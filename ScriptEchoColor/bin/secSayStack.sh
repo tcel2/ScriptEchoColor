@@ -198,6 +198,9 @@ function FUNCsayStack() {
 		elif [[ "$1" == "--resume-justdel" ]];then #FUNCsayStack_help just delete the suspend file, allowing other pids to resume speaking
 			FUNCresumeJustDel
 			return #exit_FUNCsayStack: wont put empty lines
+		elif [[ "$1" == "--reset" ]];then #FUNCsayStack_help reset and clear all that would have been spoken
+			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECfileSayStack}"
+			return #exit_FUNCsayStack: wont put empty lines
 		else
 			FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
 		  return 1 #exit_FUNCsayStack: 
@@ -302,21 +305,27 @@ function FUNCsayStack() {
 			if ! sleep $sleepDelay; then return 1; fi #exit_FUNCsayStack: on sleep fail
 		done
 		
-		local strHead=`head -n 1 "$_SECfileSayStack"`
-		if [[ -n "$strHead" ]]; then
-			if $bDaemon; then
-				echo "Said at `SECFUNCdtTimePrettyNow`: $strHead"
-			fi
+		if [[ -f "$_SECfileSayStack" ]];then
+			local strHead=`head -n 1 "$_SECfileSayStack"`
+			if [[ -n "$strHead" ]]; then
+				if $bDaemon; then
+					echo "Said at `SECFUNCdtTimePrettyNow`: $strHead"
+				fi
 			
-			echo "$strHead"	|FUNCexecSS festival --pipe
+				echo "$strHead"	|FUNCexecSS festival --pipe
 
-			FUNCexecSS sed -i 1d "$_SECfileSayStack" #delete 1st line
+				FUNCexecSS sed -i 1d "$_SECfileSayStack" #delete 1st line
+			else
+				if ! $bDaemon;then
+					break
+				fi
+			fi
 		else
 			if ! $bDaemon;then
 				break
 			fi
 		fi
-	
+		
 		if ! sleep $sleepDelay; then return 1; fi #exit_FUNCsayStack: on sleep fail
 	done
 	

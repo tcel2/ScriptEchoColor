@@ -156,7 +156,7 @@ CHANGES:
       ex.2: echoc -qi
     The problem happens in these 2 circunstances:
       ex.1: `\`read -s\``
-      ex.2: func(){ `read -s`; };`func`
+      ex.2: func(){ `read -s`; };`func` 
   
   v1.14:
     bugs fixed:
