@@ -13,7 +13,7 @@ INSTALL:
 USAGE:
   you can type 
     ScriptEchoColor --help
-  or 
+  or  
     echoc --help
 
 EXAMPLES:
