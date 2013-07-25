@@ -1,0 +1,13 @@
+# setup ex.: echo 'export SEC_HELPERS=$HOME/.ScriptEchoColor/sec.helperscript.source' >>$HOME/.bashrc
+# then add this to your script file: source $SEC_HELPERS
+# add your custom ones to file "$HOME/.ScriptEchoColor/user.helperscript.source"
+
+
+eechocV(){
+ eval `echoc -V "$@"`
+}
+
+
+if [[ -f "$HOME/.ScriptEchoColor/user.helperscript.source" ]]; then
+  source "$HOME/.ScriptEchoColor/user.helperscript.source"
+fi

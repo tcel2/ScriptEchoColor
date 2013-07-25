@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright (C) 2004-2012 by Henrique Abdalla
+#
+# This file is part of ScriptEchoColor.
+#
+# ScriptEchoColor simplifies Linux terminal text colorizing, formatting 
+# and several steps of script coding.
+#
+# ScriptEchoColor is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# ScriptEchoColor is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ScriptEchoColor. If not, see <http://www.gnu.org/licenses/>.
+#
+# Homepage: http://scriptechocolor.sourceforge.net/
+# Project Homepage: https://sourceforge.net/projects/scriptechocolor/
+
+
+if [[ -z "$1" ]]; then
+  echo "$0: type --help for help" >/dev/stderr
+  exit 1
+fi
+
+if [[ "$1" == "--help" ]]; then
+  ScriptEchoColor "@gOutputs the octal(default)/hexa/decimal value of a character prefixed with '\\'.\n\
+@bUse --hexa to output hexadecimal value with the '\\' prefix.\n\
+Use --decimal to output decimal value without prefix.\n\
+It accepts multiple characters/parameters to be converted." >/dev/stderr
+  exit
+fi
+
+bDecimal=false
+bHexa=false
+if   [[ "$1" == "--decimal" ]]; then
+  bDecimal=true
+  shift
+elif [[ "$1" == "--hexa" ]]; then
+  bHexa=true
+  shift
+fi
+
+str="$*"
+for((n=0;n<${#str};n++));do
+  char="${str:n:1}"
+  if   $bDecimal; then
+    if((n>0));then echo -n ","; fi
+    printf "%d"     "'$char'"
+  elif $bHexa; then
+    printf "\\\x%x" "'$char'" # needed 3 (\\\)! weird?
+  else
+    printf "\\\0%o"   "'$char'"
+  fi
+done
