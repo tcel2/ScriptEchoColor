@@ -232,7 +232,7 @@ CHANGES:
       without advices.
       It also helps to uninstall a previous installed version and 
         to remove temporary unpacked package directory.
-
+	
   v1.04:
     install.sh is more flexible as you can set install path and executables path
     uninstall.sh updated too
