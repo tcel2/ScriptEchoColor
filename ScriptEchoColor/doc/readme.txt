@@ -242,7 +242,7 @@ CHANGES:
     added option -L (easily append unformatted text to logfile, use toguether with exported environment variables SEC_LOG_FILE and optional SEC_LOG_DEFAULT)
     added option --test to make it easy to bug report
     limitations already working for some terminals ($TERM): linux, xterm, rxvt
-  
+	
   v1.03:
     install.sh now checks for dependencies
     added option -u (output unformatted)
