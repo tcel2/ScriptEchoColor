@@ -36,8 +36,8 @@ if [[ -n "$2" ]]; then minPercCPU=$2; fi
 
 topCPUtoCheckAmount=10
 tmprToMonitor="temp1"
-maxDelay=15
-minimumWait=5
+maxDelay=30 #15
+minimumWait=15 #5
 #useOnlyThisPID="" #empty to find the highest cpu usage one
 
 export SEC_SAYVOL=10
@@ -140,6 +140,7 @@ while true; do
 		echoc --say "high temperature $tmprCurrent, stopping some processes..."
 		
 		count=0
+		SECFUNCdelay timeToCoolDown --init
 		while true; do
 			tmprCurrentold=$tmprCurrent
 			FUNCmon
@@ -162,7 +163,7 @@ while true; do
 			echoc --say "$tmprCurrent"
 		done
 		
-		echoc --say "temperature lowered to: $tmprCurrent)"
+		echoc --say "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
 				
 	  #echoc -x "kill -SIGCONT $pidHighCPUusage"
 	  echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"

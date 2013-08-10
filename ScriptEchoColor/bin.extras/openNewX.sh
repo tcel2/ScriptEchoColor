@@ -244,7 +244,7 @@ function FUNCscript() {
   fi
   
   if [[ "$1" == "showHelp" ]]; then #helpScript show user custom command options and other options
-    FUNCxtermDetached FUNCshowHelp $DISPLAY 30&
+    FUNCxtermDetached --waitkey FUNCshowHelp $DISPLAY 30&
   fi
   
   if [[ "$1" == "isScreenLocked" ]];then
@@ -274,6 +274,13 @@ function FUNCscript() {
   if [[ "$1" == "cicleGammaBack" ]]; then #helpScript cicle gamma value
   	FUNCcicleGamma -1
   fi
+  
+  if [[ "$1" == "sayTemperature" ]]; then #helpScript say temperature
+		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
+		tmprToMonitor="temp1"
+		tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
+		echoc --say "$tmprCurrent celcius"
+  fi
 };export -f FUNCscript
 
 function FUNCkeepJwmAlive() {
@@ -296,13 +303,21 @@ function FUNCkeepJwmAlive() {
 };export -f FUNCkeepJwmAlive
 
 function FUNCxtermDetached() {
+	if [[ "$1" == "--waitkey" ]];then
+		waitKey="echoc -w"
+		shift
+	fi
+	
 	# this is a trick to prevent child terminal to close when its parent closes
 	local params="$@"
+#	function FUNCxtermDetachedExec() {
+#		$params
+#	};export -f FUNCxtermDetachedExec
 	
-	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"&
+	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$waitKey\";echoc -w"&
 	local pidXterm=$!
 	
-	# wait for the child (with the params) to open
+	# wait for the child (with the $params) to open
 	while ! ps --ppid $pidXterm; do
 		sleep 1
 	done
@@ -326,6 +341,11 @@ function FUNCechocInitBashInteractive() {
 	bash -i
 };export -f FUNCechocInitBashInteractive
 
+function FUNCmaximiseWindow() {
+	local windowId=$1
+	wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz
+};export -f FUNCmaximiseWindow
+
 function FUNCshowHelp() {
   local timeout=""
   if [[ -n "$2" ]];then
@@ -341,7 +361,8 @@ function FUNCshowHelp() {
     tr '\n' '\0x00' |\
     sed -r 's"\x00"\\n"g'`;
     #grep -v "key=\"[[:digit:]]\"" |
-  echo -e "${strCustomCmdHelp}\n${strJwmrcKeys}\n" >"$helpFile";
+    
+  echo -e "Custom Commands:\n${strCustomCmdHelp}\n\nCommands:\n${strJwmrcKeys}\n" >"$helpFile";
   
   #zenity --display=$1 $timeout --info --title "OpenNewX: your Custom Commands!" --text="$strCustomCmdHelp"&
   zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
@@ -349,13 +370,13 @@ function FUNCshowHelp() {
   
   local windowId=""
   for windowId in `xdotool search --sync --pid $pidZenity`;do
-    wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz
+    FUNCmaximiseWindow $windowId
   done
   
-  while ps -p $pidZenity 2>&1 >/dev/null;do
-    echo "wait zenity exit..."
-    if ! sleep 1;then break;fi
-  done
+#  while ps -p $pidZenity 2>&1 >/dev/null;do
+#    echo "wait zenity exit..."
+#    if ! sleep 1;then break;fi
+#  done
   
   rm -v "$helpFile"
 };export -f FUNCshowHelp
@@ -518,11 +539,12 @@ if $useJWM; then
           <Key mask="4" key="C">exec:xterm -e "FUNCclearCache #kill=skip"</Key>
           <Key mask="4" key="G">exec:'"xterm -e \"$0 --script nvidiaCicle\" #kill=skip"'</Key>
           <Key mask="S4" key="G">exec:'"xterm -e \"$0 --script nvidiaCicleBack\" #kill=skip"'</Key>
+          <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
           <Key mask="4" key="L">exec:bash -c "FUNCscreenLockNow"</Key>
           <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
           <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
-          <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
+          <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
           <Key mask="4" key="T">exec:xterm -e "FUNCsayTime #kill=skip"</Key>
           <Key mask="4" key="X">exec:xterm -e "FUNCechocInitBashInteractive #kill=skip"</Key>
           <Key mask="4" key="Z">exec:xterm -display :0 -e "FUNCechocInitBashInteractive #kill=skip"</Key>
@@ -643,8 +665,8 @@ xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCscreenAutoLock\""&
 # good for games!
 #bXTerm=true #TODO gnome-terminal is not working with this yet...
 
-FUNCxtermDetached FUNCshowHelp :0&
-FUNCxtermDetached FUNCshowHelp :1&
+FUNCxtermDetached --waitkey FUNCshowHelp :0&
+FUNCxtermDetached --waitkey FUNCshowHelp :1&
 #pidZenity0=$!
 
 #while true; do
