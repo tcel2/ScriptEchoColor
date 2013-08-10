@@ -253,7 +253,7 @@ CHANGES:
     uninstall.sh now must be run from install dir $HOME/ScriptEchoColor
     --help shows now the right version
     updated text of help and extended help
-  
+	
   v1.01beta:
     option -x (execute string) in case command returns false now shows the command with the exit code
     added examples.sh
