@@ -259,7 +259,7 @@ CHANGES:
     added examples.sh
     added safety checks to uninstall.sh 
     uploaded homepage content
-    
+	
   v1.0beta:
     first release
-  
+
