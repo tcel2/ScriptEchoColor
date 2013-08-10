@@ -247,7 +247,7 @@ CHANGES:
     install.sh now checks for dependencies
     added option -u (output unformatted)
     added option -l <logfile> (append unformatted text to logfile)
-  
+	
   v1.02beta:
     examples.sh now you can choose example at commandline like -10
     uninstall.sh now must be run from install dir $HOME/ScriptEchoColor
