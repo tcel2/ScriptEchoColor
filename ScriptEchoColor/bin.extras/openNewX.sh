@@ -225,6 +225,20 @@ function FUNCnvidiaCicle() {
 	#echoc -w -t 10 "`SECFUNCvarShow nvidiaCurrent`"
 };export -f FUNCnvidiaCicle
 
+function FUNCtempAvg() {
+	count=20 #each 10 = 1second
+	tmprToMonitor="temp1"
+	bc <<< `
+		for((i=0;i<$count;i++)); do 
+			sensors \
+				|grep "$tmprToMonitor" \
+				|sed -r "s;$tmprToMonitor(.*);\1;" \
+				|tr -d ' :[:alpha:]°()=' \
+				|sed -r 's"^([+-][[:digit:]]*[.][[:digit:]]).*"\1"';
+			sleep 0.1;
+		done |tr -d '\n' |sed "s|.*|scale=1;(0&)/$count|"`
+};export -f FUNCtempAvg
+
 function FUNCscript() {
 	# scripts will be executed with all environment properly setup with eval `echoc --libs-init`
 	if [[ -z "$1" ]]; then
@@ -276,10 +290,11 @@ function FUNCscript() {
   fi
   
   if [[ "$1" == "sayTemperature" ]]; then #helpScript say temperature
-		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
-		tmprToMonitor="temp1"
-		tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
-		echoc --say "$tmprCurrent celcius"
+#		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
+#		tmprToMonitor="temp1"
+#		tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
+#		echoc --say "$tmprCurrent celcius"
+		echoc --say "`FUNCtempAvg` celcius"
   fi
 };export -f FUNCscript
 
