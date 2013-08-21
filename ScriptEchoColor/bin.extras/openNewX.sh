@@ -258,7 +258,7 @@ function FUNCscript() {
   fi
   
   if [[ "$1" == "showHelp" ]]; then #helpScript show user custom command options and other options
-    FUNCxtermDetached --waitkey FUNCshowHelp $DISPLAY 30&
+    FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
   fi
   
   if [[ "$1" == "isScreenLocked" ]];then
@@ -317,9 +317,16 @@ function FUNCkeepJwmAlive() {
 	done
 };export -f FUNCkeepJwmAlive
 
+function FUNCwaitX1exit() {
+	while FUNCisX1running;do
+		echo "wait X :1 exit"
+		sleep 1
+	done
+};export -f FUNCwaitX1exit
+
 function FUNCxtermDetached() {
-	if [[ "$1" == "--waitkey" ]];then
-		waitKey="echoc -w"
+	if [[ "$1" == "--waitx1exit" ]];then
+		waitX1exit="FUNCwaitX1exit"
 		shift
 	fi
 	
@@ -329,7 +336,7 @@ function FUNCxtermDetached() {
 #		$params
 #	};export -f FUNCxtermDetachedExec
 	
-	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$waitKey\";echoc -w"&
+	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$waitX1exit\";echoc -w"&
 	local pidXterm=$!
 	
 	# wait for the child (with the $params) to open
@@ -367,7 +374,7 @@ function FUNCshowHelp() {
     timeout="--timeout=$2"
   fi
   
-  local helpFile="/tmp/SEC.$selfName.keysHelpText.txt"
+  local helpFile="/tmp/SEC.$selfName.$$.keysHelpText.txt"
   
   local strJwmrcKeys=`\
     cat ~/.jwmrc |\
@@ -473,8 +480,9 @@ while [[ ${1:0:2} == "--" ]]; do
     echo "usage: options runCommand"
     
     # this sed only cleans lines that have extended options with "--" prefixed
-    sedCleanHelpLine='s"\(.*\"\)\(--.*\)\".*#opt" \2\t"' #helpskip
-    grep "#opt" $0 |grep -v "#helpskip" |sed "$sedCleanHelpLine"
+    #sedCleanHelpLine='s"\(.*\"\)\(--.*\)\".*#opt" \2\t"' #helpskip
+		sedCleanHelpLine='s;(.*")(--.*)".*#opt; \2\t;' #helpskip
+    grep "#opt" $0 |grep -v "#helpskip" |sed -r "$sedCleanHelpLine"
     #echo "SCRIPTS:";    grep "#helpScript" $0 |grep -v "#helpskip" |sed "$sedCleanHelpLine"
     
     exit 0
@@ -680,8 +688,8 @@ xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCscreenAutoLock\""&
 # good for games!
 #bXTerm=true #TODO gnome-terminal is not working with this yet...
 
-FUNCxtermDetached --waitkey FUNCshowHelp :0&
-FUNCxtermDetached --waitkey FUNCshowHelp :1&
+#FUNCxtermDetached --waitX1exit FUNCshowHelp :0&
+FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
 #pidZenity0=$!
 
 #while true; do

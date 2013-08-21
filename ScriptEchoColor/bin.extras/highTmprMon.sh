@@ -96,6 +96,23 @@ function FUNCinfo() {
 	echo -n "$@";read -s -t 1 -p "";echo
 }
 
+function FUNCtempAvg() {
+	local l_temperature="temp1"
+	if [[ -n "$1" ]];then
+		l_temperature="$1"
+	fi
+	count=20 #each 10 = 1second
+	bc <<< `
+		for((i=0;i<$count;i++)); do 
+			sensors \
+				|grep "$l_temperature" \
+				|sed -r "s;$l_temperature(.*);\1;" \
+				|tr -d ' :[:alpha:]°()=' \
+				|sed -r 's"^([+-][[:digit:]]*[.][[:digit:]]).*"\1"';
+			sleep 0.1;
+		done |tr -d '\n' |sed "s|.*|scale=1;(0&)/$count|"`
+}
+
 function FUNCmon() {
 	tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
 }

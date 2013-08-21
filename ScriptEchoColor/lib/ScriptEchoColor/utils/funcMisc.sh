@@ -169,7 +169,7 @@ function SECFUNCparamsToEval() {
 }
 
 function SECFUNCexec() {
-	omitOutput="2>/dev/null 1>/dev/null" #"2>&1 >/dev/null" the same..
+	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
 	bOmitOutput=false
 	bShowElapsed=false
 	bWaitKey=false
