@@ -22,11 +22,17 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#help
-echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time."
-echo "It is limited to the current user processes."
-echo "pre-alpha, later on it should monitor all temperatures etc etc.."
-echo "PARAMS: tmprLimit minPercCPU"
+eval `echoc --libs-init`
+selfName=`basename "$0"`
+lockFile="/tmp/.seclock-$selfName"
+lockPid=`cat "$lockFile"`
+isAlreadyRunning=false
+if [[ -z "$lockPid" ]] || ! ps -p $lockPid 2>&1 >/dev/null; then
+	isAlreadyRunning=false
+else
+	isAlreadyRunning=true
+	SECFUNCvarSetFileName $lockPid
+fi
 
 #config
 tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
@@ -42,24 +48,49 @@ minimumWait=15 #5
 
 export SEC_SAYVOL=10
 
-#init check
-selfName=`basename "$0"`
-
-lockFile="/tmp/.seclock-$selfName"
-lockPid=`cat "$lockFile"`
-if [[ -z "$lockPid" ]] || ! ps -p $lockPid 2>&1 >/dev/null; then
-	echo $$ >"$lockFile"
-else
-	echoc -p "already running!"
-	exit 1
-fi
-#if ! echoc --tcobo $selfName; then
-#if ps -A -o pid,command |grep "$selfName" |grep -v $$ |grep -qv "grep"; then
-	#echoc -p "already running!"
-#	exit 1
-#fi
+################## options
+SECFUNCvarSet --default isLoweringTemperature=false
+while [[ "${1:0:1}" == "-" ]];do
+	if [[ "${1:1:1}" == "-" ]];then
+		if [[ "$1" == "--isloweringtemperature" ]];then #help
+			#SECFUNCvarGet isLoweringTemperature
+			if $isAlreadyRunning;then
+				if $isLoweringTemperature;then
+					echo "true"
+					exit 0
+				else
+					echo "false"
+					exit 1
+				fi
+			else
+				echoc -p "not running!"
+				exit 1
+			fi
+		elif [[ "$1" == "--help" ]];then #help
+			echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time."
+			echo "It is limited to the current user processes."
+			echo "pre-alpha, later on it should monitor all temperatures etc etc.."
+			echo "PARAMS: tmprLimit minPercCPU"
+			grep "#help" $0 |grep -v grep
+			exit
+		elif [[ "$1" == "--debugtest" ]];then #help
+			echo $SECvarFile
+		fi
+	else
+		if [[ "$1" == "-d" ]];then
+			echo "dummy"
+		fi
+	fi
+	shift
+done
 
 #code
+if $isAlreadyRunning; then
+	echoc -p "already running!"
+	exit 1
+else
+	echo $$ >"$lockFile"
+fi
 
 function FUNCbcToBool() {
 	local iResult=`echo "$1" |bc -l`
@@ -159,6 +190,7 @@ while true; do
 		count=0
 		SECFUNCdelay timeToCoolDown --init
 		while true; do
+			SECFUNCvarSet isLoweringTemperature=true
 			tmprCurrentold=$tmprCurrent
 			FUNCmon
 			((count++))
@@ -179,6 +211,7 @@ while true; do
 			echoc -x "sleep 1" #let it cooldown a bit
 			echoc --say "$tmprCurrent"
 		done
+		SECFUNCvarSet isLoweringTemperature=false
 		
 		echoc --say "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
 				
