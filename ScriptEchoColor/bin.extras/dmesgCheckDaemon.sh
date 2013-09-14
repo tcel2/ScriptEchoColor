@@ -52,7 +52,8 @@ function FUNCupdateLastId {
   
   #lastId=`FUNCdmesg |tail -n 1 |cut -d ' ' -f2 |cut -d ']' -f1`
   #lastId=`FUNCdmesg |tail -n 1 |grep "[0-9]*\.[0-9]*" -o |head -n 1`
-  lastId=`FUNCdmesg |tail -n 1 |grep -o "[[][[:digit:]]*[.][[:digit:]]*[]]" |grep -o "[[:digit:]]*[.][[:digit:]]*" |head -n 1`
+  #lastId=`FUNCdmesg |tail -n 1 |grep -o "[[][[:digit:]]*[.][[:digit:]]*[]]" |grep -o "[[:digit:]]*[.][[:digit:]]*" |head -n 1`
+  lastId=`FUNCdmesg |tail -n 1 |sed -r 's".*\[ *([[:digit:]]*[.][[:digit:]]*)\].*"\1"'`
   
   FUNCupdateLastIdLine
 }

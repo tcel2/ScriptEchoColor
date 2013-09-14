@@ -22,8 +22,9 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-_SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
-_SECfileSayStack="/tmp/SEC.SayStack.tmp"
+export _SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
+export _SECfileSayStack="/tmp/SEC.SayStack.tmp"
+export _SECcacheFolder="/tmp/SEC.SayStack.cache"
 
 source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 
@@ -43,11 +44,11 @@ function FUNCsayStack() {
   
   function FUNCechoDbgSS() { 
   	SECFUNCechoDbg --caller "FUNCsayStack" "$1"; 
-  }
+  };export -f FUNCechoDbgSS
   
   function FUNCechoErrSS() { 
   	SECFUNCechoErr --caller "FUNCsayStack" "$1"; 
-  }
+  };export -f FUNCechoErrSS
   
   function FUNCexecSS() {
   	###### options
@@ -68,7 +69,7 @@ function FUNCsayStack() {
   	
   	###### main code
 		SECFUNCexec --caller "FUNCsayStack" --quiet "$@"
-  }
+  };export -f FUNCexecSS
   
   function FUNCisPidActive() { #generic check with info
   	if [[ -z "$1" ]]; then
@@ -86,7 +87,7 @@ function FUNCsayStack() {
   	
   	FUNCexecSS --caller "$FUNCNAME" ps -p $1 -o pid,ppid,stat,state,command;
   	return $?
-  }
+  };export -f FUNCisPidActive
   
   function FUNCcheckIfLockPidIsRunning() {
   	local realLockFile="$1"
@@ -101,7 +102,7 @@ function FUNCsayStack() {
 		fi
 		
 		return 0 # pid is running
-	}
+	};export -f FUNCcheckIfLockPidIsRunning
   
 	function FUNCgetRealLockFile() {
 		while true; do
@@ -126,7 +127,7 @@ function FUNCsayStack() {
 			echo "$realLockFile"
 			return 0
 		done
-	}
+	};export -f FUNCgetRealLockFile
   
   function FUNCsuspend() {
 		echo "$strSuspendByKey=$$" >"$suspendFile"
@@ -164,11 +165,43 @@ function FUNCsayStack() {
 			
 			if ! sleep $sleepDelay; then return 1; fi
 		done
-  }
+  };export -f FUNCsuspend
   
   function FUNCresumeJustDel() {
   	FUNCexecSS rm $_SECdbgVerboseOpt "$suspendFile"
-  }
+  };export -f FUNCresumeJustDel
+  
+	function FUNChasCache() {
+		local md5sumText="$1"
+		local fileAudio="$2" #optional
+		
+		local cacheFile="$_SECcacheFolder/$md5sumText"
+		if [[ -f "$cacheFile" ]];then
+			SECFUNCechoDbg --caller $FUNCNAME "cache exists: $cacheFile"
+			return 0
+		else
+			SECFUNCechoDbg --caller $FUNCNAME "cache missing: $cacheFile"
+		fi
+		
+		if [[ -f "$fileAudio" ]];then
+			FUNCexecSS cp "$fileAudio" "$_SECcacheFolder/$md5sumText"
+		fi
+		return 1
+	};export -f FUNChasCache
+	function FUNCplay() { 
+		local md5sumText="$1"
+		local sayVol="$2"
+		local fileAudio="$3" #optional
+		SECFUNCechoDbg --caller $FUNCNAME "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
+		
+		local cacheFile="$_SECcacheFolder/$md5sumText"
+		if FUNChasCache "$md5sumText" "$fileAudio";then
+			FUNCexecSS touch "$cacheFile" #to indicate that it was recently used
+			fileAudio="$cacheFile"
+		fi
+		
+		FUNCexecSS play -v $sayVol "$fileAudio"; 
+	};export -f FUNCplay;
   
   ####################### other initializations
   
@@ -198,7 +231,7 @@ function FUNCsayStack() {
 		elif [[ "$1" == "--resume-justdel" ]];then #FUNCsayStack_help just delete the suspend file, allowing other pids to resume speaking
 			FUNCresumeJustDel
 			return #exit_FUNCsayStack: wont put empty lines
-		elif [[ "$1" == "--reset" ]];then #FUNCsayStack_help reset and clear all that would have been spoken
+		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help clear SayStack buffer for all speeches requested by all applications til now
 			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECfileSayStack}"
 			return #exit_FUNCsayStack: wont put empty lines
 		else
@@ -208,6 +241,9 @@ function FUNCsayStack() {
 		shift
 	done
 	local sayText="$1" #last param
+	sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
+	local md5sumText=`echo "$sayText" |md5sum |sed -r "$sedOnlyMd5sum"`
+	FUNCexecSS mkdir -p "$_SECcacheFolder"
 	if $bDaemon;then
 		sayText="${strDaemonSays}${sayText}"
 	fi
@@ -224,11 +260,15 @@ function FUNCsayStack() {
 	#echo "$sayText" >>"$_SECfileSayStack"
 	sayVol=`echo "scale=2;$SEC_SAYVOL/100" |bc -l`
 	paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this param with a var name SECsortOrder that I believe wont conflict with pre-existant ones on festival
+	paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival
+	paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
 	echo "${paramSortOrder}\
-	      (Parameter.set 'Audio_Method 'Audio_Command)\
+				${paramMd5sum}\
+				${paramSayVol}\
+				(Parameter.set 'Audio_Method 'Audio_Command)\
 				(Parameter.set 'Audio_Required_Rate 16000)\
 				(Parameter.set 'Audio_Required_Format 'snd)\
-				(Parameter.set 'Audio_Command \"play -v $sayVol \$FILE\")\
+				(Parameter.set 'Audio_Command \"bash -c 'FUNCplay $md5sumText $sayVol '\$FILE\")\
 				(SayText \"$sayText\")" >>"$_SECfileSayStack"
 	sort "$_SECfileSayStack" -o "$_SECfileSayStack" #ensure FIFO
 	
@@ -311,9 +351,18 @@ function FUNCsayStack() {
 				if $bDaemon; then
 					echo "Said at `SECFUNCdtTimePrettyNow`: $strHead"
 				fi
-			
-				echo "$strHead"	|FUNCexecSS festival --pipe
-
+				
+				sedGetMd5sum="s;.* 'SECmd5sum '([[:alnum:]]*)\).*;\1;"
+				md5sumText=`echo "$strHead" |sed -r "$sedGetMd5sum"`
+				sedGetSayVol="s;.* 'SECsayVol '([[:digit:]]*[.][[:digit:]]*)\).*;\1;"
+				sayVol=`echo "$strHead" |sed -r "$sedGetSayVol"`
+				#echo "strHead=$strHead" >/dev/stderr
+				if FUNChasCache $md5sumText;then
+					FUNCplay "$md5sumText" $sayVol
+				else
+					echo "$strHead"	|FUNCexecSS festival --pipe
+				fi
+				
 				FUNCexecSS sed -i 1d "$_SECfileSayStack" #delete 1st line
 			else
 				if ! $bDaemon;then

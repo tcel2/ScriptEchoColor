@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2012 by Henrique Abdalla
+# Copyright (C) 2004-2013 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -208,7 +208,7 @@ while true; do
 				break;
 			fi
 			
-			echoc -x "sleep 1" #let it cooldown a bit
+			sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
 			echoc --say "$tmprCurrent"
 		done
 		SECFUNCvarSet isLoweringTemperature=false
