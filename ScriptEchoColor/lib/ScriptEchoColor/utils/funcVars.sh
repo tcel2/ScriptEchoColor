@@ -88,7 +88,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 		local l_sedGetPidFromFilename='s"^.*/SEC[.].*[.]\([[:digit:]]*\)[.]vars[.]tmp$"\1"'
 		local l_pid=`echo "$l_file" |sed "$l_sedGetPidFromFilename"`;
 		if [[ -n `echo "$l_pid" |tr -d "[:digit:]"` ]]; then 
-			echo "SECERROR: l_pid [$l_pid] must be only digits..." >>$l_output
+			echo "SECERROR: l_pid [$l_pid] must be only digits..." >>$l_output # do not use >>/dev/stderr because this is not so important? and will mess the console..
 			return 1; # if fail, tmp files will remain but script wont break... good?
 		fi; 
 		
@@ -155,7 +155,9 @@ function SECFUNCvarGet() { #help: <varname> [arrayIndex] if var is an array, you
   		eval 'echo "${'$1'['$2']}"'
   	else
 	  	#declare |grep "^$1=(" |sed 's"^'$1'=""'
-	  	declare -p $1 |sed -r -e "s;^declare -[^ ]* $1=;;" -e "s;^'(.*)'$;\1;"
+	  	local l_sedRemoveDeclare="s;^declare -[^ ]* $1=;;"
+	  	local l_sedRemovePliqs="s;^'(.*)'$;\1;"
+	  	declare -p $1 |sed -r -e "$l_sedRemoveDeclare" -e "$l_sedRemovePliqs"
 #			local l_value=""
 #			#for val in `eval 'echo "${'$1'[@]}"'`; do
 #			local l_tot=`eval 'echo "${#'$1'[*]}"'`
@@ -216,7 +218,7 @@ function SECFUNCvarShowDbg() { #help: only show var and value if SEC_DEBUG is se
   fi
 }
 function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tOptions:\n\t--show will show always var and value;\n\t--showdbg will show only if SEC_DEBUG is set;\n\t--write (this is the default now) will also write value promptly to DB;\n\t--nowrite prevent promptly writing value to DB;\n\t--default will only set if variable is not set yet (like being initialized only ONCE);\n\t--array (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...;
-	SECFUNCvarReadDB
+	#SECFUNCvarReadDB
 	
 	local l_bShow=false
 	local l_bShowDbg=false
@@ -224,7 +226,7 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	local l_bWrite=$SECvarOptWriteAlways
 	local l_bDefault=false
 	local l_bArray=false
-	while true; do
+	while [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--show" ]]; then
 			l_bShow=true
 			shift
@@ -244,28 +246,31 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 			l_bDefault=true
 			shift
 		else
-			break
+			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			return 1
 		fi
 	done
 	
-	local l_varPleaseDontUseThisVarNamePlease="$1"
+	local l_varPlDoUsThVaNaPl="$1" #PleaseDontUseThisVarNamePlease
 	local l_value="$2"
 
 	#if [[ -z "$l_value" ]]; then
-	if echo "$l_varPleaseDontUseThisVarNamePlease" |grep -q "="; then
+	if echo "$l_varPlDoUsThVaNaPl" |grep -q "="; then
 		sedVar='s"\(.*\)=.*"\1"'
 		sedValue='s".*=\(.*\)"\1"'
-		l_varPleaseDontUseThisVarNamePlease=`echo "$1" |sed "$sedVar"`
+		l_varPlDoUsThVaNaPl=`echo "$1" |sed "$sedVar"`
 		l_value=`echo "$1" |sed "$sedValue"`
 	fi
 	
-	if `SECFUNCvarIsArray $l_varPleaseDontUseThisVarNamePlease`; then
+	if `SECFUNCvarIsArray $l_varPlDoUsThVaNaPl`; then
 		l_bArray=true
 		l_value=""
 	fi
 	
-  SECFUNCvarRegisterWithLock $l_varPleaseDontUseThisVarNamePlease #must register before writing
-  
+	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #to read DB is useful to keep current environment updated with changes made by other threads?
+	
+	SECFUNCvarRegisterWithLock $l_varPlDoUsThVaNaPl #must register before writing
+	
 	if ! $l_bArray; then
 		local l_bSetVarValue=false
 		if $l_bDefault; then
@@ -278,28 +283,29 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 			#  ${VAR:?errorMessage} #if VAR is unset or empty, terminate shell script with errorMessage
 		
 			# set default value if variable is not set yet
-			if ! eval "[[ -n \${$l_varPleaseDontUseThisVarNamePlease+someVarName} ]]"; then 
+			if ! eval "[[ -n \${$l_varPlDoUsThVaNaPl+someVarName} ]]"; then 
 				l_bSetVarValue=true
 			fi
 		else
 			l_bSetVarValue=true
 		fi
 		if $l_bSetVarValue; then
-			eval "export $l_varPleaseDontUseThisVarNamePlease=\"`SECFUNCfixPliq "$l_value"`\""
-			#eval "export $l_varPleaseDontUseThisVarNamePlease=\"$l_value\""
+			eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
+			#eval "export $l_varPlDoUsThVaNaPl=\"$l_value\""
 		fi
   fi
 
 	if $l_bArray || $l_bSetVarValue; then
+		SECFUNCvarPrepareArraysToExport $l_varPlDoUsThVaNaPl
 		if $l_bWrite; then
 			SECFUNCvarWriteDBwithLock
 		fi
 	fi
   
   if $l_bShow; then # priority over show only in debug mode
-	  SECFUNCvarShow $l_varPleaseDontUseThisVarNamePlease
+	  SECFUNCvarShow $l_varPlDoUsThVaNaPl
   elif $l_bShowDbg; then
-	  SECFUNCvarShowDbg $l_varPleaseDontUseThisVarNamePlease
+	  SECFUNCvarShowDbg $l_varPlDoUsThVaNaPl
 	fi
 }
 function SECFUNCvarIsRegistered() { #help: check if var is registered
@@ -317,11 +323,11 @@ function SECFUNCvarIsSet() { #help: equal to: SECFUNCvarIsRegistered
 	return $?
 }
 function SECFUNCdebugMsg() {
-	echo "SEC_DEBUG(`basename "$0"`:$LINENO): $@" >>/dev/stderr
+	echo "SEC_DEBUG(`basename "$0"`): $@" >>/dev/stderr
 }
 function SECFUNCdebugMsgWaitAkey() {
 	if $SEC_DEBUG_WAIT;then
-		SECFUNCdebugMsg "press a key to continue..."
+		SECFUNCdebugMsg "$@, press a key to continue..."
 		read -n 1
 	fi
 }
@@ -373,7 +379,7 @@ function SECFUNCvarWaitRegister() { #help: <var> [delay=1]: wait var be stored. 
 	
 	while true; do
 		SECFUNCvarReadDB $1
-		if $SEC_DEBUG;then local l_value=`SECFUNCvarGet $1`;SECFUNCdebugMsg "$1=$l_value";fi
+		if $SEC_DEBUG;then local l_value=`SECFUNCvarGet $1`;SECFUNCdebugMsg "$FUNCNAME: $1=$l_value";fi
 		if SECFUNCvarIsSet $1; then
 			SECFUNCvarGet $1 #this is to also create the variable on caller
 			break;
@@ -382,13 +388,7 @@ function SECFUNCvarWaitRegister() { #help: <var> [delay=1]: wait var be stored. 
 		#read -t $l_delay #bash will crash!
 	done
 }
-function SECFUNCvarRestoreVarsArray() { #private: 
-	# if SECvarsTmp is set, recover its value to array
-	if [[ -n ${SECvarsTmp+dummy} ]]; then
-		eval 'SECvars='$SECvarsTmp #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
-	fi
-}
-function SECFUNCvarPrepareVarsArrayToExport() { #private: 
+function SECFUNCvarPrepare_SECvars_ArrayToExport() { #private: 
 	if((${#SECvars[*]}==0));then
 		export SECvars=()
 	else
@@ -396,10 +396,56 @@ function SECFUNCvarPrepareVarsArrayToExport() { #private:
 		export SECvars
 	fi
 	# collect exportable array in string mode
-	l_export=`declare -p SECvars |sed 's"^declare -ax SECvars"export SECvarsTmp"'`
-	# creates SECvarsTmp to be restored as array at SECFUNCvarRestoreVarsArray (on a child shell)
+	local l_export=`declare -p SECvars |sed 's"^declare -ax SECvars"export SECvarsTmp"'`
+	# creates SECvarsTmp to be restored as array at SECFUNCvarRestore_SECvars_Array (on a child shell)
 	eval "$l_export"
 }
+function SECFUNCvarRestore_SECvars_Array() { #private: 
+	# IMPORTANT: SECFUNCvarReadDB makes this function useless...
+	# if SECvarsTmp is set, recover its value to array on child shell
+	if [[ -n ${SECvarsTmp+dummy} ]]; then
+		eval 'SECvars='$SECvarsTmp #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
+	fi
+}
+function SECFUNCvarPrepareArraysToExport() { #private:
+	local l_list="$1" #optional for single array variable export
+	
+	if [[ -z "$1" ]];then
+		l_list="${SECvars[*]}"
+	fi
+	
+	local l_varPlDoUsThVaNaPl #PleaseDontUseThisVarNamePlease
+	#export SECexportedArraysList="" #would break in case of single array var export...
+	for l_varPlDoUsThVaNaPl in $l_list; do
+		if `SECFUNCvarIsArray $l_varPlDoUsThVaNaPl`;then
+			# just prepare to be shown with `declare` below
+			eval "export $l_varPlDoUsThVaNaPl"
+			# collect exportable array in string mode
+			local l_export=`declare -p $l_varPlDoUsThVaNaPl |sed "s'^declare -ax $l_varPlDoUsThVaNaPl'export exportedArray_${l_varPlDoUsThVaNaPl}'"`
+			if $SEC_DEBUG;then SECFUNCdebugMsg "$FUNCNAME: l_export=$l_export";fi
+			
+			# creates temp string var representing the array to be restored as array at SECFUNCvarRestoreArray (on a child shell)
+			eval "$l_export"
+			
+			if ! echo "$SECexportedArraysList" |grep -w "$l_varPlDoUsThVaNaPl" 2>&1 >/dev/null; then
+				if((${#SECexportedArraysList[*]}>0));then
+					export SECexportedArraysList="$SECexportedArraysList "
+				fi
+				export SECexportedArraysList="${SECexportedArraysList}""exportedArray_${l_varPlDoUsThVaNaPl}"
+			fi
+		fi
+	done
+}
+function SECFUNCvarRestoreArrays() { #private: 
+	# if SECexportedArraysList is set, work with it to recover arrays on child shell
+	if [[ -n ${SECexportedArraysList+dummy} ]]; then
+		eval `declare -p $SECexportedArraysList |sed -r 's/^declare -x exportedArray_([[:alnum:]_]*)=(.*)/eval \1=\`echo \2\`;/'`
+	fi
+}
+#function SECFUNCvarRestoreArray() { #private: 
+#	# recover temp string value to a real array
+#	eval "$1=\$exportedArray_$1" #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
+#}
 
 function SECFUNCvarRegisterWithLock() { #private: 
 	if ! SECFUNCvarIsRegistered $1; then
@@ -417,16 +463,18 @@ function SECFUNCvarRegister() { #private:
 	
 	# wont work as: export SECvars #because bash cant export arrays...
 	SECvars+=($1)
-	SECFUNCvarPrepareVarsArrayToExport # so SECvars is always ready when SECFUNCvarRestoreVarsArray is used at child shell
+	SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
+	SECFUNCvarPrepareArraysToExport $1
 	
 	SECFUNCvarWriteDB SECvars
 }
 
 function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary file with exclusive lock
-	#SECFUNCvarPrepareVarsArrayToExport #redundant?
-	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreVarsArray;SECFUNCvarWriteDB"
+	#SECFUNCvarPrepare_SECvars_ArrayToExport #redundant (look at SECFUNCvarRegister)?
+	#SECFUNCvarPrepareArraysToExport #redundant (look at SECFUNCvarRegister)?
+	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestore_SECvars_Array;SECFUNCvarWriteDB"
 	#flock -x "$SECvarFile" bash -c "SECFUNCvarWriteDBwithLockHelper"
-	flock -x "$SECvarFile" bash -c "SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB"
+	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB"
 	
 	##### TEST CASE (concurrent write DB test):
   # SEC_DEBUG=true
@@ -458,7 +506,7 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	SECFUNCvarWriteDB;
 #}
 function SECFUNCvarWriteDB() { #private: 
-	if $SEC_DEBUG; then SECFUNCdebugMsg "writing DB file: $SECvarFile"; fi
+	if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: writing DB file: $SECvarFile"; fi
 	
 	local l_filter=$1; #l_filter="" #@@@TODO FIX FILTER FUNCTIONALITY THAT IS STILL BUGGED!
 	local l_allVars=()
@@ -481,7 +529,7 @@ function SECFUNCvarWriteDB() { #private:
 			SECvarOptWriteAlways
 		)
 		l_allVars+=(${SECvars[@]})
-		if $SEC_DEBUG; then SECFUNCdebugMsg "l_allVars=(${l_allVars[@]})"; fi
+		if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: l_allVars=(${l_allVars[@]})"; fi
 		#declare |grep "^`echo ${l_allVars[@]} |sed 's" "=\\\|^"g'`" >"$SECvarFile"
 		#if((${#SECvars[*]}==0));then SECvars=();fi
 		echo -n >"$SECvarFile" #clean db file
@@ -502,32 +550,47 @@ function SECFUNCvarWriteDB() { #private:
 #  fi
   
 	if $SEC_DEBUG && $SEC_DEBUG_SHOWDB; then 
-		SECFUNCdebugMsg "Show DB $SECvarFile"
+		SECFUNCdebugMsg "$FUNCNAME: Show DB $SECvarFile"
 		cat "$SECvarFile" >>/dev/stderr
-		SECFUNCdebugMsgWaitAkey
+		SECFUNCdebugMsgWaitAkey "$FUNCNAME: "
 	fi
 }
 
 function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable value
-	local l_filter
-	if [[ -n "$1" ]];then
-		l_filter=$1
-	fi
+	l_bSkip=false
+	while [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--skip" ]];then #to skip reading only the specified variable
+			l_bSkip=true
+		else
+			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			return 1
+		fi
+		shift
+	done
+	
+	local l_filter="$1"
 	
 	if $SEC_DEBUG; then 
-		SECFUNCdebugMsg "reading DB file: $SECvarFile"; 
+		SECFUNCdebugMsg "$FUNCNAME: reading DB file: $SECvarFile"; 
 		if $SEC_DEBUG_SHOWDB;then
 			cat "$SECvarFile" >>/dev/stderr
 		fi
 	fi
 	
 	if [[ -n "$l_filter" ]];then
-	  #eval "`cat "$SECvarFile" |grep "^${l_filter}="`" >/dev/null 2>&1
-	  eval "`grep "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+		#eval "`cat "$SECvarFile" |grep "^${l_filter}="`" >/dev/null 2>&1
+		#eval "`grep "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+		local l_paramInvert=""
+		if $l_bSkip;then
+			l_paramInvert="-v"
+		fi
+		eval "`grep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 	else
 	  eval "`cat "$SECvarFile"`" >/dev/null 2>&1
 	fi
-	SECFUNCvarPrepareVarsArrayToExport #makes SECvars work again
+	SECFUNCvarPrepare_SECvars_ArrayToExport #TODO: (GAMBIARRA) makes SECvars work again, understand why and fix.
+	#SECFUNCvarPrepareArraysToExport
+	#SECFUNCvarRestoreArrays
 }
 function SECFUNCvarEraseDB() { #help: 
   rm "$SECvarFile"
