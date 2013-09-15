@@ -24,7 +24,7 @@
 
 export _SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECfileSayStack="/tmp/SEC.SayStack.tmp"
-export _SECcacheFolder="/tmp/SEC.SayStack.cache"
+export _SECcacheFolder="/$HOME/.ScriptEchoColor/SEC.SayStack.cache"
 
 source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 
@@ -242,7 +242,7 @@ function FUNCsayStack() {
 	done
 	local sayText="$1" #last param
 	sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
-	local md5sumText=`echo "$sayText" |md5sum |sed -r "$sedOnlyMd5sum"`
+	local md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
 	FUNCexecSS mkdir -p "$_SECcacheFolder"
 	if $bDaemon;then
 		sayText="${strDaemonSays}${sayText}"
