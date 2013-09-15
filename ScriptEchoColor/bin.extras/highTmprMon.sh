@@ -185,7 +185,8 @@ while true; do
 	  echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
 	  
 		#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
-		echoc --say "high temperature $tmprCurrent, stopping some processes..."
+		echoc --say "$tmprCurrent"
+		echoc --say "high temperature, stopping some processes..."
 		
 		count=0
 		SECFUNCdelay timeToCoolDown --init
@@ -213,7 +214,7 @@ while true; do
 		done
 		SECFUNCvarSet isLoweringTemperature=false
 		
-		echoc --say "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
+		echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
 				
 	  #echoc -x "kill -SIGCONT $pidHighCPUusage"
 	  echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
