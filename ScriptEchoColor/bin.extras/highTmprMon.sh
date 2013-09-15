@@ -28,11 +28,12 @@ selfName=`basename "$0"`
 lockFile="/tmp/.seclock-$selfName"
 lockPid=`cat "$lockFile"`
 isAlreadyRunning=false
+anIgnorePids=()
 if [[ -z "$lockPid" ]] || ! ps -p $lockPid 2>&1 >/dev/null; then
 	isAlreadyRunning=false
 else
 	isAlreadyRunning=true
-	SECFUNCvarSetFileName $lockPid
+	SECFUNCvarSetFileName $lockPid #allows intercommunication between proccesses started from non correlated parents
 fi
 
 ############### CONFIG
@@ -59,9 +60,15 @@ function FUNCbcToBool() {
 	echo $bResult
 }
 
+function FUNCignoredPids() {
+	SECFUNCvarReadDB anIgnorePids
+	local l_strIgnorePids=`echo "${anIgnorePids[@]}" |tr ' ' '|'`
+	echo "$l_strIgnorePids"
+}
+
 aHighPercPidList=()
 function FUNChighPercPidList() {
-	local aPercPid=(`ps -A --user $USER --sort=-pcpu -o pcpu,pid |head -n $((topCPUtoCheckAmount+1)) |tail -n $topCPUtoCheckAmount |sed 's"^[ ]*""' |sed 's".*"&"'`)
+	local aPercPid=(`ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid |egrep -v "(`FUNCignoredPids`)$" |head -n $((topCPUtoCheckAmount)) |sed 's"^[ ]*""' |sed 's".*"&"'`)
 
 	aHighPercPidList=()
 	local tot=${#aPercPid[*]}
@@ -117,6 +124,10 @@ function FUNCmonTmpr() {
 function FUNClimitCpu() {
 	#echo "tmprLimit=$tmprLimit";exit
 	local pidToLimit=$1
+	
+	SECFUNCvarReadDB
+	anIgnorePids=(${anIgnorePids[@]} $pidToLimit)
+	SECFUNCvarSet anIgnorePids
 	
 	#sudos cpulimit -v -p $pidToLimit -l 99 #but not care about tmpr and also wont accept -l greater than 100...
 	
@@ -238,6 +249,7 @@ lastWarningSaidTime=0
 warningDelay=60
 beforeLimitWarn=1
 while true; do
+	SECFUNCvarReadDB
 	FUNCmonTmpr
 	if((maxTemperature<tmprCurrent));then
 		maxTemperature=$tmprCurrent
