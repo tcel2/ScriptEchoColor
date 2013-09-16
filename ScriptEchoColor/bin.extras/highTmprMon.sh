@@ -137,6 +137,10 @@ function FUNClimitCpu() {
 	SECFUNCdelay chkPidRunning --init
 	bForceStop=false
 	bJustLimit=false
+	nTmprStep=5
+	nJustLimitThreshold=$((nTmprStep*2))
+	nRunAgainThreshold=$((nJustLimitThreshold+nTmprStep))
+	fSigStopDelay=0.1
 	while true; do
 		if $bForceStop || $bJustLimit;then
 			tmprCurrent=`FUNCtmprAverage 10`
@@ -147,7 +151,7 @@ function FUNClimitCpu() {
 			if $bForceStop;then
 				echoc --say "stopped $tmprCurrent"
 			elif $bJustLimit;then
-				echo "just limit $tmprCurrent"
+				echo "just limit $tmprCurrent (stop delay $fSigStopDelay)"
 			else
 				echo "running $tmprCurrent"
 			fi
@@ -156,10 +160,15 @@ function FUNClimitCpu() {
 		
 		if((tmprCurrent>=tmprLimit));then
 			bForceStop=true
-		elif((tmprCurrent>=(tmprLimit-5)));then
+		elif((tmprCurrent>=(tmprLimit-nJustLimitThreshold)));then
 			bJustLimit=true
-		elif((tmprCurrent<=(tmprLimit-10)));then
-			if((`FUNCtmprAverage 50`<=(tmprLimit-10)));then
+			if((tmprCurrent>=(tmprLimit-(nJustLimitThreshold/2)))) || $bForceStop;then
+				fSigStopDelay=0.5 #make it use even less cpu
+			else
+				fSigStopDelay=0.1
+			fi
+		elif((tmprCurrent<=(tmprLimit-nRunAgainThreshold)));then
+			if((`FUNCtmprAverage 50`<=(tmprLimit-nRunAgainThreshold)));then
 				bForceStop=false
 				bJustLimit=false
 			fi
@@ -170,7 +179,7 @@ function FUNClimitCpu() {
 			sleep 0.1
 		elif $bJustLimit;then
 			kill -SIGSTOP $pidToLimit
-			sleep 0.1
+			sleep $fSigStopDelay
 			kill -SIGCONT $pidToLimit
 			sleep 0.1
 		else
