@@ -23,6 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 export _SECselfFile_funcMisc="`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+export _SECaliasPrefix='p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),l$LINENO'
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
@@ -61,6 +62,7 @@ function SECFUNCdtTimeToFileNameNow() {
 	SECFUNCdtTimeToFileName `SECFUNCdtNow`
 }
 
+alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECaliasPrefix\" "
 function SECFUNCechoErr() { 
 	###### options
 	local caller=""
@@ -82,10 +84,11 @@ function SECFUNCechoErr() {
 	echo "ERROR[`SECFUNCdtNow`]: script='$0': ${caller}$1" >/dev/stderr; 
 }
 if [[ "$SEC_DEBUG" == "true" ]];then
-	SECFUNCechoErr "test error message"
+	SECFUNCechoErrA "test error message"
 	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
 fi
 
+alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECaliasPrefix\" "
 function SECFUNCechoDbg() { 
 	###### options
 	local caller=""
@@ -97,7 +100,7 @@ function SECFUNCechoDbg() {
 			shift
 			caller="${1}: "
 		else
-			SECFUNCechoErr "invalid option $1"
+			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
 		shift
@@ -109,6 +112,7 @@ function SECFUNCechoDbg() {
 	fi
 }
 
+alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECaliasPrefix\" "
 function SECFUNCechoWarn() { 
 	###### options
 	local caller=""
@@ -120,7 +124,7 @@ function SECFUNCechoWarn() {
 			shift
 			caller="${1}: "
 		else
-			SECFUNCechoErr "invalid option $1"
+			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
 		shift
@@ -143,7 +147,7 @@ function SECFUNCparamsToEval() {
 #		elif [[ "$1" == "--escapequotestwice" ]];then #SECFUNCparamsToEval_help quotes will be escaped TWICE like '\\\"'
 #			bEscapeQuotesTwice=true
 		else
-			SECFUNCechoErr "invalid option $1"
+			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
 		shift
@@ -168,6 +172,7 @@ function SECFUNCparamsToEval() {
   echo "$strExec"
 }
 
+alias SECFUNCexecA="SECFUNCexec --caller \"$_SECaliasPrefix\" "
 function SECFUNCexec() {
 	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
 	bOmitOutput=false
@@ -195,7 +200,7 @@ function SECFUNCexec() {
 		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed
 			bExecEcho=true;
 		else
-			SECFUNCechoErr "${caller}$FUNCNAME: invalid option $1"
+			SECFUNCechoErrA "${caller}$FUNCNAME: invalid option $1"
 			return 1
 		fi
 		shift
@@ -287,7 +292,7 @@ function SECFUNCbcPrettyCalc() {
 			bCmpMode=true
 			bCmpQuiet=true
 		else
-			SECFUNCechoErr --caller "$FUNCNAME" "invalid option '$1'"
+			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift
@@ -311,7 +316,7 @@ function SECFUNCbcPrettyCalc() {
 				echo -n "false"
 			fi
 		else
-		  SECFUNCechoErr --caller "$FUNCNAME" "invalid result for comparison output: '$output'"
+		  SECFUNCechoErrA "invalid result for comparison output: '$output'"
 		  return 2
 		fi
 	else
@@ -344,7 +349,7 @@ function SECFUNCdrawLine() {
 	if((diffWidth==1));then
 		output="$output$char"
 	elif((diffWidth>1||diffWidth<0));then
-		SECFUNCechoErr --caller "$FUNCNAME" "diffWidth=$diffWidth (should be 1 or 0)"
+		SECFUNCechoErrA "diffWidth=$diffWidth (should be 1 or 0)"
 		return 1
 	fi
 	echo "$output"
@@ -362,7 +367,7 @@ function SECFUNCdelay() {
 	local index="$FUNCNAME"
 	if [[ -n "$1" ]] && [[ "${1:0:2}" != "--" ]];then
 		if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
-			SECFUNCechoErr --caller "${FUNCNAME}" "invalid index id '$1', only allowed alphanumeric id and underscores."
+			SECFUNCechoErrA "invalid index id '$1', only allowed alphanumeric id and underscores."
 			return 1
 		fi
 		index="$1"
@@ -410,12 +415,73 @@ function SECFUNCdelay() {
 			SECFUNCdtNow
 			return
 		else
-			SECFUNCechoErr --caller "$FUNCNAME" "invalid option '$1'"
+			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift
 	done
 	
 	SECFUNCdelay $index --get #default
+}
+
+function SECFUNCuniqueLock() { #help [id] default `basename $0`
+	local l_bRelease=false
+	while [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
+			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			return
+		elif [[ "$1" == "--release" ]];then #SECFUNCuniqueLock_help release the lock
+			l_bRelease=true
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			return 1
+		fi
+		shift
+	done
+	
+	local l_id="$1"
+	if [[ -z "$l_id" ]];then
+		l_id=`basename $0`
+	fi
+	
+	local l_runUniqueFile="/tmp/.SEC.UniqueRun.$l_id"
+	local l_lockFile="${l_runUniqueFile}.lock"
+	
+	function SECFUNCuniqueLock_release() {
+		rm "$l_runUniqueFile";
+		rm "$l_lockFile";
+	}
+	
+	if $l_bRelease;then
+		SECFUNCuniqueLock_release
+		return 0
+	fi
+	
+	if [[ -f "$l_runUniqueFile" ]];then
+		local l_lockPid=`cat "$l_runUniqueFile"`
+		if ps -p $l_lockPid >/dev/null 2>&1; then
+			if(($$==$l_lockPid));then
+				SECFUNCechoWarnA "redundant lock '$l_id' request..."
+				return 0
+			else
+				echo "$l_lockPid"
+				return 1
+			fi
+		else
+			SECFUNCechoWarnA "releasing lock '$l_id' of dead process..."
+			SECFUNCuniqueLock_release
+		fi
+	fi
+	
+	if [[ ! -f "$l_runUniqueFile" ]];then
+		# try to create a symlink lock file to the unique file
+		if ! ln -s "$l_runUniqueFile" "${l_runUniqueFile}.lock";then
+			# other pid created the symlink first!
+			return 1
+		fi
+	
+		echo $$ >"$l_runUniqueFile"
+		return 0
+	fi
 }
 
