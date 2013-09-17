@@ -37,7 +37,7 @@ while [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--skipcascade" ]];then #help keep xterm running after execution completes
 		bSkipCascade=true
 	else
-		SECFUNCechoErr "invalid option $1"
+		SECFUNCechoErrA "invalid option $1"
 		exit 1
 	fi
 	shift

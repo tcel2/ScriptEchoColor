@@ -191,7 +191,7 @@ for((i=0;i<${#aWindowList[@]};i++));do
 			SECFUNCvarSet --showdbg windowHeightCurrent=\2;"'`
 		#@@@TODO after size is set, the collected size always differ from the asked one...
 		if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
-			SECFUNCexec --echo xdotool windowsize $windowId $windowWidth $windowHeight
+			SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight
 			xdotool getwindowgeometry $windowId |grep "Geometry:"
 		fi
 	
@@ -200,7 +200,7 @@ for((i=0;i<${#aWindowList[@]};i++));do
 		eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 			SECFUNCvarSet --showdbg viewportX=\1;\
 			SECFUNCvarSet --showdbg viewportY=\2;"'`
-		SECFUNCexec --echo xdotool windowmove --sync $windowId $(((basePosX-viewportX)+x)) $(((basePosY-viewportY)+y)) 2>/dev/null; 
+		SECFUNCexecA --echo xdotool windowmove --sync $windowId $(((basePosX-viewportX)+x)) $(((basePosY-viewportY)+y)) 2>/dev/null; 
 	fi
 		
 	((x+=addX)); 
