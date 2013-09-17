@@ -22,8 +22,14 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+shopt -s expand_aliases
+
 export _SECselfFile_funcMisc="`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-export _SECaliasPrefix='p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),l$LINENO'
+export _SECaliasPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),l$LINENO'
+alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
+alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
+alias SECexitA='SECFUNCdbgFuncOutA;exit '
+alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
@@ -74,22 +80,26 @@ function SECFUNCechoErr() {
 			shift
 			caller="${1}: "
 		else
-			echo "ERROR[`SECFUNCdtNow`]invalid option $1" >/dev/stderr; 
+			echo "SECERROR[`SECFUNCdtNow`]invalid option $1" >/dev/stderr; 
 			return 1
 		fi
 		shift
 	done
 	
 	###### main code
-	echo "ERROR[`SECFUNCdtNow`]: script='$0': ${caller}$1" >/dev/stderr; 
+	echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr; 
 }
-if [[ "$SEC_DEBUG" == "true" ]];then
-	SECFUNCechoErrA "test error message"
-	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
-fi
+#if [[ "$SEC_DEBUG" == "true" ]];then
+#	SECFUNCechoErrA "test error message"
+#	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
+#fi
 
 alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECaliasPrefix\" "
 function SECFUNCechoDbg() { 
+	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
+		return 0
+	fi
+	
 	###### options
 	local caller=""
 	while [[ "${1:0:2}" == "--" ]]; do
@@ -108,7 +118,7 @@ function SECFUNCechoDbg() {
 	
 	###### main code
 	if [[ "$SEC_DEBUG" == "true" ]];then
-		echo "DEBUG[`SECFUNCdtNow`]: ${caller}$1"
+		echo "SECDEBUG[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
 	fi
 }
 
@@ -131,7 +141,7 @@ function SECFUNCechoWarn() {
 	done
 	
 	###### main code
-	echo "WARN[`SECFUNCdtNow`]: ${caller}$1"
+	echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
 }
 
 function SECFUNCparamsToEval() {
@@ -200,7 +210,7 @@ function SECFUNCexec() {
 		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed
 			bExecEcho=true;
 		else
-			SECFUNCechoErrA "${caller}$FUNCNAME: invalid option $1"
+			SECFUNCechoErrA "caller=${caller}: invalid option $1"
 			return 1
 		fi
 		shift
@@ -212,24 +222,24 @@ function SECFUNCexec() {
 	
 	###### main code
   local strExec=`SECFUNCparamsToEval "$@"`
-	SECFUNCechoDbg "${caller}$FUNCNAME: $strExec"
+	SECFUNCechoDbgA "caller=${caller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "EXEC: $strExec"
+		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: $strExec" >/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "press a key to exec...";read -n 1;
+		echo -n "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: press a key to exec..." >/dev/stderr;read -n 1;
 	fi
 	
 	local ini=`SECFUNCdtNow`;
   eval "$strExec" $omitOutput;nRet=$?
 	local end=`SECFUNCdtNow`;
 	
-  SECFUNCechoDbg "${caller}$FUNCNAME: RETURN=${nRet}: $strExec"
+  SECFUNCechoDbgA "caller=${caller}: RETURN=${nRet}: $strExec"
   
 	if $bShowElapsed;then
-		echo "$FUNCNAME: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
+		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
 	fi
   return $nRet
 }
@@ -375,7 +385,7 @@ function SECFUNCdelay() {
 	fi
 	
 	function _SECFUNCdelayValidate() {
-		SECFUNCechoDbg "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
+		SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
 		if [[ -z "${_dtSECFUNCdelayArray[$index]}" ]];then
 			# programmer must have coded it somewhere to make that code clear
 			echo "--init [index=$index] needed before calling $1" >&2
@@ -392,9 +402,9 @@ function SECFUNCdelay() {
 			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			return
 		elif [[ "$1" == "--init" ]];then #SECFUNCdelay_help set temp date storage to now
-			#@@@r SECFUNCechoDbg "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
+			#@@@r SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
 			_dtSECFUNCdelayArray[$index]=`SECFUNCdtNow`
-			#@@@r SECFUNCechoDbg "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
+			#@@@r SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$index]}=${_dtSECFUNCdelayArray[$index]}"
 			return
 		elif [[ "$1" == "--get" ]];then #SECFUNCdelay_help get delay from init (is the default if no option parameters are set)
 			if ! _SECFUNCdelayValidate "$1";then return 1;fi
@@ -424,10 +434,14 @@ function SECFUNCdelay() {
 	SECFUNCdelay $index --get #default
 }
 
-function SECFUNCuniqueLock() { #help [id] default `basename $0`
+function SECFUNCuniqueLock() { 
 	local l_bRelease=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
+			echo "Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously."
+			echo "If lock exists, outputs the pid holding it."
+			echo 'Parameters: [id] defaults to `basename $0`'
+			
 			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			return
 		elif [[ "$1" == "--release" ]];then #SECFUNCuniqueLock_help release the lock

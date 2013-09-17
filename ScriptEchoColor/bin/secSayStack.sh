@@ -68,7 +68,7 @@ function FUNCsayStack() {
 		done
   	
   	###### main code
-		SECFUNCexec --caller "FUNCsayStack" --quiet "$@"
+		SECFUNCexecA --caller "FUNCsayStack" --quiet "$@"
   };export -f FUNCexecSS
   
   function FUNCisPidActive() { #generic check with info
@@ -80,7 +80,7 @@ function FUNCsayStack() {
 		# this is necessary as pid ids wrap at `cat /proc/sys/kernel/pid_max`
   	# the pid 'command' at `ps` must have this script filename
   	# this prevents this file from being sourced, see (*1) at the end...
-  	# do not use FUNCexecSS or SECFUNCexec here!
+  	# do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO why?
   	if ! ps -p $1 --no-headers -o command |grep -q "$_SECselfBaseName"; then
   		return 1
   	fi

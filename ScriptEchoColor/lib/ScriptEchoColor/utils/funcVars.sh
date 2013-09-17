@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+shopt -s expand_aliases
+
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
 # THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `echoc --libs-init`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
@@ -123,12 +125,13 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	#@@@R find /tmp -name "SEC.*.vars.tmp" -exec bash -c 'FUNCgetPidFromFileName "{}"' ";" >$l_output 2>&1
 }
 function SECFUNCvarInit() { #help: generic vars initializer
-	#@@@R if ! $SECvarInitialized; then
-		SECFUNCvarClearTmpFiles
-		SECFUNCvarSetDB
-		SECFUNCvarReadDB #important to update vars on parent shell when using eval `echoc --libs-init`
-	#@@@R 	SECvarInitialized=true
-	#@@@R fi
+	SECFUNCdbgFuncInA
+	
+	SECFUNCvarClearTmpFiles
+	SECFUNCvarSetDB
+	SECFUNCvarReadDB #important to update vars on parent shell when using eval `echoc --libs-init` #TODO are you sure?
+	
+	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarEnd() { #help: generic vars finalizer
 	SECFUNCvarEraseDB
@@ -324,15 +327,15 @@ function SECFUNCvarIsSet() { #help: equal to: SECFUNCvarIsRegistered
 	SECFUNCvarIsRegistered $1
 	return $?
 }
-function SECFUNCdebugMsg() {
-	echo "SEC_DEBUG(`basename "$0"`): $@" >>/dev/stderr
-}
-function SECFUNCdebugMsgWaitAkey() {
-	if $SEC_DEBUG_WAIT;then
-		SECFUNCdebugMsg "$@, press a key to continue..."
-		read -n 1
-	fi
-}
+#function SECFUNCdebugMsg() {
+#	echo "SEC_DEBUG(`basename "$0"`): $@" >>/dev/stderr
+#}
+#function SECFUNCdebugMsgWaitAkey() {
+#	if $SEC_DEBUG_WAIT;then
+#		SECFUNCechoDbgA "$@, press a key to continue..."
+#		read -n 1
+#	fi
+#}
 function SECFUNCvarWaitValue() { #help: [--not] <var> <value> [delay=1]: wait until var has specified value. Also get the var. --not if the value differs from specified.
 	local l_bNot=false
 	while true; do
@@ -381,7 +384,7 @@ function SECFUNCvarWaitRegister() { #help: <var> [delay=1]: wait var be stored. 
 	
 	while true; do
 		SECFUNCvarReadDB $1
-		if $SEC_DEBUG;then local l_value=`SECFUNCvarGet $1`;SECFUNCdebugMsg "$FUNCNAME: $1=$l_value";fi
+		if $SEC_DEBUG;then local l_value=`SECFUNCvarGet $1`;SECFUNCechoDbgA "$1=$l_value";fi
 		if SECFUNCvarIsSet $1; then
 			SECFUNCvarGet $1 #this is to also create the variable on caller
 			break;
@@ -424,7 +427,7 @@ function SECFUNCvarPrepareArraysToExport() { #private:
 			eval "export $l_varPlDoUsThVaNaPl"
 			# collect exportable array in string mode
 			local l_export=`declare -p $l_varPlDoUsThVaNaPl |sed "s'^declare -ax $l_varPlDoUsThVaNaPl'export exportedArray_${l_varPlDoUsThVaNaPl}'"`
-			if $SEC_DEBUG;then SECFUNCdebugMsg "$FUNCNAME: l_export=$l_export";fi
+			if $SEC_DEBUG;then SECFUNCechoDbgA "l_export=$l_export";fi
 			
 			# creates temp string var representing the array to be restored as array at SECFUNCvarRestoreArray (on a child shell)
 			eval "$l_export"
@@ -468,7 +471,7 @@ function SECFUNCvarRegister() { #private:
 	SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
 	SECFUNCvarPrepareArraysToExport $1
 	
-	SECFUNCvarWriteDB SECvars
+	SECFUNCvarWriteDB SECvars #TODO freezes with: SECFUNCvarWriteDBwithLock SECvars
 }
 
 function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary file with exclusive lock
@@ -476,7 +479,7 @@ function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary f
 	#SECFUNCvarPrepareArraysToExport #redundant (look at SECFUNCvarRegister)?
 	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestore_SECvars_Array;SECFUNCvarWriteDB"
 	#flock -x "$SECvarFile" bash -c "SECFUNCvarWriteDBwithLockHelper"
-	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB"
+	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB $@"
 	
 	##### TEST CASE (concurrent write DB test):
   # SEC_DEBUG=true
@@ -507,8 +510,10 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	# ready to write the DB!
 #	SECFUNCvarWriteDB;
 #}
-function SECFUNCvarWriteDB() { #private: 
-	if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: writing DB file: '$SECvarFile'"; fi
+function SECFUNCvarWriteDB() { #private: IMPORTANT! USE SECFUNCvarWriteDBwithLock instead!!!
+	SECFUNCdbgFuncInA
+	
+	SECFUNCechoDbgA "'$SECvarFile'"
 	
 	local l_filter=$1; #l_filter="" #@@@TODO FIX FILTER FUNCTIONALITY THAT IS STILL BUGGED!
 	local l_allVars=()
@@ -531,7 +536,7 @@ function SECFUNCvarWriteDB() { #private:
 			SECvarOptWriteAlways
 		)
 		l_allVars+=(${SECvars[@]})
-		if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: l_allVars=(${l_allVars[@]})"; fi
+		SECFUNCechoDbgA "l_allVars=(${l_allVars[@]})"
 		#declare |grep "^`echo ${l_allVars[@]} |sed 's" "=\\\|^"g'`" >"$SECvarFile"
 		#if((${#SECvars[*]}==0));then SECvars=();fi
 		echo -n >"$SECvarFile" #clean db file
@@ -552,20 +557,27 @@ function SECFUNCvarWriteDB() { #private:
 #  fi
   
 	if $SEC_DEBUG && $SEC_DEBUG_SHOWDB; then 
-		SECFUNCdebugMsg "$FUNCNAME: Show DB $SECvarFile"
+		SECFUNCechoDbgA "Show DB $SECvarFile"
 		cat "$SECvarFile" >>/dev/stderr
-		SECFUNCdebugMsgWaitAkey "$FUNCNAME: "
+		if $SEC_DEBUG_WAIT;then
+			SECFUNCechoDbgA "press a key to continue..."
+			read -n 1
+		fi
 	fi
+	
+	SECFUNCdbgFuncOutA
 }
 
 function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable value
+	SECFUNCdbgFuncInA
+	
 	l_bSkip=false
 	while [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--skip" ]];then #to skip reading only the specified variable
 			l_bSkip=true
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
-			return 1
+			SECreturnA 1
 		fi
 		shift
 	done
@@ -573,7 +585,7 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 	local l_filter="$1"
 	
 	if $SEC_DEBUG; then 
-		SECFUNCdebugMsg "$FUNCNAME: reading DB file: '$SECvarFile'"; 
+		SECFUNCechoDbgA "'$SECvarFile'"; 
 		if $SEC_DEBUG_SHOWDB;then
 			cat "$SECvarFile" >>/dev/stderr
 		fi
@@ -593,11 +605,13 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 	SECFUNCvarPrepare_SECvars_ArrayToExport #TODO: (GAMBIARRA) makes SECvars work again, understand why and fix.
 	#SECFUNCvarPrepareArraysToExport
 	#SECFUNCvarRestoreArrays
+	
+	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarEraseDB() { #help: 
   rm "$SECvarFile"
 }
-function SECFUNCvarGetFileMainName() { #help: <pid> returns the main executable name at variables filename
+function SECFUNCvarGetMainNameOfFileDB() { #help: <pid> returns the main executable name at variables filename
 	local l_pid=$1;
 	local l_fileFound=`find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
 	if [[ -n "$l_fileFound" ]];then 
@@ -608,7 +622,24 @@ function SECFUNCvarGetFileMainName() { #help: <pid> returns the main executable 
 	
 	return 0
 }
+function SECFUNCvarGetPidOfFileDB() { #help: <$SECvarFile> full DB filename
+#	if [[ -z "$1" ]];then
+#		SECFUNCechoErrA "missing SECvarFile filename to extract pid from..."
+#		return 1
+#	fi
+	
+	local l_output=`echo "$1" |sed -r 's".*[.]([[:digit:]]*)[.]vars[.]tmp$"\1"'`
+	if [[ -z "$l_output" ]];then
+		SECFUNCechoErrA "invalid SECvarFile '$1' filename..."
+		return 1
+	fi
+	
+	echo "$l_output"
+}
+
 function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file.
+	SECFUNCdbgFuncInA
+	
 	# params
 	local l_pid="$1"
 	#local l_basename="$2"
@@ -621,9 +652,11 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	local l_basename=""
 	
 	# work
+	SECFUNCechoDbgA "l_varFileAutomatic=$l_varFileAutomatic"
+	
 	#if [[ -z "$l_basename" ]];then
 		if [[ -n "$l_pid" ]];then
-			l_basename=`SECFUNCvarGetFileMainName $l_pid`
+			l_basename=`SECFUNCvarGetMainNameOfFileDB $l_pid`
 			if [[ -z "$l_basename" ]];then
 				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: variables file does not exist for asked pid $l_pid..." >>/dev/stderr
 			fi
@@ -648,8 +681,20 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 		bSymlinkToOther=false
 		echo "SECWARN(`basename "$0"`:$FUNCNAME): SECvarFile '$l_varFileSymlinkToOther' for asked other pid $l_pid does not exist" >>/dev/stderr
 	fi
+	SECFUNCechoDbgA "bSymlinkToOther=$bSymlinkToOther"
 	
 	if [[ -n "${SECvarFile+dummyValue}" ]]; then #SECvarFile is set
+		if [[ ! -f "$SECvarFile" ]];then
+			local l_pidParent=`SECFUNCvarGetPidOfFileDB $SECvarFile`
+			if ps -p $l_pidParent >/dev/null 2>&1;then
+				SECFUNCechoWarnA "SECvarFile '$SECvarFile' should exist..."
+			fi
+			unset SECvarFile # parent pid died and file was already removed; this allows the creation of a new file below. This can be a problem on a situation where a parent spawns several childs that should intercommunicate and the parent dies before the first symlink to its DB file be created... is it a real/practical problem??
+		fi
+	fi
+	
+	if [[ -n "${SECvarFile+dummyValue}" ]]; then #SECvarFile is set
+		SECFUNCechoDbgA "SECvarFile is already set to $SECvarFile"
 		if $bSymlinkToOther;then
 			if [[ "$SECvarFile" == "$l_varFileAutomatic" ]];then
 				# This function is being called a second time with parameters set. This process variables file will now symlink to a file of another process.
@@ -666,8 +711,8 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 			if [[ "$SECvarFile" != "$l_varFileAutomatic" ]];then
 				# a child process will symlink to parent SECvarFile
 				local SECvarFileParent="$SECvarFile"
-				ln -sf "$SECvarFileParent" "$l_varFileAutomatic"
-				export SECvarFile="$l_varFileAutomatic" #IMPORTANT use export to set it because read and write DB are on child proccess
+				SECFUNCexecA ln -sf "$SECvarFileParent" "$l_varFileAutomatic"
+				export SECvarFile="$l_varFileAutomatic" #IMPORTANT use 'export' to set it properly because read and write DB are on child proccess
 			else
 				# equal means this function is being called again for this same pid/process, what is unexpected/redundant
 				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..." >>/dev/stderr; 
@@ -686,6 +731,8 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 			SECFUNCvarWriteDBwithLock #create the file
 		fi
 	fi
+	
+	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarUnitTest() {
 	echo "Test to set and get values:"

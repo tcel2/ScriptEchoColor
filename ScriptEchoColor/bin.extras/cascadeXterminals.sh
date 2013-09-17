@@ -26,6 +26,8 @@ renice -n 19 -p $$
 eval `echoc --libs-init`
 trap 'FUNCtrapInt' INT
 
+############### PARAMS
+
 SECFUNCvarSet --default basePosX=0
 SECFUNCvarSet --default basePosY=0
 bDaemon=false
@@ -90,6 +92,13 @@ function FUNCwait() {
 }
 
 ###################### MAIN CODE
+
+if $bDaemon;then
+	if ! SECFUNCuniqueLock; then
+		echoc -p "already running..."
+		exit 1
+	fi
+fi
 
 ###### CONFIG 
 

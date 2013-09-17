@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+shopt -s expand_aliases
+
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh"
 
