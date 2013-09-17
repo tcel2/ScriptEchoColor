@@ -24,17 +24,21 @@
 
 ################# INIT
 eval `echoc --libs-init`
+
 selfName=`basename "$0"`
 lockFile="/tmp/.seclock-$selfName"
 lockPid=`cat "$lockFile"`
+#echo lockPid=$lockPid
 isAlreadyRunning=false
-anIgnorePids=()
-if [[ -z "$lockPid" ]] || ! ps -p $lockPid 2>&1 >/dev/null; then
+if [[ -z "$lockPid" ]] || ! ps -p $lockPid >/dev/null 2>&1; then
 	isAlreadyRunning=false
 else
 	isAlreadyRunning=true
-	SECFUNCvarSetFileName $lockPid #allows intercommunication between proccesses started from non correlated parents
+	#allows intercommunication between proccesses started from different parents
+	SECFUNCvarSetFileName $lockPid
 fi
+
+anIgnorePids=()
 
 ############### CONFIG
 export tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
@@ -45,8 +49,9 @@ export tmprToMonitor="temp1"
 export maxDelay=30 #15
 export minimumWait=15 #5
 #export sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
-export sedTemperature='s"^'"$tmprToMonitor"':[[:blank:]]*[+-]([[:digit:]]*)[.][[:digit:]]*°C.*"\1"p' #use like: sensors |sed -nr "$sedTemperature"
+export sedTemperature='s"^'"$tmprToMonitor"':[[:blank:]]*[+-]([[:digit:]]*)[.][[:digit:]]*°C.*"\1"p' #use this way: sensors |sed -nr "$sedTemperature"
 #useOnlyThisPID="" #empty to find the highest cpu usage one
+SECFUNCvarSet --default bDebugFakeTmpr=false
 
 export SEC_SAYVOL=10
 
@@ -93,60 +98,98 @@ function FUNCinfo() {
 }
 
 function FUNCtmprAverage() {
-	local count=20 #each 10 = 1second
-	if [[ -n "$1" ]];then
-		count=$1
-		shift
+	local count=$1
+	
+	if [[ -z "$count" ]];then
+		count=20 #each 10 = 1second
 	fi
-	local scale=0 #1
-#	bc <<< `
-#		for((i=0;i<$count;i++)); do 
-#			sensors \
-#				|grep "$tmprToMonitor" \
-#				|sed -r "s;$tmprToMonitor(.*);\1;" \
-#				|tr -d ' :[:alpha:]°()=' \
-#				|sed -r 's"^([+-][[:digit:]]*[.][[:digit:]]).*"\1"';
-#			sleep 0.1;
-#		done |tr -d '\n' |sed "s|.*|scale=$scale;(0&)/$count|"`
-#	bc <<< `
-#		for((i=0;i<$count;i++)); do 
-#			sensors |sed -nr "$sedTemperature";
-#			sleep 0.1;
-#		done |tr -d '\n' |sed "s|.*|scale=$scale;(0&)/$count|"`
-	bc <<< `for((i=0;i<$count;i++)); do sensors |sed -nr "$sedTemperature"; sleep 0.1;done |tr '\n' '+' |sed "s|.*|scale=$scale;(&0)/$count|"`
+	
+	local scale=0 #local scale=1
+	bc <<< ` \
+		for((i=0;i<$count;i++)); do \
+			sensors |sed -nr "$sedTemperature"; \
+			sleep 0.1; \
+		done |tr '\n' '+' |sed "s|.*|scale=$scale;(&0)/$count|"`
 }
 
-function FUNCmonTmpr() {
-	#tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
-	tmprCurrent=`sensors |sed -nr "$sedTemperature"`
-};export -f FUNCmonTmpr
+#function FUNCmonTmpr() {
+#	#tmprCurrent=`sensors |sed -nr "$sedTemperature"`
+#	tmprCurrent=`FUNCtmprAverage 1`
+#};export -f FUNCmonTmpr
 
-function FUNClimitCpu() {
-	#echo "tmprLimit=$tmprLimit";exit
-	local pidToLimit=$1
+function FUNCchildLimCpuFastLoop() {
+	eval `echoc --libs-init`
+	SECFUNCvarWaitRegister pidToLimit
+	SECFUNCvarWaitRegister fSigStopDelay
+	SECFUNCvarWaitRegister fSigRunDelay
 	
+	SECFUNCdelay ${FUNCNAME}_maintenance --init
+	while true; do
+		if((`SECFUNCdelay ${FUNCNAME}_maintenance --getsec`>=1));then
+			#SECFUNCvarSet DEBUG_${FUNCNAME} "\$\$=$$ PPID=$PPID pidToLimit=$pidToLimit BASHPID=$BASHPID"
+			if ! ps -p $$ >/dev/null 2>&1; then break; fi
+			if ! ps -p $PPID >/dev/null 2>&1; then break; fi
+			if ! ps -p $pidToLimit >/dev/null 2>&1; then break; fi
+			SECFUNCvarReadDB
+			SECFUNCdelay ${FUNCNAME}_maintenance --init
+		fi
+		
+		if [[ "$fSigStopDelay" != "0.0" ]];then
+			kill -SIGSTOP $pidToLimit
+			sleep $fSigStopDelay
+		fi
+		if [[ "$fSigRunDelay" != "0.0" ]];then
+			kill -SIGCONT $pidToLimit
+			sleep $fSigRunDelay
+		fi
+	done
+}
+function FUNClimitCpu() {
+	#there exists this: `sudos cpulimit -v -p $pidToLimit -l 99` #but it doesnt care about temperature and also wont accept -l greater than 100 and... requires root/sudo access
+	
+	#echo "tmprLimit=$tmprLimit";exit
+	SECFUNCvarSet pidToLimit=$1
+	
+	# make main process ignore the pid
 	SECFUNCvarReadDB
 	anIgnorePids=(${anIgnorePids[@]} $pidToLimit)
 	SECFUNCvarSet anIgnorePids
 	
-	#sudos cpulimit -v -p $pidToLimit -l 99 #but not care about tmpr and also wont accept -l greater than 100...
-	
-	local nDelay=1
-	local bLimitCpu=false
 	SECFUNCdelay showTmpr --init
-	SECFUNCdelay chkPidRunning --init
+	SECFUNCdelay ${FUNCNAME}_maintenance --init
+	
 	bForceStop=false
 	bJustLimit=false
+	
 	nTmprStep=5
 	nJustLimitThreshold=$((nTmprStep*2))
 	nRunAgainThreshold=$((nJustLimitThreshold+nTmprStep))
-	fSigStopDelay=0.1
+	
+	fStepMin=0.05
+	fStepMax=0.5
+	SECFUNCvarSet fSigStopDelay=0.0
+	SECFUNCvarSet fSigRunDelay=$fStepMax
+	
+	FUNCchildLimCpuFastLoop& #another loop that complements this one!
+	echo "pid for FUNCchildLimCpuFastLoop is $!"
 	while true; do
-		if $bForceStop || $bJustLimit;then
-			tmprCurrent=`FUNCtmprAverage 10`
-		else
-			FUNCmonTmpr
+		if((`SECFUNCdelay ${FUNCNAME}_maintenance --getsec`>=1));then
+			if ! ps -p $pidToLimit >/dev/null 2>&1; then break; fi
+			SECFUNCvarReadDB
+			SECFUNCdelay ${FUNCNAME}_maintenance --init
 		fi
+		
+		#echo "DEBUG: tmprCurrentFake=$tmprCurrentFake"
+		if $bDebugFakeTmpr;then
+			tmprCurrent=$tmprCurrentFake
+		else
+			if $bForceStop || $bJustLimit;then
+				tmprCurrent=`FUNCtmprAverage 15`
+			else
+				tmprCurrent=`FUNCtmprAverage 3`
+			fi
+		fi
+		
 		if((`SECFUNCdelay showTmpr --getsec`>=3));then
 			if $bForceStop;then
 				echoc --say "stopped $tmprCurrent"
@@ -158,41 +201,29 @@ function FUNClimitCpu() {
 			SECFUNCdelay showTmpr --init
 		fi
 		
+		# from highest to lowest temperature limits
 		if((tmprCurrent>=tmprLimit));then
 			bForceStop=true
+			SECFUNCvarSet fSigStopDelay=$fStepMax
+			SECFUNCvarSet fSigRunDelay=0.0
+		elif((tmprCurrent>=(tmprLimit-(nJustLimitThreshold/2))));then
+			bJustLimit=true
+			SECFUNCvarSet fSigStopDelay=$fStepMax
+			SECFUNCvarSet fSigRunDelay=`SECFUNCbcPrettyCalc "$fStepMin+$fStepMin"`
 		elif((tmprCurrent>=(tmprLimit-nJustLimitThreshold)));then
 			bJustLimit=true
-			if((tmprCurrent>=(tmprLimit-(nJustLimitThreshold/2)))) || $bForceStop;then
-				fSigStopDelay=0.5 #make it use even less cpu
-			else
-				fSigStopDelay=0.1
-			fi
+			SECFUNCvarSet fSigStopDelay=$fStepMin
+			SECFUNCvarSet fSigRunDelay=$fStepMin
 		elif((tmprCurrent<=(tmprLimit-nRunAgainThreshold)));then
-			if((`FUNCtmprAverage 50`<=(tmprLimit-nRunAgainThreshold)));then
+			if((`FUNCtmprAverage 10`<=(tmprLimit-nRunAgainThreshold)));then #to make it sure
 				bForceStop=false
 				bJustLimit=false
+				SECFUNCvarSet fSigStopDelay=0.0
+				SECFUNCvarSet fSigRunDelay=$fStepMax
 			fi
 		fi
 		
-		if $bForceStop;then
-			kill -SIGSTOP $pidToLimit
-			sleep 0.1
-		elif $bJustLimit;then
-			kill -SIGSTOP $pidToLimit
-			sleep $fSigStopDelay
-			kill -SIGCONT $pidToLimit
-			sleep 0.1
-		else
-			kill -SIGCONT $pidToLimit
-			sleep 0.1
-		fi
-		
-		if((`SECFUNCdelay chkPidRunning --getsec`>5));then
-			if ! ps -p $pidToLimit 2>&1 >/dev/null;then
-				break
-			fi
-			SECFUNCdelay chkPidRunning --init
-		fi
+		sleep 0.5
 	done
 }
 
@@ -214,29 +245,54 @@ while [[ "${1:0:1}" == "-" ]];do
 				echoc -p "not running!"
 				exit 1
 			fi
-		elif [[ "$1" == "--limitcpu" ]];then #help limit cpu usage for specified pid to lower temperature
+		elif [[ "$1" == "--debugfaketmpr" ]];then #help <FakeTemperature> set a fake temperature for debug purposes. Set FakeTemperature to "off" to disable it and use real temperature again.
+			shift
+			
+			if [[ "$1" == "off" ]];then
+				SECFUNCvarSet bDebugFakeTmpr=false
+				exit
+			fi
+			
+			if [[ -z "$1" ]];then
+				echoc -p "missing fake temperature parameter"
+				exit 1
+			fi
+			SECFUNCvarSet bDebugFakeTmpr=true
+			SECFUNCvarSet tmprCurrentFake $1
+			exit
+		elif [[ "$1" == "--limitcpu" ]];then #help <pid> limit cpu usage for specified pid to lower temperature
 			pidToLimit=$2
-			if ps -p $pidToLimit 2>&1 >/dev/null;then
+			if ps -p $pidToLimit >/dev/null 2>&1;then
 				FUNClimitCpu $pidToLimit
+			else
+				echoc -p "missing valid pid"
+				$0 --help |grep "\-\-limitcpu" >/dev/stderr
+				exit 1
 			fi
 			exit
 		elif [[ "$1" == "--tmpr" ]];then #help get temperature
-			FUNCmonTmpr
+			tmprCurrent=`FUNCtmprAverage 15`
 			echo "$tmprCurrent"
 			exit
 		elif [[ "$1" == "--help" ]];then #help
 			echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time."
 			echo "It is limited to the current user processes."
 			echo "pre-alpha, later on it should monitor all temperatures etc etc.."
-			echo "PARAMS: tmprLimit minPercCPU"
-			grep "#help" $0 |grep -v grep
+			#echo "PARAMS: tmprLimit minPercCPU"
+			echo
+			echo "Options:"
+			grep "#help" $0 |grep -v grep |sed -r 's/.*"(--[[:alnum:]]*)" \]\];then #help[ ]*(.*)/\t\1\t\t\2/'
 			exit
-		elif [[ "$1" == "--debugtest" ]];then #help
-			echo $SECvarFile
+		else
+			echoc -p "invalid option: $1"
+			exit 1
 		fi
 	else
 		if [[ "$1" == "-d" ]];then
 			echo "dummy"
+		else
+			echoc -p "invalid option: $1"
+			exit 1
 		fi
 	fi
 	shift
@@ -259,7 +315,12 @@ warningDelay=60
 beforeLimitWarn=1
 while true; do
 	SECFUNCvarReadDB
-	FUNCmonTmpr
+	if $bDebugFakeTmpr;then
+		tmprCurrent=$tmprCurrentFake
+	else
+		tmprCurrent=`FUNCtmprAverage 3`
+	fi
+	
 	if((maxTemperature<tmprCurrent));then
 		maxTemperature=$tmprCurrent
 	fi

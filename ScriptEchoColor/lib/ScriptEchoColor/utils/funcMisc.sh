@@ -361,8 +361,8 @@ function SECFUNCdelay() {
 	
 	local index="$FUNCNAME"
 	if [[ -n "$1" ]] && [[ "${1:0:2}" != "--" ]];then
-		if [[ -n `echo "$1" |tr -d '[:alnum:]'` ]];then
-			SECFUNCechoErr --caller "${FUNCNAME}" "invalid index id '$1', only allowed alphanumeric id."
+		if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
+			SECFUNCechoErr --caller "${FUNCNAME}" "invalid index id '$1', only allowed alphanumeric id and underscores."
 			return 1
 		fi
 		index="$1"

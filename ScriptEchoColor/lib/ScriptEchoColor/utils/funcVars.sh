@@ -53,7 +53,7 @@ fi
 #@@@R if [[ "$SECvarInitialized" != "true" ]]; then
 #@@@R 	export SECvarInitialized=false #initialized at SECFUNCvarInit
 #@@@R fi
-### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB() !!!!!!!!!!!!!
+### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
 function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no related pid\n\tOptions:\n\t--verbose shows what is happening
 	local l_verbose=""
@@ -274,16 +274,18 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	if ! $l_bArray; then
 		local l_bSetVarValue=false
 		if $l_bDefault; then
-			# info: substitution: with "-" VAR has priority; with "+" ALTERNATE has priority
-			#  [ -n "${VAR+ALTERNATE}" ] # Fails if VAR is unset
-			#  [ -n "${VAR:+ALTERNATE}" ] # Fails if VAR is unset or empty
-			#  [ -n "${VAR-ALTERNATE}" ] # Succeeds if VAR is unset
-			#  [ -n "${VAR:-ALTERNATE}" ] # Succeeds if VAR is unset or empty
-			#  ${VAR:=newValue} #assign newValue to VAR in case it is unset or empty, and substitute it
-			#  ${VAR:?errorMessage} #if VAR is unset or empty, terminate shell script with errorMessage
+			########################################################
+			## info: substitution: with "-" VAR has priority; with "+" ALTERNATE has priority
+			##  [ -n "${VAR+ALTERNATE}" ] # Fails if VAR is unset
+			##  [ -n "${VAR:+ALTERNATE}" ] # Fails if VAR is unset or empty
+			##  [ -n "${VAR-ALTERNATE}" ] # Succeeds if VAR is unset
+			##  [ -n "${VAR:-ALTERNATE}" ] # Succeeds if VAR is unset or empty
+			##  ${VAR:=newValue} #assign newValue to VAR in case it is unset or empty, and substitute it
+			##  ${VAR:?errorMessage} #if VAR is unset or empty, terminate shell script with errorMessage
+			########################################################
 		
 			# set default value if variable is not set yet
-			if ! eval "[[ -n \${$l_varPlDoUsThVaNaPl+someVarName} ]]"; then 
+			if ! eval "[[ -n \${$l_varPlDoUsThVaNaPl+dummyValue} ]]"; then 
 				l_bSetVarValue=true
 			fi
 		else
@@ -403,7 +405,7 @@ function SECFUNCvarPrepare_SECvars_ArrayToExport() { #private:
 function SECFUNCvarRestore_SECvars_Array() { #private: 
 	# IMPORTANT: SECFUNCvarReadDB makes this function useless...
 	# if SECvarsTmp is set, recover its value to array on child shell
-	if [[ -n ${SECvarsTmp+dummy} ]]; then
+	if [[ -n ${SECvarsTmp+dummyValue} ]]; then
 		eval 'SECvars='$SECvarsTmp #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
 	fi
 }
@@ -427,7 +429,7 @@ function SECFUNCvarPrepareArraysToExport() { #private:
 			# creates temp string var representing the array to be restored as array at SECFUNCvarRestoreArray (on a child shell)
 			eval "$l_export"
 			
-			if ! echo "$SECexportedArraysList" |grep -w "$l_varPlDoUsThVaNaPl" 2>&1 >/dev/null; then
+			if ! echo "$SECexportedArraysList" |grep -w "$l_varPlDoUsThVaNaPl" >/dev/null 2>&1; then
 				if((${#SECexportedArraysList[*]}>0));then
 					export SECexportedArraysList="$SECexportedArraysList "
 				fi
@@ -438,7 +440,7 @@ function SECFUNCvarPrepareArraysToExport() { #private:
 }
 function SECFUNCvarRestoreArrays() { #private: 
 	# if SECexportedArraysList is set, work with it to recover arrays on child shell
-	if [[ -n ${SECexportedArraysList+dummy} ]]; then
+	if [[ -n ${SECexportedArraysList+dummyValue} ]]; then
 		eval `declare -p $SECexportedArraysList |sed -r 's/^declare -x exportedArray_([[:alnum:]_]*)=(.*)/eval \1=\`echo \2\`;/'`
 	fi
 }
@@ -506,7 +508,7 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	SECFUNCvarWriteDB;
 #}
 function SECFUNCvarWriteDB() { #private: 
-	if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: writing DB file: $SECvarFile"; fi
+	if $SEC_DEBUG; then SECFUNCdebugMsg "$FUNCNAME: writing DB file: '$SECvarFile'"; fi
 	
 	local l_filter=$1; #l_filter="" #@@@TODO FIX FILTER FUNCTIONALITY THAT IS STILL BUGGED!
 	local l_allVars=()
@@ -522,10 +524,10 @@ function SECFUNCvarWriteDB() { #private:
 		# do not save these (to prevent them being changed at read db):
 		#SEC_DEBUG
 		#SEC_DEBUG_SHOWDB
+		#SECvarFile
 		# this seems safe!  	
 		l_allVars=(
 			SECvars
-			SECvarFile
 			SECvarOptWriteAlways
 		)
 		l_allVars+=(${SECvars[@]})
@@ -571,7 +573,7 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 	local l_filter="$1"
 	
 	if $SEC_DEBUG; then 
-		SECFUNCdebugMsg "$FUNCNAME: reading DB file: $SECvarFile"; 
+		SECFUNCdebugMsg "$FUNCNAME: reading DB file: '$SECvarFile'"; 
 		if $SEC_DEBUG_SHOWDB;then
 			cat "$SECvarFile" >>/dev/stderr
 		fi
@@ -595,30 +597,196 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 function SECFUNCvarEraseDB() { #help: 
   rm "$SECvarFile"
 }
-function SECFUNCvarSetFileName() { #help: [pid] tmp file is automatic
+function SECFUNCvarGetFileMainName() { #help: <pid> returns the main executable name at variables filename
+	local l_pid=$1;
+	local l_fileFound=`find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
+	if [[ -n "$l_fileFound" ]];then 
+		echo $l_fileFound |sed -r "s;^/tmp/SEC[.](.*)[.]$l_pid[.]vars[.]tmp$;\1;"
+	else
+		return 1
+	fi
+	
+	return 0
+}
+function SECFUNCvarSetFileName() { #help: [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars file.
+	# params
 	local l_pid="$1"
+	#local l_basename="$2"
 	
-	# if pid info is not set, get current script pid
-	if [[ -z "$l_pid" ]]; then
-		l_pid=$$
+	# config
+	local l_pathTmp="/tmp"
+	local l_prefix="SEC"
+	local l_sufix="vars.tmp"
+	local l_varFileAutomatic="$l_pathTmp/$l_prefix.`basename "$0"`.$$.$l_sufix"
+	local l_basename=""
+	
+	# work
+	#if [[ -z "$l_basename" ]];then
+		if [[ -n "$l_pid" ]];then
+			l_basename=`SECFUNCvarGetFileMainName $l_pid`
+			if [[ -z "$l_basename" ]];then
+				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: variables file does not exist for asked pid $l_pid..." >>/dev/stderr
+			fi
+		else
+			l_basename=`basename "$0"`
+		fi
+	#fi
+	
+	local l_varFileSymlinkToOther=""
+	if [[ -n "$l_pid" ]];then
+		local l_varFileSymlinkToOther="$l_pathTmp/$l_prefix.$l_basename.$l_pid.$l_sufix"
 	fi
 	
-	# if file vars is already set, prevent doing it again! so nested/child scripts will stay with the same file!!!
-	local l_varFile="/tmp/SEC.`basename "$0"`.$l_pid.vars.tmp"
-	if [[ ! -n "${SECvarFile+x}" ]]; then
-	  export SECvarFile="$l_varFile"
-	  #@@@R SECFUNCvarWriteDBwithLock #initially empty
+	local bSymlinkToOther=true
+	if [[ ! -n "$l_pid" ]];then
+		bSymlinkToOther=false
+	elif ! ps -p $l_pid >/dev/null 2>&1;then
+		bSymlinkToOther=false
+		echo "SECWARN(`basename "$0"`:$FUNCNAME): asked pid $l_pid is not running" >>/dev/stderr
+	#elif [[ ! -n `find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
+	elif [[ ! -f "$l_varFileSymlinkToOther" ]];then
+		bSymlinkToOther=false
+		echo "SECWARN(`basename "$0"`:$FUNCNAME): SECvarFile '$l_varFileSymlinkToOther' for asked other pid $l_pid does not exist" >>/dev/stderr
 	fi
+	
+	if [[ -n "${SECvarFile+dummyValue}" ]]; then #SECvarFile is set
+		if $bSymlinkToOther;then
+			if [[ "$SECvarFile" == "$l_varFileAutomatic" ]];then
+				# This function is being called a second time with parameters set. This process variables file will now symlink to a file of another process.
+				# no need to first remove the old existing SECvarFile as it will be overwritten
+				if [[ ! -f "$SECvarFile" ]];then
+					echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: SECvarFile '$SECvarFile' should exist..." >>/dev/stderr;
+				fi
+				ln -sf "$l_varFileSymlinkToOther" "$SECvarFile"
+			else
+				# this will only happen if a child first call to this function has parameters, what is unexpected...
+				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: a child first call to this function has parameters that point to another pid/proccess (SECvarFile '$SECvarFile' != l_varFileAutomatic '$l_varFileAutomatic')..." >>/dev/stderr; 
+			fi
+		else #not symlink to other
+			if [[ "$SECvarFile" != "$l_varFileAutomatic" ]];then
+				# a child process will symlink to parent SECvarFile
+				local SECvarFileParent="$SECvarFile"
+				ln -sf "$SECvarFileParent" "$l_varFileAutomatic"
+				export SECvarFile="$l_varFileAutomatic" #IMPORTANT use export to set it because read and write DB are on child proccess
+			else
+				# equal means this function is being called again for this same pid/process, what is unexpected/redundant
+				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..." >>/dev/stderr; 
+			fi
+		fi
+	else #SECvarFile is not set (unset)
+		# if SECvarFile is not set, it does not exist, will be the first file and the real file (not symlink); happens on parentest initialization
+		if [[ -L "$l_varFileAutomatic" ]] || [[ -f "$l_varFileAutomatic" ]];then 
+			echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: automatic SECvarFile '$l_varFileAutomatic' should not exist..." >>/dev/stderr; 
+		fi
+		
+		export SECvarFile="$l_varFileAutomatic" #IMPORTANT use export to set it because read and write DB are on child proccess
+		if $bSymlinkToOther;then
+			ln -sf "$l_varFileSymlinkToOther" "$SECvarFile"
+		else
+			SECFUNCvarWriteDBwithLock #create the file
+		fi
+	fi
+}
+function _SECFUNCvarSetFileName() { #help: [pid] [basename] the variables file is automatically set, but if pid and basename are specified, it allows this process to intercomunicate with that pid process thru the vars file. 'basename' can be automatic in case proccess has same name like a child instance of a same script.
+#	# params
+#	local l_pid="$1"
+#	local l_basename="$2"
+#	
+#	# config
+#	local l_pathTmp="/tmp"
+#	local l_prefix="SEC"
+#	local l_sufix="vars.tmp"
+#	
+#	# work
+#	if [[ -z "$l_basename" ]];then
+#		l_basename=`basename "$0"`
+#	fi
+#	
+#	local l_varFileForce=""
+#	if [[ -n "$l_pid" ]];then
+#		local l_varFileForce="$l_pathTmp/$l_prefix.$l_basename.$l_pid.$l_sufix"
+#	fi
+#	
+#	local bForceFileName=true
+#	if [[ ! -n "$l_pid" ]];then
+#		bForceFileName=false
+#	elif ! ps -p $l_pid >/dev/null 2>&1;then
+#		bForceFileName=false
+#		echo "SECWARN(`basename "$0"`:$FUNCNAME): asked pid $l_pid is not running" >>/dev/stderr
+#	#elif [[ ! -n `find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
+#	elif [[ ! -f "$l_varFileForce" ]];then
+#		bForceFileName=false
+#		echo "SECWARN(`basename "$0"`:$FUNCNAME): SECvarFile for asked pid $l_pid does not exist" >>/dev/stderr
+#	fi
+#	
+#	local l_varFile=""
+#	if $bForceFileName;then
+#		l_varFile=$l_varFileForce
+#	else
+#		# if pid info is not set, get current script pid
+#		l_pid=$$
+#		# l_basename is already set up there...
+#		l_varFile="$l_pathTmp/$l_prefix.$l_basename.$l_pid.$l_sufix"
+#	fi
+#	
+#	if [[ -n "${SECvarFile+dummyValue}" ]]; then #SECvarFile is set
+#		if [[ "$SECvarFile" != "$l_varFile" ]];then #prevents mess
+#			if $bForceFileName;then
+#				# already set but a new name is being required
+#				
+#			else #not forced means automatic filename setup on initialization
+#				# already set by parent pid/process
+#				local SECvarFileParent="$SECvarFile"
+#				if [[ -L "$l_varFile" ]] || [[ -f "$l_varFile" ]];then 
+#					echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: automatic SECvarFile already exists..." >>/dev/stderr; 
+#				fi
+#				ln -sf "$SECvarFileParent" "$l_varFile"
+#				export SECvarFile="$l_varFile"
+#			fi
+#		fi
+#	else #SECvarFile is not set (unset)
+#		
+#	fi
+	
+#	#USE SYMLINKS INSTEAD, BAD IDEA -> so, if SECvarFile is already set, prevent doing it again; so nested/child scripts will stay with the same file!!!
+#	if [[ -n "${SECvarFile+dummyValue}" ]]; then
+#		# if already SECvarFile is already set, it is from the parent, so make a symlink to it
+#		# if there is already a file ($SECvarFile) from a parent pid, create a symlink (with the name of this child pid) to it, so SECFUNCvarClearTmpFiles know not to rm in case parent pid dies
+#		if [[ "$SECvarFile" != "$l_varFile" ]];then
+#			ln -sf "$SECvarFile" "$l_varFile"
+#		fi
+#		SECvarFile="$l_varFile"
+#		
+#		local SECvarFileParent
+#		SECvarFileParent=$SECvarFile
+#		export SECvarFile="$l_varFile"
+#		ln -sf "$SECvarFileParent" "$SECvarFile"
+#	else
+#		# if SECvarFile is unset (not set) so there is no parent with SEC variables enabled; so set it to l_varFile
+#	  export SECvarFile="$l_varFile"
+#	  #@@@R SECFUNCvarWriteDBwithLock #initially empty
+#		if $bForceFileName;then
+#			# in this case, the script asked to change its SECvarFile to the specified other pid SECvarFile (defined by l_varFile), so both processes can intercomunicate!
+#			rm -f "$SECvarFile"
+#			ln -sf "$l_varFile" "$SECvarFile"
+#		fi
+#	fi
 	
 	# make sure file exists
 	if [[ ! -f "$SECvarFile" ]];then
-	  SECFUNCvarWriteDBwithLock #initially empty
+		SECFUNCvarWriteDBwithLock #initially empty
 	fi
 	
-	# if there is already a file, create a symlink to it to SECFUNCvarClearTmpFiles know not to rm in case parent pid dies
-	if [[ "$l_varFile" != "$SECvarFile" ]]; then
-		ln -sf "$SECvarFile" "$l_varFile"
-	fi
+#	if [[ "$l_varFile" != "$SECvarFile" ]]; then
+#		if $bForceFileName;then
+#			# in this case, the script asked to change its SECvarFile to the specified other pid SECvarFile (defined by l_varFile), so both processes can intercomunicate!
+#			rm -f "$SECvarFile"
+#			ln -sf "$l_varFile" "$SECvarFile"
+#		else
+#			# if there is already a file ($SECvarFile) from a parent pid, create a symlink (with the name of this child pid) to it, so SECFUNCvarClearTmpFiles know not to rm in case parent pid dies
+#			ln -sf "$SECvarFile" "$l_varFile"
+#		fi
+#	fi
 }
 function SECFUNCvarUnitTest() {
 	echo "Test to set and get values:"
