@@ -35,7 +35,7 @@ if [[ -z "$lockPid" ]] || ! ps -p $lockPid >/dev/null 2>&1; then
 else
 	isAlreadyRunning=true
 	#allows intercommunication between proccesses started from different parents
-	SECFUNCvarSetFileName $lockPid
+	SECFUNCvarSetDB $lockPid
 fi
 
 anIgnorePids=()
