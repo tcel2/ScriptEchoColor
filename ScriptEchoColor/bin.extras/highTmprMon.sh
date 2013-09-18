@@ -312,8 +312,8 @@ if [[ -n "$2" ]]; then minPercCPU=$2; fi
 if $isAlreadyRunning; then
 	echoc -p "already running!"
 	exit 1
-else
-	echo $$ >"$lockFile"
+#else
+#	echo $$ >"$lockFile"
 fi
 
 maxTemperature=0
