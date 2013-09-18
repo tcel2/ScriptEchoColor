@@ -27,6 +27,7 @@ strFile="$1"
 
 if [[ -z "$strFile" ]] || [[ "$strFile" == "--help" ]]; then
   echo -e "$0(pid $$)\a" >/dev/stderr
+  echo " IMPORTANT: prefer using funcMisc.sh->SECFUNCfileLock(); `basename $0` will deprecate some day..."
   echo "  Parameters: <[PATH/]FILENAME>" >/dev/stderr
   echo "  A file named \"[PATH/]FILENAME.lock\" will be created." >/dev/stderr
   echo >/dev/stderr

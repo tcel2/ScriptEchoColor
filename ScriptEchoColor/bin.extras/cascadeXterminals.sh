@@ -94,7 +94,9 @@ function FUNCwait() {
 ###################### MAIN CODE
 
 if $bDaemon;then
-	if ! SECFUNCuniqueLock; then
+	if SECFUNCuniqueLock; then
+		SECFUNCvarSetDB -f
+	else
 		echoc -p "already running..."
 		exit 1
 	fi

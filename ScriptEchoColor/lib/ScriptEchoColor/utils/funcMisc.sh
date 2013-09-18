@@ -24,8 +24,9 @@
 
 shopt -s expand_aliases
 
-export _SECselfFile_funcMisc="`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-export _SECaliasPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),l$LINENO'
+#export _SECselfFile_funcMisc="`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+export _SECselfFile_funcMisc="`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
+export _SECaliasPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
@@ -432,6 +433,111 @@ function SECFUNCdelay() {
 	done
 	
 	SECFUNCdelay $index --get #default
+}
+
+function SECFUNCfileLock() {
+	local l_bUnlock=false
+	while [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
+			echo "Creates a lock file for the specified file."
+			echo "Params: <realFile> cannot be a symlink or a directory"
+			
+			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			return
+		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
+			l_bUnlock=true
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			return 1
+		fi
+		shift
+	done
+	
+	local l_file="$1" #can be with full path
+	if [[ ! -f "$l_file" ]];then
+		SECFUNCechoErrA "file '$l_file' does not exist (if symlink must point to a file)"
+		return 1
+	fi
+	
+	if [[ "${l_file:0:1}" != "/" ]];then
+		l_file="`pwd`/$l_file"
+	fi
+	
+	local l_sedMd5sumOnly='s"([[:alnum:]]*) .*"\1"'
+	local l_md5sum=`echo "$l_file" |md5sum |sed -r "$l_sedMd5sumOnly"`
+	local l_fileLock="/tmp/.SEC.FileLock.$l_md5sum.lock"
+	local l_fileLockPid="/tmp/.SEC.FileLock.$l_md5sum.lock.pid"
+	local l_lockingPid=-1 #no pid can be -1 right?
+	
+	function SECFUNCfileLock_removeLock() {
+		if [[ -f "$l_fileLock" ]];then
+			rm "$l_fileLock"
+		fi
+		if [[ -f "$l_fileLockPid" ]];then
+			rm "$l_fileLockPid"
+		fi
+	}
+	
+	function SECFUNCfileLock_validateLock() {
+		#TODO use find to validate all lock files for all pid as maintenance each 10minutes (in some way...).
+		# validate lock files
+		if [[ -f "$l_fileLockPid" ]];then
+			# if locking pid is missing (for any reason), remove lock
+			if [[ ! -f "$l_fileLockPid" ]];then
+				SECFUNCechoWarnA "Locking pid file '$l_fileLockPid' is missing, for file '$l_file', removing lock..."
+				SECFUNCfileLock_removeLock
+			else
+				l_lockingPid=`cat "$l_fileLockPid"`
+		
+				# if pid died, remove locking files
+				if ! ps -p $l_lockingPid >/dev/null 2>&1;then
+					SECFUNCechoDbgA "Pid '$l_lockingPid' died, removing lock '$l_fileLock', for file '$l_file'..."
+					SECFUNCfileLock_removeLock
+				fi
+			fi
+		fi
+	}
+	SECFUNCfileLock_validateLock
+	
+	if $l_bUnlock;then
+		if [[ -L "$l_fileLock" ]];then
+			if(($l_lockingPid==$$));then
+				SECFUNCfileLock_removeLock
+				return 0
+			else
+				SECFUNCechoWarnA "Cant unlock. File '$l_file' was locked by pid $l_lockingPid..."
+				return 1
+			fi
+		else
+			if [[ -f "$l_fileLock" ]];then
+				SECFUNCechoErrA "lock file '$l_fileLock' should be a symlink..."
+				return 1
+			else
+				SECFUNCechoWarnA "lock file '$l_fileLock' is missing, already unlocked..."
+				return 0
+			fi
+		fi
+	else
+		if(($l_lockingPid==$$));then
+			SECFUNCechoWarnA "file '$l_file' is already locked with '$l_fileLock' by this pid $$..."
+			return 0
+		fi
+		
+		#wait for lock to be released and lock it up!
+		local l_count=0
+		while ! ln -s "$l_file" "$l_fileLock" >/dev/null 2>&1;do
+			sleep 0.1
+			((l_count++))
+			if(( (l_count%30)==0 ));then
+				SECFUNCechoWarnA "for file '$l_file', cant get lock '$l_fileLock', for `SECFUNCbcPrettyCalc "$l_count*0.1"` seconds..."
+				#SECFUNCfileLock_validateLock
+			fi
+			SECFUNCfileLock_validateLock
+		done
+		echo "$$" >"$l_fileLockPid"
+	fi
+	
+	return 0
 }
 
 function SECFUNCuniqueLock() { 

@@ -203,22 +203,22 @@ if [[ ! -f "$strSpeedupFile" ]]; then
 fi
 source "$strSpeedupFile"
 
-function FUNCgetInstallPath() {
-	local installPath=`which "$strSelfName"`
-	if [[ -h "$installPath" ]]; then
-		installPath=`readlink "$installPath"`
-	fi
-	
-	installPath=`dirname "$installPath"` #remove the file name
-	
-	if [[ "`basename "$installPath"`" != "bin" ]];then
-		echo "$strSelfName should be at a '.../bin/' path!"
-		exit 1
-	fi
-	installPath=`dirname "$installPath"` #remove the bin path
-	
-	echo "$installPath"
-}  
+#function FUNCgetInstallPath() {
+#	local installPath=`which "$strSelfName"`
+#	if [[ -h "$installPath" ]]; then
+#		installPath=`readlink "$installPath"`
+#	fi
+#	
+#	installPath=`dirname "$installPath"` #remove the file name
+#	
+#	if [[ "`basename "$installPath"`" != "bin" ]];then
+#		echo "$strSelfName should be at a '.../bin/' path!"
+#		exit 1
+#	fi
+#	installPath=`dirname "$installPath"` #remove the bin path
+#	
+#	echo "$installPath"
+#}  
 
 #SECinstallPath="" # variable redefined at setup.cfg
 #strSetupCfgFile="$strCfgPath/setup.cfg"
@@ -253,7 +253,9 @@ function FUNCgetInstallPath() {
 #  
 #  source "$strSetupCfgFile"
 #fi
-SECinstallPath=`FUNCgetInstallPath`
+
+#SECinstallPath=`FUNCgetInstallPath`
+SECinstallPath=`secGetInstallPath.sh`
 
 FUNCdebug(){
   if [[ -z "$SEC_DEBUG" ]]; then
@@ -1390,7 +1392,8 @@ if $bOptGuessTermEmulator; then
 fi
 
 if $bOptInstallPath; then
-	FUNCgetInstallPath;
+	#FUNCgetInstallPath;
+	secGetInstallPath.sh
 	exit 0
 fi
 

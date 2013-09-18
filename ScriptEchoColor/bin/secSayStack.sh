@@ -26,7 +26,8 @@ export _SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECfileSayStack="/tmp/SEC.SayStack.tmp"
 export _SECcacheFolder="/$HOME/.ScriptEchoColor/SEC.SayStack.cache"
 
-source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+#source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
 
 function FUNCsayStack() {
 	####################### internal cfg of variables, functions and base initializations

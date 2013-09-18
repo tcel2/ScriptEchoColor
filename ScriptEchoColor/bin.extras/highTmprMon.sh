@@ -39,7 +39,9 @@ selfName=`basename "$0"`
 #	SECFUNCvarSetDB $lockPid
 #fi
 isAlreadyRunning=false
-if ! SECFUNCuniqueLock; then
+if SECFUNCuniqueLock; then
+	SECFUNCvarSetDB -f
+else
 	SECFUNCvarSetDB `SECFUNCuniqueLock`
 	isAlreadyRunning=true
 fi

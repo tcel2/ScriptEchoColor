@@ -272,7 +272,7 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	
 	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #to read DB is useful to keep current environment updated with changes made by other threads?
 	
-	SECFUNCvarRegisterWithLock $l_varPlDoUsThVaNaPl #must register before writing
+	SECFUNCvarRegister $l_varPlDoUsThVaNaPl #must register before writing
 	
 	if ! $l_bArray; then
 		local l_bSetVarValue=false
@@ -303,7 +303,7 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	if $l_bArray || $l_bSetVarValue; then
 		SECFUNCvarPrepareArraysToExport $l_varPlDoUsThVaNaPl
 		if $l_bWrite; then
-			SECFUNCvarWriteDBwithLock
+			SECFUNCvarWriteDB
 		fi
 	fi
   
@@ -452,42 +452,60 @@ function SECFUNCvarRestoreArrays() { #private:
 #	eval "$1=\$exportedArray_$1" #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
 #}
 
-function SECFUNCvarRegisterWithLock() { #private: 
+function SECFUNCvarRegister() { #private: 
 	if ! SECFUNCvarIsRegistered $1; then
-		# var is registered at child shell
-		flock -x "$SECvarFile" bash -c "SECFUNCvarRegister $1"
+		SECFUNCfileLock "$SECvarFile"
 		
-		# udpate this shell with registered var
 		SECFUNCvarReadDB SECvars
+		#SECFUNCvarLoadMissingVars
+		#SECFUNCvarReadDB
+	
+		# wont work as: export SECvars #because bash cant export arrays...
+		SECvars+=($1)
+		SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
+		SECFUNCvarPrepareArraysToExport $1
+	
+		SECFUNCvarWriteDB --skiplock SECvars
+		
+		SECFUNCfileLock --unlock "$SECvarFile" #IMPORTANT: MUST REACH THIS CODE LINE!
 	fi
 }
-function SECFUNCvarRegister() { #private: 
-	SECFUNCvarReadDB SECvars
-	#SECFUNCvarLoadMissingVars
-	#SECFUNCvarReadDB
-	
-	# wont work as: export SECvars #because bash cant export arrays...
-	SECvars+=($1)
-	SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
-	SECFUNCvarPrepareArraysToExport $1
-	
-	SECFUNCvarWriteDB SECvars #TODO freezes with: SECFUNCvarWriteDBwithLock SECvars
-}
+#function SECFUNCvarRegisterWithLock() { #private: 
+#	if ! SECFUNCvarIsRegistered $1; then
+#		# var is registered at child shell
+#		flock -x "$SECvarFile" bash -c "SECFUNCvarRegister $1"
+#		
+#		# udpate this shell with registered var
+#		SECFUNCvarReadDB SECvars
+#	fi
+#}
+#function SECFUNCvarRegister() { #private: 
+#	SECFUNCvarReadDB SECvars
+#	#SECFUNCvarLoadMissingVars
+#	#SECFUNCvarReadDB
+#	
+#	# wont work as: export SECvars #because bash cant export arrays...
+#	SECvars+=($1)
+#	SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
+#	SECFUNCvarPrepareArraysToExport $1
+#	
+#	SECFUNCvarWriteDB SECvars #TODO freezes with: SECFUNCvarWriteDBwithLock SECvars
+#}
 
-function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary file with exclusive lock
-	#SECFUNCvarPrepare_SECvars_ArrayToExport #redundant (look at SECFUNCvarRegister)?
-	#SECFUNCvarPrepareArraysToExport #redundant (look at SECFUNCvarRegister)?
-	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestore_SECvars_Array;SECFUNCvarWriteDB"
-	#flock -x "$SECvarFile" bash -c "SECFUNCvarWriteDBwithLockHelper"
-	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB $@"
-	
-	##### TEST CASE (concurrent write DB test):
-  # SEC_DEBUG=true
-  # function FUNCdoIt() { SECFUNCvarSet varTst$1=$1;echo $1; };
-  # for((i=0;i<10;i++));do FUNCdoIt $i& done
-  # cat $SECvarFile 	
-  #####
-}
+#function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary file with exclusive lock
+#	#SECFUNCvarPrepare_SECvars_ArrayToExport #redundant (look at SECFUNCvarRegister)?
+#	#SECFUNCvarPrepareArraysToExport #redundant (look at SECFUNCvarRegister)?
+#	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestore_SECvars_Array;SECFUNCvarWriteDB"
+#	#flock -x "$SECvarFile" bash -c "SECFUNCvarWriteDBwithLockHelper"
+#	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB $@"
+#	
+#	##### TEST CASE (concurrent write DB test):
+#  # SEC_DEBUG=true
+#  # function FUNCdoIt() { SECFUNCvarSet varTst$1=$1;echo $1; };
+#  # for((i=0;i<10;i++));do FUNCdoIt $i& done
+#  # cat $SECvarFile 	
+#  #####
+#}
 function SECFUNCvarLoadMissingVars() { #private: 
 	# load new vars list
 	SECFUNCvarReadDB SECvars;
@@ -510,8 +528,30 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	# ready to write the DB!
 #	SECFUNCvarWriteDB;
 #}
-function SECFUNCvarWriteDB() { #private: IMPORTANT! USE SECFUNCvarWriteDBwithLock instead!!!
+function SECFUNCvarWriteDB() {
 	SECFUNCdbgFuncInA
+	
+	local l_bSkipLock=false
+	while [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--skiplock" ]];then
+			l_bSkipLock=true
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			return 1
+		fi
+		shift
+	done
+	
+	local l_fileExist=false
+	if [[ -f "$SECvarFile" ]];then
+		l_fileExist=true
+	fi
+	
+	if $l_fileExist;then
+		if ! $l_bSkipLock;then
+			SECFUNCfileLock "$SECvarFile"
+		fi
+	fi
 	
 	SECFUNCechoDbgA "'$SECvarFile'"
 	
@@ -562,6 +602,12 @@ function SECFUNCvarWriteDB() { #private: IMPORTANT! USE SECFUNCvarWriteDBwithLoc
 		if $SEC_DEBUG_WAIT;then
 			SECFUNCechoDbgA "press a key to continue..."
 			read -n 1
+		fi
+	fi
+	
+	if $l_fileExist;then
+		if ! $l_bSkipLock;then
+			SECFUNCfileLock --unlock "$SECvarFile" #IMPORTANT: MUST REACH THIS CODE LINE!
 		fi
 	fi
 	
@@ -637,8 +683,28 @@ function SECFUNCvarGetPidOfFileDB() { #help: <$SECvarFile> full DB filename
 	echo "$l_output"
 }
 
-function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file.
+function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file. With --forcerealfile or -f it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
 	SECFUNCdbgFuncInA
+	
+	local l_bForceRealFile=false
+	while [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1:0:2}" == "--" ]];then
+			if [[ "$1" == "--forcerealfile" ]];then
+				l_bForceRealFile=true
+			else
+				SECFUNCechoErrA "invalid option $1"
+				return 1
+			fi
+		else
+			if [[ "$1" == "-f" ]];then
+				l_bForceRealFile=true
+			else
+				SECFUNCechoErrA "invalid option $1"
+				return 1
+			fi
+		fi
+		shift
+	done
 	
 	# params
 	local l_pid="$1"
@@ -651,14 +717,28 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	local l_varFileAutomatic="$l_pathTmp/$l_prefix.`basename "$0"`.$$.$l_sufix"
 	local l_basename=""
 	
-	# work
-	SECFUNCechoDbgA "l_varFileAutomatic=$l_varFileAutomatic"
+	# BEGIN WORK
+	SECFUNCechoDbgA "SECvarFile=$SECvarFile, l_varFileAutomatic=$l_varFileAutomatic, l_bForceRealFile=$l_bForceRealFile"
+	#SECFUNCechoDbgA "ls of l_varFileAutomatic: `ls -l $l_varFileAutomatic >/dev/null 2>&1`"
+	
+	if $l_bForceRealFile;then
+		if [[ -L "$l_varFileAutomatic" ]];then
+			rm "$l_varFileAutomatic"
+			unset SECvarFile
+		elif [[ -f "$l_varFileAutomatic" ]];then
+			# if parent pid dies before the symlink be created, a real file will have already been created
+			if [[ "$SECvarFile" == "$l_varFileAutomatic" ]];then
+				SECFUNCechoDbgA "no need to force as real file has already been created because the parent pid died before the symlink be created..."
+				return 0
+			fi
+		fi
+	fi
 	
 	#if [[ -z "$l_basename" ]];then
 		if [[ -n "$l_pid" ]];then
 			l_basename=`SECFUNCvarGetMainNameOfFileDB $l_pid`
 			if [[ -z "$l_basename" ]];then
-				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: variables file does not exist for asked pid $l_pid..." >>/dev/stderr
+				SECFUNCechoWarnA "not expected: variables file does not exist for asked pid $l_pid..."
 			fi
 		else
 			l_basename=`basename "$0"`
@@ -675,11 +755,11 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 		bSymlinkToOther=false
 	elif ! ps -p $l_pid >/dev/null 2>&1;then
 		bSymlinkToOther=false
-		echo "SECWARN(`basename "$0"`:$FUNCNAME): asked pid $l_pid is not running" >>/dev/stderr
+		SECFUNCechoWarnA "asked pid $l_pid is not running"
 	#elif [[ ! -n `find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
 	elif [[ ! -f "$l_varFileSymlinkToOther" ]];then
 		bSymlinkToOther=false
-		echo "SECWARN(`basename "$0"`:$FUNCNAME): SECvarFile '$l_varFileSymlinkToOther' for asked other pid $l_pid does not exist" >>/dev/stderr
+		SECFUNCechoWarnA "SECvarFile '$l_varFileSymlinkToOther' for asked other pid $l_pid does not exist"
 	fi
 	SECFUNCechoDbgA "bSymlinkToOther=$bSymlinkToOther"
 	
@@ -700,12 +780,12 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 				# This function is being called a second time with parameters set. This process variables file will now symlink to a file of another process.
 				# no need to first remove the old existing SECvarFile as it will be overwritten
 				if [[ ! -f "$SECvarFile" ]];then
-					echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: SECvarFile '$SECvarFile' should exist..." >>/dev/stderr;
+					SECFUNCechoWarnA "not expected: SECvarFile '$SECvarFile' should exist..."
 				fi
 				ln -sf "$l_varFileSymlinkToOther" "$SECvarFile"
 			else
 				# this will only happen if a child first call to this function has parameters, what is unexpected...
-				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: a child first call to this function has parameters that point to another pid/proccess (SECvarFile '$SECvarFile' != l_varFileAutomatic '$l_varFileAutomatic')..." >>/dev/stderr; 
+				SECFUNCechoWarnA "not expected: a child first call to this function has parameters that point to another pid/proccess (SECvarFile '$SECvarFile' != l_varFileAutomatic '$l_varFileAutomatic')..."
 			fi
 		else #not symlink to other
 			if [[ "$SECvarFile" != "$l_varFileAutomatic" ]];then
@@ -714,21 +794,24 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 				SECFUNCexecA ln -sf "$SECvarFileParent" "$l_varFileAutomatic"
 				export SECvarFile="$l_varFileAutomatic" #IMPORTANT use 'export' to set it properly because read and write DB are on child proccess
 			else
-				# equal means this function is being called again for this same pid/process, what is unexpected/redundant
-				echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..." >>/dev/stderr; 
+				#if ! $l_bForceRealFile;then
+					# equal means this function is being called again for this same pid/process, what is unexpected/redundant
+					SECFUNCechoWarnA "not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..."
+				#fi
 			fi
 		fi
 	else #SECvarFile is not set (unset)
 		# if SECvarFile is not set, it does not exist, will be the first file and the real file (not symlink); happens on parentest initialization
 		if [[ -L "$l_varFileAutomatic" ]] || [[ -f "$l_varFileAutomatic" ]];then 
-			echo "SECWARN(`basename "$0"`:$FUNCNAME): not expected: automatic SECvarFile '$l_varFileAutomatic' should not exist..." >>/dev/stderr; 
+			#SECFUNCechoDbgA "TEST '$l_varFileAutomatic' TMP `ls -l "$l_varFileAutomatic"`"
+			SECFUNCechoWarnA "not expected: automatic SECvarFile '$l_varFileAutomatic' should not exist..."
 		fi
 		
 		export SECvarFile="$l_varFileAutomatic" #IMPORTANT use export to set it because read and write DB are on child proccess
 		if $bSymlinkToOther;then
 			ln -sf "$l_varFileSymlinkToOther" "$SECvarFile"
 		else
-			SECFUNCvarWriteDBwithLock #create the file
+			SECFUNCvarWriteDB #create the file
 		fi
 	fi
 	
