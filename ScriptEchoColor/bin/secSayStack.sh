@@ -24,7 +24,7 @@
 
 export _SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECfileSayStack="/tmp/SEC.SayStack.tmp"
-export _SECcacheFolder="/$HOME/.ScriptEchoColor/SEC.SayStack.cache"
+export _SECcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache"
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
@@ -36,7 +36,8 @@ function FUNCsayStack() {
 	local suspendFile="${_SECfileSayStack}.suspend"
 	local strSuspendAtKey="SayStackSuspendedAtPid"
 	local strSuspendByKey="SayStackSuspendedByPid"
-	local SEC_SAYVOL=100
+	export SEC_SAYVOL=100
+	export SEC_SAYMP3=true
   local sleepDelay=0.1
   local bDaemon=false
   local bWaitSay=false
@@ -44,11 +45,11 @@ function FUNCsayStack() {
   local strDaemonSays="Say stack daemon initialized."
   
   function FUNCechoDbgSS() { 
-  	SECFUNCechoDbg --caller "FUNCsayStack" "$1"; 
+  	SECFUNCechoDbgA --caller "FUNCsayStack" "$1"; 
   };export -f FUNCechoDbgSS
   
   function FUNCechoErrSS() { 
-  	SECFUNCechoErr --caller "FUNCsayStack" "$1"; 
+  	SECFUNCechoErrA --caller "FUNCsayStack" "$1"; 
   };export -f FUNCechoErrSS
   
   function FUNCexecSS() {
@@ -178,14 +179,20 @@ function FUNCsayStack() {
 		
 		local cacheFile="$_SECcacheFolder/$md5sumText"
 		if [[ -f "$cacheFile" ]];then
-			SECFUNCechoDbg --caller $FUNCNAME "cache exists: $cacheFile"
+			SECFUNCechoDbgA "cache exists: $cacheFile"
 			return 0
 		else
-			SECFUNCechoDbg --caller $FUNCNAME "cache missing: $cacheFile"
+			SECFUNCechoDbgA "cache missing: $cacheFile"
 		fi
 		
 		if [[ -f "$fileAudio" ]];then
-			FUNCexecSS cp "$fileAudio" "$_SECcacheFolder/$md5sumText"
+			FUNCexecSS cp "$fileAudio" "$_SECcacheFolder/${md5sumText}"
+			SECFUNCechoDbgA "SEC_SAYMP3=$SEC_SAYMP3"
+			if $SEC_SAYMP3;then
+				avconv -i "$_SECcacheFolder/${md5sumText}" -b 32k "$_SECcacheFolder/${md5sumText}.mp3"
+				rm "$_SECcacheFolder/${md5sumText}"
+				ln -s "$_SECcacheFolder/${md5sumText}.mp3" "$_SECcacheFolder/${md5sumText}"
+			fi
 		fi
 		return 1
 	};export -f FUNChasCache
@@ -193,15 +200,21 @@ function FUNCsayStack() {
 		local md5sumText="$1"
 		local sayVol="$2"
 		local fileAudio="$3" #optional
-		SECFUNCechoDbg --caller $FUNCNAME "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
+		SECFUNCechoDbgA "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
 		
 		local cacheFile="$_SECcacheFolder/$md5sumText"
 		if FUNChasCache "$md5sumText" "$fileAudio";then
 			FUNCexecSS touch "$cacheFile" #to indicate that it was recently used
 			fileAudio="$cacheFile"
+			if $SEC_SAYMP3;then
+				local fileAudioMp3="${fileAudio}.mp3"
+				if [[ -f "$fileAudioMp3" ]];then
+					fileAudio="$fileAudioMp3"
+				fi
+			fi
 		fi
 		
-		FUNCexecSS play -v $sayVol "$fileAudio"; 
+		FUNCexecSS play -v $sayVol "$fileAudio";
 	};export -f FUNCplay;
   
   ####################### other initializations
@@ -218,6 +231,8 @@ function FUNCsayStack() {
 		elif [[ "$1" == "--sayvol" ]];then #FUNCsayStack_help set volume to be used at festival
 			shift
 		  SEC_SAYVOL="$1"
+		elif [[ "$1" == "--nomp3" ]];then #FUNCsayStack_help do not use mp3 format, but cache files will be about 10x bigger...
+			SEC_SAYMP3=false
 		elif [[ "$1" == "--daemon" ]];then #FUNCsayStack_help keeps running and takes care of all speak requests with log
 			bDaemon=true
 		elif [[ "$1" == "--waitsay" ]];then #FUNCsayStack_help only exit after the saying of the specified text has finished
@@ -392,6 +407,6 @@ fi
 
 #(*1)
 if [[ `basename "$0"` != "$_SECselfBaseName" ]];then
-	SECFUNCechoErr "this file '$_SECselfBaseName' cannot be used as source script! or, update var _SECselfBaseName with correct filename is required! press a key to exit."; read -n 1; exit 1
+	SECFUNCechoErrA "this file '$_SECselfBaseName' cannot be used as source script! or, update var _SECselfBaseName with correct filename is required! press a key to exit."; read -n 1; exit 1
 fi
 
