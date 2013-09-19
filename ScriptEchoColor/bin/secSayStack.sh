@@ -22,9 +22,9 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-export _SECselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
-export _SECfileSayStack="/tmp/SEC.SayStack.tmp"
-export _SECcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache"
+export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
+export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"
+export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache"
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
@@ -32,8 +32,8 @@ source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
 function FUNCsayStack() {
 	####################### internal cfg of variables, functions and base initializations
 	local selfMainFunctionPid="$BASHPID" #$$ WONT WORK if this code has been sourced on another script, it requires $BASHPID for the instance pid of a child process with this function
-	local lockFile="${_SECfileSayStack}.lock"
-	local suspendFile="${_SECfileSayStack}.suspend"
+	local lockFile="${_SECSAYfileSayStack}.lock"
+	local suspendFile="${_SECSAYfileSayStack}.suspend"
 	local strSuspendAtKey="SayStackSuspendedAtPid"
 	local strSuspendByKey="SayStackSuspendedByPid"
 	export SEC_SAYVOL=100
@@ -83,7 +83,7 @@ function FUNCsayStack() {
   	# the pid 'command' at `ps` must have this script filename
   	# this prevents this file from being sourced, see (*1) at the end...
   	# do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO why?
-  	if ! ps -p $1 --no-headers -o command |grep -q "$_SECselfBaseName"; then
+  	if ! ps -p $1 --no-headers -o command |grep -q "$_SECSAYselfBaseName"; then
   		return 1
   	fi
   	
@@ -99,7 +99,7 @@ function FUNCsayStack() {
 		FUNCechoDbgSS "already running pid is $otherPid"
 		if ! FUNCisPidActive $otherPid; then
 			# if pid is not running, probably crashed so clean up locks
-			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECfileSayStack}."*".lock"
+			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
 			return 1 # pid is not running
 		fi
 		
@@ -120,7 +120,7 @@ function FUNCsayStack() {
 					continue
 				fi
 			elif [[ -a "$lockFile" ]];then
-				#rm "${_SECfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
+				#rm "${_SECSAYfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
 				FUNCechoErrSS "$FUNCNAME: $LINENO: $lockFile should be a symlink! the mess will be cleaned..."
 				FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
 				continue
@@ -142,7 +142,7 @@ function FUNCsayStack() {
 			fi
 			
 			# there is no say stack to be suspended...
-			local nSayStackDataSize=`du -b "$_SECfileSayStack" |sed -r "s'^([[:digit:]]*).*'\1'"`
+			local nSayStackDataSize=`du -b "$_SECSAYfileSayStack" |sed -r "s'^([[:digit:]]*).*'\1'"`
 			if((nSayStackDataSize==0));then
 				# no one is trying to say anything...
 				break;
@@ -177,7 +177,7 @@ function FUNCsayStack() {
 		local md5sumText="$1"
 		local fileAudio="$2" #optional
 		
-		local cacheFile="$_SECcacheFolder/$md5sumText"
+		local cacheFile="$_SECSAYcacheFolder/$md5sumText"
 		if [[ -f "$cacheFile" ]];then
 			SECFUNCechoDbgA "cache exists: $cacheFile"
 			return 0
@@ -186,12 +186,12 @@ function FUNCsayStack() {
 		fi
 		
 		if [[ -f "$fileAudio" ]];then
-			FUNCexecSS cp "$fileAudio" "$_SECcacheFolder/${md5sumText}"
+			FUNCexecSS cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
 			SECFUNCechoDbgA "SEC_SAYMP3=$SEC_SAYMP3"
 			if $SEC_SAYMP3;then
-				avconv -i "$_SECcacheFolder/${md5sumText}" -b 32k "$_SECcacheFolder/${md5sumText}.mp3"
-				rm "$_SECcacheFolder/${md5sumText}"
-				ln -s "$_SECcacheFolder/${md5sumText}.mp3" "$_SECcacheFolder/${md5sumText}"
+				avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b 32k "$_SECSAYcacheFolder/${md5sumText}.mp3"
+				rm "$_SECSAYcacheFolder/${md5sumText}"
+				ln -s "$_SECSAYcacheFolder/${md5sumText}.mp3" "$_SECSAYcacheFolder/${md5sumText}"
 			fi
 		fi
 		return 1
@@ -202,7 +202,7 @@ function FUNCsayStack() {
 		local fileAudio="$3" #optional
 		SECFUNCechoDbgA "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
 		
-		local cacheFile="$_SECcacheFolder/$md5sumText"
+		local cacheFile="$_SECSAYcacheFolder/$md5sumText"
 		if FUNChasCache "$md5sumText" "$fileAudio";then
 			FUNCexecSS touch "$cacheFile" #to indicate that it was recently used
 			fileAudio="$cacheFile"
@@ -248,7 +248,11 @@ function FUNCsayStack() {
 			FUNCresumeJustDel
 			return #exit_FUNCsayStack: wont put empty lines
 		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help clear SayStack buffer for all speeches requested by all applications til now
-			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECfileSayStack}"
+			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+			return #exit_FUNCsayStack: wont put empty lines
+		elif [[ "$1" == "--i-play" ]];then #(internal use)
+			shift
+			FUNCplay "$@"
 			return #exit_FUNCsayStack: wont put empty lines
 		else
 			FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
@@ -259,7 +263,7 @@ function FUNCsayStack() {
 	local sayText="$1" #last param
 	sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
 	local md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
-	FUNCexecSS mkdir -p "$_SECcacheFolder"
+	FUNCexecSS mkdir -p "$_SECSAYcacheFolder"
 	if $bDaemon;then
 		sayText="${strDaemonSays}${sayText}"
 	fi
@@ -273,7 +277,7 @@ function FUNCsayStack() {
 		fi
 	fi
 	
-	#echo "$sayText" >>"$_SECfileSayStack"
+	#echo "$sayText" >>"$_SECSAYfileSayStack"
 	sayVol=`echo "scale=2;$SEC_SAYVOL/100" |bc -l`
 	paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this param with a var name SECsortOrder that I believe wont conflict with pre-existant ones on festival
 	paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival
@@ -284,9 +288,9 @@ function FUNCsayStack() {
 				(Parameter.set 'Audio_Method 'Audio_Command)\
 				(Parameter.set 'Audio_Required_Rate 16000)\
 				(Parameter.set 'Audio_Required_Format 'snd)\
-				(Parameter.set 'Audio_Command \"bash -c 'FUNCplay $md5sumText $sayVol '\$FILE\")\
-				(SayText \"$sayText\")" >>"$_SECfileSayStack"
-	sort "$_SECfileSayStack" -o "$_SECfileSayStack" #ensure FIFO
+				(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --i-play $md5sumText $sayVol '\$FILE\")\
+				(SayText \"$sayText\")" >>"$_SECSAYfileSayStack"
+	sort "$_SECSAYfileSayStack" -o "$_SECSAYfileSayStack" #ensure FIFO
 	
 	####################### lock file work
 	while true; do
@@ -303,7 +307,7 @@ function FUNCsayStack() {
 #				continue #try again
 #			fi
 #		elif [[ -a "$lockFile" ]];then
-#			#rm "${_SECfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
+#			#rm "${_SECSAYfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
 #			FUNCechoErrSS "$FUNCNAME: $LINENO: $lockFile should be a symlink!"
 #			return 1 #exit_FUNCsayStack: 
 #		fi
@@ -314,7 +318,7 @@ function FUNCsayStack() {
 	
 		if [[ -z "$realLockFile" ]];then
 			# if not exist, aquire lock
-			realLockFile="${_SECfileSayStack}.$selfMainFunctionPid.lock"
+			realLockFile="${_SECSAYfileSayStack}.$selfMainFunctionPid.lock"
 			
 			#create the real file
 			echo "$selfFullCmd" >>"$realLockFile"
@@ -333,13 +337,13 @@ function FUNCsayStack() {
 #			FUNCechoDbgSS "already running pid is $otherPid"
 #			if ! FUNCisPidActive $otherPid; then
 #				# if pid is not running, probably crashed so clean up locks
-#				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECfileSayStack}."*".lock"
+#				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
 #				continue #try again
 #			fi
 		
 			FUNCechoDbgSS "pid $otherPid will take care of say stack!"
 			if $bWaitSay;then
-				while grep -q "$paramSortOrder" "$_SECfileSayStack";do
+				while grep -q "$paramSortOrder" "$_SECSAYfileSayStack";do
 					if ! sleep $sleepDelay; then return 1; fi #exit_FUNCsayStack: on sleep fail
 				done
 			fi
@@ -361,8 +365,8 @@ function FUNCsayStack() {
 			if ! sleep $sleepDelay; then return 1; fi #exit_FUNCsayStack: on sleep fail
 		done
 		
-		if [[ -f "$_SECfileSayStack" ]];then
-			local strHead=`head -n 1 "$_SECfileSayStack"`
+		if [[ -f "$_SECSAYfileSayStack" ]];then
+			local strHead=`head -n 1 "$_SECSAYfileSayStack"`
 			if [[ -n "$strHead" ]]; then
 				if $bDaemon; then
 					echo "Said at `SECFUNCdtTimePrettyNow`: $strHead"
@@ -379,7 +383,7 @@ function FUNCsayStack() {
 					echo "$strHead"	|FUNCexecSS festival --pipe
 				fi
 				
-				FUNCexecSS sed -i 1d "$_SECfileSayStack" #delete 1st line
+				FUNCexecSS sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
 			else
 				if ! $bDaemon;then
 					break
@@ -406,7 +410,7 @@ if [[ -n "$1" ]]; then
 fi
 
 #(*1)
-if [[ `basename "$0"` != "$_SECselfBaseName" ]];then
-	SECFUNCechoErrA "this file '$_SECselfBaseName' cannot be used as source script! or, update var _SECselfBaseName with correct filename is required! press a key to exit."; read -n 1; exit 1
+if [[ `basename "$0"` != "$_SECSAYselfBaseName" ]];then
+	SECFUNCechoErrA "this file '$_SECSAYselfBaseName' cannot be used as source script! or, update var _SECSAYselfBaseName with correct filename is required! press a key to exit."; read -n 1; exit 1
 fi
 
