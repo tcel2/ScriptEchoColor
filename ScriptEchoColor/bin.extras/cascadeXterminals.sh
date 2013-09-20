@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 renice -n 19 -p $$
-eval `echoc --libs-init`
+eval `secLibsInit.sh`
 trap 'FUNCtrapInt' INT
 
 ############### PARAMS

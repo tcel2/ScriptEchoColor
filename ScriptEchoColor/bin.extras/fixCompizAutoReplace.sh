@@ -26,7 +26,7 @@ trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
 #trap 'FUNCreplaceCompiz' INT #this crashes bash while read is active
 
 ################# init 
-eval `echoc --libs-init`
+eval `secLibsInit.sh`
 bAskReplaceKill=false
 
 ################## functions

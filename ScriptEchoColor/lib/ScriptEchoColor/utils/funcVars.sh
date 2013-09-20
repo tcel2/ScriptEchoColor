@@ -26,7 +26,7 @@ shopt -s expand_aliases
 
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
-# THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `echoc --libs-init`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
+# THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `secLibsInit.sh`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
 #trap '
 #	SEC_DEBUG=false;
 #	SECFUNCvarReadDB;
@@ -58,6 +58,8 @@ fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
 function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no related pid\n\tOptions:\n\t--verbose shows what is happening
+	SECFUNCdbgFuncInA
+	
 	local l_verbose=""
 	local l_output="/dev/null"
 	if [[ "$1" == "--verbose" ]]; then
@@ -91,11 +93,12 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 		local l_pid=`echo "$l_file" |sed "$l_sedGetPidFromFilename"`;
 		if [[ -n `echo "$l_pid" |tr -d "[:digit:]"` ]]; then 
 			echo "SECERROR: l_pid [$l_pid] must be only digits..." >>$l_output # do not use >>/dev/stderr because this is not so important? and will mess the console..
+			SECFUNCdbgFuncOutA
 			return 1; # if fail, tmp files will remain but script wont break... good?
 		fi; 
 		
 		#local l_bHasPid=$(($?==0?true:false))
-		local l_bHasPid=`if ps -p $l_pid >>/dev/null; then echo "true"; else echo "false";fi`
+		local l_bHasPid=`if ps -p $l_pid >/dev/null 2>&1; then echo "true"; else echo "false";fi`
 		#@@@R echo ">>>$l_bHasPid" >>$l_output
 		
 		# excludes from check list valid files (with related pid)
@@ -123,13 +126,14 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	done
 	
 	#@@@R find /tmp -name "SEC.*.vars.tmp" -exec bash -c 'FUNCgetPidFromFileName "{}"' ";" >$l_output 2>&1
+	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarInit() { #help: generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	SECFUNCvarClearTmpFiles
 	SECFUNCvarSetDB
-	SECFUNCvarReadDB #important to update vars on parent shell when using eval `echoc --libs-init` #TODO are you sure?
+	SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA
 }

@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 trap 'echo "(ctrl+c pressed, exiting...)";exit 2' INT
-eval `echoc --libs-init`
+eval `secLibsInit.sh`
 
 ############### INTERNAL CFG
 export pathUbuntuOne="$HOME/Ubuntu One"

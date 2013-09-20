@@ -6,7 +6,7 @@ if [[ -z "$cmd" ]];then
 fi
 bash -c "\
 	export PATH=\"$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin:$PATH\";\
-	eval \`echoc --libs-init\`;\
+	eval \`secLibsInit.sh\`;\
 	$cmd;\
 	bash;"
 

@@ -26,7 +26,7 @@
 
 ########################## INIT AND VARS
 
-eval `echoc --libs-init`
+eval `secLibsInit.sh`
 
 #alias ps='echoc -x ps' #good to debug the bug
 
@@ -185,7 +185,7 @@ function FUNCcicleGamma() {
 function FUNCnvidiaCicle() {
 	local nDirection=$1 # 1 or -1
 	
-	#eval `echoc --libs-init` #required if using exported function on child environment
+	#eval `secLibsInit.sh` #required if using exported function on child environment
 	SECFUNCvarSet --default nvidiaCurrent -1
 	
 	limit=9 #99 and 999 are too slow...
@@ -240,7 +240,7 @@ function FUNCtempAvg() {
 };export -f FUNCtempAvg
 
 function FUNCscript() {
-	# scripts will be executed with all environment properly setup with eval `echoc --libs-init`
+	# scripts will be executed with all environment properly setup with eval `secLibsInit.sh`
 	if [[ -z "$1" ]]; then
 		echo "Scripts List:"
 		grep "#helpScript" $0 |grep -v grep
@@ -359,7 +359,7 @@ function FUNCdoNotCloseThisTerminal() {
 };export -f FUNCdoNotCloseThisTerminal
 
 function FUNCechocInitBashInteractive() {
-	eval `echoc --libs-init`
+	eval `secLibsInit.sh`
 	bash -i
 };export -f FUNCechocInitBashInteractive
 

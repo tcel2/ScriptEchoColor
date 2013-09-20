@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `echoc --libs-init`
+eval `secLibsInit.sh`
 
 #echo "parms: $@";echoc -w
 

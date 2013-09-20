@@ -391,8 +391,8 @@ optHelpListExtdFmt="$optHelp-list-extended-format"
 optIdea="--idea"
 optInfo="--info"
 optInstallPath="--getinstallpath"
-optLibSourceInit="--libs-init"
-optLibSource="--libs"
+#optLibSourceInit="--libs-init"
+#optLibSource="--libs"
 optLogFileName="--logfilename"
 optParentPidList="--parentpidlist"
 optRecreateConfigFile="--recreateconfigfile"
@@ -429,8 +429,8 @@ nOptIdea=0
 
 bOptInfo=false
 bOptInstallPath=false
-bOptLibSource=false
-bOptLibSourceInit=false
+#bOptLibSource=false
+#bOptLibSourceInit=false
 bOptLogFileName=false
 bOptParentPidList=false
 bOptRecreateConfigFile=false
@@ -582,13 +582,13 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
       "${optHelp:2}") 
           bOptHelp=true 
           ;;
-      "${optLibSource:2}")
-          bOptLibSource=true 
-          ;;
-      "${optLibSourceInit:2}")
-          bOptLibSource=true 
-          bOptLibSourceInit=true
-          ;;
+#      "${optLibSource:2}")
+#          bOptLibSource=true 
+#          ;;
+#      "${optLibSourceInit:2}")
+#          bOptLibSource=true 
+#          bOptLibSourceInit=true
+#          ;;
       "${optThereCanOnlyBeOne:2}")
 #          shift; nOptThereCanOnlyBeOnePidSkip=$1
 #          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" 2>&1 >/dev/null; then
@@ -1527,8 +1527,8 @@ if $bOptHelp; then
     echo " ${optGfxE294char}: use full gfx translation table"
     echo " ${optRecreateConfigFile}: will remove $strUserCfgFile to be recreated with defaults"
     echo " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
-    echo " ${optLibSource}: env vars and source libs, use like: eval \`echoc ${optLibSource}\`"
-    echo " ${optLibSourceInit}: like ${optLibSource}, but also initialize everything"
+#    echo " ${optLibSource}: env vars and source libs, use like: eval \`echoc ${optLibSource}\`"
+#    echo " ${optLibSourceInit}: like ${optLibSource}, but also initialize everything"
     echo " ${optSay}: use festival to say the text!"
     echo " ${optWaitSay}: like ${optSay} but wait until speech ends before exiting."
     echo " ${optExecuteRetry}: in conjunction with -x or -X, will ask if you want to retry the failed command."
@@ -1905,17 +1905,17 @@ if $bOptIdea; then
   exit 0
 fi
 
-if $bOptLibSource || $bOptLibSourceInit; then
-	echo "export SECinstallPath=\"$SECinstallPath\";"
-	echo "source \"$SECinstallPath/lib/$strSelfName/includeAll.sh\";"
-	echo 'eval "`SECFUNCexportFunctions`"'
-	
-	if $bOptLibSourceInit; then
-		echo "SECFUNCvarInit;"
-	fi
-	
-	exit 0
-fi
+#if $bOptLibSource || $bOptLibSourceInit; then
+#	echo "export SECinstallPath=\"$SECinstallPath\";"
+#	echo "source \"$SECinstallPath/lib/$strSelfName/includeAll.sh\";"
+#	echo 'eval "`SECFUNCexportFunctions`"'
+#	
+#	if $bOptLibSourceInit; then
+#		echo "SECFUNCvarInit;"
+#	fi
+#	
+#	exit 0
+#fi
 if $bOptHelpLibs; then
 	#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
 	echo "HELP on Libs functions:"

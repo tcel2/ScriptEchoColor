@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `echoc --libs-init 2>/dev/null`
+eval `secLibsInit.sh`
 
 waitStart=3
 delayRaiseTabOutliner=0.1

@@ -1,6 +1,6 @@
 IMPORTANT!
 	This file `lib/ScriptEchoColor/utils/funcVars.sh`	is experimental code! 
-	It is loaded when you use: eval `echoc --libs-init`
+	It is loaded when you use: eval `secLibsInit.sh`
 	Its main purpose is to share global variables between parent and child, in a way both can write and read each others modifications, what may be unsafe...
 	Only use it on non critical (non sudo, non root, non critical work) scripts.
 	(just learned about http://modules.sourceforge.net/, on research atm)
@@ -20,24 +20,18 @@ EXAMPLES:
   at install dir type 
     ./secexamples.sh -a
 
-ARGUMENT SCRIPTS: 
-  argget.sh, argset.sh and argclr.sh
-  Info:
-    This is like a very simple database with 'variable(value)' per line
-      within a text file.
-    Limits:
-      Variable name must start at begin of line!
-      Variable value must be just after its name, within 'var(value)' and 
-        must be only one line (forbidden multiline 'value')!
-      To have 'new line' at 'value' use \n and format it after collecting 
-        variable value!
-
+SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
+	at top of your script type:
+		eval `secLibsInit.sh`
+	see:
+		secLibsInit.sh --help
+	for more info on using it.
+	see several useful examples at 'bin.extras'
 
 KNOWN BUGS and LIMITATIONS:
 
 TODO (fix at top):
   fix: SECFUNCvarSet (and other functions) without parameters gets crazy..
-	fix: echoc "abc!" causes error: 'bash: !": event not found'; workaround is to append space like this "abc! "
   fix: echoc "\$" not working!!!
   fix: arrow keys detection: left right; to select question options
   with -t option, append to the end of the line the remaining time each 10s or each 10% of time passes
@@ -84,7 +78,9 @@ NOTES (highlights) (for tech info look at CHANGES section):
 	update to GPL3
 	
 	Fixed invisible typed characters after hit ctrl+c on `echoc -q`!
-	Fixed: eval `echoc --libs-init`; while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
+	Fixed: eval `secLibsInit.sh`; while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
+	Fixed: use `set +o histexpand` on ~/.bashrc; echoc "abc!" causes error: 'bash: !": event not found'; workaround is to append space like this "abc! "
+	Fixed: ...loads of things I didnt take note...
 	
   	New options:
   		--say to allow use of festival to say the text! and envvars added:
