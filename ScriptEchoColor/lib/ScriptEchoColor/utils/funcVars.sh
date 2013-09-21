@@ -57,6 +57,7 @@ if [[ -z "$SECvarPrefix" ]]; then
 	export SECvarPrefix="v"
 fi
 if $SECvarShortFuncsAliases; then 
+	#TODO validate if such aliases or executables exist before setting it here and warn about it
 	alias "$SECvarPrefix"get='SECFUNCvarGet';
 	alias "$SECvarPrefix"readdb='SECFUNCvarReadDB';
 	alias "$SECvarPrefix"set='SECFUNCvarSet';
