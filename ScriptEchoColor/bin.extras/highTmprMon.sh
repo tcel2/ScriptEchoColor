@@ -173,7 +173,7 @@ function FUNClimitCpu() {
 	nJustLimitThreshold=$((nTmprStep*2))
 	nRunAgainThreshold=$((nJustLimitThreshold+nTmprStep))
 	
-	fStepMin=0.05
+	fStepMin=0.025
 	fStepMax=0.5
 	SECFUNCvarSet fSigStopDelay=0.0
 	SECFUNCvarSet fSigRunDelay=$fStepMax
