@@ -8,5 +8,8 @@ bash -c "\
 	export PATH=\"$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin:$PATH\";\
 	eval \`secLibsInit.sh\`;\
 	$cmd;\
+	echoc --alert ' now copy and run this (triple click on the line below) ';\
+	echo 'eval \`secLibsInit.sh\`';\
+	echo;\
 	bash;"
 

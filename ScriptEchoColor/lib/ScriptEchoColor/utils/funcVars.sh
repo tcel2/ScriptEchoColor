@@ -49,6 +49,22 @@ fi
 if [[ "$SECvarOptWriteAlways" != "false" ]]; then
 	export SECvarOptWriteAlways=true
 fi
+if [[ "$SECvarShortFuncsAliases" != "false" ]]; then
+	export SECvarShortFuncsAliases=true
+fi
+
+if [[ -z "$SECvarPrefix" ]]; then
+	export SECvarPrefix="v"
+fi
+if $SECvarShortFuncsAliases; then 
+	alias "$SECvarPrefix"get='SECFUNCvarGet';
+	alias "$SECvarPrefix"readdb='SECFUNCvarReadDB';
+	alias "$SECvarPrefix"set='SECFUNCvarSet';
+	alias "$SECvarPrefix"setdb='SECFUNCvarSetDB';
+	alias "$SECvarPrefix"syncwrdb='SECFUNCvarSyncWriteReadDB';
+	alias "$SECvarPrefix"writedb='SECFUNCvarWriteDB';
+fi
+
 #if [[ "$SECvarOptWriteDBUseFullEnv" != "false" ]]; then
 #	export SECvarOptWriteDBUseFullEnv=true # EXPERIMENTAL!!!!
 #fi
@@ -156,6 +172,7 @@ function SECFUNCvarIsArray() {
 # 	fi
 # 	return 1
 }
+
 function SECFUNCvarGet() { #help: <varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
   if `SECFUNCvarIsArray $1`;then
   	if [[ -n "$2" ]]; then
@@ -224,6 +241,7 @@ function SECFUNCvarShowDbg() { #help: only show var and value if SEC_DEBUG is se
     SECFUNCvarShow "$@"
   fi
 }
+
 function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tOptions:\n\t--show will show always var and value;\n\t--showdbg will show only if SEC_DEBUG is set;\n\t--write (this is the default now) will also write value promptly to DB;\n\t--nowrite prevent promptly writing value to DB;\n\t--default will only set if variable is not set yet (like being initialized only ONCE);\n\t--array (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...;
 	#SECFUNCvarReadDB
 	
@@ -532,6 +550,23 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	# ready to write the DB!
 #	SECFUNCvarWriteDB;
 #}
+
+function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggining of a loop
+	local l_lockPid
+	if l_lockPid=`SECFUNCfileLock --islocked "$SECvarFile"`;then
+		if [[ "$l_lockPid" == "$$" ]];then
+			SECFUNCvarWriteDB --skiplock #the lock was created in the end of this function
+			SECFUNCfileLock --unlock "$SECvarFile" #releases the reading lock
+		fi
+	fi
+	
+	sleep 0.5 #waits so other processes have a change to work with the BD; should be greater than the delay to try locking.
+	
+	SECFUNCfileLock "$SECvarFile" # wait until able to get a lock for reading
+	SECFUNCvarReadDB #will read the changes of other scripts and force them wait for this caller script to end its proccessing
+	# exits so the caller script can work with variables on it #TODO verify what happens at SECFUNCvarSet
+}
+
 function SECFUNCvarWriteDB() {
 	SECFUNCdbgFuncInA
 	
@@ -566,6 +601,7 @@ function SECFUNCvarWriteDB() {
   	#declare >"$SECvarFile" #I believe was not too safe
   	
 	if [[ -n "$l_filter" ]];then
+		# this way (without cleaning the DB file), it will just append one variable to it; so in the DB file there will have 2 instances of such variable but, of course, only the last one will be valid; is this messy? #TODO update the specific variable with sed -i
 		l_allVars=($l_filter)
 		#TODO for some reason this sed is breaking the db file data; without it the new var value will be appended and the next db read will ensure the last var value be the right one (what a mess..)
 		#sed -i "/^$l_filter=/d" "$SECvarFile" #remove the line with the var

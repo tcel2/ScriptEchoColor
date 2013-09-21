@@ -437,6 +437,7 @@ function SECFUNCdelay() {
 
 function SECFUNCfileLock() {
 	local l_bUnlock=false
+	local l_bCheckIfIsLocked=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
 			echo "Creates a lock file for the specified file."
@@ -446,6 +447,8 @@ function SECFUNCfileLock() {
 			return
 		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
 			l_bUnlock=true
+		elif [[ "$1" == "--islocked" ]];then #SECFUNCfileLock_help check if is locked and, if so, outputs the locking pid.
+			l_bCheckIfIsLocked=true
 		else
 			SECFUNCechoErrA "invalid option: $1"
 			return 1
@@ -459,6 +462,11 @@ function SECFUNCfileLock() {
 		return 1
 	fi
 	
+	# l_file must be the real file where all symlinks point to; therefore this will break in case the file has hard links being locked too...
+	while [[ -L "$l_file" ]];do
+		l_file=`readlink "$l_file"`
+	done
+	
 	if [[ "${l_file:0:1}" != "/" ]];then
 		l_file="`pwd`/$l_file"
 	fi
@@ -470,36 +478,57 @@ function SECFUNCfileLock() {
 	local l_lockingPid=-1 #no pid can be -1 right?
 	
 	function SECFUNCfileLock_removeLock() {
+		local l_bRemoved=false
+		
 		if [[ -f "$l_fileLock" ]];then
 			rm "$l_fileLock"
+			l_bRemoved=true
 		fi
+		
 		if [[ -f "$l_fileLockPid" ]];then
 			rm "$l_fileLockPid"
+			l_bRemoved=true
 		fi
+		
+		if ! $l_bRemoved;then
+			return 1
+		fi
+		
+		return 0
 	}
 	
 	function SECFUNCfileLock_validateLock() {
 		#TODO use find to validate all lock files for all pid as maintenance each 10minutes (in some way...).
-		# validate lock files
-		if [[ -f "$l_fileLockPid" ]];then
-			# if locking pid is missing (for any reason), remove lock
-			if [[ ! -f "$l_fileLockPid" ]];then
-				SECFUNCechoWarnA "Locking pid file '$l_fileLockPid' is missing, for file '$l_file', removing lock..."
+		# if locking pid is missing (for any reason), remove lock
+		if [[ ! -f "$l_fileLockPid" ]];then
+			if SECFUNCfileLock_removeLock;then
+				SECFUNCechoDbgA "Locking pid file '$l_fileLockPid' was missing, for file '$l_file', removed lock..."
+			fi
+		else
+			l_lockingPid=`cat "$l_fileLockPid" 2>/dev/null` # the locking pid file can be removed just before this command happens!
+	
+			# if pid died, remove locking files
+			if ! ps -p $l_lockingPid >/dev/null 2>&1;then
+				SECFUNCechoDbgA "Pid '$l_lockingPid' died, removing lock '$l_fileLock', for file '$l_file'..."
 				SECFUNCfileLock_removeLock
-			else
-				l_lockingPid=`cat "$l_fileLockPid"`
-		
-				# if pid died, remove locking files
-				if ! ps -p $l_lockingPid >/dev/null 2>&1;then
-					SECFUNCechoDbgA "Pid '$l_lockingPid' died, removing lock '$l_fileLock', for file '$l_file'..."
-					SECFUNCfileLock_removeLock
-				fi
+				l_lockingPid=-1
 			fi
 		fi
 	}
-	SECFUNCfileLock_validateLock
 	
-	if $l_bUnlock;then
+	# important to initialize l_lockingPid from the 2nd time on this func is called...
+	if [[ -f "$l_fileLockPid" ]];then
+		SECFUNCfileLock_validateLock
+	fi
+	
+	if $l_bCheckIfIsLocked;then
+		if(($l_lockingPid>-1));then
+			echo "$l_lockingPid" #outputs the locking pid
+			return 0
+		else
+			return 1
+		fi
+	elif $l_bUnlock;then
 		if [[ -L "$l_fileLock" ]];then
 			if(($l_lockingPid==$$));then
 				SECFUNCfileLock_removeLock
@@ -517,9 +546,9 @@ function SECFUNCfileLock() {
 				return 0
 			fi
 		fi
-	else
+	else # asking to lock
 		if(($l_lockingPid==$$));then
-			SECFUNCechoWarnA "file '$l_file' is already locked with '$l_fileLock' by this pid $$..."
+			SECFUNCechoDbgA "file '$l_file' is already locked with '$l_fileLock' (this pid $$)..." # if it was a warning would not be that useful right? just annoying...
 			return 0
 		fi
 		
