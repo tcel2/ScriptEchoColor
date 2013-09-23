@@ -159,8 +159,7 @@ function SECFUNCvarInit() { #help: generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	SECFUNCvarClearTmpFiles
-	SECFUNCvarSetDB
-	SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
+	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA
 }
@@ -508,8 +507,7 @@ function pSECFUNCvarRegister() { #private:
 		#pSECFUNCvarLoadMissingVars
 		#SECFUNCvarReadDB
 	
-		# wont work as: export SECvars #because bash cant export arrays...
-		SECvars+=($1)
+		SECvars+=($1) # useless to use like 'export SECvars' here, because bash cant export arrays...
 		pSECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when pSECFUNCvarRestore_SECvars_Array is used at child shell
 		pSECFUNCvarPrepareArraysToExport $1
 	
@@ -817,14 +815,14 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 				l_bForceRealFile=true
 			else
 				SECFUNCechoErrA "invalid option $1"
-				return 1
+				SECFUNCdbgFuncOutA;return 1
 			fi
 		else
 			if [[ "$1" == "-f" ]];then
 				l_bForceRealFile=true
 			else
 				SECFUNCechoErrA "invalid option $1"
-				return 1
+				SECFUNCdbgFuncOutA;return 1
 			fi
 		fi
 		shift
@@ -852,7 +850,7 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 			# if parent pid dies before the symlink be created, a real file will have already been created
 			if [[ "$SECvarFile" == "$l_varFileAutomatic" ]];then
 				SECFUNCechoDbgA "no need to force as real file has already been created because the parent pid died before the symlink be created..."
-				return 0
+				SECFUNCdbgFuncOutA;return 0
 			fi
 		fi
 	fi
@@ -937,6 +935,8 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 			SECFUNCvarWriteDB #create the file
 		fi
 	fi
+	
+	SECFUNCvarReadDB
 	
 	SECFUNCdbgFuncOutA
 }

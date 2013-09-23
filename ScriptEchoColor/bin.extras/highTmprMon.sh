@@ -35,7 +35,10 @@ else
 	isAlreadyRunning=true
 fi
 
-anIgnorePids=()
+if [[ -z "${anIgnorePids+dummyValue}" ]];then 
+	export anIgnorePids=()
+	varset anIgnorePids
+fi
 
 ############### CONFIG
 export tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
@@ -64,7 +67,7 @@ function FUNCbcToBool() {
 
 function FUNCignoredPids() {
 	SECFUNCvarReadDB anIgnorePids
-	anIgnorePids=($$ ${anIgnorePids})
+	#anIgnorePids=($$ ${anIgnorePids})
 	local l_strIgnorePids=`echo "${anIgnorePids[@]}" |tr ' ' '|'`
 	echo "$l_strIgnorePids"
 } #;export -f FUNCignoredPids
@@ -73,7 +76,12 @@ aHighPercPidList=()
 function FUNChighPercPidList() {
 	local l_strIgnoredPids=`FUNCignoredPids`
 	SECFUNCechoDbgA "l_strIgnoredPids='$l_strIgnoredPids'"
-	local aPercPid=(`ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid |egrep -v "($l_strIgnoredPids)$" |head -n $((topCPUtoCheckAmount)) |sed 's"^[ ]*""' |sed 's".*"&"'`)
+	local aPercPid=(`\
+		ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid 2>/dev/null \
+		|egrep -v "($l_strIgnoredPids)$" \
+		|head -n $((topCPUtoCheckAmount)) \
+		|sed 's"^[ ]*""' \
+		|sed 's".*"&"'`)
 	SECFUNCechoDbgA "aPercPid=(${aPercPid[@]})"
 
 	aHighPercPidList=()
@@ -91,7 +99,8 @@ function FUNChighPercPidList() {
 }
 
 function FUNClistTopPids() {
-	ps -A --user $USER --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $(($1+1))
+	ps -A --user $USER --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm 2>/dev/null \
+	|head -n $(($1+1))
 }
 
 function FUNCinfo() {
@@ -154,7 +163,9 @@ function FUNClimitCpu() {
 	
 	# make main process ignore the pid
 	SECFUNCvarReadDB
-	anIgnorePids=(${anIgnorePids[@]} $pidToLimit)
+	#anIgnorePids=(${anIgnorePids[@]} $pidToLimit)
+	anIgnorePids+=($$) # add self of course
+	anIgnorePids+=($pidToLimit)
 	SECFUNCvarSet anIgnorePids
 	
 	SECFUNCdelay showTmpr --init
@@ -302,7 +313,7 @@ done
 if [[ -n "$1" ]]; then tmprLimit=$1; fi
 if [[ -n "$2" ]]; then minPercCPU=$2; fi
 
-############## MAIN
+############## MAIN (DAEMON is default (parameter less))
 if $isAlreadyRunning; then
 	echoc -p "already running!"
 	exit 1
@@ -315,6 +326,8 @@ prevTemperature=0
 lastWarningSaidTime=0
 warningDelay=60
 beforeLimitWarn=1
+anIgnorePids+=($$) # add this main daemon pid
+varset anIgnorePids
 while true; do
 	SECFUNCvarReadDB
 	if $bDebugFakeTmpr;then
