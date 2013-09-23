@@ -31,5 +31,5 @@ install:
 	mkdir -pv "$(INSTPREFIX)"
 	cp -vR "bin" "$(INSTPREFIX)"
 	cp -vR "doc" "$(INSTPREFIX)"
-	cp -vR "secextra" "$(INSTPREFIX)"
+	cp -vR "lib" "$(INSTPREFIX)"
 	@echo

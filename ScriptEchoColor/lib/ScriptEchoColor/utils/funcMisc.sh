@@ -541,7 +541,7 @@ function SECFUNCfileLock() {
 	}
 	
 	function SECFUNCfileLock_validateLock() {
-		#TODO use find to validate all lock files for all pid as maintenance each 10minutes (in some way... see `at` command at shell!).
+		#TODO? use find to validate all lock files for all pid as maintenance each 10minutes (in some way... see `at` command at shell!). but.. tmp and ramdrive variables are erased on boot..
 		# if locking pid is missing (for any reason), remove lock
 		if [[ ! -f "$l_fileLockPid" ]];then
 			if SECFUNCfileLock_removeLock;then
@@ -618,6 +618,7 @@ function SECFUNCfileLock() {
 function SECFUNCuniqueLock() { 
 	local l_bRelease=false
 	local l_pid=$$
+	local l_bQuiet=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			echo "Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously."
@@ -626,6 +627,8 @@ function SECFUNCuniqueLock() {
 			
 			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			return
+		elif [[ "$1" == "--quiet" ]];then #SECFUNCuniqueLock_help prevent all output to /dev/stdout
+			l_bQuiet=true
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
 			shift
 			l_pid=$1
@@ -667,7 +670,9 @@ function SECFUNCuniqueLock() {
 				SECFUNCechoWarnA "redundant lock '$l_id' request..."
 				return 0
 			else
-				echo "$l_lockPid"
+				if ! $l_bQuiet;then
+					echo "$l_lockPid"
+				fi
 				return 1
 			fi
 		else

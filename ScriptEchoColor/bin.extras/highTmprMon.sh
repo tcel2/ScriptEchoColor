@@ -28,7 +28,7 @@ eval `secLibsInit.sh`
 selfName=`basename "$0"`
 
 isAlreadyRunning=false
-if SECFUNCuniqueLock; then
+if SECFUNCuniqueLock --quiet; then
 	SECFUNCvarSetDB -f
 else
 	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
@@ -64,13 +64,17 @@ function FUNCbcToBool() {
 
 function FUNCignoredPids() {
 	SECFUNCvarReadDB anIgnorePids
+	anIgnorePids=($$ ${anIgnorePids})
 	local l_strIgnorePids=`echo "${anIgnorePids[@]}" |tr ' ' '|'`
 	echo "$l_strIgnorePids"
-}
+} #;export -f FUNCignoredPids
 
 aHighPercPidList=()
 function FUNChighPercPidList() {
-	local aPercPid=(`ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid |egrep -v "(`FUNCignoredPids`)$" |head -n $((topCPUtoCheckAmount)) |sed 's"^[ ]*""' |sed 's".*"&"'`)
+	local l_strIgnoredPids=`FUNCignoredPids`
+	SECFUNCechoDbgA "l_strIgnoredPids='$l_strIgnoredPids'"
+	local aPercPid=(`ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid |egrep -v "($l_strIgnoredPids)$" |head -n $((topCPUtoCheckAmount)) |sed 's"^[ ]*""' |sed 's".*"&"'`)
+	SECFUNCechoDbgA "aPercPid=(${aPercPid[@]})"
 
 	aHighPercPidList=()
 	local tot=${#aPercPid[*]}
@@ -82,6 +86,7 @@ function FUNChighPercPidList() {
 			aHighPercPidList=(${aHighPercPidList[*]} ${aPercPid[i+1]})
 		fi
 	done
+	SECFUNCechoDbgA "aHighPercPidList=(${aHighPercPidList[@]})"
 	#echo ${aHighPercPidList[*]}
 }
 

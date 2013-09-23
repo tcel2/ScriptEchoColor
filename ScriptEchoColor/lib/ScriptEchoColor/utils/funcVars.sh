@@ -539,7 +539,7 @@ function pSECFUNCvarLoadMissingVars() { #private:
 }
 
 function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
-	# the array SECmultiThreadEvenPids will be indexed by pid ID, and each value is the counter of executions; if a pid is executing above the average of all pids, it will wait so other pids can do their processing...
+	# the array SECmultiThreadEvenPids will be indexed by pid ID, and each value is the counter of executions; if a pid is executing above the average of all pids, it will wait (but wont stop completely) so other pids can do their processing...
 	SECFUNCdbgFuncInA
 	local l_bForceAllow=false
 	while [[ "${1:0:2}" == "--" ]];do
@@ -582,10 +582,11 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 #				fi
 #			fi
 #		done
-		local sedSelectArrayValue="s;declare -a[x]* SECmultiThreadEvenPids='\(([^)]*)\)';\1;"
-		local sedColledPidsOnly='s;\[([[:digit:]]*)\]="[^"]*";\1;g'
-		local aPidList=(`declare -p SECmultiThreadEvenPids |sed -r -e "$sedSelectArrayValue" -e "$sedColledPidsOnly"`)
-		for l_pid in ${aPidList[@]};do
+#		local sedSelectArrayValue="s;declare -a[x]* SECmultiThreadEvenPids='\(([^)]*)\)';\1;"
+#		local sedColledPidsOnly='s;\[([[:digit:]]*)\]="[^"]*";\1;g'
+#		local aPidList=(`declare -p SECmultiThreadEvenPids |sed -r -e "$sedSelectArrayValue" -e "$sedColledPidsOnly"`)
+#		for l_pid in ${aPidList[@]};do
+		for l_pid in ${!SECmultiThreadEvenPids[@]};do
 			#if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then
 				if ! ps -p $l_pid >/dev/null 2>&1;then
 					unset SECmultiThreadEvenPids[l_pid]
