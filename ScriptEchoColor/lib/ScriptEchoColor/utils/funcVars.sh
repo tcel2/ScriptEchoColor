@@ -100,7 +100,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	local l_sedRemoveHeadingSortDigits='s"^[[:digit:]]=""'
 	local l_sedAddQuotesToLine='s/.*/"&"/' # to eval work right when creating item in the list
 	eval "local l_listFiles=(`\
-		find /tmp -maxdepth 1 -name "SEC.*.vars.tmp" -printf "$l_printfTypeAndFullName" \
+		find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -printf "$l_printfTypeAndFullName" \
 			|sed -e "$l_sedAllThatIsNotSymlinkBecomes1" -e "$l_sedAllThatIsSymlinkBecomes0" \
 			|sort \
 			|sed -e "$l_sedRemoveHeadingSortDigits" -e "$l_sedAddQuotesToLine"\
@@ -108,7 +108,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	local l_file
 	for l_file in "${l_listFiles[@]}"; do echo "found: $l_file" >>$l_output;done
 	
-	#@@@R eval "local l_listFiles=(`find /tmp -name "SEC.*.vars.tmp" -exec echo '"{}"' \;`)"
+	#@@@R eval "local l_listFiles=(`find $SEC_TmpFolder -name "SEC.*.vars.tmp" -exec echo '"{}"' \;`)"
 	local l_tot=${#l_listFiles[*]}
 	for((i=0;i<l_tot;i++));do
 		echo "check[$i]: ${l_listFiles[i]}" >>$l_output
@@ -152,7 +152,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 		fi 
 	done
 	
-	#@@@R find /tmp -name "SEC.*.vars.tmp" -exec bash -c 'FUNCgetPidFromFileName "{}"' ";" >$l_output 2>&1
+	#@@@R find $SEC_TmpFolder -name "SEC.*.vars.tmp" -exec bash -c 'FUNCgetPidFromFileName "{}"' ";" >$l_output 2>&1
 	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarInit() { #help: generic vars initializer
@@ -619,7 +619,7 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggining of a loop
 	SECFUNCdbgFuncInA
 	local l_lockPid
-	#grep $$ /tmp/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
 	if l_lockPid=`SECFUNCfileLock --islocked "$SECvarFile"`;then
 		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >/dev/stderr
 		if [[ "$l_lockPid" == "$$" ]];then
@@ -641,7 +641,7 @@ function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggini
 	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
 	
 	SECFUNCfileLock "$SECvarFile" # wait until able to get a lock for reading
-	#grep $$ /tmp/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
 	SECFUNCvarSet SECmultiThreadEvenPids #SECFUNCvarWriteDB --skiplock SECmultiThreadEvenPids
 	SECFUNCvarReadDB #will read the changes of other scripts and force them wait for this caller script to end its proccessing
 	
@@ -782,9 +782,9 @@ function SECFUNCvarEraseDB() { #help:
 }
 function SECFUNCvarGetMainNameOfFileDB() { #help: <pid> returns the main executable name at variables filename
 	local l_pid=$1;
-	local l_fileFound=`find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
+	local l_fileFound=`find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
 	if [[ -n "$l_fileFound" ]];then 
-		echo $l_fileFound |sed -r "s;^/tmp/SEC[.](.*)[.]$l_pid[.]vars[.]tmp$;\1;"
+		echo $l_fileFound |sed -r "s;^$SEC_TmpFolder/SEC[.](.*)[.]$l_pid[.]vars[.]tmp$;\1;"
 	else
 		return 1
 	fi
@@ -834,10 +834,9 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	#local l_basename="$2"
 	
 	# config
-	local l_pathTmp="/tmp"
 	local l_prefix="SEC"
 	local l_sufix="vars.tmp"
-	local l_varFileAutomatic="$l_pathTmp/$l_prefix.`basename "$0"`.$$.$l_sufix"
+	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.`basename "$0"`.$$.$l_sufix"
 	local l_basename=""
 	
 	# BEGIN WORK
@@ -870,7 +869,7 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	
 	local l_varFileSymlinkToOther=""
 	if [[ -n "$l_pid" ]];then
-		local l_varFileSymlinkToOther="$l_pathTmp/$l_prefix.$l_basename.$l_pid.$l_sufix"
+		local l_varFileSymlinkToOther="$SEC_TmpFolder/$l_prefix.$l_basename.$l_pid.$l_sufix"
 	fi
 	
 	local bSymlinkToOther=true
@@ -879,7 +878,7 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	elif ! ps -p $l_pid >/dev/null 2>&1;then
 		bSymlinkToOther=false
 		SECFUNCechoWarnA "asked pid $l_pid is not running"
-	#elif [[ ! -n `find /tmp -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
+	#elif [[ ! -n `find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
 	elif [[ ! -f "$l_varFileSymlinkToOther" ]];then
 		bSymlinkToOther=false
 		SECFUNCechoWarnA "SECvarFile '$l_varFileSymlinkToOther' for asked other pid $l_pid does not exist"

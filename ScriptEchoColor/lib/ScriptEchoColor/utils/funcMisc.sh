@@ -49,6 +49,9 @@ if [[ ! -d "$SEC_TmpFolder" ]];then
 		# is not fast as ramdrive (shm) and may cause trouble..
 	fi
 fi
+if [[ -L "$SEC_TmpFolder" ]];then
+	SEC_TmpFolder="`readlink "$SEC_TmpFolder"`" #required for find that would fail on symlink to a folder..
+fi
 
 _SECdbgVerboseOpt=""
 if [[ "$SEC_DEBUG" == "true" ]];then
