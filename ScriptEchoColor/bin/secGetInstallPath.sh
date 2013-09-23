@@ -1,8 +1,8 @@
 #!/bin/bash
 
-strSelfName="ScriptEchoColor"
+strMainAppName="ScriptEchoColor"
 
-installPath=`which "$strSelfName"`
+installPath=`which "$strMainAppName"`
 if [[ -h "$installPath" ]]; then
 	installPath=`readlink "$installPath"`
 fi
@@ -10,7 +10,7 @@ fi
 installPath=`dirname "$installPath"` #remove the file name
 
 if [[ "`basename "$installPath"`" != "bin" ]];then
-	echo "$strSelfName should be at a '.../bin/' path!"
+	echo "$strMainAppName should be at a '.../bin/' path!"
 	exit 1
 fi
 installPath=`dirname "$installPath"` #remove the bin path

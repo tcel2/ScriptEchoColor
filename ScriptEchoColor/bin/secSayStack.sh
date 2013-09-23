@@ -24,7 +24,7 @@
 
 export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"
-export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache"
+export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache" #cant be at /tmp that is erased (everytime?) on boot..
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"

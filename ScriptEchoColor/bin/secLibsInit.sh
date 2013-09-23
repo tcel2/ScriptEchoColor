@@ -1,12 +1,12 @@
 #!/bin/bash
 
+SECinstallPath=`secGetInstallPath.sh`
 while [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
 		
-		SECinstallPath=`secGetInstallPath.sh`
 		#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
 		echo "HELP on Libs functions:"
 		echo
@@ -38,8 +38,9 @@ while [[ "${1:0:2}" == "--" ]];do
 	shift
 done
 
-echo 'export SECinstallPath="`secGetInstallPath.sh`";'
-echo 'source "$SECinstallPath/lib/ScriptEchoColor/includeAll.sh";'
+# echo 'export SECinstallPath="`secGetInstallPath.sh`";' #at funcMisc
+# echo 'source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";' #at funcVars
+echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";"
 echo 'eval "`SECFUNCexportFunctions`";'
 echo 'SECFUNCvarInit;'
 

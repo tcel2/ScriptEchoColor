@@ -92,35 +92,35 @@ function FUNCclearCache() {
 	echoc -x "echo 3 |sudo -k tee /proc/sys/vm/drop_caches" #put on sudoers
 };export -f FUNCclearCache
 
-function FUNClockFile() {
-	local bUnlock=false
-	if [[ "$1" == "--unlock" ]];then
-		bUnlock=true;
-		shift
-	fi
-	
-	local fileId="$1"
-	local mainPid="$2" #the main pid that all childs will use as reference
-	
-	local lockFile="/tmp/${fileId}.lock"
-	local lockFileReal="${lockFile}.$mainPid"
-	
-	if $bUnlock;then
-		rm -vf "$lockFile" >/dev/stderr
-		rm -vf "$lockFileReal" >/dev/stderr
-		return;
-	fi
-	
-	while ! ln -s "$lockFileReal" "$lockFile" >/dev/stderr; do #create the symlink
-		local realFile=`readlink "$lockFile"`
-		pidOfRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
-		if ! ps -p $pidOfRealFile >/dev/stderr;then
-			rm -vf "$realFile" >/dev/stderr
-		fi
-		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
-	done
-	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileReal"
-}
+#function FUNClockFile() {
+#	local bUnlock=false
+#	if [[ "$1" == "--unlock" ]];then
+#		bUnlock=true;
+#		shift
+#	fi
+#	
+#	local fileId="$1"
+#	local mainPid="$2" #the main pid that all childs will use as reference
+#	
+#	local lockFile="/tmp/${fileId}.lock"
+#	local lockFileReal="${lockFile}.$mainPid"
+#	
+#	if $bUnlock;then
+#		rm -vf "$lockFile" >/dev/stderr
+#		rm -vf "$lockFileReal" >/dev/stderr
+#		return;
+#	fi
+#	
+#	while ! ln -s "$lockFileReal" "$lockFile" >/dev/stderr; do #create the symlink
+#		local realFile=`readlink "$lockFile"`
+#		pidOfRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
+#		if ! ps -p $pidOfRealFile >/dev/stderr;then
+#			rm -vf "$realFile" >/dev/stderr
+#		fi
+#		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
+#	done
+#	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileReal"
+#}
 
 function FUNCcicleGamma() {
 	local nDirection=$1 #1 or -1
@@ -140,7 +140,8 @@ function FUNCcicleGamma() {
 #	done
 #	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileGammaReal"
 	local lockGammaId="openNewX.gamma"
-	FUNClockFile "$lockGammaId" $pidOpenNewX
+#	FUNClockFile "$lockGammaId" $pidOpenNewX
+	SECFUNCuniqueLock --pid $pidOpenNewX "$lockGammaId"
 
 #	SECFUNCvarSet --default gammaLock 0
 #	SECFUNCvarWaitValue gammaLock 0
@@ -177,7 +178,8 @@ function FUNCcicleGamma() {
 	xgamma -gamma $fGamma
 #	SECFUNCvarSet gammaLock 0
 #	rm -vf "$lockFileGamma"
-	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
+#	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
+	SECFUNCuniqueLock --release --pid $pidOpenNewX "$lockGammaId"
 	
 	echoc --say "gamma $fGamma"
 };export -f FUNCcicleGamma

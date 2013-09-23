@@ -22,7 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-shopt -s expand_aliases
+#shopt -s expand_aliases #at funcMisc
+source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh";
 
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
@@ -37,9 +38,9 @@ shopt -s expand_aliases
 # Fix in case it is empty or something else, make it sure it is true or false.
 # The comparison must be inverse to default value!
 # This way, it can be inherited from parent!
-if [[ "$SEC_DEBUG" != "true" ]]; then
-	export SEC_DEBUG=false # of course, np if already "false"
-fi
+#if [[ "$SEC_DEBUG" != "true" ]]; then
+#	export SEC_DEBUG=false # of course, np if already "false"
+#fi
 if [[ "$SEC_DEBUG_WAIT" != "true" ]]; then
 	export SEC_DEBUG_WAIT=false # of course, np if already "false"
 fi
@@ -53,8 +54,17 @@ if [[ "$SECvarShortFuncsAliases" != "false" ]]; then
 	export SECvarShortFuncsAliases=true
 fi
 
+# other important initializers
+if [[ -z "${SECvars+dummyValue}" ]];then 
+	export SECvars=()
+fi
+if [[ -z "${SECmultiThreadEvenPids+dummyValue}" ]];then 
+	export SECmultiThreadEvenPids=()
+fi
+
+# function aliases for easy coding
 if [[ -z "$SECvarPrefix" ]]; then
-	export SECvarPrefix="v"
+	export SECvarPrefix="var" #this prefix can be setup by the user
 fi
 if $SECvarShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
@@ -295,7 +305,7 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	
 	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #to read DB is useful to keep current environment updated with changes made by other threads?
 	
-	SECFUNCvarRegister $l_varPlDoUsThVaNaPl #must register before writing
+	pSECFUNCvarRegister $l_varPlDoUsThVaNaPl #must register before writing
 	
 	if ! $l_bArray; then
 		local l_bSetVarValue=false
@@ -324,9 +334,14 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
   fi
 
 	if $l_bArray || $l_bSetVarValue; then
-		SECFUNCvarPrepareArraysToExport $l_varPlDoUsThVaNaPl
+		pSECFUNCvarPrepareArraysToExport $l_varPlDoUsThVaNaPl
 		if $l_bWrite; then
-			SECFUNCvarWriteDB
+			if [[ "`SECFUNCfileLock --islocked "$SECvarFile"`" == "$$" ]];then
+				#the lock may happen outside here so it must be unlocked only outside here...
+				SECFUNCvarWriteDB --skiplock $l_varPlDoUsThVaNaPl
+			else
+				SECFUNCvarWriteDB $l_varPlDoUsThVaNaPl
+			fi
 		fi
 	fi
   
@@ -416,26 +431,32 @@ function SECFUNCvarWaitRegister() { #help: <var> [delay=1]: wait var be stored. 
 		#read -t $l_delay #bash will crash!
 	done
 }
-function SECFUNCvarPrepare_SECvars_ArrayToExport() { #private: 
-	if((${#SECvars[*]}==0));then
+function pSECFUNCvarPrepare_SECvars_ArrayToExport() { #private: 
+	if [[ -z "${SECvars+dummyValue}" ]];then 
+		# was not set
 		export SECvars=()
-	else
+	else 
 		# just prepare to be shown with `declare` below
 		export SECvars
 	fi
+#	if((${#SECvars[*]}==0));then
+#		export SECvars=()
+#	else
+#		# just prepare to be shown with `declare` below
+#		export SECvars
+#	fi
 	# collect exportable array in string mode
 	local l_export=`declare -p SECvars |sed 's"^declare -ax SECvars"export SECvarsTmp"'`
-	# creates SECvarsTmp to be restored as array at SECFUNCvarRestore_SECvars_Array (on a child shell)
+	# creates SECvarsTmp to be restored as array at pSECFUNCvarRestore_SECvars_Array (on a child shell)
 	eval "$l_export"
 }
-function SECFUNCvarRestore_SECvars_Array() { #private: 
-	# IMPORTANT: SECFUNCvarReadDB makes this function useless...
+function pSECFUNCvarRestore_SECvars_Array() { #private: IMPORTANT: SECFUNCvarReadDB makes this function useless, just keep it for awhile...
 	# if SECvarsTmp is set, recover its value to array on child shell
 	if [[ -n ${SECvarsTmp+dummyValue} ]]; then
 		eval 'SECvars='$SECvarsTmp #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
 	fi
 }
-function SECFUNCvarPrepareArraysToExport() { #private:
+function pSECFUNCvarPrepareArraysToExport() { #private:
 	local l_list="$1" #optional for single array variable export
 	
 	if [[ -z "$1" ]];then
@@ -456,7 +477,7 @@ function SECFUNCvarPrepareArraysToExport() { #private:
 			eval "$l_export"
 			
 			if ! echo "$SECexportedArraysList" |grep -w "$l_varPlDoUsThVaNaPl" >/dev/null 2>&1; then
-				if((${#SECexportedArraysList[*]}>0));then
+				if((${#SECexportedArraysList[*]}>0));then #append space
 					export SECexportedArraysList="$SECexportedArraysList "
 				fi
 				export SECexportedArraysList="${SECexportedArraysList}""exportedArray_${l_varPlDoUsThVaNaPl}"
@@ -464,7 +485,7 @@ function SECFUNCvarPrepareArraysToExport() { #private:
 		fi
 	done
 }
-function SECFUNCvarRestoreArrays() { #private: 
+function pSECFUNCvarRestoreArrays() { #private: 
 	# if SECexportedArraysList is set, work with it to recover arrays on child shell
 	if [[ -n ${SECexportedArraysList+dummyValue} ]]; then
 		eval `declare -p $SECexportedArraysList |sed -r 's/^declare -x exportedArray_([[:alnum:]_]*)=(.*)/eval \1=\`echo \2\`;/'`
@@ -475,61 +496,32 @@ function SECFUNCvarRestoreArrays() { #private:
 #	eval "$1=\$exportedArray_$1" #do not put export here! this is just to transform the string back into a valid array. Arrays cant currently be exported by bash.
 #}
 
-function SECFUNCvarRegister() { #private: 
+function pSECFUNCvarRegister() { #private: 
 	if ! SECFUNCvarIsRegistered $1; then
-		SECFUNCfileLock "$SECvarFile"
+		local l_wasLockedHere=false #the lock may happen outside here so it must be unlocked only outside here...
+		if [[ "`SECFUNCfileLock --islocked "$SECvarFile"`" != "$$" ]];then
+			SECFUNCfileLock "$SECvarFile"
+			l_wasLockedHere=true
+		fi
 		
 		SECFUNCvarReadDB SECvars
-		#SECFUNCvarLoadMissingVars
+		#pSECFUNCvarLoadMissingVars
 		#SECFUNCvarReadDB
 	
 		# wont work as: export SECvars #because bash cant export arrays...
 		SECvars+=($1)
-		SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
-		SECFUNCvarPrepareArraysToExport $1
+		pSECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when pSECFUNCvarRestore_SECvars_Array is used at child shell
+		pSECFUNCvarPrepareArraysToExport $1
 	
 		SECFUNCvarWriteDB --skiplock SECvars
 		
-		SECFUNCfileLock --unlock "$SECvarFile" #IMPORTANT: MUST REACH THIS CODE LINE!
+		if $l_wasLockedHere;then
+			SECFUNCfileLock --unlock "$SECvarFile" #IMPORTANT: MUST REACH THIS CODE LINE!
+		fi
 	fi
 }
-#function SECFUNCvarRegisterWithLock() { #private: 
-#	if ! SECFUNCvarIsRegistered $1; then
-#		# var is registered at child shell
-#		flock -x "$SECvarFile" bash -c "SECFUNCvarRegister $1"
-#		
-#		# udpate this shell with registered var
-#		SECFUNCvarReadDB SECvars
-#	fi
-#}
-#function SECFUNCvarRegister() { #private: 
-#	SECFUNCvarReadDB SECvars
-#	#SECFUNCvarLoadMissingVars
-#	#SECFUNCvarReadDB
-#	
-#	# wont work as: export SECvars #because bash cant export arrays...
-#	SECvars+=($1)
-#	SECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when SECFUNCvarRestore_SECvars_Array is used at child shell
-#	SECFUNCvarPrepareArraysToExport $1
-#	
-#	SECFUNCvarWriteDB SECvars #TODO freezes with: SECFUNCvarWriteDBwithLock SECvars
-#}
 
-#function SECFUNCvarWriteDBwithLock() { #help: write variables to the temporary file with exclusive lock
-#	#SECFUNCvarPrepare_SECvars_ArrayToExport #redundant (look at SECFUNCvarRegister)?
-#	#SECFUNCvarPrepareArraysToExport #redundant (look at SECFUNCvarRegister)?
-#	#flock -x "$SECvarFile" bash -c "SECFUNCvarRestore_SECvars_Array;SECFUNCvarWriteDB"
-#	#flock -x "$SECvarFile" bash -c "SECFUNCvarWriteDBwithLockHelper"
-#	flock -x "$SECvarFile" bash -c "SECFUNCvarRestoreArrays;SECFUNCvarLoadMissingVars;SECFUNCvarWriteDB $@"
-#	
-#	##### TEST CASE (concurrent write DB test):
-#  # SEC_DEBUG=true
-#  # function FUNCdoIt() { SECFUNCvarSet varTst$1=$1;echo $1; };
-#  # for((i=0;i<10;i++));do FUNCdoIt $i& done
-#  # cat $SECvarFile 	
-#  #####
-#}
-function SECFUNCvarLoadMissingVars() { #private: 
+function pSECFUNCvarLoadMissingVars() { #private: 
 	# load new vars list
 	SECFUNCvarReadDB SECvars;
 	
@@ -545,27 +537,116 @@ function SECFUNCvarLoadMissingVars() { #private:
 #	echo "MisVars=${l_varsMissing[@]}" >/dev/stderr
 #	cat $SECvarFile |grep varTst |grep -v SECvars >/dev/stderr
 }
-#function SECFUNCvarWriteDBwithLockHelper() { #private: 
-#	SECFUNCvarLoadMissingVars
-#	
-#	# ready to write the DB!
-#	SECFUNCvarWriteDB;
-#}
+
+function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
+	# the array SECmultiThreadEvenPids will be indexed by pid ID, and each value is the counter of executions; if a pid is executing above the average of all pids, it will wait so other pids can do their processing...
+	SECFUNCdbgFuncInA
+	local l_bForceAllow=false
+	while [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--force" ]];then
+			l_bForceAllow=true
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			SECFUNCdbgFuncOutA;return 1
+		fi
+		shift
+	done
+	
+#	local l_pid=-1
+#	local l_maxPidId=`cat /proc/sys/kernel/pid_max`
+#	for((l_pid=0;l_pid<l_maxPidId;l_pid++));do
+#		if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then
+#			SECmultiThreadEvenPidsOLD[l_pid]=${SECmultiThreadEvenPids[l_pid]}
+#		fi
+#	done
+	local l_thisPidCounter=0
+	if [[ -n "${SECmultiThreadEvenPids[$$]+dummyValue}" ]];then
+		# if exists (is set, not unset), backup the value before reading DB
+		l_thisPidCounter=${SECmultiThreadEvenPids[$$]}
+	fi
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	SECFUNCvarReadDB SECmultiThreadEvenPids #readonly read the full array (that will also bring the pids in the indexes!), just to know what other pids are doing; the stored SECmultiThreadEvenPids on the DB, is just an old value that was set by the last pid that write to the DB, not the real current value in the memory of that pid.
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	#restore the backuped value, or set default if none
+	SECmultiThreadEvenPids[$$]=$l_thisPidCounter
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	
+	#maintenance, remove dead pids from the list
+	if $l_bForceAllow;then 
+		local l_pid=-1
+#		local l_maxPidId=`cat /proc/sys/kernel/pid_max`
+#		for((l_pid=0;l_pid<l_maxPidId;l_pid++));do
+#			if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then
+#				if ! ps -p $l_pid >/dev/null 2>&1;then
+#					unset SECmultiThreadEvenPids[l_pid]
+#				fi
+#			fi
+#		done
+		local sedSelectArrayValue="s;declare -a[x]* SECmultiThreadEvenPids='\(([^)]*)\)';\1;"
+		local sedColledPidsOnly='s;\[([[:digit:]]*)\]="[^"]*";\1;g'
+		local aPidList=(`declare -p SECmultiThreadEvenPids |sed -r -e "$sedSelectArrayValue" -e "$sedColledPidsOnly"`)
+		for l_pid in ${aPidList[@]};do
+			#if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then
+				if ! ps -p $l_pid >/dev/null 2>&1;then
+					unset SECmultiThreadEvenPids[l_pid]
+				fi
+			#fi
+		done
+	fi
+	
+	# local vars
+#	if [[ -z "${SECmultiThreadEvenPids[$$]+dummyValue}" ]];then
+#		SECmultiThreadEvenPids[$$]=0
+#	fi
+#	local l_thisPidCounter=${SECmultiThreadEvenPids[$$]}
+	local l_totPids="${#SECmultiThreadEvenPids[@]}"
+	local l_sumCounters=`echo "${SECmultiThreadEvenPids[@]}" |tr ' ' '+'`;l_sumCounters=`bc <<< "$l_sumCounters"`
+	local l_average=`bc <<< "$l_sumCounters/$l_totPids"`
+	
+	SECFUNCechoDbgA "l_average=$l_average, l_thisPidCounter=$l_thisPidCounter, l_totPids=$l_totPids, SECmultiThreadEvenPids=(${SECmultiThreadEvenPids[@]}), \$\$=$$, BASHPID=$BASHPID, BASH_SUBSHELL=$BASH_SUBSHELL"
+	
+	if $l_bForceAllow || ((l_thisPidCounter<=l_average));then
+		((++l_thisPidCounter)) #((++SECmultiThreadEvenPids[$$]))
+		SECmultiThreadEvenPids[$$]=$l_thisPidCounter
+		# SECFUNCvarSet SECmultiThreadEvenPids #do not do this! breaks the synchronised DB access..
+		SECFUNCdbgFuncOutA;return 0
+	else
+		SECFUNCdbgFuncOutA;return 1
+	fi
+	SECFUNCdbgFuncOutA
+}
 
 function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggining of a loop
+	SECFUNCdbgFuncInA
 	local l_lockPid
+	#grep $$ /tmp/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
 	if l_lockPid=`SECFUNCfileLock --islocked "$SECvarFile"`;then
+		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >/dev/stderr
 		if [[ "$l_lockPid" == "$$" ]];then
+			#pSECFUNCvarRegister SECmultiThreadEvenPids
 			SECFUNCvarWriteDB --skiplock #the lock was created in the end of this function
 			SECFUNCfileLock --unlock "$SECvarFile" #releases the reading lock
 		fi
 	fi
 	
-	sleep 0.5 #waits so other processes have a change to work with the BD; should be greater than the delay to try locking.
+	SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --init
+	while ! pSECFUNCvarMultiThreadEvenPidsAllowThis;do
+		sleep 0.1 #waits so other processes have a change to work with the BD
+		#echo "delay=`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`" >/dev/stderr
+		if((`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`>1));then #limit to allow other pids to process
+			pSECFUNCvarMultiThreadEvenPidsAllowThis --force
+			break;
+		fi
+	done
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
 	
 	SECFUNCfileLock "$SECvarFile" # wait until able to get a lock for reading
+	#grep $$ /tmp/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
+	SECFUNCvarSet SECmultiThreadEvenPids #SECFUNCvarWriteDB --skiplock SECmultiThreadEvenPids
 	SECFUNCvarReadDB #will read the changes of other scripts and force them wait for this caller script to end its proccessing
+	
 	# exits so the caller script can work with variables on it #TODO verify what happens at SECFUNCvarSet
+	SECFUNCdbgFuncOutA
 }
 
 function SECFUNCvarWriteDB() {
@@ -685,13 +766,14 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 		if $l_bSkip;then
 			l_paramInvert="-v"
 		fi
+		# can retrieve more than one line with same variable, what is ok as the last set will override all previous ones
 		eval "`grep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 	else
 	  eval "`cat "$SECvarFile"`" >/dev/null 2>&1
 	fi
-	SECFUNCvarPrepare_SECvars_ArrayToExport #TODO: (GAMBIARRA) makes SECvars work again, understand why and fix.
-	#SECFUNCvarPrepareArraysToExport
-	#SECFUNCvarRestoreArrays
+	pSECFUNCvarPrepare_SECvars_ArrayToExport #TODO: (GAMBIARRA) makes SECvars work again, understand why and fix.
+	#pSECFUNCvarPrepareArraysToExport
+	#pSECFUNCvarRestoreArrays
 	
 	SECFUNCdbgFuncOutA
 }

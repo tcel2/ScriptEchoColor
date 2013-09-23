@@ -24,15 +24,31 @@
 
 shopt -s expand_aliases
 
-#export _SECselfFile_funcMisc="`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-export _SECselfFile_funcMisc="`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
-export _SECaliasPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
+export SECinstallPath="`secGetInstallPath.sh`";
+export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
+export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
 alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
+
+if [[ "$SEC_DEBUG" != "true" ]]; then
+	export SEC_DEBUG=false # of course, np if already "false"
+fi
+if [[ "$SEC_MsgColored" != "false" ]];then
+	export SEC_MsgColored=true
+fi
+
+export SEC_TmpFolder="/dev/shm"
+if [[ ! -d "$SEC_TmpFolder" ]];then
+	SEC_TmpFolder="/run/shm"
+	if [[ ! -d "$SEC_TmpFolder" ]];then
+		SEC_TmpFolder="/tmp"
+		# is not fast as ramdrive (shm) and may cause trouble..
+	fi
+fi
 
 _SECdbgVerboseOpt=""
 if [[ "$SEC_DEBUG" == "true" ]];then
@@ -69,7 +85,7 @@ function SECFUNCdtTimeToFileNameNow() {
 	SECFUNCdtTimeToFileName `SECFUNCdtNow`
 }
 
-alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECaliasPrefix\" "
+alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoErr() { 
 	###### options
 	local caller=""
@@ -88,14 +104,20 @@ function SECFUNCechoErr() {
 	done
 	
 	###### main code
-	echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr; 
+	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr; 
+	local l_output="SECERROR[`SECFUNCdtNow`]: ${caller}$@"
+	if $SEC_MsgColored;then
+		echo -e "\E[0m\E[91m${l_output}\E[0m" >/dev/stderr
+	else
+		echo "${l_output}" >/dev/stderr
+	fi
 }
 #if [[ "$SEC_DEBUG" == "true" ]];then
 #	SECFUNCechoErrA "test error message"
 #	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
 #fi
 
-alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECaliasPrefix\" "
+alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { 
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
 		return 0
@@ -119,11 +141,16 @@ function SECFUNCechoDbg() {
 	
 	###### main code
 	if [[ "$SEC_DEBUG" == "true" ]];then
-		echo "SECDEBUG[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
+		local l_output="SECDEBUG[`SECFUNCdtNow`]: ${caller}$@"
+		if $SEC_MsgColored;then
+			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >/dev/stderr
+		else
+			echo "${l_output}" >/dev/stderr
+		fi
 	fi
 }
 
-alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECaliasPrefix\" "
+alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
 	###### options
 	local caller=""
@@ -142,7 +169,13 @@ function SECFUNCechoWarn() {
 	done
 	
 	###### main code
-	echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
+	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
+	local l_output="SECWARN[`SECFUNCdtNow`]: ${caller}$@"
+	if $SEC_MsgColored;then
+		echo -e "\E[0m\E[93m${l_output}\E[0m" >/dev/stderr
+	else
+		echo "${l_output}" >/dev/stderr
+	fi
 }
 
 function SECFUNCparamsToEval() {
@@ -183,7 +216,7 @@ function SECFUNCparamsToEval() {
   echo "$strExec"
 }
 
-alias SECFUNCexecA="SECFUNCexec --caller \"$_SECaliasPrefix\" "
+alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCexec() {
 	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
 	bOmitOutput=false
@@ -440,6 +473,7 @@ function SECFUNCfileLock() {
 	local l_bCheckIfIsLocked=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
+			echo "Waits until the specified file is unlocked/lockable."
 			echo "Creates a lock file for the specified file."
 			echo "Params: <realFile> cannot be a symlink or a directory"
 			
@@ -473,8 +507,8 @@ function SECFUNCfileLock() {
 	
 	local l_sedMd5sumOnly='s"([[:alnum:]]*) .*"\1"'
 	local l_md5sum=`echo "$l_file" |md5sum |sed -r "$l_sedMd5sumOnly"`
-	local l_fileLock="/tmp/.SEC.FileLock.$l_md5sum.lock"
-	local l_fileLockPid="/tmp/.SEC.FileLock.$l_md5sum.lock.pid"
+	local l_fileLock="$SEC_TmpFolder/.SEC.FileLock.$l_md5sum.lock"
+	local l_fileLockPid="$SEC_TmpFolder/.SEC.FileLock.$l_md5sum.lock.pid"
 	local l_lockingPid=-1 #no pid can be -1 right?
 	
 	function SECFUNCfileLock_removeLock() {
@@ -498,7 +532,7 @@ function SECFUNCfileLock() {
 	}
 	
 	function SECFUNCfileLock_validateLock() {
-		#TODO use find to validate all lock files for all pid as maintenance each 10minutes (in some way...).
+		#TODO use find to validate all lock files for all pid as maintenance each 10minutes (in some way... see `at` command at shell!).
 		# if locking pid is missing (for any reason), remove lock
 		if [[ ! -f "$l_fileLockPid" ]];then
 			if SECFUNCfileLock_removeLock;then
@@ -532,6 +566,9 @@ function SECFUNCfileLock() {
 		if [[ -L "$l_fileLock" ]];then
 			if(($l_lockingPid==$$));then
 				SECFUNCfileLock_removeLock
+				return 0
+			elif(($l_lockingPid==-1));then
+				SECFUNCechoWarnA "File '$l_file' was not locked..."
 				return 0
 			else
 				SECFUNCechoWarnA "Cant unlock. File '$l_file' was locked by pid $l_lockingPid..."
@@ -571,6 +608,7 @@ function SECFUNCfileLock() {
 
 function SECFUNCuniqueLock() { 
 	local l_bRelease=false
+	local l_pid=$$
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			echo "Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously."
@@ -579,6 +617,13 @@ function SECFUNCuniqueLock() {
 			
 			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			return
+		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
+			shift
+			l_pid=$1
+			if ! ps -p $l_pid >/dev/null 2>&1;then
+				SECFUNCechoErrA "invalid pid: '$l_pid'"
+				return 1
+			fi
 		elif [[ "$1" == "--release" ]];then #SECFUNCuniqueLock_help release the lock
 			l_bRelease=true
 		else
@@ -593,7 +638,7 @@ function SECFUNCuniqueLock() {
 		l_id=`basename $0`
 	fi
 	
-	local l_runUniqueFile="/tmp/.SEC.UniqueRun.$l_id"
+	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$l_id"
 	local l_lockFile="${l_runUniqueFile}.lock"
 	
 	function SECFUNCuniqueLock_release() {
@@ -609,7 +654,7 @@ function SECFUNCuniqueLock() {
 	if [[ -f "$l_runUniqueFile" ]];then
 		local l_lockPid=`cat "$l_runUniqueFile"`
 		if ps -p $l_lockPid >/dev/null 2>&1; then
-			if(($$==$l_lockPid));then
+			if(($l_pid==$l_lockPid));then
 				SECFUNCechoWarnA "redundant lock '$l_id' request..."
 				return 0
 			else
@@ -629,7 +674,7 @@ function SECFUNCuniqueLock() {
 			return 1
 		fi
 	
-		echo $$ >"$l_runUniqueFile"
+		echo $l_pid >"$l_runUniqueFile"
 		return 0
 	fi
 }

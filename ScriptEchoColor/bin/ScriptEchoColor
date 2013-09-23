@@ -1905,17 +1905,6 @@ if $bOptIdea; then
   exit 0
 fi
 
-#if $bOptLibSource || $bOptLibSourceInit; then
-#	echo "export SECinstallPath=\"$SECinstallPath\";"
-#	echo "source \"$SECinstallPath/lib/$strSelfName/includeAll.sh\";"
-#	echo 'eval "`SECFUNCexportFunctions`"'
-#	
-#	if $bOptLibSourceInit; then
-#		echo "SECFUNCvarInit;"
-#	fi
-#	
-#	exit 0
-#fi
 if $bOptHelpLibs; then
 	#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
 	echo "HELP on Libs functions:"
@@ -2887,8 +2876,6 @@ FUNCdoTheEcho(){
   	
   	#echo "(SayText \"$strUnformatted\")" |festival --pipe
   	
-#		source "$SECinstallPath/lib/$strSelfName/includeAll.sh";
-#		SECFUNCsayStack --sayvol $SEC_SAYVOL "$strUnformatted"&
 		if $bWaitSay; then
 			strOptWaitSay="--waitsay"
 		fi
@@ -2896,9 +2883,6 @@ FUNCdoTheEcho(){
 		if $bWaitSay; then
 			wait $!
 		fi
-		#read -t 0.1
-		#while((`stat -c%s /tmp/SEC.SayStack.tmp`==0));do sleep 0.1;	done
-		#"$SECinstallPath/bin/secSayStack.sh" --wait "$strUnformatted"
 		#sleep 5
 		#while ! ps -p $!;do			sleep 0.1;		done
 		#disown -h %1

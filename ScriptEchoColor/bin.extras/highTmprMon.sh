@@ -27,22 +27,11 @@ eval `secLibsInit.sh`
 
 selfName=`basename "$0"`
 
-#lockFile="/tmp/.seclock-$selfName"
-#lockPid=`cat "$lockFile"`
-##echo lockPid=$lockPid
-#isAlreadyRunning=false
-#if [[ -z "$lockPid" ]] || ! ps -p $lockPid >/dev/null 2>&1; then
-#	isAlreadyRunning=false
-#else
-#	isAlreadyRunning=true
-#	#allows intercommunication between proccesses started from different parents
-#	SECFUNCvarSetDB $lockPid
-#fi
 isAlreadyRunning=false
 if SECFUNCuniqueLock; then
 	SECFUNCvarSetDB -f
 else
-	SECFUNCvarSetDB `SECFUNCuniqueLock`
+	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
 	isAlreadyRunning=true
 fi
 
