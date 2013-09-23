@@ -64,6 +64,12 @@ function SECFUNCexportFunctions() {
 		|sed 's"declare .* SECFUNC"export -f SECFUNC"' \
 		|sed 's".*"&;"' \
 		|grep "export -f SECFUNC"
+	
+	declare -F \
+		|grep "pSECFUNC" \
+		|sed 's"declare .* pSECFUNC"export -f pSECFUNC"' \
+		|sed 's".*"&;"' \
+		|grep "export -f pSECFUNC"
 }
 
 function SECFUNCdtNow() { 
