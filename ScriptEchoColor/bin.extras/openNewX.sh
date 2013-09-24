@@ -28,6 +28,12 @@
 
 eval `secLibsInit.sh`
 
+if SECFUNCuniqueLock --quiet; then
+	SECFUNCvarSetDB -f
+else
+	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+fi
+
 #alias ps='echoc -x ps' #good to debug the bug
 
 SECFUNCvarGet SEC_SAYVOL
