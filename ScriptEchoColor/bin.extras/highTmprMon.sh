@@ -27,12 +27,12 @@ eval `secLibsInit.sh`
 
 selfName=`basename "$0"`
 
-isAlreadyRunning=false
+isDaemonRunning=false
 if SECFUNCuniqueLock --quiet; then
 	SECFUNCvarSetDB -f
 else
 	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-	isAlreadyRunning=true
+	isDaemonRunning=true
 fi
 
 if [[ -z "${anIgnorePids+dummyValue}" ]];then 
@@ -171,17 +171,20 @@ function FUNClimitCpu() {
 	SECFUNCdelay showTmpr --init
 	SECFUNCdelay ${FUNCNAME}_maintenance --init
 	
-	bForceStop=false
-	bJustLimit=false
+	bDoLowFpsLimiting=false
 	
-	nTmprStep=5
-	nJustLimitThreshold=$((nTmprStep*2))
-	nRunAgainThreshold=$((nJustLimitThreshold+nTmprStep))
+	nTmprLimitMax=80 #$tmprLimit
+	nJustLimitThreshold=$((nTmprLimitMax-3))
+	nLowFpsLimitingThreshold=$((nTmprLimitMax-7))
+	nRunAgainThreshold=$((nTmprLimitMax-15))
 	
 	fStepMin=0.025
-	fStepMax=0.5
+	fStepMax=3.0
 	SECFUNCvarSet fSigStopDelay=0.0
 	SECFUNCvarSet fSigRunDelay=$fStepMax
+	
+	bForceStop=false
+	bJustLimit=false
 	
 	FUNCchildLimCpuFastLoop& #another loop that complements this one!
 	echo "pid for FUNCchildLimCpuFastLoop is $!"
@@ -205,7 +208,9 @@ function FUNClimitCpu() {
 		
 		if((`SECFUNCdelay showTmpr --getsec`>=3));then
 			if $bForceStop;then
-				echoc --say "stopped $tmprCurrent"
+				if ! $bOverrideForceStopNow;then
+					nice -n 19 echoc --say "stopped $tmprCurrent"
+				fi
 			elif $bJustLimit;then
 				echo "just limit $tmprCurrent (stop delay $fSigStopDelay)"
 			else
@@ -215,24 +220,41 @@ function FUNClimitCpu() {
 		fi
 		
 		# from highest to lowest temperature limits
-		if((tmprCurrent>=tmprLimit));then
-			bForceStop=true
+		if $bOverrideForceStopNow || ((tmprCurrent>=nTmprLimitMax));then
+			# while bOverrideForceStopNow is true, proccess will be kept stopped
 			SECFUNCvarSet fSigStopDelay=$fStepMax
 			SECFUNCvarSet fSigRunDelay=0.0
-		elif((tmprCurrent>=(tmprLimit-(nJustLimitThreshold/2))));then
-			bJustLimit=true
-			SECFUNCvarSet fSigStopDelay=$fStepMax
-			SECFUNCvarSet fSigRunDelay=`SECFUNCbcPrettyCalc "$fStepMin+$fStepMin"`
-		elif((tmprCurrent>=(tmprLimit-nJustLimitThreshold)));then
-			bJustLimit=true
-			SECFUNCvarSet fSigStopDelay=$fStepMin
-			SECFUNCvarSet fSigRunDelay=$fStepMin
-		elif((tmprCurrent<=(tmprLimit-nRunAgainThreshold)));then
-			if((`FUNCtmprAverage 10`<=(tmprLimit-nRunAgainThreshold)));then #to make it sure
-				bForceStop=false
-				bJustLimit=false
-				SECFUNCvarSet fSigStopDelay=0.0
-				SECFUNCvarSet fSigRunDelay=$fStepMax
+			bForceStop=true
+		fi
+		
+		if ! $bForceStop; then
+			if((tmprCurrent>=nJustLimitThreshold));then
+				SECFUNCvarSet fSigStopDelay=$fStepMax
+				if $bJustStopPid;then
+					SECFUNCvarSet fSigRunDelay=0.0
+					bForceStop=true
+				else
+					SECFUNCvarSet fSigRunDelay=`SECFUNCbcPrettyCalc "$fStepMin+$fStepMin"`
+					bJustLimit=true
+				fi
+			elif $bDoLowFpsLimiting && ((tmprCurrent>=nLowFpsLimitingThreshold));then
+				# this is somewhat annoying like a lagged/low fps game...
+				SECFUNCvarSet fSigStopDelay=$fStepMin
+				SECFUNCvarSet fSigRunDelay=$fStepMin
+				bJustLimit=true
+			fi
+		fi
+		
+		# check if can run normally again
+		if ! $bOverrideForceStopNow;then
+			# will wait user set bOverrideForceStopNow to true...
+			if((tmprCurrent<=nRunAgainThreshold));then
+				if((`FUNCtmprAverage 10`<=nRunAgainThreshold));then #to make it sure
+					bForceStop=false
+					bJustLimit=false
+					SECFUNCvarSet fSigStopDelay=0.0
+					SECFUNCvarSet fSigRunDelay=$fStepMax
+				fi
 			fi
 		fi
 		
@@ -240,32 +262,133 @@ function FUNClimitCpu() {
 	done
 }
 
+function FUNCdaemon() {
+	if $isDaemonRunning; then
+		echoc -p "daemon is already running!"
+		exit 1
+	#else
+	#	echo $$ >"$lockFile"
+	fi
+
+	local maxTemperature=0
+	local prevTemperature=0
+	local lastWarningSaidTime=0
+	local warningDelay=60
+	local beforeLimitWarn=1
+	anIgnorePids+=($$) # add this main daemon pid
+	varset anIgnorePids
+	while true; do
+		SECFUNCvarReadDB
+		if $bDebugFakeTmpr;then
+			tmprCurrent=$tmprCurrentFake
+		else
+			tmprCurrent=`FUNCtmprAverage 3`
+		fi
+	
+		if((maxTemperature<tmprCurrent));then
+			maxTemperature=$tmprCurrent
+		fi
+	
+		#echoc --info "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
+		FUNClistTopPids 3
+		
+		# warning for high temperature near limit
+		if((tmprCurrent>=(tmprLimit-beforeLimitWarn)));then
+			if((prevTemperature!=tmprCurrent));then
+				if((SECONDS>(lastWarningSaidTime+warningDelay)));then
+					echoc --say "$tmprCurrent"
+					lastWarningSaidTime=$SECONDS
+				fi
+			fi
+		fi
+		
+		if((tmprCurrent>=tmprLimit));then
+			# report processes
+			FUNClistTopPids $topCPUtoCheckAmount
+			#echoc -x "ps -A --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $((topCPUtoCheckAmount+1))"
+			#pidHighCPUusage=`ps --user $USER --sort=-pcpu -o pid |head -n 2 |tail -n 1`
+			#pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
+		  #echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
+		
+			FUNChighPercPidList
+			#echoc -x "kill -SIGSTOP $pidHighCPUusage"
+			echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
+			
+			#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
+			echoc --say "$tmprCurrent"
+			echoc --say "high temperature, stopping some processes..."
+		
+			count=0
+			SECFUNCdelay timeToCoolDown --init
+			while true; do
+				SECFUNCvarSet isLoweringTemperature=true
+				tmprCurrentold=$tmprCurrent
+				tmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
+				((count++))
+			
+				echo "current temperature: $tmprCurrent"
+				FUNClistTopPids $((${#aHighPercPidList[*]}+1))
+			
+				if((count>maxDelay));then
+					echoc --say "Time limit ($maxDelay seconds) to lower temperature reached..."
+					break;
+				fi
+			
+				#stabilized or reached a minimum old<=current
+				if((count>=minimumWait && tmprCurrentold<=tmprCurrent));then
+					break;
+				fi
+			
+				sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
+				echoc --say "$tmprCurrent"
+			done
+			SECFUNCvarSet isLoweringTemperature=false
+		
+			echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
+				
+			#echoc -x "kill -SIGCONT $pidHighCPUusage"
+			echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
+		fi
+
+		prevTemperature=$tmprCurrent
+	
+		FUNCinfo "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
+		#sleep 1
+	done
+}
+
+function FUNCcheckIfDaemonRunningOrExit() {
+	if ! $isDaemonRunning;then
+		echoc -p "daemon not running!"
+		exit 1
+	fi
+}
+
 ################## options
 SECFUNCvarSet --default isLoweringTemperature=false
+varset --default bJustStopPid=false
+varset --default bOverrideForceStopNow=false
+#bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "${1:1:1}" == "-" ]];then
 		if [[ "$1" == "--isloweringtemperature" ]];then #help
+			FUNCcheckIfDaemonRunningOrExit
 			#SECFUNCvarGet isLoweringTemperature
-			if $isAlreadyRunning;then
-				if $isLoweringTemperature;then
-					echo "true"
-					exit 0
-				else
-					echo "false"
-					exit 1
-				fi
+			if $isLoweringTemperature;then
+				echo "true"
+				exit 0
 			else
-				echoc -p "not running!"
+				echo "false"
 				exit 1
 			fi
 		elif [[ "$1" == "--debugfaketmpr" ]];then #help <FakeTemperature> set a fake temperature for debug purposes. Set FakeTemperature to "off" to disable it and use real temperature again.
+			FUNCcheckIfDaemonRunningOrExit
 			shift
-			
 			if [[ "$1" == "off" ]];then
 				SECFUNCvarSet bDebugFakeTmpr=false
 				exit
 			fi
-			
+		
 			if [[ -z "$1" ]];then
 				echoc -p "missing fake temperature parameter"
 				exit 1
@@ -273,8 +396,47 @@ while [[ "${1:0:1}" == "-" ]];do
 			SECFUNCvarSet bDebugFakeTmpr=true
 			SECFUNCvarSet tmprCurrentFake $1
 			exit
+		elif [[ "$1" == "--secvarset" ]];then #help <var> <value>, direct access to SEC vars; put 'help' in place of <var> to see what vars can be changed
+			FUNCcheckIfDaemonRunningOrExit
+			shift
+			if [[ -z "$1" ]] || [[ "${1:0:1}" == "-" ]];then
+				echoc -p "expecting <var> or 'help'"
+				exit 1
+			fi
+			if [[ "$1" == "help" ]];then
+				echo "Instead of alternating between running and stopping pid at --limitcpu, will just stop it until temperature lowers properly."
+				SECFUNCvarShow bJustStopPid
+				exit
+			else
+				varId="$1"
+				shift
+				varValue="$1"
+				
+				# validate varId
+				bFound=false
+				aValidSecVars=(bJustStopPid bOverrideForceStopNow)
+				for secvarCheck in ${aValidSecVars[@]}; do
+					if [[ "$varId" == "$secvarCheck" ]];then
+						bFound=true
+						break
+					fi
+				done
+				if ! $bFound;then
+					echoc -p "invalid <var> '$varId'"
+					exit 1
+				fi
+				
+				if [[ -z "$varValue" ]] || [[ "${varValue:0:1}" == "-" ]];then
+					echoc -p "invalid <value> '$varValue'"
+					exit 1
+				fi
+				
+				varset --show "$varId" "$varValue"
+			fi
 		elif [[ "$1" == "--limitcpu" ]];then #help <pid> limit cpu usage for specified pid to lower temperature
-			pidToLimit=$2
+			FUNCcheckIfDaemonRunningOrExit
+			shift
+			pidToLimit=$1
 			if ps -p $pidToLimit >/dev/null 2>&1;then
 				FUNClimitCpu $pidToLimit
 			else
@@ -286,6 +448,9 @@ while [[ "${1:0:1}" == "-" ]];do
 		elif [[ "$1" == "--tmpr" ]];then #help get temperature
 			tmprCurrent=`FUNCtmprAverage 15`
 			echo "$tmprCurrent"
+			exit
+		elif [[ "$1" == "--daemon" ]];then #help daemon keeps checking for temperature and stopping top proccesses
+			FUNCdaemon
 			exit
 		elif [[ "$1" == "--help" ]];then #help
 			echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time."
@@ -302,7 +467,7 @@ while [[ "${1:0:1}" == "-" ]];do
 		fi
 	else
 		if [[ "$1" == "-d" ]];then
-			echo "dummy"
+			echo "dummy" #TODO can a param --daemon be added to be shifted?
 		else
 			echoc -p "invalid option: $1"
 			exit 1
@@ -310,100 +475,6 @@ while [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
-if [[ -n "$1" ]]; then tmprLimit=$1; fi
-if [[ -n "$2" ]]; then minPercCPU=$2; fi
-
-############## MAIN (DAEMON is default (parameter less))
-if $isAlreadyRunning; then
-	echoc -p "already running!"
-	exit 1
-#else
-#	echo $$ >"$lockFile"
-fi
-
-maxTemperature=0
-prevTemperature=0
-lastWarningSaidTime=0
-warningDelay=60
-beforeLimitWarn=1
-anIgnorePids+=($$) # add this main daemon pid
-varset anIgnorePids
-while true; do
-	SECFUNCvarReadDB
-	if $bDebugFakeTmpr;then
-		tmprCurrent=$tmprCurrentFake
-	else
-		tmprCurrent=`FUNCtmprAverage 3`
-	fi
-	
-	if((maxTemperature<tmprCurrent));then
-		maxTemperature=$tmprCurrent
-	fi
-	
-  #echoc --info "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
-	FUNClistTopPids 3
-  
-  # warning for high temperature near limit
-	if((tmprCurrent>=(tmprLimit-beforeLimitWarn)));then
-		if((prevTemperature!=tmprCurrent));then
-			if((SECONDS>(lastWarningSaidTime+warningDelay)));then
-			  echoc --say "$tmprCurrent"
-			  lastWarningSaidTime=$SECONDS
-			fi
-		fi
-  fi
-  
-	if((tmprCurrent>=tmprLimit));then
-		# report processes
-		FUNClistTopPids $topCPUtoCheckAmount
-		#echoc -x "ps -A --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $((topCPUtoCheckAmount+1))"
-	  #pidHighCPUusage=`ps --user $USER --sort=-pcpu -o pid |head -n 2 |tail -n 1`
-	  #pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
-    #echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
-		
-		FUNChighPercPidList
-	  #echoc -x "kill -SIGSTOP $pidHighCPUusage"
-	  echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
-	  
-		#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
-		echoc --say "$tmprCurrent"
-		echoc --say "high temperature, stopping some processes..."
-		
-		count=0
-		SECFUNCdelay timeToCoolDown --init
-		while true; do
-			SECFUNCvarSet isLoweringTemperature=true
-			tmprCurrentold=$tmprCurrent
-			tmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
-			((count++))
-			
-			echo "current temperature: $tmprCurrent"
-			FUNClistTopPids $((${#aHighPercPidList[*]}+1))
-			
-			if((count>maxDelay));then
-				echoc --say "Time limit ($maxDelay seconds) to lower temperature reached..."
-				break;
-			fi
-			
-			#stabilized or reached a minimum old<=current
-			if((count>=minimumWait && tmprCurrentold<=tmprCurrent));then
-				break;
-			fi
-			
-			sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
-			echoc --say "$tmprCurrent"
-		done
-		SECFUNCvarSet isLoweringTemperature=false
-		
-		echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
-				
-	  #echoc -x "kill -SIGCONT $pidHighCPUusage"
-	  echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
-	fi
-
-  prevTemperature=$tmprCurrent
-	
-  FUNCinfo "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
-	#sleep 1
-done
+#if [[ -n "$1" ]]; then tmprLimit=$1; fi
+#if [[ -n "$2" ]]; then minPercCPU=$2; fi
 

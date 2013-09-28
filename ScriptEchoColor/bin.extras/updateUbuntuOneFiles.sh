@@ -239,7 +239,7 @@ function FUNClsNot() { #synchronize like
 
 if $bDaemon;then
 	while true; do
-		$0 --lookforchanges
+		nice -n 19 $0 --lookforchanges
 		echoc -w -t 5 "daemons sleep too..."
 		#if ! sleep 5; then exit 1; fi
 	done
