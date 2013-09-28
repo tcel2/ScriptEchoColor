@@ -404,8 +404,14 @@ while [[ "${1:0:1}" == "-" ]];do
 				exit 1
 			fi
 			if [[ "$1" == "help" ]];then
-				echo "Instead of alternating between running and stopping pid at --limitcpu, will just stop it until temperature lowers properly."
-				SECFUNCvarShow bJustStopPid
+				echoc --info "Set these secvars to related options:"
+				echo
+				echoc "@c--limitcpu: @wInstead of alternating between running and stopping pid, will just stop it until temperature lowers properly."
+				echoc "@g`SECFUNCvarShow bJustStopPid`"
+				echo
+				echoc "@c--limitcpu: @wset this variable to 'true' to stop <pid> and keep it stopped until this variable is set again to 'false' when stopping will be automatic again based on temperature."
+				echoc "@g`SECFUNCvarShow bOverrideForceStopNow`"
+				echo
 				exit
 			else
 				varId="$1"
