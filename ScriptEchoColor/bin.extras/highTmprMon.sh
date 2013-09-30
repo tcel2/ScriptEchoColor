@@ -432,7 +432,7 @@ while [[ "${1:0:1}" == "-" ]];do
 					exit 1
 				fi
 				
-				if [[ -z "$varValue" ]] || [[ "${varValue:0:1}" == "-" ]];then
+				if [[ -z "$varValue" ]] || [[ "${varValue:0:2}" == "--" ]];then
 					echoc -p "invalid <value> '$varValue'"
 					exit 1
 				fi
