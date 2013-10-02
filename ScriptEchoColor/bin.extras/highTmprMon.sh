@@ -171,8 +171,7 @@ function FUNClimitCpu() {
 	SECFUNCdelay showTmpr --init
 	SECFUNCdelay ${FUNCNAME}_maintenance --init
 	
-	bDoLowFpsLimiting=false
-	
+	# from higher to lower in order, the code depends on it...
 	nTmprLimitMax=80 #$tmprLimit
 	nJustLimitThreshold=$((nTmprLimitMax-3))
 	nLowFpsLimitingThreshold=$((nTmprLimitMax-7))
@@ -367,6 +366,7 @@ function FUNCcheckIfDaemonRunningOrExit() {
 ################## options
 SECFUNCvarSet --default isLoweringTemperature=false
 varset --default bJustStopPid=false
+varset --default bDoLowFpsLimiting=false
 varset --default bOverrideForceStopNow=false
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while [[ "${1:0:1}" == "-" ]];do
@@ -412,6 +412,9 @@ while [[ "${1:0:1}" == "-" ]];do
 				echoc "@c--limitcpu: @wset this variable to 'true' to stop <pid> and keep it stopped until this variable is set again to 'false' when stopping will be automatic again based on temperature."
 				echoc "@g`SECFUNCvarShow bOverrideForceStopNow`"
 				echo
+				echoc "@c--limitcpu: @wset this variable to 'true' to use the fast stop/continue mode that so simulates a low fps behavior."
+				echoc "@g`SECFUNCvarShow bDoLowFpsLimiting`"
+				echo
 				exit
 			else
 				varId="$1"
@@ -420,7 +423,7 @@ while [[ "${1:0:1}" == "-" ]];do
 				
 				# validate varId
 				bFound=false
-				aValidSecVars=(bJustStopPid bOverrideForceStopNow)
+				aValidSecVars=(bJustStopPid bOverrideForceStopNow bDoLowFpsLimiting)
 				for secvarCheck in ${aValidSecVars[@]}; do
 					if [[ "$varId" == "$secvarCheck" ]];then
 						bFound=true
