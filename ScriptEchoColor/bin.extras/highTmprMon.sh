@@ -209,6 +209,8 @@ function FUNClimitCpu() {
 			if $bForceStop;then
 				if ! $bOverrideForceStopNow;then
 					nice -n 19 echoc --say "stopped $tmprCurrent"
+				else
+					echo "external application asked override to keep pid=$pidToLimit stopped temperature=$tmprCurrent"
 				fi
 			elif $bJustLimit;then
 				echo "just limit $tmprCurrent (stop delay $fSigStopDelay)"
@@ -257,6 +259,7 @@ function FUNClimitCpu() {
 			fi
 		fi
 		
+		#echo "bJustLimit=$bJustLimit, bForceStop=$bForceStop, bJustStopPid=$bJustStopPid, fSigStopDelay=$fSigStopDelay, fSigRunDelay=$fSigRunDelay, bOverrideForceStopNow=$bOverrideForceStopNow" #DEBUG
 		sleep 0.5
 	done
 }
