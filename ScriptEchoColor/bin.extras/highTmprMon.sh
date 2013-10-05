@@ -373,6 +373,11 @@ varset --default bDoLowFpsLimiting=false
 varset --default bOverrideForceStopNow=false
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while [[ "${1:0:1}" == "-" ]];do
+	b2ndIsParam=false
+	if [[ -n "$2" ]] && [[ "${2:0:1}" != "-" ]];then
+		b2ndIsParam=true
+	fi
+	
 	if [[ "${1:1:1}" == "-" ]];then
 		if [[ "$1" == "--isloweringtemperature" ]];then #help
 			FUNCcheckIfDaemonRunningOrExit
@@ -458,7 +463,11 @@ while [[ "${1:0:1}" == "-" ]];do
 			fi
 			exit
 		elif [[ "$1" == "--tmpr" ]];then #help get temperature
-			tmprCurrent=`FUNCtmprAverage 15`
+			countToAvg=15
+			if $b2ndIsParam; then
+				countToAvg="$2"
+			fi
+			tmprCurrent=`FUNCtmprAverage $countToAvg`
 			echo "$tmprCurrent"
 			exit
 		elif [[ "$1" == "--daemon" ]];then #help daemon keeps checking for temperature and stopping top proccesses
