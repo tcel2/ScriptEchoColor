@@ -164,7 +164,8 @@ function FUNClimitCpu() {
 	SECFUNCvarSet pidToLimit=$1
 	
 	# to avoid having this buffer cleared by the MAIN daemon and not clear that too
-	export SEC_SAYID="$SEC_SAYID.$FUNCNAME"
+	export SEC_SAYID="$SEC_SAYID.$FUNCNAME.$$"
+	secSayStack --clearbuffer #to stop saying loads of useless information..
 	
 	# make main process ignore the pid
 	SECFUNCvarReadDB
@@ -173,6 +174,10 @@ function FUNClimitCpu() {
 	anIgnorePids+=($pidToLimit)
 	SECFUNCvarSet anIgnorePids
 	
+	nCoolCPUCount=0
+	nCoolCPUCountMax=3
+	nMinWaitToCoolCPU=30
+	SECFUNCdelay minWaitToCoolCPU --init
 	SECFUNCdelay showTmpr --init
 	SECFUNCdelay ${FUNCNAME}_maintenance --init
 	
@@ -180,7 +185,7 @@ function FUNClimitCpu() {
 	nTmprLimitMax=80 #$tmprLimit
 	nJustLimitThreshold=$((nTmprLimitMax-3))
 	nLowFpsLimitingThreshold=$((nTmprLimitMax-7))
-	nRunAgainThreshold=$((nTmprLimitMax-20))
+	nRunAgainThreshold=$((nTmprLimitMax-15)) #-20 is good too
 	
 	fStepMin=0.025
 	fStepMax=3.0
@@ -213,7 +218,8 @@ function FUNClimitCpu() {
 		if((`SECFUNCdelay showTmpr --getsec`>=3));then
 			if $bForceStop;then
 				if ! $bOverrideForceStopNow;then
-					nice -n 19 echoc --say "stopped $tmprCurrent"
+					#nice -n 19 echoc --say "stopped $tmprCurrent"
+					nice -n 19 echoc --say "$tmprCurrent"
 				else
 					echo "external application asked override to keep pid=$pidToLimit stopped temperature=$tmprCurrent"
 				fi
@@ -226,7 +232,12 @@ function FUNClimitCpu() {
 		fi
 		
 		# from highest to lowest temperature limits
-		if $bOverrideForceStopNow || ((tmprCurrent>=nTmprLimitMax));then
+		bTmprOverLimit=false
+		if((tmprCurrent>=nTmprLimitMax));then
+			bTmprOverLimit=true
+			#SECFUNCdelay minWaitToCoolCPU --init
+		fi
+		if $bOverrideForceStopNow || $bTmprOverLimit;then
 			# while bOverrideForceStopNow is true, proccess will be kept stopped
 			SECFUNCvarSet fSigStopDelay=$fStepMax
 			SECFUNCvarSet fSigRunDelay=0.0
@@ -249,6 +260,11 @@ function FUNClimitCpu() {
 				SECFUNCvarSet fSigRunDelay=$fStepMin
 				bJustLimit=true
 			fi
+			
+			if $bForceStop;then
+				SECFUNCdelay minWaitToCoolCPU --init
+				echoc --say "going to wait at least $nMinWaitToCoolCPU seconds to C.P.U. cool down"
+			fi
 		fi
 		
 		# check if can run normally again
@@ -257,14 +273,26 @@ function FUNClimitCpu() {
 			if((tmprCurrent<=nRunAgainThreshold));then
 				tmprCurrent=`FUNCtmprAverage 30`
 				if((tmprCurrent<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
-					bForceStop=false
-					bJustLimit=false
-					SECFUNCvarSet fSigStopDelay=0.0
-					SECFUNCvarSet fSigRunDelay=$fStepMax
-					
-					secSayStack --clearbuffer #to stop saying loads of useless information..
-					#echoc --say "running $tmprCurrent"
+					((nCoolCPUCount++))
+					echo "nCoolCPUCount: $nCoolCPUCount of $nCoolCPUCountMax"
+					if((`SECFUNCdelay minWaitToCoolCPU --getsec`>=nMinWaitToCoolCPU));then
+						if((nCoolCPUCount>=nCoolCPUCountMax));then
+							if $bForceStop;then
+								secSayStack --clearbuffer #to stop saying loads of useless information..
+								echoc --waitsay "ready to run again $tmprCurrent"
+							fi
+						
+							bForceStop=false
+							bJustLimit=false
+							SECFUNCvarSet fSigStopDelay=0.0
+							SECFUNCvarSet fSigRunDelay=$fStepMax
+						fi
+					fi
+				else
+					nCoolCPUCount=0
 				fi
+			else
+				nCoolCPUCount=0
 			fi
 		fi
 		
@@ -280,7 +308,9 @@ function FUNCdaemon() {
 	#else
 	#	echo $$ >"$lockFile"
 	fi
-
+	
+	secSayStack --clearbuffer #to stop saying loads of useless information.. when this app is restarted..
+	
 	local maxTemperature=0
 	local prevTemperature=0
 	local lastWarningSaidTime=0
