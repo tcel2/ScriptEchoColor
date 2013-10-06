@@ -26,6 +26,16 @@ export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"
 export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache" #cant be at /tmp that is erased (everytime?) on boot..
 
+if [[ "$SEC_SAYMP3" != "false" ]]; then #compare to inverse of default value
+	export SEC_SAYMP3=true # of course, np if already "false"
+fi
+if [[ -z "$SEC_SAYVOL" ]]; then
+	export SEC_SAYVOL=100
+fi
+if [[ -z "$SEC_SAYID" ]]; then
+	export SEC_SAYID="SecSayStackDefaultId"
+fi
+
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
 
@@ -36,11 +46,12 @@ function FUNCsayStack() {
 	local suspendFile="${_SECSAYfileSayStack}.suspend"
 	local strSuspendAtKey="SayStackSuspendedAtPid"
 	local strSuspendByKey="SayStackSuspendedByPid"
-	export SEC_SAYVOL=100
-	export SEC_SAYMP3=true
+	#export SEC_SAYVOL=100
+	#export SEC_SAYMP3=true
 	local sleepDelay=0.1
 	local bDaemon=false
 	local bWaitSay=false
+	local strSayId="$SEC_SAYID"
 	local bResume=false
 	local strDaemonSays="Say stack daemon initialized."
   
@@ -225,6 +236,11 @@ function FUNCsayStack() {
  	
   ####################### options
 	while [[ "${1:0:2}" == "--" ]]; do
+		bNextIsParam=false #otherwise is option
+		if [[ -n "$2" ]] && [[ "${2:0:1}" != "-" ]];then
+			bNextIsParam=true
+		fi
+		
 		if [[ "$1" == "--help" ]];then #FUNCsayStack_help show this help
 			grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			return
@@ -247,9 +263,25 @@ function FUNCsayStack() {
 		elif [[ "$1" == "--resume-justdel" ]];then #FUNCsayStack_help just delete the suspend file, allowing other pids to resume speaking
 			FUNCresumeJustDel
 			return #exit_FUNCsayStack: wont put empty lines
-		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help clear SayStack buffer for all speeches requested by all applications til now
-			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+#		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help [id filter], clear SayStack buffer for all speeches requested by all applications til now; if filter is set, will only clear matching lines, see --id option
+#			if $bNextIsParam;then
+#				shift
+#				strSayId="$1"
+#				grep -v "SECsayId '$strSayId)"
+#			else
+#				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+#			fi
+#			return #exit_FUNCsayStack: wont put empty lines
+		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help clear SayStack buffer for all speeches requested by all applications til now; Though if SEC_SAYID, or --id, is set, will only clear matching lines..
+			if [[ -n "$strSayId" ]];then
+				FUNCexecSS sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
+			else
+				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+			fi
 			return #exit_FUNCsayStack: wont put empty lines
+		elif [[ "$1" == "--id" ]];then #FUNCsayStack_help identifier to store at buffer
+			shift
+			strSayId="$1"
 		elif [[ "$1" == "--i-play" ]];then #(internal use)
 			shift
 			FUNCplay "$@"
@@ -282,9 +314,11 @@ function FUNCsayStack() {
 	paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this param with a var name SECsortOrder that I believe wont conflict with pre-existant ones on festival
 	paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival
 	paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
+	paramSayId="(Parameter.set 'SECsayId '$strSayId)"
 	echo "${paramSortOrder}\
 				${paramMd5sum}\
 				${paramSayVol}\
+				${paramSayId}\
 				(Parameter.set 'Audio_Method 'Audio_Command)\
 				(Parameter.set 'Audio_Required_Rate 16000)\
 				(Parameter.set 'Audio_Required_Format 'snd)\
@@ -383,7 +417,8 @@ function FUNCsayStack() {
 					echo "$strHead"	|FUNCexecSS festival --pipe
 				fi
 				
-				FUNCexecSS sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
+				#FUNCexecSS sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
+				FUNCexecSS sed -i "/$md5sumText/d" "$_SECSAYfileSayStack" #delete correct line
 			else
 				if ! $bDaemon;then
 					break

@@ -34,7 +34,7 @@ alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
-if [[ "$SEC_DEBUG" != "true" ]]; then
+if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
 	export SEC_DEBUG=false # of course, np if already "false"
 fi
 if [[ "$SEC_MsgColored" != "false" ]];then

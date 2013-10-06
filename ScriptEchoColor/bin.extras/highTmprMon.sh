@@ -54,6 +54,7 @@ export sedTemperature='s"^'"$tmprToMonitor"':[[:blank:]]*[+-]([[:digit:]]*)[.][[
 SECFUNCvarSet --default bDebugFakeTmpr=false
 
 export SEC_SAYVOL=10
+export SEC_SAYID="$selfName"
 
 ############ FUNCTIONS
 function FUNCbcToBool() {
@@ -91,7 +92,8 @@ function FUNChighPercPidList() {
 		local item=${aPercPid[i]}
 		local bIsHigh=`FUNCbcToBool "$item > $minPercCPU"`; 
 		if $bIsHigh; then
-			aHighPercPidList=(${aHighPercPidList[*]} ${aPercPid[i+1]})
+			#aHighPercPidList=(${aHighPercPidList[*]} ${aPercPid[i+1]})
+			aHighPercPidList+=(${aPercPid[i+1]})
 		fi
 	done
 	SECFUNCechoDbgA "aHighPercPidList=(${aHighPercPidList[@]})"
@@ -160,6 +162,9 @@ function FUNClimitCpu() {
 	
 	#echo "tmprLimit=$tmprLimit";exit
 	SECFUNCvarSet pidToLimit=$1
+	
+	# to avoid having this buffer cleared by the MAIN daemon and not clear that too
+	export SEC_SAYID="$SEC_SAYID.$FUNCNAME"
 	
 	# make main process ignore the pid
 	SECFUNCvarReadDB
@@ -250,11 +255,15 @@ function FUNClimitCpu() {
 		if ! $bOverrideForceStopNow;then
 			# will wait user set bOverrideForceStopNow to true...
 			if((tmprCurrent<=nRunAgainThreshold));then
-				if((`FUNCtmprAverage 10`<=nRunAgainThreshold));then #to make it sure
+				tmprCurrent=`FUNCtmprAverage 10`
+				if((`FUNCtmprAverage 10`<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
 					bForceStop=false
 					bJustLimit=false
 					SECFUNCvarSet fSigStopDelay=0.0
 					SECFUNCvarSet fSigRunDelay=$fStepMax
+					
+					secSayStack --clearbuffer #to stop saying loads of useless information..
+					#echoc --say "running $tmprCurrent"
 				fi
 			fi
 		fi
@@ -305,51 +314,57 @@ function FUNCdaemon() {
 		fi
 		
 		if((tmprCurrent>=tmprLimit));then
-			# report processes
-			FUNClistTopPids $topCPUtoCheckAmount
-			#echoc -x "ps -A --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $((topCPUtoCheckAmount+1))"
-			#pidHighCPUusage=`ps --user $USER --sort=-pcpu -o pid |head -n 2 |tail -n 1`
-			#pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
-		  #echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
+			if((${#aHighPercPidList[@]}==0));then
+				echoc --alert "WARNING no high C.P.U. processes to stop! "
+			else
+				# report processes
+				FUNClistTopPids $topCPUtoCheckAmount
+				#echoc -x "ps -A --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $((topCPUtoCheckAmount+1))"
+				#pidHighCPUusage=`ps --user $USER --sort=-pcpu -o pid |head -n 2 |tail -n 1`
+				#pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
+				#echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
 		
-			FUNChighPercPidList
-			#echoc -x "kill -SIGSTOP $pidHighCPUusage"
-			echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
+				FUNChighPercPidList
+				#echoc -x "kill -SIGSTOP $pidHighCPUusage"
+				echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
 			
-			#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
-			echoc --say "$tmprCurrent"
-			echoc --say "high temperature, stopping some processes..."
-		
-			count=0
-			SECFUNCdelay timeToCoolDown --init
-			while true; do
-				SECFUNCvarSet isLoweringTemperature=true
-				tmprCurrentold=$tmprCurrent
-				tmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
-				((count++))
-			
-				echo "current temperature: $tmprCurrent"
-				FUNClistTopPids $((${#aHighPercPidList[*]}+1))
-			
-				if((count>maxDelay));then
-					echoc --say "Time limit ($maxDelay seconds) to lower temperature reached..."
-					break;
-				fi
-			
-				#stabilized or reached a minimum old<=current
-				if((count>=minimumWait && tmprCurrentold<=tmprCurrent));then
-					break;
-				fi
-			
-				sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
+				#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
 				echoc --say "$tmprCurrent"
-			done
-			SECFUNCvarSet isLoweringTemperature=false
+				echoc --say "high temperature, stopping some processes..."
 		
-			echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
+				count=0
+				SECFUNCdelay timeToCoolDown --init
+				while true; do
+					SECFUNCvarSet isLoweringTemperature=true
+					tmprCurrentold=$tmprCurrent
+					tmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
+					((count++))
+			
+					echo "current temperature: $tmprCurrent"
+					FUNClistTopPids $((${#aHighPercPidList[*]}+1))
+			
+					if((count>maxDelay));then
+						echoc --say "Time limit ($maxDelay seconds) to lower temperature reached..."
+						break;
+					fi
+			
+					#stabilized or reached a minimum old<=current
+					if((count>=minimumWait && tmprCurrentold<=tmprCurrent));then
+						break;
+					fi
+			
+					sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
+					echoc --say "$tmprCurrent"
+				done
+				SECFUNCvarSet isLoweringTemperature=false
+				secSayStack --clearbuffer #to stop saying loads of useless information..
+				#echoc --say "running $tmprCurrent"
+			
+				echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
 				
-			#echoc -x "kill -SIGCONT $pidHighCPUusage"
-			echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
+				#echoc -x "kill -SIGCONT $pidHighCPUusage"
+				echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
+			fi
 		fi
 
 		prevTemperature=$tmprCurrent
