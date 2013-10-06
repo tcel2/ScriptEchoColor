@@ -180,7 +180,7 @@ function FUNClimitCpu() {
 	nTmprLimitMax=80 #$tmprLimit
 	nJustLimitThreshold=$((nTmprLimitMax-3))
 	nLowFpsLimitingThreshold=$((nTmprLimitMax-7))
-	nRunAgainThreshold=$((nTmprLimitMax-15))
+	nRunAgainThreshold=$((nTmprLimitMax-20))
 	
 	fStepMin=0.025
 	fStepMax=3.0
@@ -255,8 +255,8 @@ function FUNClimitCpu() {
 		if ! $bOverrideForceStopNow;then
 			# will wait user set bOverrideForceStopNow to true...
 			if((tmprCurrent<=nRunAgainThreshold));then
-				tmprCurrent=`FUNCtmprAverage 10`
-				if((`FUNCtmprAverage 10`<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
+				tmprCurrent=`FUNCtmprAverage 30`
+				if((tmprCurrent<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
 					bForceStop=false
 					bJustLimit=false
 					SECFUNCvarSet fSigStopDelay=0.0
