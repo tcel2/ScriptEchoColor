@@ -77,6 +77,14 @@ function FUNCwait() {
 	echo -n "$@";read -s -t $waitStart -p "[`date`] press a key to continue..";echo #helps with ctrl+c
 }
 
+bDebugInfo=false
+while [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--debug" ]];then
+		bDebugInfo=true
+	fi
+	shift
+done
+
 while true; do
 	list=(`xdotool search Chromium 2>/dev/null`)
 	chromiumWindowId=""
@@ -234,12 +242,14 @@ while true; do
 			echo "activate Chromium (`date`)"
 		fi
 		
-		echo "previousWindowId=$previousWindowId"
-		echo "windowId=$windowId"
-		echo "chromiumWindowId=$chromiumWindowId"
-		echo "tabsOutlinerWindowId=$tabsOutlinerWindowId"
-		echo "tabsOutlinerWindowIdMoveable=$tabsOutlinerWindowIdMoveable"
-		echo "unityLauncherWindowId=$unityLauncherWindowId"
+		if $bDebugInfo;then
+			echo "previousWindowId=$previousWindowId"
+			echo "windowId=$windowId"
+			echo "chromiumWindowId=$chromiumWindowId"
+			echo "tabsOutlinerWindowId=$tabsOutlinerWindowId"
+			echo "tabsOutlinerWindowIdMoveable=$tabsOutlinerWindowIdMoveable"
+			echo "unityLauncherWindowId=$unityLauncherWindowId"
+		fi
 		
 		previousWindowId=$windowId
 		

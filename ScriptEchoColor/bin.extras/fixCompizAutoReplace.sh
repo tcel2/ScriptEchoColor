@@ -122,7 +122,7 @@ while [[ "${1:0:1}" == "-" ]];do
 			echoc -p "missing delay time"
 			exit 1
 		fi
-		echoc --say "going to auto replace in $delay seconds."
+		echoc --say "going to auto replace compiz in $delay seconds."
 		echoc -w -t $delay
 		#bAskReplaceKill=true
 		xtermDetached.sh compiz --replace
