@@ -108,7 +108,7 @@ case "$SEC_SAYALWAYS"   in true | false         );; *)SEC_SAYALWAYS="false"   ;;
 if [[ -z "$SEC_SAYVOL" ]] || ((SEC_SAYVOL<0));then SEC_SAYVOL=100;fi
 if [[ -z "$SEC_NICE" ]] || ((SEC_NICE<0)) || ((SEC_NICE>19));then SEC_NICE=0;fi
 
-renice -n $SEC_NICE -p $$ 2>&1 >/dev/null
+renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 
 # this fails, why?
 #function FUNCps() {
@@ -591,7 +591,7 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
 #          ;;
       "${optThereCanOnlyBeOne:2}")
 #          shift; nOptThereCanOnlyBeOnePidSkip=$1
-#          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" 2>&1 >/dev/null; then
+#          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" >/dev/null 2>&1; then
 #            strOptPROBLEM="invalid pid, $nOptThereCanOnlyBeOnePidSkip is not running!"
 #            break
 #          fi
@@ -987,7 +987,7 @@ if(( (nCurrentTime-nPIDsLastCleanTime) >= 60 )) || $bCleanAllPids; then
     strLine=`echo "$strPIDsList" |head -n $n |tail -n 1`
     nPID=`expr "$strLine" : "PID_\(.*\)("`
     #echo "DEBUG: nPID=$nPID" >&2
-    ps -p $nPID 2>&1 >/dev/null
+    ps -p $nPID >/dev/null 2>&1
     nRet=$?
     if((nRet!=0)) || $bCleanAllPids; then # not found
       FUNCargclr "PID_$nPID"

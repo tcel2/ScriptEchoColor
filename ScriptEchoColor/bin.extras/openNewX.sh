@@ -147,7 +147,8 @@ function FUNCcicleGamma() {
 #	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileGammaReal"
 	local lockGammaId="openNewX.gamma"
 #	FUNClockFile "$lockGammaId" $pidOpenNewX
-	SECFUNCuniqueLock --pid $pidOpenNewX "$lockGammaId"
+#	SECFUNCuniqueLock --pid $pidOpenNewX "$lockGammaId"
+	SECFUNCuniqueLock --pid $$ "$lockGammaId"
 
 #	SECFUNCvarSet --default gammaLock 0
 #	SECFUNCvarWaitValue gammaLock 0
@@ -185,7 +186,8 @@ function FUNCcicleGamma() {
 #	SECFUNCvarSet gammaLock 0
 #	rm -vf "$lockFileGamma"
 #	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
-	SECFUNCuniqueLock --release --pid $pidOpenNewX "$lockGammaId"
+#	SECFUNCuniqueLock --release --pid $pidOpenNewX "$lockGammaId"
+	SECFUNCuniqueLock --release --pid $$ "$lockGammaId"
 	
 	echoc --say "gamma $fGamma"
 };export -f FUNCcicleGamma
@@ -195,6 +197,9 @@ function FUNCnvidiaCicle() {
 	
 	#eval `secLibsInit.sh` #required if using exported function on child environment
 	SECFUNCvarSet --default nvidiaCurrent -1
+	
+	local lockId="openNewX.nvidia"
+	SECFUNCuniqueLock --pid $$ "$lockId"
 	
 	limit=9 #99 and 999 are too slow...
 	count=0
@@ -227,6 +232,8 @@ function FUNCnvidiaCicle() {
 			continue;
 		fi
 	done
+	
+	SECFUNCuniqueLock --release --pid $$ "$lockId"
 	
 	echoc --waitsay "n-vidia $nvidiaCurrent"
 	SECFUNCvarShow nvidiaCurrent

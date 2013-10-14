@@ -52,6 +52,8 @@ bLookForChanges=false
 bLsNot=false
 bLsMissHist=false
 bRecreateHistory=false
+bConfirmAlways=false
+bBackgroundWork=false
 while [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #@help: this help
 		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
@@ -68,8 +70,12 @@ while [[ "${1:0:2}" == "--" ]]; do
 		bSkipNautilusCheckNow=true
 	elif [[ "$1" == "--addfiles" ]]; then #@help: <files...> add files to ubuntu one! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
-	elif [[ "$1" == "--cmpdata" ]]; then #@help: compare data also if size and time comparison fails
+	elif [[ "$1" == "--cmpdata" ]]; then #@help: if size and time are equal, compare data for differences
 		bCmpData=true
+	elif [[ "$1" == "--confirmalways" ]]; then #@help: will always accept to update the changes on the first check loop
+		bConfirmAlways=true
+	elif [[ "$1" == "--background" ]]; then #@help: between each copy will be added a delay
+		bBackgroundWork=true
 	elif [[ "$1" == "--autosync" ]]; then #@help: will automatically copy the changes without asking
 		SECFUNCvarSet --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #@help: will list what files, of current folder recursively, are at ubuntu one!
@@ -176,6 +182,10 @@ function FUNCcopy() {
 	
 	SECFUNCvarSet --showdbg nFilesCount=$((++nFilesCount))
 	echo -en "\r$nFilesCount\r"
+	
+	if $bBackgroundWork;then
+		sleep 1
+	fi
 };export -f FUNCcopy
 
 function FUNCzenitySelectAndAddFilesUbuOne() {
@@ -239,7 +249,7 @@ function FUNClsNot() { #synchronize like
 
 if $bDaemon;then
 	while true; do
-		nice -n 19 $0 --lookforchanges
+		nice -n 19 $0 --lookforchanges --confirmalways --background
 		echoc -w -t 5 "daemons sleep too..."
 		#if ! sleep 5; then exit 1; fi
 	done
@@ -349,7 +359,6 @@ elif $bAddFilesMode; then
 	done
 	
 elif $bLookForChanges;then
-
 	bDoItConfirmed=false
 	bDoIt=false
 	cd "$pathUbuntuOne"
@@ -358,10 +367,10 @@ elif $bLookForChanges;then
 	SECFUNCvarSet --default --show saidChangedAt=0
 	delayMinBetweenSays=10
 	while true; do
-		if $bDoItConfirmed; then
+		if $bDoItConfirmed || $bConfirmAlways; then
 			bDoIt=true
 		fi
-	
+		
 		# list what will be done 1st
 		cd "$pathUbuntuOne"
 		SECFUNCvarSet nFilesCount=0
@@ -378,30 +387,36 @@ elif $bLookForChanges;then
 			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
 		echo `SECFUNCdelay --getpretty`
 		SECFUNCvarReadDB
-	
-		if $bDoItConfirmed; then
-			exit
-		fi
-	
+		
 		echoc --info " Changed=$nFilesChangedCount / total=$nFilesCount "
-		#SECFUNCvarShow bAutoSync
-		if 	! $bAutoSync && 
-				((nFilesChangedCount>0)) && 
-				(((`date +"%s"`-saidChangedAt)>(60*delayMinBetweenSays)));
-		then
-			echoc --info --say "Ubuntu One Changed $nFilesChangedCount files."
-			SECFUNCvarSet --show saidChangedAt=`date +"%s"`
-		fi
-	
-		if((nFilesChangedCount==0));then
-			echoc -w -t $nWaitDelay "nothing to be updated..."
+		
+		if $bConfirmAlways;then
+			echoc -w -t $nWaitDelay "sleeping..."
 			exit 0
-		fi
-	
-		if $bAutoSync || echoc -t $nWaitDelay -q "confirm updates"; then
-			bDoItConfirmed=true
 		else
-			exit
+			if $bDoItConfirmed; then
+				exit
+			fi
+			
+			#SECFUNCvarShow bAutoSync
+			if 	! $bAutoSync && 
+					((nFilesChangedCount>0)) && 
+					(((`date +"%s"`-saidChangedAt)>(60*delayMinBetweenSays)));
+			then
+				echoc --info --say "Ubuntu One Changed $nFilesChangedCount files."
+				SECFUNCvarSet --show saidChangedAt=`date +"%s"`
+			fi
+			
+			if((nFilesChangedCount==0));then
+				echoc -w -t $nWaitDelay "nothing to be updated..."
+				exit 0
+			fi
+			
+			if $bAutoSync || echoc -t $nWaitDelay -q "confirm updates"; then
+				bDoItConfirmed=true
+			else
+				exit
+			fi
 		fi
 	done
 fi
