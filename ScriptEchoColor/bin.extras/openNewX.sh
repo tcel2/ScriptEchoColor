@@ -749,11 +749,14 @@ fi
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
 #xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
 
-if echoc -q "kill X1"; then #prevent closing what shutdown jwm and xscreensaver
-	$0 --killX1
-fi
+while FUNCisX1running;do
+	echoc --alert "ctrl+c will prevent commands, like gamma change, from working properly!"
+	if echoc -q -t 5 "kill X1"; then #prevent closing what shutdown jwm and xscreensaver
+		$0 --killX1
+	fi
+done
 
 #echoc -x "kill $pidZenity0"
-echoc -w -t 5
+#echoc -w -t 5
 
 
