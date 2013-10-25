@@ -30,7 +30,7 @@ function FUNCvalidateNumber() {
 	if [[ -n "$1" ]] && [[ -n `echo "$1" |tr -d '[:digit:]'` ]];then
 		echo "invalid number '$1'" >/dev/stderr
 		return 1
-	else
+	elif [[ -z "$1" ]];then
 		echo "empty number." >/dev/stderr
 		return 1
 	fi
