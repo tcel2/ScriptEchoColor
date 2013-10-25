@@ -756,6 +756,8 @@ while FUNCisX1running;do
 	fi
 done
 
+echoc --say "X1 closed"
+echoc -w "exit"
 #echoc -x "kill $pidZenity0"
 #echoc -w -t 5
 
