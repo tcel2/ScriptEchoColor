@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 echo "Params: width height Xpos Ypos"
-echo "Recomended for 1024x768: 1005 710 1 22"
+echo "Recomended for 1024x768: 1000 705 1 25"
 
 function FUNCvalidateNumber() {
 	if [[ -n "$1" ]] && [[ -n `echo "$1" |tr -d '[:digit:]'` ]];then
@@ -58,7 +58,13 @@ while true; do
 		xdotool windowsize $windowId $nWidth $nHeight;
 		xdotool windowmove $windowId $nXpos $nYpos;
 		xdotool getwindowname $windowId
-	fi; 
+	else
+		curPosY=`xwininfo -metric -id $windowId |grep "Absolute upper-left Y:" |sed -r 's"[[:blank:]]*Absolute upper-left Y:[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'`
+		if((curPosY<52));then
+			xdotool windowmove $windowId $nXpos $nYpos;
+		fi
+	fi;
+	
 	sleep 0.5;
 done
 

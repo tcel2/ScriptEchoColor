@@ -187,9 +187,8 @@ function FUNCcicleGamma() {
 #	rm -vf "$lockFileGamma"
 #	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
 #	SECFUNCuniqueLock --release --pid $pidOpenNewX "$lockGammaId"
+	echoc --say "gamma $fGamma" #must say before releasing the lock!
 	SECFUNCuniqueLock --release --pid $$ "$lockGammaId"
-	
-	echoc --say "gamma $fGamma"
 };export -f FUNCcicleGamma
 
 function FUNCnvidiaCicle() {
