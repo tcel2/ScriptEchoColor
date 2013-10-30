@@ -25,6 +25,8 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS
+exec > >(tee /tmp/$0.$$.log)
+exec 2>&1
 
 eval `secLibsInit.sh`
 
@@ -756,7 +758,7 @@ while FUNCisX1running;do
 done
 
 echoc --say "X1 closed"
-echoc -w "exit"
+#echoc -w "exit"
 #echoc -x "kill $pidZenity0"
 #echoc -w -t 5
 
