@@ -23,8 +23,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-echo "Params: width height Xpos Ypos"
-echo "Recomended for 1024x768: 1000 705 1 25"
+echo "Params: nWidth nHeight nXpos nYpos nYposMin "
+echo "Recomended for 1024x768: 1000 705 1 25 52"
 
 function FUNCvalidateNumber() {
 	if [[ -n "$1" ]] && [[ -n `echo "$1" |tr -d '[:digit:]'` ]];then
@@ -38,15 +38,17 @@ function FUNCvalidateNumber() {
 }
 
 # make tests to your system, this works 'here' at 1024x768
-nWidth=$1
-nHeight=$2
-nXpos=$3
-nYpos=$4
+nWidth=$1 #help width to resize the demaximized window
+nHeight=$2 #help height to resize the demaximized window
+nXpos=$3 #help X top left position to place the demaximized window
+nYpos=$4 #help Y top left position to place the demaximized window
+nYposMin=$5 #help Y minimum top position of non maximized windows to title do not stay behind the top panel/toolbar/globalmenubar/whateverbar
 
 if	! FUNCvalidateNumber $nWidth	||
 		! FUNCvalidateNumber $nHeight	||
 		! FUNCvalidateNumber $nXpos		||
-		! FUNCvalidateNumber $nYpos;
+		! FUNCvalidateNumber $nYpos		||
+		! FUNCvalidateNumber $nYposMin;
 then
 	exit 1
 fi
@@ -60,7 +62,7 @@ while true; do
 		xdotool getwindowname $windowId
 	else
 		curPosY=`xwininfo -metric -id $windowId |grep "Absolute upper-left Y:" |sed -r 's"[[:blank:]]*Absolute upper-left Y:[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'`
-		if((curPosY<52));then
+		if((curPosY<nYposMin));then
 			xdotool windowmove $windowId $nXpos $nYpos;
 		fi
 	fi;
