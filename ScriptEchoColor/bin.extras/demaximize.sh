@@ -27,6 +27,15 @@
 eval `secLibsInit`
 aWindowListToSkip=("Yakuake")
 
+eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
+varset --show nScreenWidth=$nScreenWidth # to ease find code
+varset --show nScreenHeight=$nScreenHeight # to ease find code
+varset --show nWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
+varset --show nHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
+varset --show nXpos=1 #help X top left position to place the demaximized window
+varset --show nYpos=25 #help Y top left position to place the demaximized window
+varset --show nYposWhateverMin=52 #help Y minimum top position of non maximized 
+
 ########### FUNCTIONS
 function FUNCvalidateNumber() {
 	local l_id=$1
@@ -45,14 +54,28 @@ function FUNCvalidateNumber() {
 
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
-		echoc --info "Params: nWidth nHeight nXpos nYpos nYposMin "
+		echoc --info "Params: nWidth nHeight nXpos nYpos nYposWhateverMin "
 		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
 		SECFUNCshowHelp
 		exit
-	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) separated by comma
-		shift
-		aWindowListToSkip+=(`echo $1 |tr ',' ' '`)
+	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) that can be a regexp, separated by blank space
+		while [[ -n "$1" ]] && [[ "${1:0:1}" != "-" ]];do
+			aWindowListToSkip+=("$1")
+			shift
+		done
 		varset --show aWindowListToSkip
+	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
+		shift
+		sedVarValue="^([[:alnum:]]*)=(.*)"
+		while((`expr match "$1" "^[[:alnum:]]*="`>0));do
+			secVar=`  echo "$1" |sed -r "s'$sedVarValue'\1'"`
+			secValue=`echo "$1" |sed -r "s'$sedVarValue'\2'"`
+			if ! varset --show $secVar $secValue;then
+				echoc -p "invalid var [$secVar] value [$secValue]"
+				exit 1
+			fi
+			shift
+		done
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
@@ -60,18 +83,11 @@ while [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-# make tests to your system, this works 'here' at 1024x768
-varset --show nWidth=$1 #help width to resize the demaximized window
-varset --show nHeight=$2 #help height to resize the demaximized window
-varset --show nXpos=$3 #help X top left position to place the demaximized window
-varset --show nYpos=$4 #help Y top left position to place the demaximized window
-varset --show nYposMin=$5 #help Y minimum top position of non maximized windows to title do not stay behind the top panel/toolbar/globalmenubar/whateverbar
-
-if	! FUNCvalidateNumber nWidth 	||
-		! FUNCvalidateNumber nHeight 	||
-		! FUNCvalidateNumber nXpos 		||
-		! FUNCvalidateNumber nYpos 		||
-		! FUNCvalidateNumber nYposMin ;
+if	! FUNCvalidateNumber nWidth		||
+		! FUNCvalidateNumber nHeight	||
+		! FUNCvalidateNumber nXpos		||
+		! FUNCvalidateNumber nYpos		||
+		! FUNCvalidateNumber nYposWhateverMin ;
 then
 	exit 1
 fi
@@ -82,7 +98,8 @@ while true; do
 	
 	bDoIt=true
 	for checkName in ${aWindowListToSkip[@]};do
-		if [[ "$checkName" == "$windowName" ]];then
+		#if [[ "$checkName" == "$windowName" ]];then
+		if((`expr match "$windowName" "$checkName"`>0));then
 			bDoIt=false
 			break
 		fi
@@ -96,9 +113,11 @@ while true; do
 			xdotool getwindowname $windowId
 		else
 			curPosY=`xwininfo -metric -id $windowId |grep "Absolute upper-left Y:" |sed -r 's"[[:blank:]]*Absolute upper-left Y:[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'`
-			if((curPosY<nYposMin));then
-				xdotool windowmove $windowId $nXpos $nYpos;
-			fi
+			#if((curPosY<nScreenHeight));then # if curPosY greater than screenheight, it is outside current viewport (on Unity/Compiz)
+				if((curPosY<nYposWhateverMin));then
+					xdotool windowmove $windowId $nXpos $nYpos;
+				fi
+			#fi
 		fi;
 	else
 		echo "skipped $windowName"

@@ -52,6 +52,9 @@ SECFUNCvarSet --default pidOpenNewX=$$
 
 # when you see "#kill=skip" at the end of commands, will prevent terminals from being killed on killall commands (usually created at other scripts)
 
+#sedOnlyPid='s"^[ ]*\([0-9]*\) .*"\1"'
+sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
+
 ######################### FUNCTIONS
 
 function FUNCxlock() {
@@ -88,7 +91,11 @@ function FUNCscreenLockRunning() {
 };export -f FUNCscreenLockRunning
 
 function FUNCisX1running {
-  ps -A -o command |grep -v "grep" |grep -q -x "$grepX1"
+  if ps -A -o command |grep -v "grep" |grep -q -x "$grepX1";then
+    ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"
+  	return 0
+  fi
+  return 1
 };export -f FUNCisX1running
 
 function FUNCsayTime() {
@@ -321,6 +328,10 @@ function FUNCkeepJwmAlive() {
 	local pidXtermForNewX=$3
 	
 	while true; do
+		if ! ps -p $pidX1; then
+			break
+		fi
+		
 		if ! ps -p $pidXtermForNewX; then
 			break
 		fi
@@ -335,7 +346,8 @@ function FUNCkeepJwmAlive() {
 };export -f FUNCkeepJwmAlive
 
 function FUNCwaitX1exit() {
-	while FUNCisX1running;do
+#	while FUNCisX1running;do
+	while ps -p $pidX1 >/dev/null 2>&1; do
 		echo "wait X :1 exit"
 		sleep 1
 	done
@@ -470,23 +482,32 @@ while [[ ${1:0:2} == "--" ]]; do
   	FUNCscript $2
 		exit 0
   elif [[ "$1" == "--killX1" ]]; then #opt kill X :1
-    #sedOnlyPid='s"^[ ]*\([0-9]*\) .*"\1"'
-  	sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
-  	
   	# kill X
-    pidX1=`ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"`
-    echo "pidX1=$pidX1"
-    #read -n 1
-    if [[ -n "$pidX1" ]];then
+    #pidX1=`ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"`
+    
+#    pidX1=`FUNCisX1running`
+#    echo "pidX1=$pidX1"
+#    #read -n 1
+#    if [[ -n "$pidX1" ]];then
+#      ps -p $pidX1
+#      echoc -x "sudo -k kill -SIGKILL $pidX1"
+#      #read -n 1
+#    fi
+    if pidX1=`FUNCisX1running`;then
+	    echo "pidX1=$pidX1"
       ps -p $pidX1
       echoc -x "sudo -k kill -SIGKILL $pidX1"
-      #read -n 1
     fi
     
   	# kill xscreensaver if it was used at :1
-    pidXscrsv=`ps -A -o pid,command |grep "xscreensaver -display :1" |grep -v grep |sed -r "$sedOnlyPid"`
-    echo "pidXscrsv=$pidXscrsv"
-    if [[ -n "$pidXscrsv" ]];then
+#    pidXscrsv=`ps -A -o pid,command |grep "xscreensaver -display :1" |grep -v grep |sed -r "$sedOnlyPid"`
+#    echo "pidXscrsv=$pidXscrsv"
+#    if [[ -n "$pidXscrsv" ]];then
+#      ps -p $pidXscrsv
+#      kill -SIGKILL $pidXscrsv
+#    fi
+    if pidXscrsv=`ps -A -o pid,command |grep "xscreensaver -display :1" |grep -v grep |sed -r "$sedOnlyPid"`;then
+	    echo "pidXscrsv=$pidXscrsv"
       ps -p $pidXscrsv
       kill -SIGKILL $pidXscrsv
     fi
@@ -668,6 +689,7 @@ fi
 while ! FUNCisX1running; do
   sleep 1
 done
+varset --show pidX1=`FUNCisX1running`
 
 if [[ -n "$strGeometry" ]];then
 	xrandr -display :1 -s $strGeometry
@@ -750,7 +772,8 @@ fi
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
 #xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
 
-while FUNCisX1running;do
+#while FUNCisX1running; do
+while ps -p $pidX1 >/dev/null 2>&1; do
 	echoc --alert "ctrl+c will prevent commands, like gamma change, from working properly!"
 	if echoc -q -t 5 "kill X1"; then #prevent closing what shutdown jwm and xscreensaver
 		$0 --killX1
