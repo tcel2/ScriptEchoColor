@@ -117,22 +117,32 @@ while true; do
 		continue;
 	fi
 	
-	list=(`xdotool search "Tabs Outliner" 2>/dev/null`)
 	tabsOutlinerWindowId=""
 	tabsOutlinerWindowIdMoveable=""
+	list=(`xdotool search "Tabs Outliner" 2>/dev/null`)
 	for windowId in `echo ${list[*]}`; do 
 		if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Tabs Outliner\"$"; then
 			SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
 #			echo ">a> $windowId"
 #			echo ">b> `FUNCparentest $windowId`"
 #			SECFUNCvarSet --show tabsOutlinerWindowId=`FUNCparentest $windowId`
-#			echo -n ">a>";GetParentestWindow.sh $windowId
-#			echo -n ">b>";str=`GetParentestWindow.sh $windowId`;echo $str
-			SECFUNCvarSet --show tabsOutlinerWindowId=`GetParentestWindow.sh $windowId`
+#			echo -n ">a>";getParentestWindow.sh $windowId
+#			echo -n ">b>";str=`getParentestWindow.sh $windowId`;echo $str
+			SECFUNCvarSet --show tabsOutlinerWindowId=`getParentestWindow.sh $windowId`
 			xwininfo -id $tabsOutlinerWindowId |grep "Window id" #report
 			break;
 		fi
 	done
+#	while true; do 
+#		FUNCwindowAtMouse;
+#		if xwininfo -id $windowId -all |grep -q '"Tabs Outliner"'; then
+#			SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
+#			SECFUNCvarSet --show tabsOutlinerWindowId=`getParentestWindow.sh $windowId`
+#			xwininfo -id $tabsOutlinerWindowId |grep "Window id" #report
+#			break;
+#		fi
+#		sleep 1;
+#	done
 	if [[ -z "$tabsOutlinerWindowId" ]]; then
 		FUNCwait #echoc -w -t $waitStart
 		continue;
