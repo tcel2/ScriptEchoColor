@@ -120,7 +120,7 @@ while true; do
 			#fi
 		fi;
 	else
-		echo "skipped $windowName"
+		echo "INFO: Skipped: $windowName"
 	fi
 	
 	sleep 0.5;

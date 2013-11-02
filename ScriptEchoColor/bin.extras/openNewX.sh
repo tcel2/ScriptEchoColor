@@ -30,11 +30,13 @@ exec 2>&1
 
 eval `secLibsInit.sh`
 
+#echo $SECvarFile
 if SECFUNCuniqueLock --quiet; then
 	SECFUNCvarSetDB -f
 else
 	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
 fi
+#echo $SECvarFile
 
 #alias ps='echoc -x ps' #good to debug the bug
 
@@ -548,6 +550,16 @@ fi
 while FUNCisX1running; do
 	if echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
 		$0 --killX1
+		
+		#wait really exit
+		while FUNCisX1running; do
+			sleep 1
+		done
+		
+		while ! SECFUNCuniqueLock;do
+			echoc -p "Unable to create unique lock..."
+			echoc -w -t 3
+		done
 		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
 	else
 		exit
