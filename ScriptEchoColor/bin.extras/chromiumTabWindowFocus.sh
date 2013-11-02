@@ -77,6 +77,14 @@ function FUNCwait() {
 	echo -n "$@";read -s -t $waitStart -p "[`date`] press a key to continue..";echo #helps with ctrl+c
 }
 
+function FUNCwindowAtMouse() {
+	# info about window below mouse (even if have not focus)
+	eval `xdotool getmouselocation --shell 2>/dev/null`
+	windowId=$WINDOW
+	mouseX=$X
+	mouseY=$Y
+}
+
 bDebugInfo=false
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--debug" ]];then
@@ -86,14 +94,23 @@ while [[ "${1:0:1}" == "-" ]];do
 done
 
 while true; do
-	list=(`xdotool search Chromium 2>/dev/null`)
 	chromiumWindowId=""
-	for windowId in `echo ${list[*]}`; do 
-		if xwininfo -id $windowId |grep "Window id" |egrep -oq " - Chromium\"$"; then
+#	list=(`xdotool search Chromium 2>/dev/null`)
+#	for windowId in `echo ${list[*]}`; do 
+#		if xwininfo -id $windowId |grep "Window id" |egrep -oq " - Chromium\"$"; then
+#			SECFUNCvarSet --show chromiumWindowId=$windowId
+#			xwininfo -id $chromiumWindowId |grep "Window id" #report
+#			break;
+#		fi
+#	done
+	while true; do 
+		FUNCwindowAtMouse;
+		if xwininfo -id $windowId -all |grep -q '"chromium-browser"'; then
 			SECFUNCvarSet --show chromiumWindowId=$windowId
 			xwininfo -id $chromiumWindowId |grep "Window id" #report
 			break;
 		fi
+		sleep 1;
 	done
 	if [[ -z "$chromiumWindowId" ]]; then
 		FUNCwait #echoc -w -t $waitStart
@@ -143,7 +160,8 @@ while true; do
 	previousWindowId=-1
 	previousChromeTabName=""
 	while true; do
-		if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
+		#if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
+		if SECFUNCdelay checkIfRunning --checkorinit 10;then
 			echoc --info "check if chromium is still running"
 			if ! xdotool getwindowname $chromiumWindowId; then # 2>&1 >/dev/null
 				#echoc -p "chromiumWindowId"
@@ -166,11 +184,7 @@ while true; do
 		
 		#xdotool windowmove $tabsOutlinerWindowIdMoveable 0 0
 		
-		# info about window below mouse (even if have not focus)
-		eval `xdotool getmouselocation --shell 2>/dev/null`
-		windowId=$WINDOW
-		mouseX=$X
-		mouseY=$Y
+		FUNCwindowAtMouse
 		
 # not working yet...		
 		# must work only if over chromium application windows
