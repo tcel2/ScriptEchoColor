@@ -59,6 +59,7 @@ while [[ "${1:0:1}" == "-" ]];do
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) that can be a regexp, separated by blank space
+		shift
 		while [[ -n "$1" ]] && [[ "${1:0:1}" != "-" ]];do
 			aWindowListToSkip+=("$1")
 			shift

@@ -148,23 +148,41 @@ while true; do
 		continue;
 	fi
 	
-	#unityLauncherWindowId=`xdotool search unity-launcher`
-
-	list=(`xdotool search "unity-launcher" 2>/dev/null`)
-	for windowId in `echo ${list[*]}`; do 
-		if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"unity-launcher\"$"; then
-			SECFUNCvarSet --show unityLauncherWindowId=$windowId
-			xwininfo -id $unityLauncherWindowId |grep "Window id" #report
-			break;
+	unityLauncherWindowId=-1
+	if ps -A -o cmd |grep -v grep |grep unity-panel-service -iq;then
+		#unityLauncherWindowId=`xdotool search unity-launcher`
+		list=(`xdotool search "unity-launcher" 2>/dev/null`)
+		for windowId in `echo ${list[*]}`; do 
+			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"unity-launcher\"$"; then
+				SECFUNCvarSet --show unityLauncherWindowId=$windowId
+				xwininfo -id $unityLauncherWindowId |grep "Window id" #report
+				break;
+			fi
+		done
+		if [[ -z "$unityLauncherWindowId" ]]; then
+			FUNCwait #echoc -w -t $waitStart
+			continue;
 		fi
-	done
-	if [[ -z "$unityLauncherWindowId" ]]; then
-		FUNCwait #echoc -w -t $waitStart
-		continue;
+	fi
+	
+	gnomePanelWindowId=-1
+	if ps -A -o cmd |grep -v grep |grep gnome-panel -iq;then
+		list=(`xdotool search "Left Expanded Edge Panel" 2>/dev/null`)
+		for windowId in `echo ${list[*]}`; do 
+			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Left Expanded Edge Panel\"$"; then
+				SECFUNCvarSet --show gnomePanelWindowId=$windowId
+				xwininfo -id $gnomePanelWindowId |grep "Window id" #report
+				break;
+			fi
+		done
+		if [[ -z "$gnomePanelWindowId" ]]; then
+			FUNCwait #echoc -w -t $waitStart
+			continue;
+		fi
 	fi
 	
 	# move once only
-	echoc -x "xdotool windowmove $tabsOutlinerWindowIdMoveable 0 0"
+	echoc -x "xdotool windowmove $tabsOutlinerWindowIdMoveable 1 1"
 	#echoc -x "xdotool windowmove $tabsOutlinerWindowIdMoveable 3 0"
 
 	previousWindowId=-1
@@ -174,20 +192,28 @@ while true; do
 		if SECFUNCdelay checkIfRunning --checkorinit 10;then
 			echoc --info "check if chromium is still running"
 			if ! xdotool getwindowname $chromiumWindowId; then # 2>&1 >/dev/null
-				#echoc -p "chromiumWindowId"
+				echoc -p "chromiumWindowId"
 				break;
 			fi
 			if ! xdotool getwindowname $tabsOutlinerWindowId; then
-				#echoc -p "tabsOutlinerWindowId"
+				echoc -p "tabsOutlinerWindowId"
 				break;
 			fi
 			if ! xdotool getwindowname $tabsOutlinerWindowIdMoveable; then
-				#echoc -p "tabsOutlinerWindowIdMoveable"
+				echoc -p "tabsOutlinerWindowIdMoveable"
 				break;
 			fi
-			if ! xdotool getwindowname $unityLauncherWindowId; then
-				#echoc -p "unityLauncherWindowId"
-				break;
+			if ps -A -o cmd |grep -v grep |grep unity-panel-service -iq;then
+				if ! xdotool getwindowname $unityLauncherWindowId; then
+					echoc -p "unityLauncherWindowId"
+					break;
+				fi
+			fi
+			if ps -A -o cmd |grep -v grep |grep gnome-panel -iq;then
+				if ! xdotool getwindowname $gnomePanelWindowId; then
+					echoc -p "gnomePanelWindowId"
+					break;
+				fi
 			fi
 			SECFUNCdelay checkIfRunning --init
 		fi
@@ -212,14 +238,17 @@ while true; do
 		#echo "Chromium app is active."
 		
 		# from chromium to tabs outliner!
-		bActivate=false
+		bActivateTabsOutliner=false
 		if((windowId==chromiumWindowId));then
-			bActivate=true
+			bActivateTabsOutliner=true
 		fi
 		if((windowId==unityLauncherWindowId && previousWindowId==chromiumWindowId));then
-			bActivate=true
+			bActivateTabsOutliner=true
 		fi
-		if $bActivate;then
+		if((windowId==gnomePanelWindowId && previousWindowId==chromiumWindowId));then
+			bActivateTabsOutliner=true
+		fi
+		if $bActivateTabsOutliner;then
 			if((mouseX<screenLeftMarginOpen));then
 				xdotool windowactivate $tabsOutlinerWindowId
 				echo "activate TabOutliner (`date`)"
@@ -253,7 +282,8 @@ while true; do
 		else
 			if
 				((previousWindowId==tabsOutlinerWindowId)) ||
-			  ((previousWindowId==unityLauncherWindowId));
+			  ((previousWindowId==unityLauncherWindowId)) ||
+			  ((previousWindowId==gnomePanelWindowId));
 			then
 				if((windowId==chromiumWindowId));then
 					xdotool windowactivate $chromiumWindowId
@@ -273,6 +303,7 @@ while true; do
 			echo "tabsOutlinerWindowId=$tabsOutlinerWindowId"
 			echo "tabsOutlinerWindowIdMoveable=$tabsOutlinerWindowIdMoveable"
 			echo "unityLauncherWindowId=$unityLauncherWindowId"
+			echo "gnomePanelWindowId=$gnomePanelWindowId"
 		fi
 		
 		previousWindowId=$windowId
@@ -281,7 +312,8 @@ while true; do
 			((windowId==tabsOutlinerWindowId)) ||
 			((windowId==tabsOutlinerWindowIdMoveable)) ||
 			((windowId==chromiumWindowId)) ||
-			((windowId==unityLauncherWindowId));
+			((windowId==unityLauncherWindowId)) ||
+			((windowId==gnomePanelWindowId));
 		then
 			if ! sleep $delayRaiseTabOutliner;then exit 1;fi
 			SECFUNCdelay --init
