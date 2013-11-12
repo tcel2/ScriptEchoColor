@@ -25,7 +25,7 @@
 
 ########### INIT
 eval `secLibsInit`
-aWindowListToSkip=("Yakuake")
+aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$")
 
 eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
 varset --show nScreenWidth=$nScreenWidth # to ease find code
@@ -34,7 +34,7 @@ varset --show nWidth=$((nScreenWidth-25)) #help width to resize the demaximized 
 varset --show nHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
 varset --show nXpos=1 #help X top left position to place the demaximized window
 varset --show nYpos=25 #help Y top left position to place the demaximized window
-varset --show nYposWhateverMin=52 #help Y minimum top position of non maximized 
+varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 ########### FUNCTIONS
 function FUNCvalidateNumber() {
@@ -54,7 +54,7 @@ function FUNCvalidateNumber() {
 
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
-		echoc --info "Params: nWidth nHeight nXpos nYpos nYposWhateverMin "
+		echoc --info "Params: nWidth nHeight nXpos nYpos nYposMinReadPos "
 		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
 		SECFUNCshowHelp
 		exit
@@ -88,11 +88,12 @@ if	! FUNCvalidateNumber nWidth		||
 		! FUNCvalidateNumber nHeight	||
 		! FUNCvalidateNumber nXpos		||
 		! FUNCvalidateNumber nYpos		||
-		! FUNCvalidateNumber nYposWhateverMin ;
+		! FUNCvalidateNumber nYposMinReadPos ;
 then
 	exit 1
 fi
 
+strLastSkipped=""
 while true; do 
 	windowId=`xdotool getactivewindow`;
 	windowName=`xdotool getwindowname $windowId`
@@ -113,15 +114,23 @@ while true; do
 			xdotool windowmove $windowId $nXpos $nYpos;
 			xdotool getwindowname $windowId
 		else
-			curPosY=`xwininfo -metric -id $windowId |grep "Absolute upper-left Y:" |sed -r 's"[[:blank:]]*Absolute upper-left Y:[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'`
-			#if((curPosY<nScreenHeight));then # if curPosY greater than screenheight, it is outside current viewport (on Unity/Compiz)
-				if((curPosY<nYposWhateverMin));then
+			#@@@FindCodeHelper nWindowX nWindowY nWindowWidth nWindowHeight
+			eval `xwininfo -id $windowId |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
+			
+			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
+				if(( nWindowY                 < nYposMinReadPos )) ||
+					(( (nWindowX+nWindowWidth ) > nScreenWidth     )) ||
+					(( (nWindowY+nWindowHeight) > nScreenHeight    ));
+				then
 					xdotool windowmove $windowId $nXpos $nYpos;
 				fi
 			#fi
 		fi;
 	else
-		echo "INFO: Skipped: $windowName"
+		if [[ "$strLastSkipped" != "$windowName" ]];then
+			echo "INFO: Skipped: $windowName"
+			strLastSkipped="$windowName"
+		fi
 	fi
 	
 	sleep 0.5;

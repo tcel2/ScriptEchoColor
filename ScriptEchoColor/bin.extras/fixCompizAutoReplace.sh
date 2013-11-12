@@ -23,17 +23,23 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
-#trap 'FUNCreplaceCompiz' INT #this crashes bash while read is active
+#trap 'FUNCaskCompizReplaceOrKill' INT #this crashes bash while read is active
 
 ################# init 
 eval `secLibsInit.sh`
 bAskReplaceKill=false
 
 ################## functions
-function FUNCreplaceCompiz() {
+function FUNCcompizReplace() {
+	xdotool set_desktop_viewport 0 0 #to help not messing windows positioning
+	sleep 1
+	xtermDetached.sh compiz --replace
+};export -f FUNCcompizReplace
+
+function FUNCaskCompizReplaceOrKill() {
 	pidCompiz=`ps -A -o pid,command |grep compiz |grep -v grep |sed -r 's#^[ ]*([[:digit:]]*).*#\1#'`
 	echoc -t 10 -Q "fix compiz@O_replace/_kill";case `secascii $?` in 
-		r)xtermDetached.sh compiz --replace;; 
+		r)FUNCcompizReplace;; 
 		k)kill -SIGKILL $pidCompiz; echoc --info "wait a bit...";; 
 	esac
 }
@@ -58,7 +64,7 @@ function FUNCwait() {
 #	fi
 	
 	if $bAskReplaceKill;then
-		FUNCreplaceCompiz
+		FUNCaskCompizReplaceOrKill
 		bAskReplaceKill=false
 	fi
 }
@@ -125,7 +131,7 @@ while [[ "${1:0:1}" == "-" ]];do
 		echoc --say "going to auto replace compiz in $delay seconds."
 		echoc -w -t $delay
 		#bAskReplaceKill=true
-		xtermDetached.sh compiz --replace
+		FUNCcompizReplace
 	elif [[ "$1" == "--help" ]];then
 		grep '" == "--' $0 |grep -v grep
 		exit
@@ -145,7 +151,7 @@ while true; do
 	else
 		FUNCechoErr "compiz is not running..."
 		
-#		xterm -e "echo \"TEMP xterm...\"; xterm -e \"compiz --replace\""&
+#		xterm -e "echo \"TEMP xterm...\"; xterm -e \"FUNCcompizReplace\""&
 #		# wait for the child to open
 #		while ! ps --ppid $! 2>&1 >/dev/null; do
 #			sleep 1
@@ -153,7 +159,7 @@ while true; do
 #		pidXterm=`ps --ppid $! -o pid --no-headers` #TODO improve this, is not working
 #		kill -SIGINT $! #releases temp xterm
 #		FUNCechoErr "xterm pid=$pidXterm"
-		xtermDetached.sh compiz --replace
+		FUNCcompizReplace
 		
 		waitLimit=15
     count=0
