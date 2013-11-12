@@ -36,6 +36,9 @@ varset --show nXpos=1 #help X top left position to place the demaximized window
 varset --show nYpos=25 #help Y top left position to place the demaximized window
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
+selfName=`basename "$0"`
+logFile="/tmp/SEC.$selfName.log"
+
 ########### FUNCTIONS
 function FUNCvalidateNumber() {
 	local l_id=$1
@@ -96,26 +99,41 @@ fi
 strLastSkipped=""
 while true; do 
 	windowId=`xdotool getactivewindow`;
-	windowName=`xdotool getwindowname $windowId`
+	windowName=`xdotool getwindowname $windowId 2>"$logFile" `
 	
-	bDoIt=true
-	for checkName in ${aWindowListToSkip[@]};do
-		#if [[ "$checkName" == "$windowName" ]];then
-		if((`expr match "$windowName" "$checkName"`>0));then
-			bDoIt=false
-			break
-		fi
-	done
+	bOk=true
 	
-	if $bDoIt;then
-		if xwininfo -wm -id $windowId |tr -d '\n' |grep -q "Maximized Vert.*Horz";then
+	# check empty window name
+	if [[ -z "$windowName" ]];then
+		bOk=false
+	fi
+	
+	# SKIP check
+	if $bOk;then
+		for checkName in ${aWindowListToSkip[@]};do
+			#if [[ "$checkName" == "$windowName" ]];then
+			if((`expr match "$windowName" "$checkName"`>0));then
+				bOk=false
+				if [[ "$strLastSkipped" != "$windowName" ]];then
+					echo "INFO: Skipped: $windowName"
+					strLastSkipped="$windowName"
+				fi
+				break
+			fi
+		done
+	fi
+	
+	# Do it
+	if $bOk;then
+		if xwininfo -wm -id $windowId 2>"$logFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";then
 			wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
 			xdotool windowsize $windowId $nWidth $nHeight;
 			xdotool windowmove $windowId $nXpos $nYpos;
 			xdotool getwindowname $windowId
+			echo "Demaximizing: $windowName"
 		else
 			#@@@FindCodeHelper nWindowX nWindowY nWindowWidth nWindowHeight
-			eval `xwininfo -id $windowId |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
+			eval `xwininfo -id $windowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
 			
 			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
 				if(( nWindowY                 < nYposMinReadPos )) ||
@@ -123,14 +141,10 @@ while true; do
 					(( (nWindowY+nWindowHeight) > nScreenHeight    ));
 				then
 					xdotool windowmove $windowId $nXpos $nYpos;
+					echo "Fixing (placement): $windowName"
 				fi
 			#fi
 		fi;
-	else
-		if [[ "$strLastSkipped" != "$windowName" ]];then
-			echo "INFO: Skipped: $windowName"
-			strLastSkipped="$windowName"
-		fi
 	fi
 	
 	sleep 0.5;
