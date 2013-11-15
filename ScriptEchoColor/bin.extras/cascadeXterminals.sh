@@ -128,6 +128,9 @@ if $bDaemon; then
 		fi
 		#if ! sleep 5; then break; fi; 
 		FUNCwait 1 "press a key to continue.." #echoc -w -t 1 #helps with ctrl+c
+#		if echoc -t 1 -q "tile now";then
+#			bCascadeForceNow=true
+#		fi
 		#echoc -w -t 10 #helps with ctrl+c
 	done
 	exit 0

@@ -22,6 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+#set -x #@@@ comment
 eval `secLibsInit.sh`
 
 waitStart=3
@@ -81,6 +82,9 @@ function FUNCwindowAtMouse() {
 	# info about window below mouse (even if have not focus)
 	eval `xdotool getmouselocation --shell 2>/dev/null`
 	windowId=$WINDOW
+	if [[ -z "$windowId" ]] || ((windowId==0));then
+		windowId=-1 #TODO in truth -1 is converted by xwininfo into 0xffffffff and so into a valid windowId... lets expect it do not mess things up... xwininfo should be fixed? also if it gets set to 0, xwininfo ignores the parameter and asks for mouse click.. that looks like a bug right?
+	fi
 	mouseX=$X
 	mouseY=$Y
 }
@@ -105,10 +109,12 @@ while true; do
 #	done
 	while true; do 
 		FUNCwindowAtMouse;
-		if xwininfo -id $windowId -all |grep -q '"chromium-browser"'; then
-			SECFUNCvarSet --show chromiumWindowId=$windowId
-			xwininfo -id $chromiumWindowId |grep "Window id" #report
-			break;
+		if((windowId>-1));then
+			if echoc -x "xwininfo -all -id $windowId #$LINENO" |grep -q '"chromium-browser"'; then
+				SECFUNCvarSet --show chromiumWindowId=$windowId
+				xwininfo -id $chromiumWindowId |grep "Window id" #report
+				break;
+			fi
 		fi
 		sleep 1;
 	done
@@ -135,7 +141,7 @@ while true; do
 	done
 #	while true; do 
 #		FUNCwindowAtMouse;
-#		if xwininfo -id $windowId -all |grep -q '"Tabs Outliner"'; then
+#		if xwininfo -all -id $windowId |grep -q '"Tabs Outliner"'; then
 #			SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
 #			SECFUNCvarSet --show tabsOutlinerWindowId=`getParentestWindow.sh $windowId`
 #			xwininfo -id $tabsOutlinerWindowId |grep "Window id" #report
