@@ -212,13 +212,13 @@ while true; do
 			if ps -A -o cmd |grep -v grep |grep unity-panel-service -iq;then
 				if ! xdotool getwindowname $unityLauncherWindowId; then
 					echoc -p "unityLauncherWindowId"
-					break;
+					#break; #not essential
 				fi
 			fi
 			if ps -A -o cmd |grep -v grep |grep gnome-panel -iq;then
 				if ! xdotool getwindowname $gnomePanelWindowId; then
 					echoc -p "gnomePanelWindowId"
-					break;
+					#break; #not essential
 				fi
 			fi
 			SECFUNCdelay checkIfRunning --init
