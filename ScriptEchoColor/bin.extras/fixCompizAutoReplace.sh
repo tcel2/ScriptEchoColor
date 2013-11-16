@@ -28,6 +28,7 @@ trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
 ################# init 
 eval `secLibsInit.sh`
 bAskReplaceKill=false
+selfName=`basename "$0"`
 
 ################## functions
 function FUNCcompizReplace() {
@@ -51,7 +52,7 @@ function FUNCechoErr() {
 function FUNCwait() {
 	#echoc -w -t 1 "$@" #too much cpu usage
 	#echo -n "$@";read -s -t 2 -p "hit ctrl+c for options";echo
-	echo -n "$@";echo "hit ctrl+c for options"
+	echo -n "$@";echoc --info "hit ctrl+c for options"
 	for((i=0;i<10;i++));do
 		if ! sleep 1; then break; fi
 		if $bAskReplaceKill;then
@@ -129,7 +130,8 @@ while [[ "${1:0:1}" == "-" ]];do
 			exit 1
 		fi
 		echoc --say "going to auto replace compiz in $delay seconds."
-		echoc -w -t $delay
+		#echoc -w -t $delay
+		zenity --info --timeout $delay --title "$selfName" --text "hit OK to restart compiz now (or wait ${delay}s)..."
 		#bAskReplaceKill=true
 		FUNCcompizReplace
 	elif [[ "$1" == "--help" ]];then

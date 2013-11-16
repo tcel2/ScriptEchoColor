@@ -46,9 +46,9 @@ FUNCreadDBloop() {
 	while true; do
 		varreaddb
 		FUNCexitIfDaemonNotRunning
-		#SECFUNCdrawLine " RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
+		SECFUNCdrawLine " RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
 		#echo "# RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
-		date +"@(%H:%M:%S.%N)"
+		#date +"@(%H:%M:%S.%N)"
 		grep "_RemoteInfo=" $SECvarFile \
 			|sed -r 's;^(.*)_RemoteInfo="(.*)"$;\1:\t\2;' \
 			|sort
@@ -67,7 +67,13 @@ while [[ "${1:0:1}" == "-" ]];do
 		varset --show "$strVar" "$strVal"
 		varwritedb #to clean/remove dups from db file
 		exit
-	#elif [[ "$1" == "--remove";then
+	elif [[ "$1" == "--unset" ]];then #help <Variable>
+		FUNCexitIfDaemonNotRunning
+		shift
+		strVar="${1}_RemoteInfo"
+		SECFUNCvarUnset "$strVar"
+		varwritedb #to clean/remove dups from db file
+		exit
 	elif [[ "$1" == "--daemon" ]];then #help must be running to other commands work
 		while $bAlredyRunning;do
 			if SECFUNCuniqueLock --quiet; then

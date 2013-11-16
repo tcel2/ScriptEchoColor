@@ -252,6 +252,10 @@ function SECFUNCvarShowDbg() { #help: only show var and value if SEC_DEBUG is se
   fi
 }
 
+function SECFUNCvarUnset() { #help: <var> unregister the variable so it will not be saved to BD next time
+	pSECFUNCvarRegister --unregister $1
+}
+
 function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tOptions:\n\t--show will show always var and value;\n\t--showdbg will show only if SEC_DEBUG is set;\n\t--write (this is the default now) will also write value promptly to DB;\n\t--nowrite prevent promptly writing value to DB;\n\t--default will only set if variable is not set yet (like being initialized only ONCE);\n\t--array (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...;
 	#SECFUNCvarReadDB
 	
@@ -496,7 +500,15 @@ function pSECFUNCvarRestoreArrays() { #private:
 #}
 
 function pSECFUNCvarRegister() { #private: 
-	if ! SECFUNCvarIsRegistered $1; then
+	local l_bRegister=true
+	if [[ "$1" == "--unregister" ]];then
+		l_bRegister=false
+		shift
+	fi
+	
+	if	(   $l_bRegister && ! SECFUNCvarIsRegistered $1 ) ||
+			( ! $l_bRegister &&   SECFUNCvarIsRegistered $1 )    ;
+	then
 		local l_wasLockedHere=false #the lock may happen outside here so it must be unlocked only outside here...
 		if [[ "`SECFUNCfileLock --islocked "$SECvarFile"`" != "$$" ]];then
 			SECFUNCfileLock "$SECvarFile"
@@ -506,8 +518,21 @@ function pSECFUNCvarRegister() { #private:
 		SECFUNCvarReadDB SECvars
 		#pSECFUNCvarLoadMissingVars
 		#SECFUNCvarReadDB
-	
-		SECvars+=($1) # useless to use like 'export SECvars' here, because bash cant export arrays...
+		
+		if $l_bRegister;then
+			SECvars+=($1) # useless to use like 'export SECvars' here, because bash cant export arrays...
+		else
+			local l_nSECvarTmpIndex=0
+			for l_strSECvarTmp in ${SECvars[@]}; do
+				if [[ "$l_strSECvarTmp" == "$1" ]];then
+					unset SECvars[$l_nSECvarTmpIndex]
+					SECvars=(${SECvars[@]}) #to fix index, the removed var will be empty/null
+					break
+				fi
+				((l_nSECvarTmpIndex++))
+			done
+		fi
+		
 		pSECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when pSECFUNCvarRestore_SECvars_Array is used at child shell
 		pSECFUNCvarPrepareArraysToExport $1
 	
