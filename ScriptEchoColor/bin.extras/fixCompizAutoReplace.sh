@@ -129,9 +129,23 @@ while [[ "${1:0:1}" == "-" ]];do
 			echoc -p "missing delay time"
 			exit 1
 		fi
+		
 		echoc --say "going to auto replace compiz in $delay seconds."
-		#echoc -w -t $delay
-		zenity --info --timeout $delay --title "$selfName" --text "hit OK to restart compiz now (or wait ${delay}s)..."
+		zenity --info --timeout $delay --title "$selfName" --text "hit OK to restart compiz now (or wait ${delay}s)..."&
+		pidZen=$!;
+		windowList=`xdotool search --pid $pidZen 2>/dev/null`;
+		#echo ${windowList[@]} #@@@R
+		for windowId in ${windowList[@]}; do 
+			#echo $windowId #@@@R
+			#xwininfo -id $windowId |grep "Map State: IsViewable" #@@@R
+			if xwininfo -id $windowId |grep -q "Map State: IsViewable";then 
+				wmctrl -ir $windowId -b add,above;
+				#xwininfo -id $windowId #@@@R
+				break
+			fi;
+		done
+		echoc -w -t $delay
+		
 		#bAskReplaceKill=true
 		FUNCcompizReplace
 	elif [[ "$1" == "--help" ]];then
