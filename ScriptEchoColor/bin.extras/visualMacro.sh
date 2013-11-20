@@ -108,7 +108,7 @@ if $bOptInitialize; then
 	echoc --alert "TAKE NOTE of (memorize) upper left point (x,y) as shutter does not output that on console yet (?)..."
 	echoc -w
 	
-	if((DISPLAY!=nDisplay));then
+	if [[ "$DISPLAY" != "$nDisplay" ]];then
 		echoc -t 10 --alert "change to the appropriate display NOW!!!"
 	fi
 	
