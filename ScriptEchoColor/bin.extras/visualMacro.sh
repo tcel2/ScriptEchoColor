@@ -49,6 +49,11 @@ while [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--id" ]];then #help <id> set screenshot identity
 		shift
 		varset --show strId="$1"
+	elif [[ "$1" == "--checkid" ]];then #help <id> check if 'id' has already been initialized
+		if [[ -f "$basePath/$1.jpg" ]];then
+			exit 0
+		fi
+		exit 1
 	elif [[ "$1" == "--display" ]];then #help set DISPLAY
 		shift
 		varset --show nDisplay=$1
