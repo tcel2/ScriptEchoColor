@@ -50,6 +50,7 @@ while [[ "${1:0:1}" == "-" ]]; do
 		shift
 		varset --show strId="$1"
 	elif [[ "$1" == "--checkid" ]];then #help <id> check if 'id' has already been initialized
+		shift
 		if [[ -f "$basePath/$1.jpg" ]];then
 			exit 0
 		fi
@@ -105,33 +106,42 @@ if $bOptInitialize; then
 		fi
 	fi
 	
-	echoc --alert "TAKE NOTE of (memorize) upper left point (x,y) as shutter does not output that on console yet (?)..."
-	echoc -w
+	while true; do
+		echoc --alert "TAKE NOTE of (memorize) upper left point (x,y) as shutter does not output that on console yet (?)..."
+		echoc -w
 	
-	if [[ "$DISPLAY" != "$nDisplay" ]];then
-		echoc -t 10 --alert "change to the appropriate display NOW!!!"
-	fi
+		if [[ "$DISPLAY" != "$nDisplay" ]];then
+			while ps -A |grep shutter;do
+				echoc --alert -t 1 "shutter must not be running!!!"
+			done
+			echoc -t 10 --alert "change to the appropriate display NOW!!!"
+		fi
 	
-	DISPLAY=$nDisplay shutter -C -n -e -s -o "$imgTmp"
-	ls -l "$imgTmp"
+		echoc -x "DISPLAY=$nDisplay shutter -C -n -e -s -o \"$imgTmp\""
+		ls -l "$imgTmp"
 	
-	echoc -w "check the image that will be shown"
-	eog "$imgTmp"
+		echoc -w "check the image that will be shown"
+		eog "$imgTmp"
 	
-	if echoc -q "confirm it";then
-		nX=`echoc -S "What was its upper left X position"`
-		nY=`echoc -S "What was its upper left Y position"`
-	fi
+		if echoc -q "confirm it";then
+			nX=`echoc -S "What was its upper left X position"`
+			nY=`echoc -S "What was its upper left Y position"`
+		else
+			continue
+		fi
 	
-	#imgFinal="$basePath/$strId.nX=$nX.nY=$nY.jpg"
-	imgFinal="$basePath/$strId.jpg"
+		#imgFinal="$basePath/$strId.nX=$nX.nY=$nY.jpg"
+		imgFinal="$basePath/$strId.jpg"
 	
-	echo -n         >"$basePath/$strId.cfg"
-	echo "nX=$nX;" >>"$basePath/$strId.cfg"
-	echo "nY=$nY;" >>"$basePath/$strId.cfg"
+		echo -n         >"$basePath/$strId.cfg"
+		echo "nX=$nX;" >>"$basePath/$strId.cfg"
+		echo "nY=$nY;" >>"$basePath/$strId.cfg"
 	
-	mv -v "$imgTmp" "$imgFinal"
-	ls -l "$imgFinal"
+		mv -v "$imgTmp" "$imgFinal"
+		ls -l "$imgFinal"
+		
+		break;
+	done
 elif $bOptCmpLoop;then
 #	varset --show imgCmp `find "${basePath}/" -maxdepth 1 -name "${strId}.*.jpg"`
 #	if [[ ! -f "$imgCmp" ]];then
