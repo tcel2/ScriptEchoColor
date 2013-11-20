@@ -755,6 +755,9 @@ function SECFUNCshowHelp() {
 		return 1
 	fi
 	#cat "$0" |grep -w "#help" |sed -r 's,.*== "([[:alnum:]]*)" \]\];[ ]*then #help[ ]*(.*),\t\1\t\2,'
-	cat "$l_file" |grep -w "#help" |sed -r 's,^.*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*\]\];[[:blank:]]*then[[:blank:]]*#help[[:blank:]]*(.*)$,\t\1\t\2,'
+	cat "$l_file" \
+		|egrep -v "^[[:blank:]]*#" \
+		|grep -w "#help" \
+		|sed -r 's,^.*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*\]\];[[:blank:]]*then[[:blank:]]*#help[[:blank:]]*(.*)$,\t\1\t\2,'
 }
 
