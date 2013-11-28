@@ -166,8 +166,8 @@ function FUNCcicleGamma() {
 #	SECFUNCvarSet gammaLock $$
 	
 	local nIncrement="0.25"
-	local nMin="0.5"
-	local nMax="2.0"
+	local nMin="0.25"
+	local nMax="10.0"
 	
 	SECFUNCvarSet fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
 	if ((`bc <<< "$fGamma<$nMin"`)); then
