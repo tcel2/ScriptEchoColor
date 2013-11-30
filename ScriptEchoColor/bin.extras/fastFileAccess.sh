@@ -48,7 +48,17 @@ dtCfgManagedFiles=0
 
 ########### FUNCTIONS
 
+function FUNCcheckFreeSpace() {
+	local lfileFastMediaReal=`readlink "$fastMedia"`
+	df -h "$lfileFastMediaReal" >/dev/stderr
+	
+	local lsedDfAvailableSpace='s"^[^[:blank:]]*[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:digit:]]*[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'
+	local lnAvailableSpace=`df -B 1 "$lfileFastMediaReal" |tail -n 1 |sed -r "$lsedDfAvailableSpace"`
+	echo "$lnAvailableSpace"
+}
+
 function FUNCcheckCfgChanged() {
+	echoc --info "$FUNCNAME"
 	local ldtCfgManagedFiles=`stat -c "%Y" "$cfgManagedFiles"`
 	if((dtCfgManagedFiles!=ldtCfgManagedFiles));then
 		dtCfgManagedFiles=$ldtCfgManagedFiles
@@ -58,21 +68,45 @@ function FUNCcheckCfgChanged() {
 }
 
 function FUNCaddFile() {
+	# HERE IS $1, to check the real parameter
+	if [[ -L "$1" ]];then
+		if [[ -f "${1}.${cfgExt}" ]];then
+			echoc -x "grep \"`basename "$1"`\" \"$cfgManagedFiles\""
+			echoc -x "ls -l \"${1}.${cfgExt}\""
+			echoc --info "file '$1' seems to be already managed..."
+			exit
+		else
+			echoc -p "file '$1' is a symlink, must be a real file"
+			exit 1
+		fi
+	fi
+	
 	fileToAdd=`readlink -f "$1"` # canonical full path and filename
+	
 	echoc --info "working with '$fileToAdd'"
+	
 	if [[ ! -f "$fileToAdd" ]];then
 		echoc -p "invalid file '$fileToAdd'"
 		exit 1
 	fi
+	
+	# this only happens if the fast media is offline/unmounted and files have been restored
 	if grep -q "^${fileToAdd}$" $cfgManagedFiles;then
 		echoc --info "file '$fileToAdd' already managed."
 		exit
 	fi
-	echo "$fileToAdd" >>"$cfgManagedFiles"
-	if grep "$fileToAdd" "$cfgManagedFiles";then
-		echoc --info "file added"
+	
+	local lnSize=`du -b "$fileToAdd" |grep -o "^[[:digit:]]*"`
+	if((lnSize<`FUNCcheckFreeSpace`));then
+		echo "$fileToAdd" >>"$cfgManagedFiles"
+		if grep "$fileToAdd" "$cfgManagedFiles";then
+			echoc --info "file added"
+		else
+			echoc -p "unable to add file (why?).."
+			exit 1
+		fi
 	else
-		echoc -p "unable to add file.."
+		echoc -p "file is too big '$lnSize', wont fit in the fast media.."
 		exit 1
 	fi
 }
@@ -81,6 +115,10 @@ function FUNCprepareFileAtFastMedia() {
 	echoc --info "$FUNCNAME '$1'"
 	
 	local lfileId="$1"
+	if [[ -z "$lfileId" ]];then #ignore empty lines
+		return 0
+	fi
+	
 	local lpathDest=`dirname "$fastMedia/$lfileId"`
 	
 	if [[ ! -d "$lpathDest" ]];then
@@ -116,7 +154,7 @@ function FUNCprepareFileAtFastMedia() {
 		fi
 		if $lbFixMissing;then
 			secdelay delayToCopy --init
-			if ! echoc -x "cp -v \"${lfileId}.$cfgExt\" \"$fastMedia/$lfileId\"";then
+			if ! nice -n 19 echoc -x "cp -v \"${lfileId}.$cfgExt\" \"$fastMedia/$lfileId\"";then
 				echoc -p "copying failed"
 				return 1
 			fi
