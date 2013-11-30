@@ -99,7 +99,7 @@ while true; do
       nCount=0
       continue
     fi
-    exit 1
+    sleep 1 #wont exit so keep trying forever..
   fi
   ((nCount++))
   
