@@ -69,6 +69,12 @@ function FUNCaddFile() {
 		exit
 	fi
 	echo "$fileToAdd" >>"$cfgManagedFiles"
+	if grep "$fileToAdd" "$cfgManagedFiles";then
+		echoc --info "file added"
+	else
+		echoc -p "unable to add file.."
+		exit 1
+	fi
 }
 
 function FUNCprepareFileAtFastMedia() {
