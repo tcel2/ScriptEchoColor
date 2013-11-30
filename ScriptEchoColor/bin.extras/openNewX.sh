@@ -25,9 +25,6 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS
-exec > >(tee /tmp/$0.$$.log) #redirects self output to log file!
-exec 2>&1
-
 eval `secLibsInit.sh`
 
 #echo $SECvarFile
@@ -51,6 +48,10 @@ selfName=`basename "$0"`
 SECFUNCvarSet --default pidOpenNewX=$$
 #execX1="startx -- :1"
 #grepX1="/usr/bin/X :1 [-]auth /tmp/serverauth[.].*"
+
+#redirects self output to log file!
+exec > >(tee /tmp/SEC.$selfName.$$.log)
+exec 2>&1
 
 # when you see "#kill=skip" at the end of commands, will prevent terminals from being killed on killall commands (usually created at other scripts)
 
@@ -548,23 +549,25 @@ fi
 #fi
 
 # at this point, X1 will be managed by openNewX
-if FUNCisX1running && echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
-	$0 --killX1
+if FUNCisX1running;then
+	if echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
+		$0 --killX1
 	
-	#wait really exit
-	while FUNCisX1running; do
-		sleep 1
-	done
+		#wait really exit
+		while FUNCisX1running; do
+			sleep 1
+		done
 	
-	while ! SECFUNCuniqueLock;do
-		echoc -p "Unable to create unique lock..."
-		echoc -w -t 3
-	done
+		while ! SECFUNCuniqueLock;do
+			echoc -p "Unable to create unique lock..."
+			echoc -w -t 3
+		done
 	
-	SECFUNCvarSetDB -f
-	#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
-else
-	exit
+		SECFUNCvarSetDB -f
+		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
+	else
+		exit
+	fi
 fi
 
 if $useJWM; then
