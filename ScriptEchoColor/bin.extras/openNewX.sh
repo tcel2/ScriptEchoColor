@@ -25,7 +25,7 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS
-exec > >(tee /tmp/$0.$$.log)
+exec > >(tee /tmp/$0.$$.log) #redirects self output to log file!
 exec 2>&1
 
 eval `secLibsInit.sh`
@@ -547,24 +547,25 @@ fi
 #  useJWM=false
 #fi
 
-while FUNCisX1running; do
-	if echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
-		$0 --killX1
-		
-		#wait really exit
-		while FUNCisX1running; do
-			sleep 1
-		done
-		
-		while ! SECFUNCuniqueLock;do
-			echoc -p "Unable to create unique lock..."
-			echoc -w -t 3
-		done
-		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
-	else
-		exit
-	fi
-done
+# at this point, X1 will be managed by openNewX
+if FUNCisX1running && echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
+	$0 --killX1
+	
+	#wait really exit
+	while FUNCisX1running; do
+		sleep 1
+	done
+	
+	while ! SECFUNCuniqueLock;do
+		echoc -p "Unable to create unique lock..."
+		echoc -w -t 3
+	done
+	
+	SECFUNCvarSetDB -f
+	#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
+else
+	exit
+fi
 
 if $useJWM; then
   if $bRecreateRCfile || [[ ! -f "$HOME/.jwmrc" ]]; then
