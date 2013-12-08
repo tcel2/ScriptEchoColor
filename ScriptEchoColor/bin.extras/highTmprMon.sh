@@ -40,6 +40,9 @@ if [[ -z "${anIgnorePids+dummyValue}" ]];then
 	varset anIgnorePids
 fi
 
+bFUNCinterruptAsk=false
+trap 'FUNCinterruptAsk' INT
+
 ############### CONFIG
 export tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
 export minPercCPU=30
@@ -57,6 +60,10 @@ export SEC_SAYVOL=10
 export SEC_SAYID="$selfName"
 
 ############ FUNCTIONS
+function FUNCinterruptAsk() {
+	bFUNCinterruptAsk=true
+}
+
 function FUNCbcToBool() {
 	local iResult=`echo "$1" |bc -l`
 	local bResult=false;
@@ -64,6 +71,30 @@ function FUNCbcToBool() {
 		bResult=true; 
 	fi
 	echo $bResult
+}
+
+function FUNCignoredPidsRemove() {
+	local lnCount=0
+	local lbFound=false
+	SECFUNCvarShow anIgnorePids
+	for ignoredPid in ${anIgnorePids[@]};do 
+		if((ignoredPid==$1));then
+			unset anIgnorePids[lnCount]
+			lbFound=true
+		fi
+		((lnCount++))
+	done
+	
+	if $lbFound;then
+		anIgnorePids=(${anIgnorePids[@]}) #removes the empty items
+		varset --show anIgnorePids
+		
+		echoc --info "pid $1 removed from the ingore list."
+		return 0
+	else
+		echoc --info "pid $1 not in the ingore list.."
+		return 1
+	fi
 }
 
 function FUNCignoredPids() {
@@ -172,7 +203,7 @@ function FUNClimitCpu() {
 	#anIgnorePids=(${anIgnorePids[@]} $pidToLimit)
 	anIgnorePids+=($$) # add self of course
 	anIgnorePids+=($pidToLimit)
-	SECFUNCvarSet anIgnorePids
+	SECFUNCvarSet --show anIgnorePids
 	
 	nCoolCPUCount=0
 	nCoolCPUCountMax=3
@@ -297,7 +328,18 @@ function FUNClimitCpu() {
 		fi
 		
 		#echo "bJustLimit=$bJustLimit, bForceStop=$bForceStop, bJustStopPid=$bJustStopPid, fSigStopDelay=$fSigStopDelay, fSigRunDelay=$fSigRunDelay, bOverrideForceStopNow=$bOverrideForceStopNow" #DEBUG
-		sleep 0.5
+		if $bFUNCinterruptAsk;then
+			bFUNCinterruptAsk=false
+			SECFUNCvarShow bOverrideForceStopNow
+			echoc -Q -t 3 "do what?@O_exit/force _stop/allow _run again";
+			case "`secascii $?`" in 
+				e)FUNCignoredPidsRemove $pidToLimit;exit;; 
+				s)varset --show bOverrideForceStopNow=true;;
+				r)varset --show bOverrideForceStopNow=false;;
+			esac
+		else
+			sleep 0.5
+		fi
 	done
 }
 
