@@ -82,11 +82,12 @@ function FUNCscreenAutoLock() {
 
 function FUNCscreenLockRunning() {
 	if $bUseXscreensaver; then
-    if ps -A -o comm |grep xscreensaver;then
+    #if ps -A -o comm |grep -w "^xscreensaver$" >/dev/null 2>&1;then
+    if DISPLAY=:1 xscreensaver-command -time |grep "screen locked since" >/dev/null 2>&1;then
       return 0
     fi
 	else
-    if ps -A -o comm |grep xlock;then
+    if ps -A -o comm |grep -w "^xlock$" >/dev/null 2>&1;then
       return 0
     fi
 	fi
@@ -445,7 +446,7 @@ bRecreateRCfileThin=false
 bXTerm=false
 bReturnToX0=false
 bWaitCompiz=true
-SECFUNCvarSet bUseXscreensaver=false
+SECFUNCvarSet --default bUseXscreensaver=false
 strGeometry=""
 export strCustomCmdHelp=""
 while [[ ${1:0:2} == "--" ]]; do
