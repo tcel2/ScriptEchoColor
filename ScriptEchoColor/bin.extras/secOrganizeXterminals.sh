@@ -225,3 +225,4 @@ for((i=0;i<${#aWindowList[@]};i++));do
 	#if ! sleep 3;then exit 1;fi
 done
 
+
