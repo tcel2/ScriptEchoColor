@@ -748,6 +748,16 @@ function SECFUNCuniqueLock() {
 	fi
 }
 
+function SECFUNCdaemonUniqueLock() {
+	SECisDaemonRunning=false #global NOT to export
+	if SECFUNCuniqueLock --quiet; then
+		SECFUNCvarSetDB -f
+	else
+		SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+		SECisDaemonRunning=true
+	fi
+}
+
 function SECFUNCshowHelp() {
 	local l_file="$0"
 	if [[ ! -f "$l_file" ]];then

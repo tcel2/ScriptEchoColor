@@ -34,17 +34,19 @@ cfgExt="AtFastMedia"
 
 mkdir -p "$cfgPath"
 
-isDaemonRunning=false
-if SECFUNCuniqueLock --quiet; then
-	SECFUNCvarSetDB -f
-else
-	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-	isDaemonRunning=true
-fi
+#isDaemonRunning=false
+#if SECFUNCuniqueLock --quiet; then
+#	SECFUNCvarSetDB -f
+#else
+#	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+#	isDaemonRunning=true
+#fi
+SECFUNCdaemonUniqueLock
 
 ########### INTERNAL VARIABLES
 
 dtCfgManagedFiles=0
+varset --default bForceDisableFastMedia=false
 
 ########### FUNCTIONS
 
@@ -244,6 +246,23 @@ while [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--setfastmedia" ]];then #help set fast media to copy files to
 		shift
 		FUNCsetFastMedia "$1"
+#	elif [[ "$1" == "--disablefastmedia" ]];then #help disable fast media to restore original files (being real files and no more symlinks). This will keep the files copied at fast media.
+#		mv -v "$fastMedia" "${fastMedia}.DISABLED"
+#		varset bForceValidationOnce=true
+#		if echoc -q "restore now"; then
+#			mv -v "${fastMedia}.DISABLED" "$fastMedia"
+#			varset bForceValidationOnce=true
+#		fi
+	elif [[ "$1" == "--disablefastmedia" ]];then #help restore original files (being real files and no more symlinks). This will keep the files copied at fast media tho.
+		varset bForceDisableFastMedia=true
+		varset bForceValidationOnce=true
+		if echoc -q "re-enable fast media?"; then
+			varset bForceDisableFastMedia=false
+			varset bForceValidationOnce=true
+		fi
+	elif [[ "$1" == "--reenablefastmedia" ]];then #help restore fast media functionality
+		varset bForceDisableFastMedia=false
+		varset bForceValidationOnce=true
 	elif [[ "$1" == "--help" ]];then #help
 		echo "Helps on copying big files to a faster media like SSD or even RamDrive (/dev/shm), to significantly improve related applications read/load speed."
 		SECFUNCshowHelp
@@ -256,7 +275,7 @@ while [[ "${1:0:1}" == "-" ]];do
 done
 
 if $bDaemon;then
-	if $isDaemonRunning;then
+	if $SECisDaemonRunning;then
 		echoc -p "daemon already running"
 		echoc -w
 		exit 1
@@ -267,8 +286,9 @@ if $bDaemon;then
 	done
 	echoc --info "Fast Media set at: `readlink "$fastMedia"`"
 	
-	bForceValidationOnce=true #will be initially forced once
+	varset bForceValidationOnce=true #will be initially forced once
 	while true; do
+		SECFUNCvarReadDB
 		if [[ ! -f "$cfgManagedFiles" ]];then
 			echoc -t 1 -w "configure some files to be managed"
 			continue
@@ -277,7 +297,7 @@ if $bDaemon;then
 		if ! $bForceValidationOnce;then
 			if ! FUNCcheckCfgChanged;then
 				if echoc -t 10 -q "force validation?";then
-					bForceValidationOnce=true
+					varset bForceValidationOnce=true
 				fi
 				continue
 			fi
@@ -308,7 +328,7 @@ if $bDaemon;then
 		# check all files
 		while read strLine; do
 			#echoc --info "working with '$strLine'"
-			if $bFastMediaAvailable;then
+			if ! $bForceDisableFastMedia && $bFastMediaAvailable;then
 				if ! FUNCprepareFileAtFastMedia "$strLine";then
 					break
 				fi
@@ -318,7 +338,7 @@ if $bDaemon;then
 		done <"$cfgManagedFiles"
 		
 		#echoc -w -t 300
-		bForceValidationOnce=false
+		varset bForceValidationOnce=false
 	done
 fi
 
