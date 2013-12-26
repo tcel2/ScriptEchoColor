@@ -877,6 +877,9 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 				SECFUNCechoDbgA "no need to force as real file has already been created because the parent pid died before the symlink be created..."
 				SECFUNCdbgFuncOutA;return 0
 			fi
+		elif [[ ! -a "$l_varFileAutomatic" ]];then
+			# if not exist the automatic will be used below!
+			unset SECvarFile
 		fi
 	fi
 	
@@ -935,15 +938,13 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 			fi
 		else #not symlink to other
 			if [[ "$SECvarFile" != "$l_varFileAutomatic" ]];then
-				# a child process will symlink to parent SECvarFile
+				# THOUGH a child process will DO automatically symlink to parent SECvarFile! #TODO test if is really child is unnecessary?
 				local SECvarFileParent="$SECvarFile"
 				SECFUNCexecA ln -sf "$SECvarFileParent" "$l_varFileAutomatic"
 				export SECvarFile="$l_varFileAutomatic" #IMPORTANT use 'export' to set it properly because read and write DB are on child proccess
 			else
-				#if ! $l_bForceRealFile;then
-					# equal means this function is being called again for this same pid/process, what is unexpected/redundant
-					SECFUNCechoWarnA "not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..."
-				#fi
+				# equal means this function is being called again for this same pid/process, what is unexpected/redundant
+				SECFUNCechoWarnA "not expected: redundant call to this function, automatic file '$l_varFileAutomatic' already setup..."
 			fi
 		fi
 	else #SECvarFile is not set (unset)

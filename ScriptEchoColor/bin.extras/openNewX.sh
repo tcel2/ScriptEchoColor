@@ -24,16 +24,11 @@
 
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
-########################## INIT AND VARS
+########################## INIT AND VARS #####################################
 eval `secLibsInit.sh`
 
-#echo $SECvarFile
-if SECFUNCuniqueLock --quiet; then
-	SECFUNCvarSetDB -f
-else
-	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-fi
-#echo $SECvarFile
+SECFUNCdaemonUniqueLock #SECisDaemonRunning
+#SECFUNCvarShow bUseXscreensaver
 
 #alias ps='echoc -x ps' #good to debug the bug
 
@@ -58,29 +53,32 @@ exec 2>&1
 #sedOnlyPid='s"^[ ]*\([0-9]*\) .*"\1"'
 sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
 
-######################### FUNCTIONS
+######################### FUNCTIONS #####################################
 
 function FUNCxlock() {
-	xlock -mode matrix -delay 30000 -timeelapsed -verbose -nice 19 -timeout 5 -lockdelay 0 -bg darkblue -fg yellow
+	DISPLAY=:1 xlock -mode matrix -delay 30000 -timeelapsed -verbose -nice 19 -timeout 5 -lockdelay 0 -bg darkblue -fg yellow
 }; export -f FUNCxlock
 
-function FUNCscreenLockNow() {
+function FUNCchildScreenLockNow() {
+	eval `secLibsInit.sh` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	if $bUseXscreensaver; then
-		xscreensaver-command -lock
+		DISPLAY=:1 xscreensaver-command -lock
 	else
-		xautolock -locknow
+		DISPLAY=:1 xautolock -locknow
 	fi
-}; export -f FUNCscreenLockNow
+}; export -f FUNCchildScreenLockNow
 
-function FUNCscreenAutoLock() {
+function FUNCchildScreenAutoLock() {
+	eval `secLibsInit.sh` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	#SECFUNCvarShow bUseXscreensaver #@@@r
 	if $bUseXscreensaver; then
 		xscreensaver -display :1
 	else
-		xautolock -locker "bash -c FUNCxlock"
+		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
 	fi
-}; export -f FUNCscreenAutoLock
+}; export -f FUNCchildScreenAutoLock
 
-function FUNCscreenLockRunning() {
+function FUNCisScreenLockRunning() {
 	if $bUseXscreensaver; then
     #if ps -A -o comm |grep -w "^xscreensaver$" >/dev/null 2>&1;then
     if DISPLAY=:1 xscreensaver-command -time |grep "screen locked since" >/dev/null 2>&1;then
@@ -92,7 +90,7 @@ function FUNCscreenLockRunning() {
     fi
 	fi
 	return 1
-};export -f FUNCscreenLockRunning
+};export -f FUNCisScreenLockRunning
 
 function FUNCisX1running {
   if ps -A -o command |grep -v "grep" |grep -q -x "$grepX1";then
@@ -275,7 +273,7 @@ function FUNCscript() {
 	
   if [[ "$1" == "returnX0" ]]; then #helpScript return to :0
   	#cmdEval="xdotool key super+l"
-  	echoc -x "FUNCscreenLockNow"
+  	echoc -x "FUNCchildScreenLockNow"
   	
   	echoc -x "xdotool key control+alt+F7"
   	#cmdEval="sudo -k chvt 7"
@@ -289,7 +287,7 @@ function FUNCscript() {
   fi
   
   if [[ "$1" == "isScreenLocked" ]];then
-    if FUNCscreenLockRunning;then
+    if FUNCisScreenLockRunning;then
       exit 0
     else
       exit 1
@@ -436,7 +434,7 @@ function FUNCshowHelp() {
   rm -v "$helpFile"
 };export -f FUNCshowHelp
 
-######################## OPTIONS/PARAMETERS
+######################## OPTIONS/PARAMETERS #####################################
 
 useJWM=true
 useKbd=true
@@ -536,8 +534,9 @@ while [[ ${1:0:2} == "--" ]]; do
  	shift
 done
 
-#################### MAIN CODE
+#################### MAIN CODE ###########################################
 
+# validate options
 if((${#customCmd[@]}>0));then
 	if ! $bRecreateRCfile; then
 		echoc -p -- "--customcmd requires --recreaterc"
@@ -553,17 +552,17 @@ fi
 if FUNCisX1running;then
 	if echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
 		$0 --killX1
-	
+		
 		#wait really exit
 		while FUNCisX1running; do
 			sleep 1
 		done
-	
+		
 		while ! SECFUNCuniqueLock;do
 			echoc -p "Unable to create unique lock..."
 			echoc -w -t 3
 		done
-	
+		
 		SECFUNCvarSetDB -f
 		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
 	else
@@ -619,7 +618,7 @@ if $useJWM; then
           <Key mask="S4" key="G">exec:'"xterm -e \"$0 --script nvidiaCicleBack\" #kill=skip"'</Key>
           <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
-          <Key mask="4" key="L">exec:bash -c "FUNCscreenLockNow"</Key>
+          <Key mask="4" key="L">exec:bash -c "FUNCchildScreenLockNow"</Key>
           <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
           <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
           <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
@@ -731,7 +730,8 @@ xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
 xterm -display :1 -e "$0 --script nvidiaCicle" #not threaded/child so the speech does not interfere with some games sound initialization check
 
 sleep 2 #@@@!!! TODO improve with qdbus waiting for jwm?
-xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCscreenAutoLock\""&
+#SECFUNCvarShow bUseXscreensaver #@@@r
+xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCchildScreenAutoLock\""&
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 
