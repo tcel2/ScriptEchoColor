@@ -792,7 +792,7 @@ fi
 #while FUNCisX1running; do
 while ps -p $pidX1 >/dev/null 2>&1; do
 	echoc --alert "ctrl+c will prevent commands, like gamma change, from working properly!"
-	if echoc -q -t 5 "kill X1"; then #prevent closing what shutdown jwm and xscreensaver
+	if echoc -q -t 60 "kill X1"; then #prevent closing what shutdown jwm and xscreensaver
 		$0 --killX1
 	fi
 done
