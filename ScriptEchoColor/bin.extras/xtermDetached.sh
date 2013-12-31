@@ -36,7 +36,7 @@ while [[ "${1:0:2}" == "--" ]]; do
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp
 		exit
-	elif [[ "$1" == "--title" ]];then #help sets the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
+	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
 		varset strTitle="$1"
 		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
@@ -44,7 +44,6 @@ while [[ "${1:0:2}" == "--" ]]; do
 			echoc -w "exiting..."
 			exit 1
 		fi
-		eval "function $strTitle () { local ln=0; };export -f $strTitle"
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
 	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
@@ -59,6 +58,9 @@ while [[ "${1:0:2}" == "--" ]]; do
 	fi
 	shift
 done
+
+# to avoid error message
+eval "function $strTitle () { local ln=0; };export -f $strTitle"
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
 #xterm -e "echo \"TEMP xterm...\"; konsole --noclose -e bash -c \"FUNCinit;FUNCcheckLoop\""&
