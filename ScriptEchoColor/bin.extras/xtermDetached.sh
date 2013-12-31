@@ -28,14 +28,21 @@ eval `secLibsInit.sh`
 
 bDoNotClose=false
 bSkipCascade=false
+bWaitDBsymlink=true
+#varset bForceNewSECDB=true
 while [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
-		grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
+		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
+		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
-	elif [[ "$1" == "--skipcascade" ]];then #help keep xterm running after execution completes
+	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
+	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
+		bWaitDBsymlink=false
+#	elif [[ "$1" == "--nonewdb" ]];then #help by default it forces a new SEC DB file, so disable that 
+#		varset bForceNewSECDB=false
 	else
 		SECFUNCechoErrA "invalid option $1"
 		exit 1
@@ -63,9 +70,13 @@ fi
 #params=`SECFUNCparamsToEval --escapequotes "$@"`"${strDoNotClose}${strSkipCascade}"
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
+	eval `secLibsInit.sh`
+#	if $bForceNewSECDB;then
+#		SECFUNCvarSetDB -f #this prevents child shells loosing access to the early deleted SEC DB file from this and temp xterm pids..
+#	fi
 	echo "Exec: $strFUNCexecParams"
 	eval $strFUNCexecParams
-	echoc -w -t 60
+	echoc -w -t 60 #wait some time so any log can be read..
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
@@ -73,9 +84,36 @@ echo "Exec: $strExec"
 #echo -e "$strExec"
 
 xterm -e "$strExec"&
-# wait for the child to open
-while ! ps --ppid $!; do
+pidXtermTemp=$!
+# wait for the child to open (it has xterm temp as parent!)
+while ! ps --ppid $pidXtermTemp; do
     sleep 1
 done
-kill -SIGINT $!
+if $bWaitDBsymlink;then
+#	nCountFindDBsLinked=0
+	function FUNCfindSymlinks() {
+		find /run/shm/ -lname "$SECvarFile"
+	}
+	while true;do #wait for some child to link to the DB file
+		nBDsLinked=`FUNCfindSymlinks |wc -l`
+		if((nBDsLinked>0));then
+			echoc --info "DBs Linked:"
+			FUNCfindSymlinks
+			break;
+		fi
+		if ! ps -p $pidXtermTemp >/dev/null 2>&1;then
+			break;
+		fi
+#		((nCountFindDBsLinked++))
+#		if((nCountFindDBsLinked>60));then #DB linking should happen fast...
+#			break;
+#		fi
+		echoc --info "waiting for child SEC DBs to create a symlink to this: $SECvarFile"
+		sleep 1
+	done
+fi
+#echoc -w -t 60 "waiting 60s so child shells have a chance to hook on the SEC DB..."
+#echoc -x "kill -SIGINT $pidXtermTemp"
+kill -SIGINT $pidXtermTemp
+#echoc -w -t 5
 
