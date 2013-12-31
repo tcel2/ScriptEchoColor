@@ -29,12 +29,22 @@ eval `secLibsInit.sh`
 bDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
+varset strTitle="Xterm_Detached"
 #varset bForceNewSECDB=true
 while [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp
 		exit
+	elif [[ "$1" == "--title" ]];then #help sets the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
+		shift
+		varset strTitle="$1"
+		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
+			echoc -p "title '$strTitle' contains invalid characters..."
+			echoc -w "exiting..."
+			exit 1
+		fi
+		eval "function $strTitle () { local ln=0; };export -f $strTitle"
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
 	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
@@ -49,7 +59,6 @@ while [[ "${1:0:2}" == "--" ]]; do
 	fi
 	shift
 done
-
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
 #xterm -e "echo \"TEMP xterm...\"; konsole --noclose -e bash -c \"FUNCinit;FUNCcheckLoop\""&
@@ -79,7 +88,8 @@ function FUNCexecParams() {
 	echoc -w -t 60 #wait some time so any log can be read..
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
-strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
+#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
+strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e '$strTitle;FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
 echo "Exec: $strExec"
 #echo -e "$strExec"
 
