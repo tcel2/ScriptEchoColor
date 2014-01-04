@@ -24,20 +24,14 @@
 
 eval `secLibsInit`
 
-bAlredyRunning=false
-if SECFUNCuniqueLock --quiet; then
-	SECFUNCvarSetDB -f
-else
-	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-	bAlredyRunning=true
-fi
+SECFUNCdaemonUniqueLock
 
 FUNCexitIfDaemonNotRunning() {
 	if ! ps -p $daemonPid >/dev/null 2>&1;then
 		varset --show bDaemonRunning=false
 	fi
 	if ! $bDaemonRunning;then 
-		echoc -p "daemon is not running";
+		echoc -p " `basename $0` daemon is not running";
 		exit 1;
 	fi
 }
@@ -75,7 +69,7 @@ while [[ "${1:0:1}" == "-" ]];do
 		varwritedb #to clean/remove dups from db file
 		exit
 	elif [[ "$1" == "--daemon" ]];then #help must be running to other commands work
-		while $bAlredyRunning;do
+		while $SECisDaemonRunning;do
 			if SECFUNCuniqueLock --quiet; then
 				SECFUNCvarSetDB -f
 				break

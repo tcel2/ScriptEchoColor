@@ -85,81 +85,41 @@ fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
 function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no related pid\n\tOptions:\n\t--verbose shows what is happening
-	#TODO improve this, is "slow?" and cleaning files that should not be cleaned (because they DO have symlinks pointing to them..); maybe use `find` to `rm` files that have no symlink and pid in some way?
 	SECFUNCdbgFuncInA
 	
-	local l_verbose=""
-	local l_output="/dev/null"
-	if [[ "$1" == "--verbose" ]]; then
-		l_verbose=" -v "
-		l_output="/dev/stdout"
-	fi
-	
-	local l_printfTypeAndFullName='%y=%p\n'
-	local l_sedAllThatIsSymlinkBecomes0='s"^l="0="' # to sort!
-	local l_sedAllThatIsNotSymlinkBecomes1='s"^[^l]="1="' # to sort!
-	local l_sedRemoveHeadingSortDigits='s"^[[:digit:]]=""'
-	local l_sedAddQuotesToLine='s/.*/"&"/' # to eval work right when creating item in the list
-	eval "local l_listFiles=(`\
-		find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -printf "$l_printfTypeAndFullName" \
-			|sed -e "$l_sedAllThatIsNotSymlinkBecomes1" -e "$l_sedAllThatIsSymlinkBecomes0" \
-			|sort \
-			|sed -e "$l_sedRemoveHeadingSortDigits" -e "$l_sedAddQuotesToLine"\
-	`)"
-	local l_file
-	for l_file in "${l_listFiles[@]}"; do echo "found: $l_file" >>$l_output;done
-	
-	#@@@R eval "local l_listFiles=(`find $SEC_TmpFolder -name "SEC.*.vars.tmp" -exec echo '"{}"' \;`)"
-	local l_tot=${#l_listFiles[*]}
-	for((i=0;i<l_tot;i++));do
-		echo "check[$i]: ${l_listFiles[i]}" >>$l_output
-		local l_file=${l_listFiles[i]}
-		if [[ -z "$l_file" ]];then continue;fi # ignores unset item
+	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
+		local lfile="$1";
 		
-		# get pid from filename
-		local l_sedGetPidFromFilename='s"^.*/SEC[.].*[.]\([[:digit:]]*\)[.]vars[.]tmp$"\1"'
-		local l_pid=`echo "$l_file" |sed "$l_sedGetPidFromFilename"`;
-		if [[ -n `echo "$l_pid" |tr -d "[:digit:]"` ]]; then 
-			echo "SECERROR: l_pid [$l_pid] must be only digits..." >>$l_output # do not use >>/dev/stderr because this is not so important? and will mess the console..
-			SECFUNCdbgFuncOutA
-			return 1; # if fail, tmp files will remain but script wont break... good?
-		fi; 
-		
-		#local l_bHasPid=$(($?==0?true:false))
-		local l_bHasPid=`if ps -p $l_pid >/dev/null 2>&1; then echo "true"; else echo "false";fi`
-		#@@@R echo ">>>$l_bHasPid" >>$l_output
-		
-		# excludes from check list valid files (with related pid)
-		if $l_bHasPid; then
-			if [[ -h "$l_file" ]]; then
-				# find linked file in the list
-				for((i2=0;i2<l_tot;i2++));do
-					if((i==i2));then continue; fi
-					if [[ "`readlink "$l_file"`" == "${l_listFiles[i2]}" ]]; then
-						echo "keep: ${l_listFiles[i2]}" >>$l_output
-						unset l_listFiles[i2] # when reached at main loop (i), will be ignored!
-						break;
-					fi
-				done
-			fi
-			echo "keep: ${l_listFiles[i]}" >>$l_output
-			unset l_listFiles[i] # will be ignored (dummy as already being worked..)
-			continue
+		local lsedPidFromFile='s".*[.]([[:digit:]]*)[.]vars[.]tmp$"\1"';
+		local lnPid=`echo "$lfile" |sed -r "$lsedPidFromFile"`;
+		# bad filename
+		if [[ -n `echo "$lnPid" |tr -d "[:digit:]"` ]];then
+			SECFUNCechoErrA "invalid pid '$lnPid' from filename '$lfile'"
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		
-		# remove real files for missing pids
-		if ! $l_bHasPid; then 
-			rm $l_verbose "$l_file" >>$l_output
-		fi 
-	done
+		if ps -p $lnPid >/dev/null 2>&1; then 
+			SECFUNCdbgFuncOutA;return
+		else
+			# skip files that have symlinks pointing to it
+			local lnSymlinkToFileCount=`find $SEC_TmpFolder -maxdepth 1 -lname "$lfile" |wc -l`
+			if((lnSymlinkToFileCount>=1));then
+				SECFUNCechoDbgA "HAS SYMLINK: $1"
+				SECFUNCdbgFuncOutA;return
+			fi
+			
+			SECFUNCexecA rm "$lfile";
+		fi;
+	};export -f SECFUNCvarClearTmpFiles_removeFilesForDeadPids;
 	
-	#@@@R find $SEC_TmpFolder -name "SEC.*.vars.tmp" -exec bash -c 'FUNCgetPidFromFileName "{}"' ";" >$l_output 2>&1
+	# Remove symlinks for dead pids
+	find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -exec bash -c "SECFUNCvarClearTmpFiles_removeFilesForDeadPids \"{}\"" \;
 	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarInit() { #help: generic vars initializer
 	SECFUNCdbgFuncInA
 	
-	#SECFUNCvarClearTmpFiles #commented because tmp files are automatically cleaned on boot
+	SECFUNCvarClearTmpFiles #TODO create a maintenance daemon to clean tmp files and comment this?
 	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA
