@@ -85,6 +85,7 @@ fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
 function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no related pid\n\tOptions:\n\t--verbose shows what is happening
+	#TODO improve this, is "slow?" and cleaning files that should not be cleaned (because they DO have symlinks pointing to them..); maybe use `find` to `rm` files that have no symlink and pid in some way?
 	SECFUNCdbgFuncInA
 	
 	local l_verbose=""
@@ -158,7 +159,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 function SECFUNCvarInit() { #help: generic vars initializer
 	SECFUNCdbgFuncInA
 	
-	SECFUNCvarClearTmpFiles
+	#SECFUNCvarClearTmpFiles #commented because tmp files are automatically cleaned on boot
 	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA
