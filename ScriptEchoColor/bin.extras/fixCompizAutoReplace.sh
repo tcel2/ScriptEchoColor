@@ -34,7 +34,11 @@ selfName=`basename "$0"`
 function FUNCcompizReplace() {
 	xdotool set_desktop_viewport 0 0 #to help not messing windows positioning
 	sleep 1
-	xtermDetached.sh compiz --replace
+	
+	#xtermDetached.sh compiz --replace
+	
+	# no xterm to avoid log increasing cpu usage
+	compiz --replace >"$SEC_TmpFolder/SEC.$selfName.compiz.$$.log" 2>&1&
 };export -f FUNCcompizReplace
 
 function FUNCaskCompizReplaceOrKill() {
