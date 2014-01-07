@@ -403,7 +403,8 @@ function FUNCsayStack() {
 			local strHead=`head -n 1 "$_SECSAYfileSayStack"`
 			if [[ -n "$strHead" ]]; then
 				if $bDaemon; then
-					echo "Said at `SECFUNCdtTimePrettyNow`: $strHead"
+					SECFUNCdrawLine " `SECFUNCdtTimePrettyNow` "
+					echo "$strHead"
 				fi
 				
 				sedGetMd5sum="s;.* 'SECmd5sum '([[:alnum:]]*)\).*;\1;"
