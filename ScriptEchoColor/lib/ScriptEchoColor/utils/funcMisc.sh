@@ -392,38 +392,40 @@ function SECFUNCbcPrettyCalc() {
 
 function SECFUNCdrawLine() {
 	if [[ "$1" == "--help" ]];then
-		echo "params: 'phrase at middle of line' 'line character to be repeated'"
+		echo "params: [wordsAtMiddleOfLine] [lineFillChars]"
 		return
 	fi
 	
-	local phrase="$1";
-	local char=${2:0:1}
+	local lstrWords="$1";
+	local lstrFill="$2"
 	
-	if [[ -z "$char" ]];then
-		char="="
+	if [[ -z "$lstrFill" ]];then
+		lstrFill="="
 	fi
 	
-	local width=`tput cols`
-	#echo $width
-	local nFillChars=$(((width-${#phrase})/2))
-	#echo $nFillChars
-	local fill=`eval printf "%.0s${char}" {1..${nFillChars}}`
-	#echo $fill
-	local output="$fill$phrase$fill"
-	local diffWidth=$((width-${#output}))
-	if((diffWidth==1));then
-		output="$output$char"
-	elif((diffWidth>1||diffWidth<0));then
-		SECFUNCechoErrA "diffWidth=$diffWidth (should be 1 or 0)"
-		return 1
+	local lnTerminalWidth=`tput cols`
+	local lnTotalFillChars=$((lnTerminalWidth-${#lstrWords}))
+	local lnFillCharsLeft=$((lnTotalFillChars/2))
+	local lnFillCharsRight=$((lnTotalFillChars/2))
+	
+	# if odd width, add one char
+	if(( (lnTotalFillChars%2) == 1 ));then 
+		((lnFillCharsRight++))
 	fi
-	echo "$output"
-#	local width=`tput cols`;
-#	local half=$((width/2))
-#	local sizeDtHalf=$((${#dt}/2))
-#	#echo #this prevents weirdness when the previous command didnt output newline at the end...
-#	local output=`printf "%*s%*s" $((half+sizeDtHalf)) "$phrase" $((half-sizeDtHalf)) "" |sed -r "s|^(.*)${phrase}(.*)$|$char|g";`
-#	echo -e "${output}"
+	
+	# at least one complete fill must happen at beggining and ending, what may cause more than one line to be printed
+	if((lnFillCharsLeft<${#lstrFill}));then
+		lnFillCharsLeft=${#lstrFill}
+	fi
+	if((lnFillCharsRight<${#lstrFill}));then
+		lnFillCharsRight=${#lstrFill}
+	fi
+	
+	local lstrFill=`eval "printf \"%.0s${lstrFill}\" {1..${lnTerminalWidth}}"`
+	
+	local lstrOutput="${lstrFill:0:lnFillCharsLeft}${lstrWords}${lstrFill:0:lnFillCharsRight}"
+	
+	echo "$lstrOutput"
 }
 
 function SECFUNCdelay() {
