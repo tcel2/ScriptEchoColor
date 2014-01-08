@@ -39,7 +39,7 @@ varset --show nRestoreFixYpos=27 #help restoring to non maximized window Y displ
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 selfName=`basename "$0"`
-logFile="/tmp/SEC.$selfName.log"
+strLogFile="/tmp/SEC.$selfName.log"
 
 ########### FUNCTIONS
 function FUNCvalidateNumber() {
@@ -57,8 +57,8 @@ function FUNCvalidateNumber() {
 
 function FUNCwindowGeom() { #@@@helper nWindowX nWindowY nWindowWidth nWindowHeight
 	local lnWindowId=$1
-	#eval `xwininfo -id $lnWindowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
-	xwininfo -id $lnWindowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'
+	#eval `xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
+	xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' |tr -d "\n"
 }
 
 function FUNCdebugShowVars() {
@@ -68,6 +68,13 @@ function FUNCdebugShowVars() {
 	done
 	echo
 }
+
+function FUNCisMaximized() {
+	local lnWindowId=$1
+	if ! xwininfo -wm -id $lnWindowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";then
+		return 1
+	fi
+}		
 
 ############### MAIN
 
@@ -117,7 +124,7 @@ declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
 while true; do 
 	windowId=`xdotool getactivewindow`;
-	windowName=`xdotool getwindowname $windowId 2>"$logFile" `
+	windowName=`xdotool getwindowname $windowId 2>"$strLogFile" `
 
 	bOk=true
 
@@ -148,8 +155,38 @@ while true; do
 			bPseudoMaximized=true
 		fi
 		
-		if xwininfo -wm -id $windowId 2>"$logFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";then
+		if FUNCisMaximized $windowId;then
+			# demaximize
+			codeGeomMax="`FUNCwindowGeom $windowId`"
 			wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
+			# wait new geometry be effectively applied
+			while [[ "$codeGeomMax" == "`FUNCwindowGeom $windowId`" ]];do
+				#echo "wait..."
+				sleep 0.1
+			done
+			
+			#xwininfo -wm -id $windowId
+#			while xwininfo -wm -id $windowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";do
+#				echo "wait..."
+#				sleep 0.1
+#			done
+			#sleep 1
+			
+			# in case user clicked directly on maximize button
+			#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
+			if [[ -z "${aWindowGeomBkp[$windowId]}" ]];then
+#				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+#				while true;do
+#					codeGeomTmp="`FUNCwindowGeom $windowId`"
+#					if [[ "$codeGeomTmp" != "${aWindowGeomBkp[$windowId]}" ]];then
+#						aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+#						break
+#					fi
+#				done
+				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+				echo "Safe backup: ${aWindowGeomBkp[$windowId]}"
+				#xwininfo -id $windowId #@@@R
+			fi
 			
 			if $bPseudoMaximized;then
 				eval "${aWindowGeomBkp[$windowId]}" #restore variables
