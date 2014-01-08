@@ -423,7 +423,7 @@ function SECFUNCdrawLine() {
 	
 	local lstrFill=`eval "printf \"%.0s${lstrFill}\" {1..${lnTerminalWidth}}"`
 	
-	local lstrOutput="${lstrFill:0:lnFillCharsLeft}${lstrWords}${lstrFill:0:lnFillCharsRight}"
+	local lstrOutput="${lstrFill:0:lnFillCharsLeft}${lstrWords}${lstrFill:${#lstrFill}-lnFillCharsRight}"
 	
 	echo "$lstrOutput"
 }
