@@ -34,8 +34,8 @@ varset --show nPseudoMaxWidth=$((nScreenWidth-25)) #help width to resize the dem
 varset --show nPseudoMaxHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
 varset --show nXpos=1 #help X top left position to place the demaximized window
 varset --show nYpos=25 #help Y top left position to place the demaximized window
-varset --show nRestoreFixXpos=5 #help X top left position to place the demaximized window
-varset --show nRestoreFixYpos=27 #help Y top left position to place the demaximized window
+varset --show nRestoreFixXpos=5 #help restoring to non maximized window X displacement fix...
+varset --show nRestoreFixYpos=27 #help restoring to non maximized window Y displacement fix...
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 selfName=`basename "$0"`
