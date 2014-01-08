@@ -30,10 +30,12 @@ aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$
 eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
 varset --show nScreenWidth=$nScreenWidth # to ease find code
 varset --show nScreenHeight=$nScreenHeight # to ease find code
-varset --show nWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
-varset --show nHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
+varset --show nPseudoMaxWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
+varset --show nPseudoMaxHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
 varset --show nXpos=1 #help X top left position to place the demaximized window
 varset --show nYpos=25 #help Y top left position to place the demaximized window
+varset --show nRestoreFixXpos=5 #help X top left position to place the demaximized window
+varset --show nRestoreFixYpos=27 #help Y top left position to place the demaximized window
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 selfName=`basename "$0"`
@@ -53,11 +55,25 @@ function FUNCvalidateNumber() {
 	return 0
 }
 
+function FUNCwindowGeom() { #@@@helper nWindowX nWindowY nWindowWidth nWindowHeight
+	local lnWindowId=$1
+	#eval `xwininfo -id $lnWindowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
+	xwininfo -id $lnWindowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'
+}
+
+function FUNCdebugShowVars() {
+	while [[ -n "$1" ]];do
+		eval "echo -n \"$1=\$$1;\""
+		shift
+	done
+	echo
+}
+
 ############### MAIN
 
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
-		echoc --info "Params: nWidth nHeight nXpos nYpos nYposMinReadPos "
+		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
 		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
 		SECFUNCshowHelp
 		exit
@@ -87,8 +103,8 @@ while [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-if	! FUNCvalidateNumber nWidth		||
-		! FUNCvalidateNumber nHeight	||
+if	! FUNCvalidateNumber nPseudoMaxWidth		||
+		! FUNCvalidateNumber nPseudoMaxHeight	||
 		! FUNCvalidateNumber nXpos		||
 		! FUNCvalidateNumber nYpos		||
 		! FUNCvalidateNumber nYposMinReadPos ;
@@ -97,17 +113,19 @@ then
 fi
 
 strLastSkipped=""
+declare -A aWindowGeomBkp
+declare -A aWindowPseudoMaximizedGeomBkp
 while true; do 
 	windowId=`xdotool getactivewindow`;
 	windowName=`xdotool getwindowname $windowId 2>"$logFile" `
-	
+
 	bOk=true
-	
+
 	# check empty window name
 	if [[ -z "$windowName" ]];then
 		bOk=false
 	fi
-	
+
 	# SKIP check
 	if $bOk;then
 		for checkName in ${aWindowListToSkip[@]};do
@@ -125,16 +143,57 @@ while true; do
 	
 	# Do it
 	if $bOk;then
+		bPseudoMaximized=false
+		if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]}" ]];then
+			bPseudoMaximized=true
+		fi
+		
 		if xwininfo -wm -id $windowId 2>"$logFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";then
 			wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
-			xdotool windowsize $windowId $nWidth $nHeight;
-			xdotool windowmove $windowId $nXpos $nYpos;
-			xdotool getwindowname $windowId
-			echo "Demaximizing: $windowName"
-		else
-			#@@@FindCodeHelper nWindowX nWindowY nWindowWidth nWindowHeight
-			eval `xwininfo -id $windowId 2>"$logFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
 			
+			if $bPseudoMaximized;then
+				eval "${aWindowGeomBkp[$windowId]}" #restore variables
+				xdotool windowsize $windowId $nWindowWidth $nWindowHeight;
+				xdotool windowmove $windowId $((nWindowX-nRestoreFixXpos)) $((nWindowY-nRestoreFixYpos));
+				
+				aWindowPseudoMaximizedGeomBkp[$windowId]=""
+				
+				echo "Restored non-maximized size and position: $windowName"
+			else
+				# pseudo-mazimized
+				xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;
+				xdotool windowmove $windowId $nXpos $nYpos;
+				
+				#xdotool getwindowname $windowId
+				aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+				
+				echo "Pseudo Maximized: $windowName"
+			fi
+		else
+			#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
+			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
+			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
+			if $bPseudoMaximized;then
+				eval "${aWindowPseudoMaximizedGeomBkp[$windowId]}"
+				nPMGWindowX=$nWindowX
+				nPMGWindowY=$nWindowY
+				nPMGWindowWidth=$nWindowWidth
+				nPMGWindowHeight=$nWindowHeight
+			fi
+			eval `FUNCwindowGeom $windowId`
+			
+			# backup size and pos if NOT pseudo-maximized
+			#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
+			#FUNCdebugShowVars nWindowWidth nWindowHeight nPMGWindowWidth nPMGWindowHeight
+			if	! $bPseudoMaximized || 
+					((nWindowWidth<nPMGWindowWidth)) ||
+					((nWindowHeight<nPMGWindowHeight));
+			then
+				#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
+				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+				aWindowPseudoMaximizedGeomBkp[$windowId]=""
+			fi
+		
 			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
 				if(( nWindowY                 < nYposMinReadPos )) ||
 					(( (nWindowX+nWindowWidth ) > nScreenWidth     )) ||
@@ -146,7 +205,7 @@ while true; do
 			#fi
 		fi;
 	fi
-	
-	sleep 0.5;
+
+	sleep 0.25;
 done
 

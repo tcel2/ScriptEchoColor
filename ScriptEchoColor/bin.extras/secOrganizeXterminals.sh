@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+############### INIT/CFG
+
 renice -n 19 -p $$
 eval `secLibsInit.sh`
 trap 'FUNCtrapInt' INT
