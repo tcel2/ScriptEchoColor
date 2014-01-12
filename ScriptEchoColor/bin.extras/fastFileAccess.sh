@@ -170,6 +170,9 @@ function FUNCprepareFileAtFastMedia() {
 				if ! echoc -x "ln -sv \"$fastMedia/$lfileId\" \"$lfileId\"";then
 					echoc -p "symlinking failed"
 					return 1
+				else
+					# make the symlink have the same timestamp of the real file
+					touch -h -r "$fastMedia/$lfileId" "$lfileId"
 				fi
 			else
 				ls -l "$lfileId"
