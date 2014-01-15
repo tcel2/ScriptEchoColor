@@ -773,3 +773,59 @@ function SECFUNCshowHelp() {
 		|sed -r 's,^.*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*\]\];[[:blank:]]*then[[:blank:]]*#help[[:blank:]]*(.*)$,\t\1\t\2,'
 }
 
+function SECFUNCcfgFileName() {
+	if [[ "$1" == "--help" ]];then
+		echo "Application config file for scripts."
+		echo 'param: [cfgIdentifier], if not set will default to `basename "$0"`'
+		return
+	fi
+	
+	local lpath="$HOME/.ScriptEchoColor/SEC.AppVars.DB"
+	if [[ ! -d "$lpath" ]];then
+		mkdir -p "$lpath"
+	fi
+	
+	# SECcfgFileName is a global
+	if [[ -n "$1" ]];then
+		SECcfgFileName="$lpath/${1}.cfg"
+	fi
+	
+	if [[ -z "$SECcfgFileName" ]];then
+		SECcfgFileName="$lpath/`basename "$0"`.cfg"
+	fi
+	
+	#echo "$lpath/${SECcfgFileName}.cfg"
+	#echo "$SECcfgFileName"
+}
+function SECFUNCcfgRead() {
+	SECFUNCcfgFileName
+	if [[ -f "$SECcfgFileName" ]];then
+  	SECFUNCfileLock "$SECcfgFileName"
+  	source "$SECcfgFileName"
+  	SECFUNCfileLock --unlock "$SECcfgFileName"
+  fi
+}
+function SECFUNCcfgWriteVar() {
+	local lstrVarId="$1"
+	
+	SECFUNCcfgFileName
+	local lstrWrite=`declare |grep "^${lstrVarId}="`
+	if [[ -z "$lstrWrite" ]];then
+		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"
+		return 1
+	fi
+	
+	if [[ ! -f "$SECcfgFileName" ]];then
+		echo -n >"$SECcfgFileName"
+	fi
+	
+	SECFUNCfileLock "$SECcfgFileName"
+	if grep -q "^${lstrVarId}=" "$SECcfgFileName";then
+		# sed substitute variable and value
+		sed -i "s'^${lstrVarId}=.*'${lstrWrite}'" "$SECcfgFileName"
+	else
+		echo "$lstrWrite" >>"$SECcfgFileName"
+	fi
+	SECFUNCfileLock --unlock "$SECcfgFileName"
+}
+
