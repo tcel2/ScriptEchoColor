@@ -806,11 +806,25 @@ function SECFUNCcfgRead() {
   fi
 }
 function SECFUNCcfgWriteVar() {
-	local lstrVarId="$1"
+	# if var is being set, eval (do) it
+	if echo "$1" |grep -q "^[[:alnum:]_]*=";then
+#		local lsedVarId='s"^([[:alnum:]_]*)=.*"\1"'
+#		local lsedValue='s"^[[:alnum:]_]*=(.*)"\1"'
+#		lstrVarId=`echo "$1" |sed -r "$lsedVarId"`
+#		local lstrValue=`echo "$1" |sed -r "$lsedValue"`
+#		eval "$lstrVarId=\"$lstrValue\""
+		eval "`echo "$1" |sed -r 's,^([[:alnum:]_]*)=(.*),\
+			\1="\2";\
+			lstrVarId="\1";\
+			lstrValue="\2";\
+		,'`"
+	else
+		local lstrVarId="$1"
+		local lstrValue="${!lstrVarId}"
+	fi
 	
 	SECFUNCcfgFileName
-	local lstrWrite=`declare |grep "^${lstrVarId}="`
-	if [[ -z "$lstrWrite" ]];then
+	if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
 		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"
 		return 1
 	fi
@@ -822,9 +836,9 @@ function SECFUNCcfgWriteVar() {
 	SECFUNCfileLock "$SECcfgFileName"
 	if grep -q "^${lstrVarId}=" "$SECcfgFileName";then
 		# sed substitute variable and value
-		sed -i "s'^${lstrVarId}=.*'${lstrWrite}'" "$SECcfgFileName"
+		sed -i "s'^${lstrVarId}=.*'${lstrVarId}=\"${lstrValue}\"'" "$SECcfgFileName"
 	else
-		echo "$lstrWrite" >>"$SECcfgFileName"
+		echo "${lstrVarId}=\"${lstrValue}\"" >>"$SECcfgFileName"
 	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }

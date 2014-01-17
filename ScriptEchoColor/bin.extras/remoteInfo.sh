@@ -25,6 +25,7 @@
 eval `secLibsInit`
 
 SECFUNCdaemonUniqueLock
+SECFUNCcfgRead
 
 FUNCexitIfDaemonNotRunning() {
 	if ! ps -p $daemonPid >/dev/null 2>&1;then
@@ -80,6 +81,7 @@ while [[ "${1:0:1}" == "-" ]];do
 		# default is daemon
 		varset --show bDaemonRunning=true
 		varset --show daemonPid=$$
+		SECFUNCcfgWriteVar dtDaemonLastStartup=`SECFUNCdtTimePrettyNow`
 		FUNCreadDBloop
 		exit
 	elif [[ "$1" == "--infoloop" ]];then #help just read stored info in a loop

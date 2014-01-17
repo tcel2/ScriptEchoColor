@@ -255,7 +255,8 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	local l_value="$2"
 
 	#if [[ -z "$l_value" ]]; then
-	if echo "$l_varPlDoUsThVaNaPl" |grep -q "="; then
+	# if begins with valid variable name and also has value set
+	if echo "$l_varPlDoUsThVaNaPl" |grep -q "^[[:alnum:]_]*="; then
 		sedVar='s"\(.*\)=.*"\1"'
 		sedValue='s".*=\(.*\)"\1"'
 		l_varPlDoUsThVaNaPl=`echo "$1" |sed "$sedVar"`
@@ -824,7 +825,7 @@ function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically se
 	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.`basename "$0"`.$$.$l_sufix"
 	local l_basename=""
 	
-	# BEGIN WORK
+	# BEGIN WORK 
 	SECFUNCechoDbgA "SECvarFile=$SECvarFile, l_varFileAutomatic=$l_varFileAutomatic, l_bForceRealFile=$l_bForceRealFile"
 	#SECFUNCechoDbgA "ls of l_varFileAutomatic: `ls -l $l_varFileAutomatic >/dev/null 2>&1`"
 	

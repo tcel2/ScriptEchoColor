@@ -85,8 +85,8 @@ while true; do
   export strDmesgTail=`FUNCdmesg -T \
     |tail -n $tailCount \
     |grep -v "type=1505 audit.*operation=\"profile_replace\".*name=\"/usr/sbin/mysqld\"" \
-    |grep -v "Unknown OutputIN= OUT=vmnet. SRC=" \
-    |grep -v "Inbound IN=eth0 OUT= MAC="` # grep excludes at end...
+    |grep -v "Unknown OutputIN=" \
+    |grep -v "Inbound IN="`
   
   if $bLog; then
     echo -n -e "$clr_eol >>--LOG--> lastId=$lastId, lastIdLine=$lastIdLine, totLines=$totLines, tailCount=$tailCount.\r"
