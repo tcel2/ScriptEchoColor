@@ -27,6 +27,7 @@ shopt -s expand_aliases
 export SECinstallPath="`secGetInstallPath.sh`";
 export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
+export _SECbugFixDate="0" #"(3600*3)" was to fix from: "31/12/1969 21:00:00.000000000" ...
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
@@ -88,19 +89,19 @@ function SECFUNCdtNow() {
 	date +"%s.%N"; 
 }
 function SECFUNCtimePretty() {
-	date -d "@`bc <<< "(3600*3)+${1}"`" +"%H:%M:%S.%N"
+	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%H:%M:%S.%N"
 }
 function SECFUNCtimePrettyNow() {
 	SECFUNCtimePretty `SECFUNCdtNow`
 }
 function SECFUNCdtTimePretty() {
-	date -d "@`bc <<< "(3600*3)+${1}"`" +"%d/%m/%Y %H:%M:%S.%N"
+	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%d/%m/%Y %H:%M:%S.%N"
 }
 function SECFUNCdtTimePrettyNow() {
 	SECFUNCdtTimePretty `SECFUNCdtNow`
 }
 function SECFUNCdtTimeToFileName() {
-	date -d "@`bc <<< "(3600*3)+${1}"`" +"%Y_%m_%d-%H_%M_%S_%N"
+	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%Y_%m_%d-%H_%M_%S_%N"
 }
 function SECFUNCdtTimeToFileNameNow() {
 	SECFUNCdtTimeToFileName `SECFUNCdtNow`
@@ -519,7 +520,6 @@ function SECFUNCdelay() {
 			if ! _SECFUNCdelayValidateIndexIdForOption "$1";then return 1;fi
 			local delay=`SECFUNCdelay $indexId --get`
 			SECFUNCtimePretty "$delay"
-			#date -d "@`bc <<< "(3600*3)+${delay}"`" +"%H:%M:%S.%N"
 			return
 		elif [[ "$1" == "--now" ]];then #SECFUNCdelay_help get time now since epoch in seconds
 			SECFUNCdtNow
