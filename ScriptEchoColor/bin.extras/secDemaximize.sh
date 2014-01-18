@@ -39,7 +39,7 @@ varset --show nRestoreFixYpos=27 #help restoring to non maximized window Y displ
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 selfName=`basename "$0"`
-strLogFile="/tmp/SEC.$selfName.log"
+strLogFile="$SEC_TmpFolder/SEC.$selfName.log"
 
 ########### FUNCTIONS
 function FUNCvalidateNumber() {

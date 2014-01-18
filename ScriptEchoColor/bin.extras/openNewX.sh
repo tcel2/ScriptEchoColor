@@ -45,7 +45,7 @@ SECFUNCvarSet --default pidOpenNewX=$$
 #grepX1="/usr/bin/X :1 [-]auth /tmp/serverauth[.].*"
 
 #redirects self output to log file!
-exec > >(tee /tmp/SEC.$selfName.$$.log)
+exec > >(tee $SEC_TmpFolder/SEC.$selfName.$$.log)
 exec 2>&1
 
 # when you see "#kill=skip" at the end of commands, will prevent terminals from being killed on killall commands (usually created at other scripts)
