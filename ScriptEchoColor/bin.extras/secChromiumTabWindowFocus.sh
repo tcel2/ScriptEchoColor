@@ -108,6 +108,10 @@ while true; do
 #		fi
 #	done
 	while true; do 
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		FUNCwindowAtMouse;
 		if((windowId>-1));then
 			if echoc -x "xwininfo -all -id $windowId #$LINENO" |grep -q '"chromium-browser"'; then
@@ -194,6 +198,10 @@ while true; do
 	previousWindowId=-1
 	previousChromeTabName=""
 	while true; do
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		#if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
 		if SECFUNCdelay checkIfRunning --checkorinit 10;then
 			echoc --info "check if chromium is still running"

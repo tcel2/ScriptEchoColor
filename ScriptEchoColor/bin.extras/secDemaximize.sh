@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (C) 2013-2013 by Henrique Abdalla
+# Copyright (C) 2013-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -242,7 +242,11 @@ while true; do
 			#fi
 		fi;
 	fi
-
+	
+	if SECFUNCdelay daemonHold --checkorinit 5;then
+		secDaemonsControl.sh --checkhold
+	fi
+	
 	sleep 0.25;
 done
 

@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+eval `secinit`
+
 renice -n 19 $$
 
 trap 'echo "(ctrl+c hit)" >/dev/stderr;bAskExit=true' INT
@@ -127,5 +129,9 @@ EOF
 		fi
   	bAskExit=false
   fi
+  
+	if SECFUNCdelay daemonHold --checkorinit 5;then
+		secDaemonsControl.sh --checkhold
+	fi
 done
 

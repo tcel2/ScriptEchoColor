@@ -292,6 +292,11 @@ if $bDaemon;then
 	varset bForceValidationOnce=true #will be initially forced once
 	while true; do
 		SECFUNCvarReadDB
+		
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		if [[ ! -f "$cfgManagedFiles" ]];then
 			echoc -t 1 -w "configure some files to be managed"
 			continue

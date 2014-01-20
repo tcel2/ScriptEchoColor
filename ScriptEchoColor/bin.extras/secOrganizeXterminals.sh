@@ -125,9 +125,14 @@ if $bDaemon; then
 		strPidList=`FUNCpidList`
 		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
 			strPidListPrevious="$strPidList"
-			$0
+			$0 #call self to do the organization
 			bCascadeForceNow=false
 		fi
+		
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		#if ! sleep 5; then break; fi; 
 		FUNCwait 1 "press a key to continue.." #echoc -w -t 1 #helps with ctrl+c
 #		if echoc -t 1 -q "tile now";then

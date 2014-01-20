@@ -183,6 +183,9 @@ function FUNCcopy() {
 	SECFUNCvarSet --showdbg nFilesCount=$((++nFilesCount))
 	echo -en "\r$nFilesCount\r"
 	
+	# `find` calling this can be very time consuming... so daemon control goes here too...
+	secDaemonsControl.sh --checkhold
+	
 	if $bBackgroundWork;then
 		sleep 1
 	fi
@@ -251,6 +254,11 @@ if $bDaemon;then
 	while true; do
 		nice -n 19 $0 --lookforchanges --confirmalways --background
 		echoc -w -t 5 "daemons sleep too..."
+		
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		#if ! sleep 5; then exit 1; fi
 	done
 	exit 0

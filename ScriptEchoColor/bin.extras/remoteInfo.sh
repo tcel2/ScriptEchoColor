@@ -47,6 +47,11 @@ FUNCreadDBloop() {
 		grep "_RemoteInfo=" $SECvarFile \
 			|sed -r 's;^(.*)_RemoteInfo="(.*)"$;\1:\t\2;' \
 			|sort
+		
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			secDaemonsControl.sh --checkhold
+		fi
+		
 		sleep 1
 	done
 }
