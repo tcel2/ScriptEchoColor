@@ -90,6 +90,10 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		local lfile="$1";
 		
+		if [[ ! -a "$lfile" ]];then
+			return
+		fi
+		
 		local lsedPidFromFile='s".*[.]([[:digit:]]*)[.]vars[.]tmp$"\1"';
 		local lnPid=`echo "$lfile" |sed -r "$lsedPidFromFile"`;
 		# bad filename
@@ -104,11 +108,13 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 			# skip files that have symlinks pointing to it
 			local lnSymlinkToFileCount=`find $SEC_TmpFolder -maxdepth 1 -lname "$lfile" |wc -l`
 			if((lnSymlinkToFileCount>=1));then
-				SECFUNCechoDbgA "HAS SYMLINK: $1"
+				SECFUNCechoDbgA "HAS SYMLINK: $lfile"
 				SECFUNCdbgFuncOutA;return
 			fi
 			
-			SECFUNCexecA rm "$lfile";
+			if ! SECFUNCexecA rm -f "$lfile";then
+				SECFUNCechoErrA "rm failed for: $lfile"
+			fi
 		fi;
 	};export -f SECFUNCvarClearTmpFiles_removeFilesForDeadPids;
 	

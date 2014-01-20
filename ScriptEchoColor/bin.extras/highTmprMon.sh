@@ -374,7 +374,9 @@ function FUNCdaemon() {
 		fi
 	
 		#echoc --info "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
-		FUNClistTopPids 3
+		if SECFUNCdelay ShowTopPids --checkorinit 60;then
+			FUNClistTopPids 3
+		fi
 		
 		# warning for high temperature near limit
 		if((tmprCurrent>=(tmprLimit-beforeLimitWarn)));then
@@ -387,6 +389,7 @@ function FUNCdaemon() {
 		fi
 		
 		if((tmprCurrent>=tmprLimit));then
+			FUNClistTopPids 3
 			if((${#aHighPercPidList[@]}==0));then
 				echoc --alert "WARNING no high C.P.U. processes to stop! "
 			else
@@ -442,7 +445,7 @@ function FUNCdaemon() {
 
 		prevTemperature=$tmprCurrent
 	
-		FUNCinfo "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
+		FUNCinfo "tmpr=$tmprCurrent; max=$maxTemperature; limit=$tmprLimit"
 		#sleep 1
 	done
 }

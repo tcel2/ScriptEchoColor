@@ -64,7 +64,8 @@ while [[ "${1:0:1}" == "-" ]];do
 		strVar="${1}_RemoteInfo"
 		shift
 		strVal="$1"
-		varset --show "$strVar" "$strVal"
+		#varset --show "$strVar" "$strVal"
+		varset "$strVar" "$strVal"
 		varwritedb #to clean/remove dups from db file
 		exit
 	elif [[ "$1" == "--unset" ]];then #help <Variable>
