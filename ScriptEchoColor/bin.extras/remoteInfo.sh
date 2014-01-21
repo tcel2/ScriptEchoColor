@@ -23,75 +23,58 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 eval `secLibsInit`
+selfName="`basename "$0"`"
 
-SECFUNCdaemonUniqueLock
 SECFUNCcfgRead
 
-FUNCexitIfDaemonNotRunning() {
-	if ! ps -p $daemonPid >/dev/null 2>&1;then
-		varset --show bDaemonRunning=false
-	fi
-	if ! $bDaemonRunning;then 
-		echoc -p " `basename $0` daemon is not running";
-		exit 1;
+FUNCworkVar() {
+	eval "$1"
+	if ps -p $pid >/dev/null 2>&1;then
+		echo -e "$var:\t$value"
 	fi
 }
 
 FUNCreadDBloop() {
 	while true; do
-		varreaddb
-		FUNCexitIfDaemonNotRunning
+		#TODO should remove variables of inactive PIDs...
+		SECFUNCcfgRead
 		SECFUNCdrawLine " RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
-		#echo "# RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
-		#date +"@(%H:%M:%S.%N)"
-		grep "_RemoteInfo=" $SECvarFile \
-			|sed -r 's;^(.*)_RemoteInfo="(.*)"$;\1:\t\2;' \
-			|sort
 		
-		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
-		fi
+		# wont show variables that have no value
+		grep "_RemoteInfo_[[:digit:]]*=" $SECcfgFileName \
+			|grep -v '=""' \
+			|sed -r 's|^(.*)_RemoteInfo_([[:digit:]]*)="(.*)"$|var=\1;pid=\2;value="\3";|' \
+			|sort \
+			|while read strLine;do FUNCworkVar "$strLine";done
 		
 		sleep 1
 	done
 }
 
-varset --default bDaemonRunning=false
+nPidCaller="$PPID"
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--set" ]];then #help <Variable> <Value>
-		FUNCexitIfDaemonNotRunning
 		shift
-		strVar="${1}_RemoteInfo"
+		strVar="$1"
 		shift
 		strVal="$1"
-		#varset --show "$strVar" "$strVal"
-		varset "$strVar" "$strVal"
-		varwritedb #to clean/remove dups from db file
+		
+		if [[ -z "$strVal" ]];then
+			echoc -p "$selfName: value for '$strVar' is empty"
+			exit 1
+		fi
+		
+		strVar="${strVar}_RemoteInfo_${nPidCaller}"
+		
+		SECFUNCcfgWriteVar "${strVar}=${strVal}"
 		exit
 	elif [[ "$1" == "--unset" ]];then #help <Variable>
-		FUNCexitIfDaemonNotRunning
+		#TODO should remove the variable from DB file
 		shift
-		strVar="${1}_RemoteInfo"
-		SECFUNCvarUnset "$strVar"
-		varwritedb #to clean/remove dups from db file
-		exit
-	elif [[ "$1" == "--daemon" ]];then #help must be running to other commands work
-		while $SECisDaemonRunning;do
-			if SECFUNCuniqueLock --quiet; then
-				SECFUNCvarSetDB -f
-				break
-			fi
-			echoc --alert "daemon requires unique lock, waiting it be released..."
-			sleep 1
-		done
-		# default is daemon
-		varset --show bDaemonRunning=true
-		varset --show daemonPid=$$
-		SECFUNCcfgWriteVar dtDaemonLastStartup="`SECFUNCdtTimePrettyNow`"
-		FUNCreadDBloop
+		strVar="${1}_RemoteInfo_${nPidCaller}"
+		SECFUNCcfgWriteVar "${strVar}=\"\""
 		exit
 	elif [[ "$1" == "--infoloop" ]];then #help just read stored info in a loop
-		FUNCexitIfDaemonNotRunning
 		FUNCreadDBloop
 		exit
 	elif [[ "$1" == "--help" ]];then
