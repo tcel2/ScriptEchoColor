@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -27,7 +27,7 @@ source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh";
 
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
-# THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `secLibsInit.sh`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
+# THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `secinit`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
 #trap '
 #	SEC_DEBUG=false;
 #	SECFUNCvarReadDB;
@@ -126,7 +126,7 @@ function SECFUNCvarInit() { #help: generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	SECFUNCvarClearTmpFiles #TODO create a maintenance daemon to clean tmp files and comment this?
-	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secLibsInit.sh` #TODO are you sure?
+	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA
 }

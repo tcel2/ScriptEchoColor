@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2012 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -25,7 +25,7 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS #####################################
-eval `secLibsInit.sh`
+eval `secinit`
 
 SECFUNCdaemonUniqueLock #SECisDaemonRunning
 #SECFUNCvarShow bUseXscreensaver
@@ -60,7 +60,7 @@ function FUNCxlock() {
 }; export -f FUNCxlock
 
 function FUNCchildScreenLockNow() {
-	eval `secLibsInit.sh` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	if $bUseXscreensaver; then
 		DISPLAY=:1 xscreensaver-command -lock
 	else
@@ -69,7 +69,7 @@ function FUNCchildScreenLockNow() {
 }; export -f FUNCchildScreenLockNow
 
 function FUNCchildScreenAutoLock() {
-	eval `secLibsInit.sh` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	#SECFUNCvarShow bUseXscreensaver #@@@r
 	if $bUseXscreensaver; then
 		xscreensaver -display :1
@@ -205,7 +205,7 @@ function FUNCcicleGamma() {
 function FUNCnvidiaCicle() {
 	local nDirection=$1 # 1 or -1
 	
-	#eval `secLibsInit.sh` #required if using exported function on child environment
+	#eval `secinit` #required if using exported function on child environment
 	SECFUNCvarSet --default nvidiaCurrent -1
 	
 	local lockId="openNewX.nvidia"
@@ -265,13 +265,14 @@ function FUNCnvidiaCicle() {
 #};export -f FUNCtempAvg
 
 function FUNCscript() {
-	# scripts will be executed with all environment properly setup with eval `secLibsInit.sh`
-	if [[ -z "$1" ]]; then
+	# scripts will be executed with all environment properly setup with eval `secinit`
+	local lscriptName="$1"
+	shift
+	
+	if [[ -z "$lscriptName" ]]; then
 		echo "Scripts List:"
 		grep "#helpScript" $0 |grep -v grep
-	fi
-	
-  if [[ "$1" == "returnX0" ]]; then #helpScript return to :0
+  elif [[ "$lscriptName" == "returnX0" ]]; then #helpScript return to :0
   	#cmdEval="xdotool key super+l"
   	echoc -x "FUNCchildScreenLockNow"
   	
@@ -280,28 +281,19 @@ function FUNCscript() {
   	
   	echoc -x "bash"
   	return
-  fi
-  
-  if [[ "$1" == "showHelp" ]]; then #helpScript show user custom command options and other options
+  elif [[ "$lscriptName" == "showHelp" ]]; then #helpScript show user custom command options and other options
     FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
-  fi
-  
-  if [[ "$1" == "isScreenLocked" ]];then
+  elif [[ "$lscriptName" == "isScreenLocked" ]];then
     if FUNCisScreenLockRunning;then
       exit 0
     else
       exit 1
     fi
-  fi
-  
-  if [[ "$1" == "nvidiaCicle" ]]; then #helpScript cicle through nvidia pre-setups
+  elif [[ "$lscriptName" == "nvidiaCicle" ]]; then #helpScript cicle through nvidia pre-setups
 	  FUNCnvidiaCicle 1
-  fi
-  if [[ "$1" == "nvidiaCicleBack" ]]; then #helpScript cicle through nvidia pre-setups
+  elif [[ "$lscriptName" == "nvidiaCicleBack" ]]; then #helpScript cicle through nvidia pre-setups
 	  FUNCnvidiaCicle -1
-  fi
-  
-  if [[ "$1" == "cicleGamma" ]]; then #helpScript cicle gamma value
+  elif [[ "$lscriptName" == "cicleGamma" ]]; then #helpScript cicle gamma value
 #  	while true;do
 #  		if ! ps -A -o pid,comm,command |grep -v "^[ ]*$$" |grep "^[ ]*[[:digit:]]* openNewX.sh.*cicleGamma$" |grep -v grep; then
 #  			break
@@ -309,18 +301,48 @@ function FUNCscript() {
 #  		echoc -w -t 1 "already running, waiting other exit"
 #  	done
 	  FUNCcicleGamma 1
-  fi
-  if [[ "$1" == "cicleGammaBack" ]]; then #helpScript cicle gamma value
+  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #helpScript cicle gamma value
   	FUNCcicleGamma -1
-  fi
-  
-  if [[ "$1" == "sayTemperature" ]]; then #helpScript say temperature
+  elif [[ "$lscriptName" == "sayTemperature" ]]; then #helpScript say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
 #		tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
 #		echoc --say "$tmprCurrent celcius"
 #		echoc --say "`FUNCtempAvg` celcius"
 		echoc --say "`highTmprMon.sh --tmpr` celcius"
+  elif [[ "$lscriptName" == "autoStopContOnScreenLock" ]]; then #helpScript auto stop application [gamePid] running at X1 if the screen is locked there; requires `highTmprMon.sh --limitcpu $gamePid` to work.
+  	local lgamePid="$1"
+  	shift
+  	
+		local ldelay=10
+		local lbStopped=false
+		while true;do
+			SECFUNCvarReadDB
+			if openNewX.sh --script isScreenLocked;then
+				if ! $lbStopped;then
+					echoc --say "stopping"
+				fi
+			  highTmprMon.sh --secvarset bOverrideForceStopNow true
+				lbStopped=true
+			  ldelay=1
+			else
+			  highTmprMon.sh --secvarset bOverrideForceStopNow false
+				lbStopped=false
+			  ldelay=10
+			fi
+			
+			if ! ps -p $lgamePid >/dev/null 2>&1;then
+				echoc -w -t 3 "pid $lgamePid stopped running, exiting..."
+				break
+			fi
+			
+			echo "INFO: Wait, but exit if game exits..."
+			sleep $ldelay
+		done
+	else
+		echoc -p "invalid script '$lscriptName'"
+		echoc -w
+		return 1
   fi
 };export -f FUNCscript
 
@@ -390,7 +412,7 @@ function FUNCdoNotCloseThisTerminal() {
 };export -f FUNCdoNotCloseThisTerminal
 
 function FUNCechocInitBashInteractive() {
-	eval `secLibsInit.sh`
+	eval `secinit`
 	bash -i
 };export -f FUNCechocInitBashInteractive
 
@@ -481,7 +503,10 @@ while [[ ${1:0:2} == "--" ]]; do
       exit 1
     fi
   elif [[ "$1" == "--script" ]]; then #opt run a internal script (without script name will show the list)
-  	FUNCscript $2
+  	shift
+  	scriptName="$1"
+  	shift
+  	FUNCscript $scriptName "$@"
 		exit 0
   elif [[ "$1" == "--killX1" ]]; then #opt kill X :1
   	# kill X

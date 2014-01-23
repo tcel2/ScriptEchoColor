@@ -1,6 +1,6 @@
 IMPORTANT!
 	This file `lib/ScriptEchoColor/utils/funcVars.sh`	is experimental code! 
-	It is loaded when you use: eval `secLibsInit.sh`
+	It is loaded when you use: eval `secinit`
 	Its main purpose is to share global variables between parent and child, in a way both can write and read each others modifications, what may be unsafe...
 	Only use it on non critical (non sudo, non root, non critical work) scripts.
 	(just learned about http://modules.sourceforge.net/, on research atm)
@@ -22,7 +22,7 @@ EXAMPLES:
 
 SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
 	at top of your script type:
-		eval `secLibsInit.sh`
+		eval `secinit`
 	see:
 		secLibsInit.sh --help
 	for more info on using it.
@@ -78,7 +78,7 @@ NOTES (highlights) (for tech info look at CHANGES section):
 	update to GPL3
 	
 	Fixed invisible typed characters after hit ctrl+c on `echoc -q`!
-	Fixed: eval `secLibsInit.sh`; while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
+	Fixed: eval `secinit`; while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
 	Fixed: use `set +o histexpand` on ~/.bashrc; echoc "abc!" causes error: 'bash: !": event not found'; workaround is to append space like this "abc! "
 	Fixed: ...loads of things I didnt take note...
 	

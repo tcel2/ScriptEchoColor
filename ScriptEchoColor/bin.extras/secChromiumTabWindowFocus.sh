@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 #set -x #@@@ comment
-eval `secLibsInit.sh`
+eval `secinit`
 
 waitStart=3
 delayRaiseTabOutliner=0.1

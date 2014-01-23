@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ################# INIT
-eval `secLibsInit.sh`
+eval `secinit`
 
 selfName=`basename "$0"`
 
@@ -162,7 +162,7 @@ function FUNCtmprAverage() {
 #};export -f FUNCmonTmpr
 
 function FUNCchildLimCpuFastLoop() {
-	eval `secLibsInit.sh`
+	eval `secinit`
 	SECFUNCvarWaitRegister pidToLimit
 	SECFUNCvarWaitRegister fSigStopDelay
 	SECFUNCvarWaitRegister fSigRunDelay

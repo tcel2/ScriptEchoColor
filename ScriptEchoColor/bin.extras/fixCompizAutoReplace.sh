@@ -26,7 +26,7 @@ trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
 #trap 'FUNCaskCompizReplaceOrKill' INT #this crashes bash while read is active
 
 ################# init 
-eval `secLibsInit.sh`
+eval `secinit`
 bAskReplaceKill=false
 selfName=`basename "$0"`
 

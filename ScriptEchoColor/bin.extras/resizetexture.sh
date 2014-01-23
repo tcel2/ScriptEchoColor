@@ -108,7 +108,7 @@ function FUNCbkpFileName() {
 bOnce=false
 if [[ ! -n ${bOptRecursive+dummy} ]]; then
 	echoc -c
-	eval `secLibsInit.sh`
+	eval `secinit`
 	
 	SECvarOptWriteAlways=false
 	SECFUNCvarSet --default beginAt=`date +"%s"`

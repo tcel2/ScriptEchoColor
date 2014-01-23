@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -25,7 +25,7 @@
 ############### INIT/CFG
 
 renice -n 19 -p $$
-eval `secLibsInit.sh`
+eval `secinit`
 trap 'FUNCtrapInt' INT
 
 ############### PARAMS

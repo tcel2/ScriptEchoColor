@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secLibsInit.sh`
+eval `secinit`
 
 #echo "parms: $@";echoc -w
 
@@ -81,7 +81,7 @@ fi
 #params=`SECFUNCparamsToEval --escapequotes "$@"`"${strDoNotClose}${strSkipCascade}"
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
-	eval `secLibsInit.sh`
+	eval `secinit`
 #	if $bForceNewSECDB;then
 #		SECFUNCvarSetDB -f #this prevents child shells loosing access to the early deleted SEC DB file from this and temp xterm pids..
 #	fi
