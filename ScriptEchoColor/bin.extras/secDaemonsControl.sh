@@ -36,17 +36,23 @@ while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" ]];then #help the script executing this will hold/wait
 		
 		if $bHoldScripts;then
-			echo "$strSelfName: script on hold..."
+			echoc --info "$strSelfName: script on hold..."
 			
 			SECONDS=0
 			while $bHoldScripts;do
-				echo -ne "${SECONDS}s\r"
+				echo -ne "${SECONDS}s (hit 'y' to run once)\r"
+				
+				#sleep 5
+				read -n 1 -t 5 strResp
+				if [[ "$strResp" == "y" ]];then
+					break
+				fi
+				
 				SECFUNCcfgRead
-				sleep 5
 			done
 		
 			echo
-			echo "$strSelfName: script continues..."
+			echoc --info "$strSelfName: script continues..."
 		fi
 		
 		exit
