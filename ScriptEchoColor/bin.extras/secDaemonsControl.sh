@@ -36,6 +36,7 @@ fi
 ############################# OPTIONS ###############################
 bReleaseAll=false
 bHoldAll=false
+bCheckHold=false
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait
 		bCheckHold=true
