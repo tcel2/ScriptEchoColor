@@ -27,7 +27,7 @@ shopt -s expand_aliases
 export SECinstallPath="`secGetInstallPath.sh`";
 export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
-export _SECbugFixDate="0" #"(3600*3)" was to fix from: "31/12/1969 21:00:00.000000000" ...
+export _SECbugFixDate="(3600*3)" #to fix from: "31/12/1969 21:00:00.000000000" ...
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
 alias SECexitA='SECFUNCdbgFuncOutA;exit '

@@ -139,6 +139,16 @@ function FUNCclearCache() {
 #	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileReal"
 #}
 
+function FUNCkeepGamma() { # some games reset the gamma on each restart
+	eval `secinit`
+	
+	while true; do
+		SECFUNCvarReadDB
+		xgamma -gamma $fGamma
+		sleep 60
+	done
+};export -f FUNCkeepGamma
+
 function FUNCcicleGamma() {
 	local nDirection=$1 #1 or -1
 	
@@ -574,26 +584,23 @@ fi
 #fi
 
 # at this point, X1 will be managed by openNewX
-if FUNCisX1running;then
-	if echoc -q -t 20 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now"; then
-		$0 --killX1
-		
-		#wait really exit
-		while FUNCisX1running; do
-			sleep 1
-		done
-		
+while true; do
+	if FUNCisX1running;then
+		if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then
+			echoc -x "$0 --killX1"
+		fi
+	else
 		while ! SECFUNCuniqueLock;do
 			echoc -p "Unable to create unique lock..."
 			echoc -w -t 3
 		done
-		
+	
 		SECFUNCvarSetDB -f
 		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
-	else
-		exit
+		
+		break
 	fi
-fi
+done
 
 if $useJWM; then
   if $bRecreateRCfile || [[ ! -f "$HOME/.jwmrc" ]]; then
@@ -745,6 +752,8 @@ if $useJWM; then
   #xterm -e "FUNCkeepJwmAlive $pidJWM $$ #kill=skip"&
   FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
 fi
+
+xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma #kill=skip"&
 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
