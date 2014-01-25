@@ -23,6 +23,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+############################# INIT ###############################
 strSelfName="`basename "$0"`"
 
 eval `secinit`
@@ -32,38 +33,16 @@ if [[ -z "$bHoldScripts" ]];then
 	SECFUNCcfgWriteVar bHoldScripts=false
 fi
 
+############################# OPTIONS ###############################
+bReleaseAll=false
+bHoldAll=false
 while [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--checkhold" ]];then #help the script executing this will hold/wait
-		
-		if $bHoldScripts;then
-			echoc --info "$strSelfName: script on hold..."
-			
-			SECONDS=0
-			while $bHoldScripts;do
-				echo -ne "${SECONDS}s (hit 'y' to run once)\r"
-				
-				#sleep 5
-				read -n 1 -t 5 strResp
-				if [[ "$strResp" == "y" ]];then
-					break
-				fi
-				
-				SECFUNCcfgRead
-			done
-		
-			echo
-			echoc --info "$strSelfName: script continues..."
-		fi
-		
-		exit
-	elif [[ "$1" == "--hold" ]];then #help will request scripts to hold execution
-		echoc --info "scripts will hold execution"
-		SECFUNCcfgWriteVar bHoldScripts=true
-		exit
-	elif [[ "$1" == "--continue" ]];then #help will request scripts to continue execution
-		echoc --info "scripts will continue execution"
-		SECFUNCcfgWriteVar bHoldScripts=false
-		exit
+	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait
+		bCheckHold=true
+	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
+		bHoldAll=true
+	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
+		bReleaseAll=true
 	elif [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp
 		exit
@@ -74,4 +53,33 @@ while [[ "${1:0:1}" == "-" ]];do
 	
 	shift
 done
+
+############################# MAIN ###############################
+if $bCheckHold;then
+	if $bHoldScripts;then
+		echoc --info "$strSelfName: script on hold..."
+	
+		SECONDS=0
+		while $bHoldScripts;do
+			echo -ne "${SECONDS}s (hit 'y' to run once)\r"
+		
+			#sleep 5
+			read -n 1 -t 5 strResp
+			if [[ "$strResp" == "y" ]];then
+				break
+			fi
+		
+			SECFUNCcfgRead
+		done
+		
+		echo
+		echoc --info "$strSelfName: script continues..."
+	fi
+elif $bReleaseAll;then
+	echoc --info "scripts will continue execution"
+	SECFUNCcfgWriteVar bHoldScripts=false
+elif $bHoldAll;then
+	echoc --info "scripts will hold execution"
+	SECFUNCcfgWriteVar bHoldScripts=true
+fi
 

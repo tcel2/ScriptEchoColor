@@ -766,11 +766,17 @@ function SECFUNCshowHelp() {
 		SECFUNCechoErrA
 		return 1
 	fi
-	#cat "$0" |grep -w "#help" |sed -r 's,.*== "([[:alnum:]]*)" \]\];[ ]*then #help[ ]*(.*),\t\1\t\2,'
+	
+	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#help.*),\1\2,'
+	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
+	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
 	cat "$l_file" \
 		|egrep -v "^[[:blank:]]*#" \
 		|grep -w "#help" \
-		|sed -r 's,^.*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*\]\];[[:blank:]]*then[[:blank:]]*#help[[:blank:]]*(.*)$,\t\1\t\2,'
+		|sed -r "$lsedOptionsAndHelpText" \
+		|sed -r "$lsedRemoveTokenOR" \
+		|sed -r "$lsedRemoveComparedVariable" \
+		|sed -r 's,#help,,'
 }
 
 function SECFUNCcfgFileName() {
