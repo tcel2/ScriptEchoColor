@@ -62,6 +62,9 @@ export SEC_SAYID="$selfName"
 ############ FUNCTIONS
 function FUNCinterruptAsk() {
 	bFUNCinterruptAsk=true
+	
+	# `reset` is to help prevent terminal bug where typed characters will not show after ctrl+c on `read -s` happens (some times only)...
+	reset
 }
 
 function FUNCbcToBool() {
@@ -136,9 +139,44 @@ function FUNClistTopPids() {
 	|head -n $(($1+1))
 }
 
-function FUNCinfo() {
+function FUNCsleepCalcDelay() {
+	local lnSleep=29
+	
+	# prime numbers ftw!
+	if(( tmprCurrent > (tmprLimit-50) ));then
+		lnSleep=19
+	fi
+	if(( tmprCurrent > (tmprLimit-40) ));then
+		lnSleep=13
+	fi
+	if(( tmprCurrent > (tmprLimit-30) ));then
+		lnSleep=7
+	fi
+	if(( tmprCurrent > (tmprLimit-20) ));then
+		lnSleep=3
+	fi
+	if(( tmprCurrent > (tmprLimit-10) ));then
+		lnSleep=1
+	fi
+	if(( tmprCurrent > (tmprLimit-5) ));then
+		lnSleep=0.5
+	fi
+	
+	echo "$lnSleep"
+};export -f FUNCsleepCalcDelay
+
+function FUNCsleep() {
+	# `sleep` does not work with ctrl+c trap properly...
+	read -s -t "$1" -p ""
+};export -f FUNCsleep
+
+function FUNCinfoSleep() {
+	local lnSleep=$1
+	shift
+	
+	#echo -n "$@";read -s -t $lnSleep -p "";echo
+	echo -n "$@";FUNCsleep "$lnSleep";echo
 	#echoc -t 1 --info "$@" #too much cpu usage
-	echo -n "$@";read -s -t 1 -p "";echo
 }
 
 function FUNCtmprAverage() {
@@ -152,7 +190,7 @@ function FUNCtmprAverage() {
 	bc <<< ` \
 		for((i=0;i<$count;i++)); do \
 			sensors |sed -nr "$sedTemperature"; \
-			sleep 0.1; \
+			FUNCsleep 0.1; \
 		done |tr '\n' '+' |sed "s|.*|scale=$scale;(&0)/$count|"`
 }
 
@@ -180,11 +218,11 @@ function FUNCchildLimCpuFastLoop() {
 		
 		if [[ "$fSigStopDelay" != "0.0" ]];then
 			kill -SIGSTOP $pidToLimit
-			sleep $fSigStopDelay
+			FUNCsleep $fSigStopDelay
 		fi
 		if [[ "$fSigRunDelay" != "0.0" ]];then
 			kill -SIGCONT $pidToLimit
-			sleep $fSigRunDelay
+			FUNCsleep $fSigRunDelay
 		fi
 	done
 }
@@ -338,7 +376,7 @@ function FUNClimitCpu() {
 				r)varset --show bOverrideForceStopNow=false;;
 			esac
 		else
-			sleep 0.5
+			FUNCsleep `FUNCsleepCalcDelay`
 		fi
 	done
 }
@@ -391,7 +429,7 @@ function FUNCdaemon() {
 		if((tmprCurrent>=tmprLimit));then
 			FUNClistTopPids 3
 			if((${#aHighPercPidList[@]}==0));then
-				echoc --alert "WARNING no high C.P.U. processes to stop! "
+				echoc --say --alert "WARNING no high C.P.U. processes to stop! "
 			else
 				# report processes
 				FUNClistTopPids $topCPUtoCheckAmount
@@ -429,7 +467,7 @@ function FUNCdaemon() {
 						break;
 					fi
 			
-					sleep 1 #echoc -x "sleep 1" #let it cooldown a bit
+					FUNCsleep 1 #echoc -x "FUNCsleep 1" #let it cooldown a bit
 					echoc --say "$tmprCurrent"
 				done
 				SECFUNCvarSet isLoweringTemperature=false
@@ -442,11 +480,12 @@ function FUNCdaemon() {
 				echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
 			fi
 		fi
-
+		
+		# prime numbers ftw!
+		local lnDaemonSleep=`FUNCsleepCalcDelay`
+		FUNCinfoSleep $lnDaemonSleep "tmpr=$tmprCurrent; max=$maxTemperature; limit=$tmprLimit; sleep=${lnDaemonSleep}s"
+		
 		prevTemperature=$tmprCurrent
-	
-		FUNCinfo "tmpr=$tmprCurrent; max=$maxTemperature; limit=$tmprLimit"
-		#sleep 1
 	done
 }
 
