@@ -45,7 +45,9 @@ function FUNCexecEcho() {
 	fi
 	
 	#shopt -u expand_aliases
-	eval "\\$@";local lnRet=$?
+	#eval "\\$@";local lnRet=$?
+	"$@" #do not use `eval` !
+	local lnRet=$?
 	#shopt -s expand_aliases
 	
 	if((lnRet!=0));then

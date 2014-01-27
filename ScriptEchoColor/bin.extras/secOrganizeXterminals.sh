@@ -69,22 +69,39 @@ function FUNCwindowList() {
 	#xdotool search --class xterm |sort
 	
 	local windowId=""
-	local listWindowIds=(`xdotool search --class xterm;xdotool search --class rxvt`)
-	#for windowId in ${listWindowIds[@]};do
-	for((i=0;i<${#listWindowIds[@]};i++));do
-		windowId=${listWindowIds[i]}
-		#echo "windowId=$windowId" >/dev/stderr
+	local listWindowIds=(`(xdotool search --class xterm;xdotool search --class rxvt) |sort -n`)
+
+#	for((i=0;i<${#listWindowIds[@]};i++));do
+#		windowId=${listWindowIds[i]}
+#		#echo "windowId=$windowId" >/dev/stderr
+#		local windowPid=`xdotool getwindowpid $windowId`
+#		if [[ -z "$windowPid" ]] || ps -o command -p $windowPid |grep -q "#skipCascade";then
+#			listWindowIds[i]=""
+#		fi
+#	done
+#	listWindowIds=(${listWindowIds[@]}) #recreates the array so empty entries will be ignored
+#	#echo "${listWindowIds[@]}" |sort >/dev/stderr
+#	
+#	#str=`xdotool search --class xterm;xdotool search --class rxvt`
+#	#echo "$str" |sort
+#	echo "${listWindowIds[@]}" |sort -n
+
+	local lnSystemPidMax=`cat /proc/sys/kernel/pid_max`
+	local listWindowIdsSorted=()
+	for windowId in ${listWindowIds[@]};do
 		local windowPid=`xdotool getwindowpid $windowId`
-		if [[ -z "$windowPid" ]] || ps -o command -p $windowPid |grep -q "#skipCascade";then
-			listWindowIds[i]=""
+		if [[ -n "$windowPid" ]] && ! ps -o command -p $windowPid |grep -q "#skipCascade";then
+			local elapsedPidTime=`ps --no-headers -o etimes -p $windowPid`
+			local lnWindowPidFixedSize=`printf "%0${#lnSystemPidMax}d" ${windowPid}`
+			local lnIndex="${elapsedPidTime}${lnWindowPidFixedSize}"
+			listWindowIdsSorted[lnIndex]="$windowId" 
 		fi
 	done
-	listWindowIds=(${listWindowIds[@]}) #recreates the array so empty entries will be ignored
-	#echo "${listWindowIds[@]}" |sort >/dev/stderr
 	
-	#str=`xdotool search --class xterm;xdotool search --class rxvt`
-	#echo "$str" |sort
-	echo "${listWindowIds[@]}" |sort
+	#`tac` will make newest windows be ordered at last slots on screen
+	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]}" |tr ' ' '\n' |tac`)
+	
+	echo "${listWindowIdsSorted[@]}"
 }
 
 function FUNCwait() {
@@ -134,7 +151,7 @@ if $bDaemon; then
 		fi
 		
 		#if ! sleep 5; then break; fi; 
-		FUNCwait 1 "press a key to continue.." #echoc -w -t 1 #helps with ctrl+c
+		FUNCwait 1 "ctrl+c for options.." #echoc -w -t 1 #helps with ctrl+c
 #		if echoc -t 1 -q "tile now";then
 #			bCascadeForceNow=true
 #		fi
