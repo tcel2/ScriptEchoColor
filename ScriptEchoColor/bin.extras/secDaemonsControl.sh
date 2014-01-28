@@ -58,11 +58,11 @@ done
 ############################# MAIN ###############################
 if $bCheckHold;then
 	if $bHoldScripts;then
-		echoc --info "$strSelfName: script on hold..."
-	
+		echoc --info "$strSelfName: script on hold (hit: 'y' to run once; 'r' to release all)..."
+		
 		SECONDS=0
 		while $bHoldScripts;do
-			echo -ne "${SECONDS}s (hit: 'y' to run once; 'r' to release all)\r"
+			echo -ne "${SECONDS}s\r"
 		
 			#sleep 5
 			read -n 1 -t 5 strResp

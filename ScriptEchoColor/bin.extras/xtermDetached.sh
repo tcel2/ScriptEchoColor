@@ -48,6 +48,8 @@ while [[ "${1:0:2}" == "--" ]]; do
 		bDoNotClose=true
 	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
+	elif [[ "$1" == "--log" ]];then #TODO
+		echo "TODO: implement auto-log"
 	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
 		bWaitDBsymlink=false
 #	elif [[ "$1" == "--nonewdb" ]];then #help by default it forces a new SEC DB file, so disable that 
@@ -87,7 +89,7 @@ function FUNCexecParams() {
 #	fi
 	echo "Exec: $strFUNCexecParams"
 	eval $strFUNCexecParams
-	echoc -w -t 60 #wait some time so any log can be read..
+	#echoc -w -t 60 #wait some time so any log can be read..
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
