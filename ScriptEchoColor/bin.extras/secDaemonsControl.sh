@@ -62,11 +62,14 @@ if $bCheckHold;then
 	
 		SECONDS=0
 		while $bHoldScripts;do
-			echo -ne "${SECONDS}s (hit 'y' to run once)\r"
+			echo -ne "${SECONDS}s (hit: 'y' to run once; 'r' to release all)\r"
 		
 			#sleep 5
 			read -n 1 -t 5 strResp
 			if [[ "$strResp" == "y" ]];then
+				break
+			elif [[ "$strResp" == "r" ]];then
+				SECFUNCcfgWriteVar bHoldScripts=false
 				break
 			fi
 		
