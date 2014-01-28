@@ -104,12 +104,6 @@ function FUNCwindowList() {
 	echo "${listWindowIdsSorted[@]}"
 }
 
-function FUNCwait() {
-	#echoc -w -t 1 "$@" #too much cpu usage
-	#read -s -n 1 -t $1 -p "wait: $2";echo #helps with ctrl+c, but bash crashes with the trap..
-	echo "wait: $2";sleep $1
-}
-
 ###################### MAIN CODE
 
 if $bDaemon;then
@@ -151,7 +145,8 @@ if $bDaemon; then
 		fi
 		
 		#if ! sleep 5; then break; fi; 
-		FUNCwait 1 "ctrl+c for options.." #echoc -w -t 1 #helps with ctrl+c
+		echo -ne "wait: ctrl+c for options..\r"
+		sleep 1 #`read` caused trouble with ctrl+c?
 #		if echoc -t 1 -q "tile now";then
 #			bCascadeForceNow=true
 #		fi

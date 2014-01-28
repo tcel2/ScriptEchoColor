@@ -332,11 +332,13 @@ function FUNCscript() {
 				if ! $lbStopped;then
 					echoc --say "stopping"
 				fi
-			  highTmprMon.sh --secvarset bOverrideForceStopNow true
+			  #highTmprMon.sh --secvarset bOverrideForceStopNow true
+			  kill -SIGSTOP $lgamePid
 				lbStopped=true
 			  ldelay=1
 			else
-			  highTmprMon.sh --secvarset bOverrideForceStopNow false
+			  #highTmprMon.sh --secvarset bOverrideForceStopNow false
+			  kill -SIGCONT $lgamePid
 				lbStopped=false
 			  ldelay=10
 			fi

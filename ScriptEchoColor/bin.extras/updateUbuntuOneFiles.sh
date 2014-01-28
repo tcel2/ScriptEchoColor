@@ -22,7 +22,11 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-trap 'echo "(ctrl+c pressed, exiting...)";exit 2' INT
+function FUNCtrap() {
+	trap 'echo "(ctrl+c pressed, exiting...)";exit 2' INT
+	#TODO `find` exits if ctrl+c is pressed, why? #trap 'echo "ctrl+c pressed...";varset bInterruptAsk=true;' INT
+};export -f FUNCtrap
+FUNCtrap
 eval `secinit`
 
 ############### INTERNAL CFG
@@ -39,6 +43,9 @@ sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_UR
 #if [[ "$bSkipNautilusCheckNow" != "true" ]]; then
 #	bSkipNautilusCheckNow="false"
 #fi
+
+bGoFastOnce=false
+varset --default bInterruptAsk=false
 
 ############### OPTIONS
 
@@ -127,7 +134,19 @@ fi
 
 ################## FUNCTIONS 
 
+function FUNCinterruptAsk() {
+	if $bInterruptAsk;then
+		echoc -Q "ctrl+c pressed@O_go fast once/_exit@Dg";case "`secascii $?`" in 
+			g)bGoFastOnce=true;; 
+			e)exit;; 
+		esac
+	fi
+	varset bInterruptAsk=false
+};export -f FUNCinterruptAsk
+
 function FUNCcopy() {
+	FUNCtrap
+	eval `secinit`
 	SECFUNCvarReadDB
 	
 	local bDoIt=$1
@@ -186,8 +205,11 @@ function FUNCcopy() {
 	# `find` calling this can be very time consuming... so daemon control goes here too...
 	secDaemonsControl.sh --checkhold
 	
-	if $bBackgroundWork;then
-		sleep 1
+	FUNCinterruptAsk #can set bGoFastOnce to true
+	if ! $bGoFastOnce;then
+		if $bBackgroundWork;then
+			read -s -n 1 -t 1 -p "" #sleep 1
+		fi
 	fi
 };export -f FUNCcopy
 
@@ -393,6 +415,7 @@ elif $bLookForChanges;then
 			-and \
 			\( -not -xtype d \) \
 			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
+		bGoFastOnce=false #controlled by FUNCinterruptAsk
 		echo `SECFUNCdelay --getpretty`
 		SECFUNCvarReadDB
 		
