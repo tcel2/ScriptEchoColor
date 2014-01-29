@@ -58,7 +58,7 @@ function FUNCvalidateNumber() {
 function FUNCwindowGeom() { #@@@helper nWindowX nWindowY nWindowWidth nWindowHeight
 	local lnWindowId=$1
 	#eval `xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
-	xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' |tr -d "\n"
+	xwininfo -id $lnWindowId 2>"$strLogFile" |grep -a "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' |tr -d "\n"
 }
 
 function FUNCdebugShowVars() {
