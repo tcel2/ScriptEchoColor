@@ -29,6 +29,7 @@ eval `secinit`
 bDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
+export nExitWait=0
 varset strTitle="Xterm_Detached"
 #varset bForceNewSECDB=true
 while [[ "${1:0:2}" == "--" ]]; do
@@ -46,6 +47,9 @@ while [[ "${1:0:2}" == "--" ]]; do
 		fi
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
+	elif [[ "$1" == "--waitonexit" ]];then #help <seconds> wait seconds before exiting
+		shift
+		nExitWait="$1"
 	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
 	elif [[ "$1" == "--log" ]];then #TODO
@@ -89,7 +93,10 @@ function FUNCexecParams() {
 #	fi
 	echo "Exec: $strFUNCexecParams"
 	eval $strFUNCexecParams
-	#echoc -w -t 60 #wait some time so any log can be read..
+	
+	if((nExitWait>0));then
+		echoc -w -t $nExitWait #wait some time so any log can be read..
+	fi
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"

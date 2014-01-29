@@ -135,7 +135,21 @@ while [[ "${1:0:1}" == "-" ]];do
 		fi
 		
 		echoc --say "going to auto replace compiz in $delay seconds."
-		zenity --info --timeout $delay --title "$selfName" --text "hit OK to restart compiz now (or wait ${delay}s)..."
+		export strDialogTitle="Dialog - $selfName"
+		
+		function FUNCtoggleDiagOnTop(){
+			while true; do
+				nWindowIdDialog=`xdotool search "$strDialogTitle" 2>/dev/null`
+				if xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
+					wmctrl -i -r $nWindowIdDialog -b toggle,above;
+					break
+				fi
+				sleep 1
+			done
+		}
+		FUNCtoggleDiagOnTop&
+		
+		zenity --info --timeout $delay --title "$strDialogTitle" --text "hit OK to restart compiz now (or wait ${delay}s)..."
 #		pidZen=$!;
 #		windowList=`xdotool search --pid $pidZen 2>/dev/null`;
 #		for windowId in ${windowList[@]}; do 

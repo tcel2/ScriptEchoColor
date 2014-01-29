@@ -232,10 +232,21 @@ while true; do
 			fi
 		
 			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
-				if(( nWindowY                 < nYposMinReadPos )) ||
-					(( (nWindowX+nWindowWidth ) > nScreenWidth     )) ||
-					(( (nWindowY+nWindowHeight) > nScreenHeight    ));
-				then
+				bFixWindowPos=false
+				if(( nWindowY < nYposMinReadPos ));then
+					bFixWindowPos=true
+				fi
+				if(( nWindowX < nScreenWidth ));then
+					if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
+						bFixWindowPos=true
+					fi
+				fi
+				if(( nWindowY < nScreenHeight ));then
+					if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
+						bFixWindowPos=true
+					fi
+				fi
+				if $bFixWindowPos;then
 					xdotool windowmove $windowId $nXpos $nYpos;
 					echo "Fixing (placement): $windowName"
 				fi

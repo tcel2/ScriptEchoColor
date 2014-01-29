@@ -233,7 +233,9 @@ for((i=0;i<${#aWindowList[@]};i++));do
 		eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 			SECFUNCvarSet --showdbg viewportX=\1;\
 			SECFUNCvarSet --showdbg viewportY=\2;"'`
-		SECFUNCexecA --echo xdotool windowmove --sync $windowId $(((basePosX-viewportX)+x)) $(((basePosY-viewportY)+y)) 2>/dev/null; 
+		SECFUNCexecA --echo xdotool windowmove --sync $windowId \
+			$(( (basePosX-viewportX)+x )) \
+			$(( (basePosY-viewportY)+y )) 2>/dev/null; 
 	fi
 		
 	((x+=addX)); 
