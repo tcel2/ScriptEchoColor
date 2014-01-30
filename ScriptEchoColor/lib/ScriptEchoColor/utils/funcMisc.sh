@@ -761,22 +761,36 @@ function SECFUNCdaemonUniqueLock() {
 }
 
 function SECFUNCshowHelp() {
-	local l_file="$0"
-	if [[ ! -f "$l_file" ]];then
-		SECFUNCechoErrA
+	local lstrToken="$1"
+	echo "`basename "$0"` $lstrToken help:"
+	if [[ -n "$lstrToken" ]];then
+		if [[ -n `echo "$lstrToken" |tr -d '[:alnum:]_'` ]];then
+			SECFUNCechoErrA "invalid prefix '$lstrToken'"
+			return 1
+		fi
+		lstrToken="${lstrToken}_"
+	fi
+	
+	local lstrFile="$0"
+	if [[ ! -f "$lstrFile" ]];then
+		# as help text are comments and `type` wont show them, the real script files is required...
+		SECFUNCechoErrA "unable to access script file"
 		return 1
 	fi
 	
-	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#help.*),\1\2,'
+	local lgrepNoCommentedLines="^[[:blank:]]*#"
+	local lgrepMatchHelpToken="#${lstrToken}help"
+	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
 	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-	cat "$l_file" \
-		|egrep -v "^[[:blank:]]*#" \
-		|grep -w "#help" \
+	local lsedRemoveHelpToken='s,#'${lstrToken}'help,,'
+	cat "$lstrFile" \
+		|egrep -v "$lgrepNoCommentedLines" \
+		|grep -w "$lgrepMatchHelpToken" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveComparedVariable" \
-		|sed -r 's,#help,,'
+		|sed -r "$lsedRemoveHelpToken"
 }
 
 function SECFUNCcfgFileName() {

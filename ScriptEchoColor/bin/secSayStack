@@ -37,7 +37,7 @@ if [[ -z "$SEC_SAYID" ]]; then
 fi
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh"
+source "`secGetInstallPath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 
 function FUNCsayStack() {
 	####################### internal cfg of variables, functions and base initializations
@@ -68,7 +68,8 @@ function FUNCsayStack() {
   	local caller=""
 		while [[ "${1:0:2}" == "--" ]]; do
 			if [[ "$1" == "--help" ]];then #FUNCexecSS_help show this help
-				grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+				#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+				SECFUNCshowHelp ${FUNCNAME}
 				return
 			elif [[ "$1" == "--caller" ]];then #FUNCexecSS_help is the name of the function calling this one
 				shift
@@ -242,7 +243,9 @@ function FUNCsayStack() {
 		fi
 		
 		if [[ "$1" == "--help" ]];then #FUNCsayStack_help show this help
-			grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#FUNCexecSS --help
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--sayvol" ]];then #FUNCsayStack_help set volume to be used at festival
 			shift
