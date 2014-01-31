@@ -22,7 +22,11 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+#echo "All Params: $@"
+
+#echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile"
 eval `secinit`
+#echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile";echoc -w 
 
 #echo "parms: $@";echoc -w
 
@@ -31,8 +35,8 @@ bSkipCascade=false
 bWaitDBsymlink=true
 export nExitWait=0
 varset strTitle="Xterm_Detached"
-#varset bForceNewSECDB=true
 while [[ "${1:0:2}" == "--" ]]; do
+	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp
@@ -54,19 +58,24 @@ while [[ "${1:0:2}" == "--" ]]; do
 		bSkipCascade=true
 	elif [[ "$1" == "--log" ]];then #TODO
 		echo "TODO: implement auto-log"
+		echoc -p "not implemented yet"
+		echoc -w
+		exit 1
 	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
 		bWaitDBsymlink=false
-#	elif [[ "$1" == "--nonewdb" ]];then #help by default it forces a new SEC DB file, so disable that 
-#		varset bForceNewSECDB=false
 	else
 		SECFUNCechoErrA "invalid option $1"
 		exit 1
 	fi
 	shift
+	#echo "NextParam: $1"
 done
+
+#echo "Remaining Params: $@"
 
 # to avoid error message
 eval "function $strTitle () { local ln=0; };export -f $strTitle"
+#type $strTitle
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
 #xterm -e "echo \"TEMP xterm...\"; konsole --noclose -e bash -c \"FUNCinit;FUNCcheckLoop\""&
@@ -88,15 +97,14 @@ fi
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
 	eval `secinit`
-#	if $bForceNewSECDB;then
-#		SECFUNCvarSetDB -f #this prevents child shells loosing access to the early deleted SEC DB file from this and temp xterm pids..
-#	fi
-	echo "Exec: $strFUNCexecParams"
+	
+	echo "$FUNCNAME:Exec: $strFUNCexecParams"
 	eval $strFUNCexecParams
 	
 	if((nExitWait>0));then
 		echoc -w -t $nExitWait #wait some time so any log can be read..
 	fi
+	#echoc -w
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"

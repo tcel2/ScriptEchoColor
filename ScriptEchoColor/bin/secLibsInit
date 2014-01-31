@@ -30,27 +30,41 @@ while [[ "${1:0:2}" == "--" ]];do
 		echo
 		
 		#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
-		echo "HELP on Libs functions:"
+		echo "HELP on Libs functions at: $SECinstallPath/lib/ScriptEchoColor"
 		echo
-		#echo "$strInfo"
-		echo "at: $SECinstallPath/lib/ScriptEchoColor"
-	
-		cd "$SECinstallPath/lib/ScriptEchoColor"
-	
+		
+		#cd "$SECinstallPath/lib/ScriptEchoColor"
 		#function FUNCechoPipe() {
 		#	read str
 		#	echo -en "$str"
 		#};export -f FUNCechoPipe
-		function FUNCtoFind() { 
-			echo "File: ${1:2}"; #remove heading "./"
-			sedGatherHelpText='s"function \(SECFUNC[[:alnum:]].*()\).*#help: \(.*\)"  \1\t\2"';
-			sedTranslateNewLine='s"[\]n"\n"g'
-			sedTranslateTab='s"[\]t"\t"g'
-			#grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |FUNCechoPipe;
-			grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |sed "$sedTranslateNewLine" |sed "$sedTranslateTab";
-		};export -f FUNCtoFind
-		find ./ -iname "*.sh" -exec bash -c 'FUNCtoFind "{}"' \;
-		 
+#		function FUNCtoFind() { 
+#			echo "File: ${1:2}"; #remove heading "./"
+#			sedGatherHelpText='s"function \(SECFUNC[[:alnum:]].*()\).*#help: \(.*\)"  \1\t\2"';
+#			sedTranslateNewLine='s"[\]n"\n"g'
+#			sedTranslateTab='s"[\]t"\t"g'
+#			#grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |FUNCechoPipe;
+#			grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |sed "$sedTranslateNewLine" |sed "$sedTranslateTab";
+#		};export -f FUNCtoFind
+#		function FUNCtoFind() { 
+#			echo "File: ${1:2}"; #remove heading "./"
+#			local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
+#			local lastrFunctions=(`grep "function SECFUNC.*" "$1" |sed -r "$lsedFunctionNameOnly"`)
+#			for lstrFuncId in ${lastrFunctions[@]};do
+#				echo "  $lstrFuncId"
+#				if type $lstrFuncId |grep -q "\-\-help";then
+#					$lstrFuncId --help
+#				fi
+#			done
+#		};export -f FUNCtoFind
+		#find ./ -iname "*.sh" -exec bash -c 'FUNCtoFind "{}"' \;
+		#eval `$0`
+		#find ./ -iname "*.sh" -exec bash -c '{} --help' \;
+		
+		echo "See these for more:"
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
+		
 		#echo "$strInfo"
 		exit
 	else

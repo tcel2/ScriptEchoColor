@@ -84,7 +84,7 @@ fi
 #@@@R fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
-function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no related pid\n\tOptions:\n\t--verbose shows what is happening
+function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncInA
 	
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
@@ -122,7 +122,7 @@ function SECFUNCvarClearTmpFiles() { #help: remove tmp files that have no relate
 	find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -exec bash -c "SECFUNCvarClearTmpFiles_removeFilesForDeadPids \"{}\"" \;
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarInit() { #help: generic vars initializer
+function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	SECFUNCvarClearTmpFiles #TODO create a maintenance daemon to clean tmp files and comment this?
@@ -130,7 +130,7 @@ function SECFUNCvarInit() { #help: generic vars initializer
 	
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarEnd() { #help: generic vars finalizer
+function SECFUNCvarEnd() { #generic vars finalizer
 	SECFUNCvarEraseDB
 }
 function SECFUNCvarIsArray() {
@@ -150,7 +150,7 @@ function SECFUNCvarIsArray() {
 # 	return 1
 }
 
-function SECFUNCvarGet() { #help: <varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
+function SECFUNCvarGet() { #<varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
   if `SECFUNCvarIsArray $1`;then
   	if [[ -n "$2" ]]; then
   		eval 'echo "${'$1'['$2']}"'
@@ -178,15 +178,15 @@ function SECFUNCvarGet() { #help: <varname> [arrayIndex] if var is an array, you
 		eval 'echo "$'$1'"'
 	fi
 }
-function SECFUNCfixPliq() { #internal:
+function SECFUNCfixPliq() {
 		#echo "$1"
   	#echo "$1" |sed -e 's/"/\\"/g' -e 's"\"\\"g'
   	echo "$1" |sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
-function SECFUNCvarShowSimple() { #help: (see SECFUNCvarShow)
+function SECFUNCvarShowSimple() { #(see SECFUNCvarShow)
   SECFUNCvarShow "$1"
 }
-function SECFUNCvarShow() { #help: show var, opt --towritedb
+function SECFUNCvarShow() { #show var, opt --towritedb
 	local l_prefix="" #"export "
 	if [[ "$1" == "--towritedb" ]]; then
 		#l_prefix="SECFUNCvarSet --nowrite " # --nowrite because it will be used at read db
@@ -213,17 +213,17 @@ function SECFUNCvarShow() { #help: show var, opt --towritedb
 		#echo "${l_prefix}$1=\"$l_value\";";
   fi
 }
-function SECFUNCvarShowDbg() { #help: only show var and value if SEC_DEBUG is set true
+function SECFUNCvarShowDbg() { #only show var and value if SEC_DEBUG is set true
   if $SEC_DEBUG; then
     SECFUNCvarShow "$@"
   fi
 }
 
-function SECFUNCvarUnset() { #help: <var> unregister the variable so it will not be saved to BD next time
+function SECFUNCvarUnset() { #<var> unregister the variable so it will not be saved to BD next time
 	pSECFUNCvarRegister --unregister $1
 }
 
-function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tOptions:\n\t--show will show always var and value;\n\t--showdbg will show only if SEC_DEBUG is set;\n\t--write (this is the default now) will also write value promptly to DB;\n\t--nowrite prevent promptly writing value to DB;\n\t--default will only set if variable is not set yet (like being initialized only ONCE);\n\t--array (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...;
+function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 	#SECFUNCvarReadDB
 	
 	local l_bShow=false
@@ -233,28 +233,26 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	local l_bDefault=false
 	local l_bArray=false
 	while [[ "${1:0:1}" == "-" ]]; do
-		if [[ "$1" == "--show" ]]; then
+		if [[ "$1" == "--show" ]]; then #SECFUNCvarSet_help will show always var and value
 			l_bShow=true
-			shift
-		elif [[ "$1" == "--showdbg" ]]; then
+		elif [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--showdbg" ]]; then #SECFUNCvarSet_help will show only if SEC_DEBUG is set
 			l_bShowDbg=true
-			shift
-		elif [[ "$1" == "--write" ]]; then
+		elif [[ "$1" == "--write" ]]; then #SECFUNCvarSet_help (this is the default now) will also write value promptly to DB
 			l_bWrite=true
-			shift
-		elif [[ "$1" == "--array" ]]; then
+		elif [[ "$1" == "--array" ]]; then #SECFUNCvarSet_help (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...
 			l_bArray=true
-			shift
-		elif [[ "$1" == "--nowrite" ]]; then
+		elif [[ "$1" == "--nowrite" ]]; then #SECFUNCvarSet_help prevent promptly writing value to DB
 			l_bWrite=false
-			shift
-		elif [[ "$1" == "--default" ]]; then
+		elif [[ "$1" == "--default" ]]; then #SECFUNCvarSet_help will only set if variable is not set yet (like being initialized only ONCE)
 			l_bDefault=true
-			shift
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
 			return 1
 		fi
+		shift
 	done
 	
 	local l_varPlDoUsThVaNaPl="$1" #PleaseDontUseThisVarNamePlease
@@ -263,8 +261,9 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	#if [[ -z "$l_value" ]]; then
 	# if begins with valid variable name and also has value set
 	if echo "$l_varPlDoUsThVaNaPl" |grep -q "^[[:alnum:]_]*="; then
-		sedVar='s"\(.*\)=.*"\1"'
-		sedValue='s".*=\(.*\)"\1"'
+		#sedVar='s"\(.*\)=.*"\1"'
+		sedVar='s"\([[:alnum:]_]*\)=.*"\1"'
+		sedValue='s"[[:alnum:]_]*=\(.*\)"\1"'
 		l_varPlDoUsThVaNaPl=`echo "$1" |sed "$sedVar"`
 		l_value=`echo "$1" |sed "$sedValue"`
 	fi
@@ -322,7 +321,7 @@ function SECFUNCvarSet() { #help: [options] <<var> <value>|<var>=<value>> :\n\tO
 	  SECFUNCvarShowDbg $l_varPlDoUsThVaNaPl
 	fi
 }
-function SECFUNCvarIsRegistered() { #help: check if var is registered
+function SECFUNCvarIsRegistered() { #check if var is registered
 	#echo "${SECvars[*]}" |grep -q $1
 	local l_var
 	for l_var in ${SECvars[*]}; do
@@ -332,7 +331,7 @@ function SECFUNCvarIsRegistered() { #help: check if var is registered
 	done
 	return 1
 }
-function SECFUNCvarIsSet() { #help: equal to: SECFUNCvarIsRegistered
+function SECFUNCvarIsSet() { #equal to: SECFUNCvarIsRegistered
 	SECFUNCvarIsRegistered $1
 	return $?
 }
@@ -345,15 +344,22 @@ function SECFUNCvarIsSet() { #help: equal to: SECFUNCvarIsRegistered
 #		read -n 1
 #	fi
 #}
-function SECFUNCvarWaitValue() { #help: [--not] <var> <value> [delay=1]: wait until var has specified value. Also get the var. --not if the value differs from specified.
+function SECFUNCvarWaitValue() { #[OPTIONS] <var> <value> [delay]: wait until var has specified value. Also get the var.
 	local l_bNot=false
-	while true; do
-		if [[ "$1" == "--not" ]]; then
+	local l_bProgress=false
+	while [[ "${1:0:1}" == "-" ]]; do
+		if [[ "$1" == "--not" ]]; then #SECFUNCvarWaitValue_help true if the value differs from specified.
 			l_bNot=true
-			shift
+		elif [[ "$1" == "--report" ]]; then #SECFUNCvarWaitValue_help report what is happening while it waits
+			l_bProgress=true
+		elif [[ "$1" == "--help" ]]; then #SECFUNCvarWaitValue_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
 		else
-			break
+			SECFUNCechoErr "invalid option '$1'"
+			return 1
 		fi
+		shift
 	done
 	
 	local l_var=$1
@@ -363,6 +369,7 @@ function SECFUNCvarWaitValue() { #help: [--not] <var> <value> [delay=1]: wait un
 		l_delay=1
 	fi
 	
+	SECONDS=0
 	while true; do
 		SECFUNCvarReadDB $l_var
 		local l_value=`SECFUNCvarGet $l_var`;
@@ -383,9 +390,16 @@ function SECFUNCvarWaitValue() { #help: [--not] <var> <value> [delay=1]: wait un
 		fi
 		if ! sleep $l_delay; then kill -SIGINT $$; fi
 		#read -t $l_delay #bash will crash!
+		if $l_bProgress;then
+			local lstrNot=""
+			if $l_bNot;then
+				lstrNot="NOT "
+			fi
+			echo -ne "waiting $l_var='$l_value' ${lstrNot}be '$l_valueCheck' for ${SECONDS}s...\r" >>/dev/stderr
+		fi
 	done
 }
-function SECFUNCvarWaitRegister() { #help: <var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
+function SECFUNCvarWaitRegister() { #<var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
 	local l_delay=$2
 	if [[ -z "$l_delay" ]]; then
 		l_delay=1
@@ -728,7 +742,7 @@ function SECFUNCvarWriteDB() {
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable value
+function SECFUNCvarReadDB() { #[varName] filter to load only one variable value
 	SECFUNCdbgFuncInA
 	
 	l_bSkip=false
@@ -769,10 +783,10 @@ function SECFUNCvarReadDB() { #help: [varName] filter to load only one variable 
 	
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarEraseDB() { #help: 
+function SECFUNCvarEraseDB() {
   rm "$SECvarFile"
 }
-function SECFUNCvarGetMainNameOfFileDB() { #help: <pid> returns the main executable name at variables filename
+function SECFUNCvarGetMainNameOfFileDB() { #<pid> returns the main executable name at variables filename
 	local l_pid=$1;
 	local l_fileFound=`find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
 	if [[ -n "$l_fileFound" ]];then 
@@ -783,7 +797,7 @@ function SECFUNCvarGetMainNameOfFileDB() { #help: <pid> returns the main executa
 	
 	return 0
 }
-function SECFUNCvarGetPidOfFileDB() { #help: <$SECvarFile> full DB filename
+function SECFUNCvarGetPidOfFileDB() { #<$SECvarFile> full DB filename
 #	if [[ -z "$1" ]];then
 #		SECFUNCechoErrA "missing SECvarFile filename to extract pid from..."
 #		return 1
@@ -798,25 +812,16 @@ function SECFUNCvarGetPidOfFileDB() { #help: <$SECvarFile> full DB filename
 	echo "$l_output"
 }
 
-function SECFUNCvarSetDB() { #help: [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file. With --forcerealfile or -f it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
+function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file.
 	SECFUNCdbgFuncInA
 	
 	local l_bForceRealFile=false
 	while [[ "${1:0:1}" == "-" ]];do
-		if [[ "${1:0:2}" == "--" ]];then
-			if [[ "$1" == "--forcerealfile" ]];then
-				l_bForceRealFile=true
-			else
-				SECFUNCechoErrA "invalid option $1"
-				SECFUNCdbgFuncOutA;return 1
-			fi
+		if [[ "$1" == "--forcerealfile" || "$1" == "-f" ]];then #SECFUNCvarSetDB_help it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
+			l_bForceRealFile=true
 		else
-			if [[ "$1" == "-f" ]];then
-				l_bForceRealFile=true
-			else
-				SECFUNCechoErrA "invalid option $1"
-				SECFUNCdbgFuncOutA;return 1
-			fi
+			SECFUNCechoErrA "invalid option $1"
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -964,4 +969,14 @@ function SECFUNCvarUnitTest() {
 	SECFUNCvarSet l_values
 	SECFUNCvarShow l_values
 }
+
+if [[ `basename "$0"` == "funcVars.sh" ]];then
+	while [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then
+			SECFUNCshowFunctionsHelp
+			exit
+		fi
+		shift
+	done
+fi
 

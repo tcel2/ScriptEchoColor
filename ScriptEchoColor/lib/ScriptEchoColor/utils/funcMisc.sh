@@ -108,12 +108,13 @@ function SECFUNCdtTimeToFileNameNow() {
 }
 
 alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
-function SECFUNCechoErr() { 
+function SECFUNCechoErr() { #echo error messages
 	###### options
 	local caller=""
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoErr_help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoErr_help is the name of the function calling this one
 			shift
@@ -140,7 +141,7 @@ function SECFUNCechoErr() {
 #fi
 
 alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECmsgCallerPrefix\" "
-function SECFUNCechoDbg() { 
+function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -149,7 +150,8 @@ function SECFUNCechoDbg() {
 	local caller=""
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoDbg_help is the name of the function calling this one
 			shift
@@ -178,7 +180,8 @@ function SECFUNCechoWarn() {
 	local caller=""
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoWarn_help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoWarn_help is the name of the function calling this one
 			shift
@@ -206,7 +209,8 @@ function SECFUNCparamsToEval() {
 	bEscapeQuotesTwice=false
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--escapequotes" ]];then #SECFUNCparamsToEval_help quotes will be escaped like '\"'
 			bEscapeQuotes=true
@@ -250,7 +254,8 @@ function SECFUNCexec() {
 	local caller=""
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one
 			shift
@@ -350,7 +355,8 @@ function SECFUNCbcPrettyCalc() {
 	local bCmpQuiet=false
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help --help show this help
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--cmp" ]];then #SECFUNCbcPrettyCalc_help output comparison result as "true" or "false"
 			bCmpMode=true
@@ -391,9 +397,9 @@ function SECFUNCbcPrettyCalc() {
 	
 }
 
-function SECFUNCdrawLine() {
+function SECFUNCdrawLine() { #[wordsAtMiddleOfLine] [lineFillChars]
 	if [[ "$1" == "--help" ]];then
-		echo "params: [wordsAtMiddleOfLine] [lineFillChars]"
+		SECFUNCshowHelp ${FUNCNAME}
 		return
 	fi
 	
@@ -429,7 +435,7 @@ function SECFUNCdrawLine() {
 	echo "$lstrOutput"
 }
 
-function SECFUNCdelay() {
+function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
 	local indexId="$FUNCNAME"
@@ -462,11 +468,8 @@ function SECFUNCdelay() {
 	local l_b1stIsTrueOnCheckOrInit=false
 	while [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
-			echo -e "Help:
-	The first parameter can optionally be a string identifying a custom delay like:
-		SECFUNCdelay main --init;
-		SECFUNCdelay test --init;"
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--1stistrue" ]];then #SECFUNCdelay_help to use with --checkorinit that makes 1st run return true
 			l_b1stIsTrueOnCheckOrInit=true
@@ -534,16 +537,14 @@ function SECFUNCdelay() {
 	SECFUNCdelay $indexId --get #default
 }
 
-function SECFUNCfileLock() {
+function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
+			
 	local l_bUnlock=false
 	local l_bCheckIfIsLocked=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
-			echo "Waits until the specified file is unlocked/lockable."
-			echo "Creates a lock file for the specified file."
-			echo "Params: <realFile> cannot be a symlink or a directory"
-			
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
 			l_bUnlock=true
@@ -672,17 +673,14 @@ function SECFUNCfileLock() {
 	return 0
 }
 
-function SECFUNCuniqueLock() { 
+function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.\n\t[id] defaults to `basename $0`
 	local l_bRelease=false
 	local l_pid=$$
 	local l_bQuiet=false
 	while [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
-			echo "Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously."
-			echo "If lock exists, outputs the pid holding it."
-			echo 'Parameters: [id] defaults to `basename $0`'
-			
-			grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--quiet" ]];then #SECFUNCuniqueLock_help prevent all output to /dev/stdout
 			l_bQuiet=true
@@ -761,29 +759,42 @@ function SECFUNCdaemonUniqueLock() {
 }
 
 function SECFUNCshowHelp() {
-	local lstrToken="$1"
-	echo "`basename "$0"` $lstrToken help:"
-	if [[ -n "$lstrToken" ]];then
-		if [[ -n `echo "$lstrToken" |tr -d '[:alnum:]_'` ]];then
-			SECFUNCechoErrA "invalid prefix '$lstrToken'"
-			return 1
-		fi
-		lstrToken="${lstrToken}_"
-	fi
+	local lstrFunctionNameToken="$1"
 	
 	local lstrFile="$0"
 	if [[ ! -f "$lstrFile" ]];then
 		# as help text are comments and `type` wont show them, the real script files is required...
-		SECFUNCechoErrA "unable to access script file"
+		SECFUNCechoErrA "unable to access script file '$lstrFile'"
 		return 1
 	fi
 	
+	if [[ -n "$lstrFunctionNameToken" ]];then
+		if [[ -n `echo "$lstrFunctionNameToken" |tr -d '[:alnum:]_'` ]];then
+			SECFUNCechoErrA "invalid prefix '$lstrFunctionNameToken'"
+			return 1
+		fi
+		
+		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m"
+		
+		# for function description
+		local lstrFuncDesc=`grep "function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#" "$lstrFile" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#(.*);\1;"`
+		if [[ -n "$lstrFuncDesc" ]];then
+			echo -e "\t$lstrFuncDesc"
+		fi
+		
+		lstrFunctionNameToken="${lstrFunctionNameToken}_"
+	else
+		echo "`basename "$0"` help:"
+	fi
+	
+	# for script options or function options
 	local lgrepNoCommentedLines="^[[:blank:]]*#"
-	local lgrepMatchHelpToken="#${lstrToken}help"
-	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrToken'help.*),\1\2,'
+	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
+	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
 	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-	local lsedRemoveHelpToken='s,#'${lstrToken}'help,,'
+	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
+	#local lsedAddNewLine='s".*"&\n"'
 	cat "$lstrFile" \
 		|egrep -v "$lgrepNoCommentedLines" \
 		|grep -w "$lgrepMatchHelpToken" \
@@ -791,12 +802,12 @@ function SECFUNCshowHelp() {
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveComparedVariable" \
 		|sed -r "$lsedRemoveHelpToken"
+		#|sed -r "$lsedAddNewLine"
 }
 
-function SECFUNCcfgFileName() {
+function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
 	if [[ "$1" == "--help" ]];then
-		echo "Application config file for scripts."
-		echo 'param: [cfgIdentifier], if not set will default to `basename "$0"`'
+		SECFUNCshowHelp ${FUNCNAME} \
 		return
 	fi
 	
@@ -862,4 +873,42 @@ function SECFUNCcfgWriteVar() {
 	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }
+function SECFUNCshowFunctionsHelp() { #show functions specific help
+	#set -x
+	if [[ "$1" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
+		#this option also prevents infinite loop for this script help
+		SECFUNCshowHelp ${FUNCNAME}
+		return
+	fi
+	
+	echo "`basename "$0"` Functions:"
+	local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
+	local lastrFunctions=(`grep "function SECFUNC.*" "$0" |grep -v grep |sed -r "$lsedFunctionNameOnly"`)
+	lastrFunctions=(`echo "${lastrFunctions[@]}" |tr " " "\n" |sort`)
+	for lstrFuncId in ${lastrFunctions[@]};do
+		echo
+		if type $lstrFuncId 2>/dev/null |grep -q "\-\-help";then
+			local lstrHelp=`$lstrFuncId --help`
+			if [[ -n "$lstrHelp" ]];then
+				echo "$lstrHelp"
+			else
+				#echo "  $lstrFuncId()"
+				SECFUNCshowHelp $lstrFuncId #this only happens for SECFUNCechoDbg ...
+			fi
+		else
+			#echo "  $lstrFuncId()"
+			SECFUNCshowHelp $lstrFuncId
+		fi
+	done
+}
+
+if [[ `basename "$0"` == "funcMisc.sh" ]];then
+	while [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then
+			SECFUNCshowFunctionsHelp
+			exit
+		fi
+		shift
+	done
+fi
 
