@@ -58,7 +58,8 @@ function FUNCwait() {
 	#echo -n "$@";read -s -t 2 -p "hit ctrl+c for options";echo
 	echo -n "$@";echoc --info "hit ctrl+c for options"
 	for((i=0;i<10;i++));do
-		if ! sleep 1; then break; fi
+		#if ! sleep 1; then break; fi #this breaks compiz also if you hit ctrl+c
+		read -n 1 -t 1
 		if $bAskReplaceKill;then
 			break;
 		fi
