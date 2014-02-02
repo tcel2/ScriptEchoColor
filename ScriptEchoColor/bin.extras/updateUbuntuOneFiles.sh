@@ -61,6 +61,7 @@ bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
 bBackgroundWork=false
+bAutoGit=false
 while [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #@help: this help
 		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
@@ -83,6 +84,8 @@ while [[ "${1:0:2}" == "--" ]]; do
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #@help: between each copy will be added a delay
 		bBackgroundWork=true
+	elif [[ "$1" == "--autogit" ]]; then #@help: all files at Ubuntu One will be versioned (with history)
+		bAutoGit=true
 	elif [[ "$1" == "--autosync" ]]; then #@help: will automatically copy the changes without asking
 		SECFUNCvarSet --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #@help: will list what files, of current folder recursively, are at ubuntu one!
@@ -186,7 +189,10 @@ function FUNCcopy() {
 	
 	if $bChanged; then
 		SECFUNCvarSet --showdbg nFilesChangedCount=$((++nFilesChangedCount))
+		
+		# this will remove from Ubuntu One, real files that are also missing at $HOME, so will sync properly (so wont work as backup)
 		cmdRm="trash -vf \"$pathUbuntuOne/$strFile\""
+		
 		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathUbuntuOne/$strFile\""
 		if $bDoIt; then
 			echoc --info "working with: $strFile"
@@ -406,8 +412,11 @@ elif $bLookForChanges;then
 		SECFUNCvarSet nFilesCount=0
 		SECFUNCvarSet nFilesChangedCount=0
 		SECFUNCdelay --init
+		
 		find ./ \
 			\( -not -name "." -not -name ".." \) \
+			-and \
+			\( -not -path "./.git/*" \) \
 			-and \
 			\( -type f -or -type l \) \
 			-and \
@@ -415,6 +424,12 @@ elif $bLookForChanges;then
 			-and \
 			\( -not -xtype d \) \
 			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
+		if $bAutoGit;then
+			git init #no problem as I read
+			git add --all #add missing files on git
+			git commit -m "`SECFUNCdtTimePrettyNow`"
+		fi
+		
 		bGoFastOnce=false #controlled by FUNCinterruptAsk
 		echo `SECFUNCdelay --getpretty`
 		SECFUNCvarReadDB
