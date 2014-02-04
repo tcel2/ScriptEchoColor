@@ -66,7 +66,7 @@ function FUNCsayStack() {
   function FUNCexecSS() {
   	###### options
   	local caller=""
-		while [[ "${1:0:2}" == "--" ]]; do
+		while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 			if [[ "$1" == "--help" ]];then #FUNCexecSS_help show this help
 				#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 				SECFUNCshowHelp ${FUNCNAME}
@@ -86,7 +86,7 @@ function FUNCsayStack() {
   };export -f FUNCexecSS
   
   function FUNCisPidActive() { #generic check with info
-  	if [[ -z "$1" ]]; then
+  	if [[ -z "${1-}" ]]; then
 			FUNCechoErrSS "$FUNCNAME: $LINENO: empty pid value"
 			return 1
   	fi
@@ -186,8 +186,8 @@ function FUNCsayStack() {
   };export -f FUNCresumeJustDel
   
 	function FUNChasCache() {
-		local md5sumText="$1"
-		local fileAudio="$2" #optional
+		local md5sumText="${1-}"
+		local fileAudio="${2-}" #optional
 		
 		local cacheFile="$_SECSAYcacheFolder/$md5sumText"
 		if [[ -f "$cacheFile" ]];then
@@ -209,9 +209,9 @@ function FUNCsayStack() {
 		return 1
 	};export -f FUNChasCache
 	function FUNCplay() { 
-		local md5sumText="$1"
-		local sayVol="$2"
-		local fileAudio="$3" #optional
+		local md5sumText="${1-}"
+		local sayVol="${2-}"
+		local fileAudio="${3-}" #optional
 		SECFUNCechoDbgA "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
 		
 		local cacheFile="$_SECSAYcacheFolder/$md5sumText"
@@ -295,7 +295,7 @@ function FUNCsayStack() {
 		fi
 		shift
 	done
-	local sayText="$1" #last param
+	local sayText="${1-}" #last param
 	sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
 	local md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
 	FUNCexecSS mkdir -p "$_SECSAYcacheFolder"
