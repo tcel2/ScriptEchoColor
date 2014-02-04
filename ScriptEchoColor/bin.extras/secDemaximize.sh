@@ -27,6 +27,8 @@
 eval `secLibsInit`
 aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$")
 
+SECFUNCuniqueLock --daemonwait
+
 eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
 varset --show nScreenWidth=$nScreenWidth # to ease find code
 varset --show nScreenHeight=$nScreenHeight # to ease find code
@@ -78,7 +80,7 @@ function FUNCisMaximized() {
 
 ############### MAIN
 
-while [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
 		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
@@ -151,7 +153,7 @@ while true; do
 	# Do it
 	if $bOk;then
 		bPseudoMaximized=false
-		if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]}" ]];then
+		if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
 			bPseudoMaximized=true
 		fi
 		
@@ -174,7 +176,7 @@ while true; do
 			
 			# in case user clicked directly on maximize button
 			#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
-			if [[ -z "${aWindowGeomBkp[$windowId]}" ]];then
+			if [[ -z "${aWindowGeomBkp[$windowId]-}" ]];then
 #				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
 #				while true;do
 #					codeGeomTmp="`FUNCwindowGeom $windowId`"

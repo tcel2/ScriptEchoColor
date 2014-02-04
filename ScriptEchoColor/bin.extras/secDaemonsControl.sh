@@ -24,12 +24,20 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ############################# INIT ###############################
-strSelfName="`basename "$0"`"
-
 eval `secinit`
 
+strSelfName="`basename "$0"`"
+declare -A aDaemonsPid
+
+#aDaemonsPid=()
+
+#declare -p aDaemonsPid
+#declare -p bHoldScripts
+#type SECFUNCcfgRead
 SECFUNCcfgRead
-if [[ -z "$bHoldScripts" ]];then
+#declare -p aDaemonsPid
+#declare -p bHoldScripts
+if [[ -z "${bHoldScripts-}" ]];then
 	SECFUNCcfgWriteVar bHoldScripts=false
 fi
 
@@ -37,13 +45,22 @@ fi
 bReleaseAll=false
 bHoldAll=false
 bCheckHold=false
-while [[ "${1:0:1}" == "-" ]];do
+bList=false
+bDaemon=false
+bRegisterOnly=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait
 		bCheckHold=true
 	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
 		bHoldAll=true
 	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
 		bReleaseAll=true
+	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
+		bList=true
+	elif [[ "$1" == "--daemon" ]];then #help loop --list
+		bDaemon=true
+	elif [[ "$1" == "--register" ]];then #help register the daemon to be listed, not controlled.
+		bRegisterOnly=true
 	elif [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp
 		exit
@@ -55,8 +72,74 @@ while [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
+#################### FUNCTIONS
+function FUNClist() {
+	SECFUNCcfgRead
+	#cat "$SECcfgFileName"
+	SECFUNCdrawLine "Daemons List at `SECFUNCdtTimePrettyNow`:"
+	echo -e "Index\tPid\tName"
+#		declare -p aDaemonsPid
+#		SECFUNCcfgRead
+	#declare -p aDaemonsPid
+	nCount=0
+	#echo "${!aDaemonsPid[@]}" |sort
+	for strDaemonId in `echo ${!aDaemonsPid[@]} |tr ' ' '\n' |sort`;do
+		#echo ">>>$strDaemonId"
+		nPid="${aDaemonsPid[$strDaemonId]-}"
+		if ps -p $nPid >/dev/null 2>&1;then
+			echo -e "$nCount\t$nPid\t$strDaemonId";
+			((nCount++))
+		else
+			unset aDaemonsPid[$strDaemonId]
+			SECFUNCcfgWriteVar aDaemonsPid
+		fi
+	done
+	echo -e "Total=$nCount"
+}
+
+function FUNCregisterDaemon() {
+	#strPPidId=`ps --no-headers -p $PPID -o comm`
+	nPidDaemon=$SECnPidDaemon
+	if((nPidDaemon==0));then
+		nPidDaemon=$PPID
+	fi
+	strPPidId=`grep "$nPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$nPidDaemon$'\1'"`
+	strPPidId=`SECFUNCfixId "$strPPidId"`
+	if [[ -z "$strPPidId" ]];then
+		strPPidId="pid$nPidDaemon"
+	fi
+	if [[ "${aDaemonsPid[$strPPidId]-}" != $nPidDaemon ]];then
+		aDaemonsPid[$strPPidId]=$nPidDaemon
+		#declare -p aDaemonsPid
+		SECFUNCcfgWriteVar aDaemonsPid
+	fi
+}
+
 ############################# MAIN ###############################
+if $bRegisterOnly;then
+	FUNCregisterDaemon
+	exit
+fi
+
+if $bList;then
+	FUNClist
+	exit
+fi
+
+if $bDaemon;then
+	SECFUNCuniqueLock --daemonwait
+	FUNCregisterDaemon
+	while true;do
+		secDaemonsControl.sh --checkhold
+		FUNClist
+		#sleep 10
+		read -n 1 -t 10 #allows hit enter to refresh now
+	done
+	exit
+fi
+
 if $bCheckHold;then
+	FUNCregisterDaemon
 	if $bHoldScripts;then
 		echoc --info "$strSelfName: script on hold (hit: 'y' to run once; 'r' to release all)..."
 		

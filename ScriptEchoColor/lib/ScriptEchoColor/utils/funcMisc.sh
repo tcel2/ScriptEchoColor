@@ -23,10 +23,11 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 shopt -s expand_aliases
+set -u #so when unset variables are expanded, gives fatal error
 
 export SECinstallPath="`secGetInstallPath.sh`";
 export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
-export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,$FUNCNAME(),L$LINENO'
+export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
 export _SECbugFixDate="(3600*3)" #to fix from: "31/12/1969 21:00:00.000000000" ...
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
@@ -35,20 +36,37 @@ alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
+######### EXTERNAL VARIABLES can be set by user #########
+: ${SEC_DEBUG:=false}
 if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
 	export SEC_DEBUG=false # of course, np if already "false"
 fi
+
+: ${SEC_MsgColored:=true}
 if [[ "$SEC_MsgColored" != "false" ]];then
 	export SEC_MsgColored=true
 fi
+
+: ${SEC_ShortFuncsAliases:=true}
 if [[ "$SEC_ShortFuncsAliases" != "false" ]]; then
 	export SEC_ShortFuncsAliases=true
 fi
 
 # function aliases for easy coding
-if [[ -z "$SECfuncPrefix" ]]; then
-	export SECfuncPrefix="sec" #this prefix can be setup by the user
-fi
+: ${SECfuncPrefix:=sec} #this prefix can be setup by the user
+export SECfuncPrefix
+
+###################### INTERNAL VARIABLES are set by functions ########
+: ${SECcfgFileName:=}
+export SECcfgFileName
+
+: ${SECnPidDaemon:=0}
+export SECnPidDaemon
+
+: ${SECbDaemonWasAlreadyRunning:=false}
+export SECbDaemonWasAlreadyRunning
+
+###################### SETUP ENVIRONMENT
 if $SEC_ShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
 	alias "$SECfuncPrefix"delay='SECFUNCdelay';
@@ -70,6 +88,8 @@ _SECdbgVerboseOpt=""
 if [[ "$SEC_DEBUG" == "true" ]];then
 	_SECdbgVerboseOpt="-v"
 fi
+
+################ FUNCTIONS
 
 function SECFUNCexportFunctions() {
 	declare -F \
@@ -111,7 +131,7 @@ alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoErr() { #echo error messages
 	###### options
 	local caller=""
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoErr_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -148,7 +168,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	
 	###### options
 	local caller=""
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -178,7 +198,7 @@ alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
 	###### options
 	local caller=""
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoWarn_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -207,7 +227,7 @@ function SECFUNCparamsToEval() {
 	###### options
 	bEscapeQuotes=false
 	bEscapeQuotesTwice=false
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -232,7 +252,7 @@ function SECFUNCparamsToEval() {
 #	fi
 	
 	local strExec=""
-	while [[ -n "$1" ]];do
+	while [[ -n "${1-}" ]];do
   	if [[ -n "$strExec" ]];then
 	  	strExec="${strExec} ";
   	fi
@@ -252,7 +272,7 @@ function SECFUNCexec() {
 	
 	###### options
 	local caller=""
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -320,7 +340,8 @@ function SECFUNChelpExit() {
 }
 
 function SECFUNCppidList() {
-  local separator=$1
+  local separator="${1-}"
+  shift
   
   local pidList=()
   local ppid=$$;
@@ -353,7 +374,7 @@ function SECFUNCppidListToGrep() {
 function SECFUNCbcPrettyCalc() {
 	local bCmpMode=false
 	local bCmpQuiet=false
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help --help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -398,13 +419,14 @@ function SECFUNCbcPrettyCalc() {
 }
 
 function SECFUNCdrawLine() { #[wordsAtMiddleOfLine] [lineFillChars]
-	if [[ "$1" == "--help" ]];then
+	if [[ "${1-}" == "--help" ]];then
 		SECFUNCshowHelp ${FUNCNAME}
 		return
 	fi
 	
-	local lstrWords="$1";
-	local lstrFill="$2"
+	local lstrWords="${1-}";
+	shift
+	local lstrFill="${1-}"
 	
 	if [[ -z "$lstrFill" ]];then
 		lstrFill="="
@@ -435,27 +457,53 @@ function SECFUNCdrawLine() { #[wordsAtMiddleOfLine] [lineFillChars]
 	echo "$lstrOutput"
 }
 
+function SECFUNCfixId() {
+	# removes all non-alphanumeric and non underscore
+	echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]//g'
+}
+
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\$FUNCNAME\" "
+function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: for functions and variables name.
+	local caller=""
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--caller" ]];then #SECFUNCechoErr_help is the name of the function calling this one
+			shift
+			caller="${1}(): "
+		fi
+		shift
+	done
+	
+	if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
+		SECFUNCechoErrA "${caller}invalid id '$1', only allowed alphanumeric and underscores."
+		return 1
+	fi
+	return 0
+}
+
 function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
 	local indexId="$FUNCNAME"
-	if [[ -n "$1" ]] && [[ "${1:0:2}" != "--" ]];then
-		if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
-			SECFUNCechoErrA "invalid indexId '$1', only allowed alphanumeric id and underscores."
+	if [[ -n "${1-}" ]] && [[ "${1:0:2}" != "--" ]];then
+		if ! SECFUNCvalidateIdA "$1";then
 			return 1
 		fi
+#		if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
+#			SECFUNCechoErrA "invalid indexId '$1', only allowed alphanumeric id and underscores."
+#			return 1
+#		fi
 		indexId="$1"
 		shift
 	fi
 	
 	function _SECFUNCdelayValidateIndexIdForOption() {
 		local l_bQuiet=false
-		if [[ "$1" == "--quiet" ]];then
+		if [[ "${1-}" == "--quiet" ]];then
 			l_bQuiet=true
 			shift
 		fi
-		SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$indexId]}=${_dtSECFUNCdelayArray[$indexId]}"
-		if [[ -z "${_dtSECFUNCdelayArray[$indexId]}" ]];then
+		SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$indexId]-}=${_dtSECFUNCdelayArray[$indexId]-}"
+		if [[ -z "${_dtSECFUNCdelayArray[$indexId]-}" ]];then
 			# programmer must have coded it somewhere to make that code clear
 			#echo "--init [indexId=$indexId] needed before calling $1" >&2
 			if ! $l_bQuiet;then
@@ -466,7 +514,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	}
 	
 	local l_b1stIsTrueOnCheckOrInit=false
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -541,7 +589,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			
 	local l_bUnlock=false
 	local l_bCheckIfIsLocked=false
-	while [[ "${1:0:2}" == "--" ]];do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
@@ -557,7 +605,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		shift
 	done
 	
-	local l_file="$1" #can be with full path
+	local l_file="${1-}" #can be with full path
 	if [[ ! -f "$l_file" ]];then
 		SECFUNCechoErrA "file '$l_file' does not exist (if symlink must point to a file)"
 		return 1
@@ -674,16 +722,26 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 }
 
 function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.\n\t[id] defaults to `basename $0`
+	#set -x
 	local l_bRelease=false
 	local l_pid=$$
 	local l_bQuiet=false
-	while [[ "${1:0:2}" == "--" ]];do
+	local lbDaemon=false
+	local lbWaitDaemon=false
+	local lstrId="`basename "$0" |tr '.-' '__'`"
+	SECnPidDaemon=0
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--quiet" ]];then #SECFUNCuniqueLock_help prevent all output to /dev/stdout
 			l_bQuiet=true
+		elif [[ "$1" == "--notquiet" ]];then #SECFUNCuniqueLock_help allow output to /dev/stdout
+			l_bQuiet=false
+		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help set the lock id, defaults to `basename $0`
+			shift
+			lstrId="$1"
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
 			shift
 			l_pid=$1
@@ -693,6 +751,11 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 			fi
 		elif [[ "$1" == "--release" ]];then #SECFUNCuniqueLock_help release the lock
 			l_bRelease=true
+		elif [[ "$1" == "--daemon" ]];then #SECFUNCuniqueLock_help Auto set the DB to the daemon DB if it is already running, or create a new DB; Also sets this variable: SECbDaemonWasAlreadyRunning.
+			lbDaemon=true
+		elif [[ "$1" == "--daemonwait" ]];then #SECFUNCuniqueLock_help will wait for the other daemon to exit, and then will become the daemon
+			lbDaemon=true
+			lbWaitDaemon=true
 		else
 			SECFUNCechoErrA "invalid option: $1"
 			return 1
@@ -700,12 +763,38 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 		shift
 	done
 	
-	local l_id="$1"
-	if [[ -z "$l_id" ]];then
-		l_id=`basename $0`
+	if ! SECFUNCvalidateIdA "$lstrId";then
+		return 1
 	fi
 	
-	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$l_id"
+	if ${lbDaemon:?};then #will call this self function, beware..
+		SECONDS=0
+		while true;do
+			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO WHY?
+			if SECFUNCuniqueLock --quiet "$lstrId"; then
+				SECFUNCvarSetDB -f
+				SECnPidDaemon=$l_pid # ONLY after the lock has been acquired!
+			else
+				SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+				SECbDaemonWasAlreadyRunning=true
+			fi
+			
+			if ${lbWaitDaemon:?};then
+				if $SECbDaemonWasAlreadyRunning;then
+					echo -ne "Wait Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
+					sleep 1 #keep trying to become the daemon
+				else
+					break #has become the daemon, breaks loop..
+				fi
+			else
+				break; #always break, because DB is always set (child or master)
+			fi
+		done
+		return 0 # to prevent bugs..
+	fi
+	
+	#local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$l_pid.$lstrId"
+	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$lstrId"
 	local l_lockFile="${l_runUniqueFile}.lock"
 	
 	function SECFUNCuniqueLock_release() {
@@ -713,7 +802,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 		rm "$l_lockFile";
 	}
 	
-	if $l_bRelease;then
+	if ${l_bRelease:?};then
 		SECFUNCuniqueLock_release
 		return 0
 	fi
@@ -722,16 +811,16 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 		local l_lockPid=`cat "$l_runUniqueFile"`
 		if ps -p $l_lockPid >/dev/null 2>&1; then
 			if(($l_pid==$l_lockPid));then
-				SECFUNCechoWarnA "redundant lock '$l_id' request..."
+				SECFUNCechoWarnA "redundant lock '$lstrId' request..."
 				return 0
 			else
-				if ! $l_bQuiet;then
+				if ! ${l_bQuiet:?};then
 					echo "$l_lockPid"
 				fi
 				return 1
 			fi
 		else
-			SECFUNCechoWarnA "releasing lock '$l_id' of dead process..."
+			SECFUNCechoWarnA "releasing lock '$lstrId' of dead process..."
 			SECFUNCuniqueLock_release
 		fi
 	fi
@@ -748,24 +837,41 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	fi
 }
 
-function SECFUNCdaemonUniqueLock() {
-	SECisDaemonRunning=false #global NOT to export
-	if SECFUNCuniqueLock --quiet; then
-		SECFUNCvarSetDB -f
-	else
-		SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-		SECisDaemonRunning=true
-	fi
-}
+#function SECFUNCdaemonUniqueLock() { #Auto set the DB to the daemon DB if it is already running, or set a new DB\n\tAlso sets this variable: SECbDaemonWasAlreadyRunning\n\tAnd finally passes all parameters to function: SECFUNCuniqueLock
+#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+#		if [[ "$1" == "--help" ]];then #SECFUNCdaemonUniqueLock
+#			SECFUNCshowHelp ${FUNCNAME}
+#			return
+#		else
+#			break #SECFUNCuniqueLock will take care of parameters now
+#		fi
+#		shift
+#	done
+#	
+#	SECbDaemonWasAlreadyRunning=false #global NOT to export
+#	if SECFUNCuniqueLock --quiet "$@"; then
+#		SECFUNCvarSetDB -f
+#	else
+#		SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+#		SECbDaemonWasAlreadyRunning=true
+#	fi
+#}
 
 function SECFUNCshowHelp() {
-	local lstrFunctionNameToken="$1"
+	local lstrFunctionNameToken="${1-}"
 	
 	local lstrFile="$0"
 	if [[ ! -f "$lstrFile" ]];then
-		# as help text are comments and `type` wont show them, the real script files is required...
-		SECFUNCechoErrA "unable to access script file '$lstrFile'"
-		return 1
+		if [[ "${lstrFunctionNameToken:0:10}" == "SECFUNCvar" ]];then
+			#TODO !!! IMPORTANT !!! this MUST be the only place on funcMisc.sh that funcVars.sh or anything from it is known about!!! BEWARE!!!!!!!!!!!!!!!!!! Create a validator on a package builder?
+			lstrFile="$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh"
+		elif [[ "${lstrFunctionNameToken:0:7}" == "SECFUNC" ]];then
+			lstrFile="$_SECselfFile_funcMisc"
+		else
+			# as help text are comments and `type` wont show them, the real script files is required...
+			SECFUNCechoErrA "unable to access script file '$lstrFile'"
+			return 1
+		fi
 	fi
 	
 	if [[ -n "$lstrFunctionNameToken" ]];then
@@ -806,7 +912,7 @@ function SECFUNCshowHelp() {
 }
 
 function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
-	if [[ "$1" == "--help" ]];then
+	if [[ "${1-}" == "--help" ]];then
 		SECFUNCshowHelp ${FUNCNAME} \
 		return
 	fi
@@ -817,7 +923,7 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	fi
 	
 	# SECcfgFileName is a global
-	if [[ -n "$1" ]];then
+	if [[ -n "${1-}" ]];then
 		SECcfgFileName="$lpath/${1}.cfg"
 	fi
 	
@@ -829,16 +935,30 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	#echo "$SECcfgFileName"
 }
 function SECFUNCcfgRead() {
+	#echo oi;eval `cat tst.db`;return
 	SECFUNCcfgFileName
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
-  	source "$SECcfgFileName"
+  	
+  	#declare -p aDaemonsPid
+  	#echo "$SECcfgFileName"
+  	#cat "$SECcfgFileName"
+  	#source "$SECcfgFileName"
+  	#local lstrCfgData=`cat "$SECcfgFileName"`
+  	#echo $lstrCfgData
+  	#eval $lstrCfgData
+  	#eval `cat "$SECcfgFileName"`
+  	#echo ">>>tst=${tst-}"
+  	eval "`cat "$SECcfgFileName"`"
+  	#declare -p aDaemonsPid
+  	
   	SECFUNCfileLock --unlock "$SECcfgFileName"
   fi
 }
-function SECFUNCcfgWriteVar() {
+function SECFUNCcfgWriteVar() { #set -x
 	# if var is being set, eval (do) it
-	if echo "$1" |grep -q "^[[:alnum:]_]*=";then
+	local lbIsArray=false
+	if echo "$1" |grep -q "^[[:alnum:]_]*=";then # here the var will never be array
 #		local lsedVarId='s"^([[:alnum:]_]*)=.*"\1"'
 #		local lsedValue='s"^[[:alnum:]_]*=(.*)"\1"'
 #		lstrVarId=`echo "$1" |sed -r "$lsedVarId"`
@@ -851,7 +971,13 @@ function SECFUNCcfgWriteVar() {
 		,'`"
 	else
 		local lstrVarId="$1"
-		local lstrValue="${!lstrVarId}"
+#		local lstrArrayToWrite=`declare -p ${lstrVarId}`
+#		if $lstrArrayToWrite |grep -q "^declare -[aA]";then
+#			lbIsArray=true
+#			#local lstrValue=`declare -p ${lstrVarId} |sed -r "s,^declare -[aA] ([[:alnum:]_]*)='(.*)',\2,"`
+#		else
+#			local lstrValue="${!lstrVarId-}"
+#		fi
 	fi
 	
 	SECFUNCcfgFileName
@@ -860,22 +986,61 @@ function SECFUNCcfgWriteVar() {
 		return 1
 	fi
 	
+	# `declare` must be stripped off or the evaluation of the cfg file will fail!!!
+	if declare -p ${lstrVarId} |grep -q "^declare -[aA]";then
+		lbIsArray=true
+	fi
+	
+	local lstrPliqForArray=""
+	if $lbIsArray;then
+		lstrPliqForArray="'"
+		#lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^(declare -[[:alpha:]-]* [[:alnum:]_]*)='(.*)'$,${lstrVarId}=\"\";unset ${lstrVarId};\1=\2,"`
+#		lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)='(.*)'$,\1=\2,"`
+#	else
+#		lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=(.*)$,\1=\2,"`
+	fi
+	
+	local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
+	
+#	local lstrPliqForArray=""
+#	local lstrPrepareArray=""
+#	if $lbIsArray;then
+#		lstrPliqForArray="'"
+#		
+#		local lstrDeclareArray=`declare -p $lstrVarId |sed -r 's"^([^=]*)=.*"\1"'`
+#		lstrPrepareArray="$lstrVarId='';unset $lstrVarId;$lstrDeclareArray;"
+#	fi
+#	lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
+	#echo "lstrToWrite=$lstrToWrite"
+	#eval export ${lstrVarId}
+	
 	if [[ ! -f "$SECcfgFileName" ]];then
 		echo -n >"$SECcfgFileName"
 	fi
 	
 	SECFUNCfileLock "$SECcfgFileName"
-	if grep -q "^${lstrVarId}=" "$SECcfgFileName";then
-		# sed substitute variable and value
-		sed -i "s'^${lstrVarId}=.*'${lstrVarId}=\"${lstrValue}\"'" "$SECcfgFileName"
-	else
-		echo "${lstrVarId}=\"${lstrValue}\"" >>"$SECcfgFileName"
-	fi
+	#set -x	
+	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
+	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName"
+	echo "${lstrToWrite};" >>"$SECcfgFileName"
+	#set +x
+#	if $lbIsArray;then
+#		local lstrMatchLineToRemove=`echo "$lstrArrayToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
+#		sed "/$lstrMatchLineToRemove/d" "$SECcfgFileName"
+#		echo "$lstrArrayToWrite;" >>"$SECcfgFileName"
+#	else
+#		if grep -q "^${lstrVarId}=" "$SECcfgFileName";then
+#			# sed substitute variable and value
+#			sed -i "s'^${lstrVarId}=.*'${lstrVarId}=\"${lstrValue}\";'" "$SECcfgFileName"
+#		else
+#			echo "${lstrVarId}=\"${lstrValue}\";" >>"$SECcfgFileName"
+#		fi
+#	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }
 function SECFUNCshowFunctionsHelp() { #show functions specific help
 	#set -x
-	if [[ "$1" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
+	if [[ "${1-}" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
 		#this option also prevents infinite loop for this script help
 		SECFUNCshowHelp ${FUNCNAME}
 		return
@@ -902,8 +1067,15 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 	done
 }
 
+function SECFUNCarraySize() {
+	local laArrayId="$1"
+	set +u
+	eval echo "\${#${laArrayId}[@]}"
+	set -u
+}
+
 if [[ `basename "$0"` == "funcMisc.sh" ]];then
-	while [[ "${1:0:1}" == "-" ]];do
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
 			SECFUNCshowFunctionsHelp
 			exit

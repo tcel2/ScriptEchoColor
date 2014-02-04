@@ -25,15 +25,16 @@
 ################# INIT
 eval `secinit`
 
-selfName=`basename "$0"`
+#isDaemonRunning=false
+#if SECFUNCuniqueLock --quiet; then
+#	SECFUNCvarSetDB -f
+#else
+#	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+#	isDaemonRunning=true
+#fi
+SECFUNCuniqueLock --daemon #--daemonwait will be set after, here is just to attach the same db of the daemon
 
-isDaemonRunning=false
-if SECFUNCuniqueLock --quiet; then
-	SECFUNCvarSetDB -f
-else
-	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-	isDaemonRunning=true
-fi
+selfName=`basename "$0"`
 
 if [[ -z "${anIgnorePids+dummyValue}" ]];then 
 	export anIgnorePids=()
@@ -382,12 +383,14 @@ function FUNClimitCpu() {
 }
 
 function FUNCdaemon() {
-	if $isDaemonRunning; then
-		echoc -p "daemon is already running!"
-		exit 1
-	#else
-	#	echo $$ >"$lockFile"
-	fi
+#	if $SECbDaemonWasAlreadyRunning; then
+#		echoc -p "daemon is already running!"
+#		exit 1
+#	#else
+#	#	echo $$ >"$lockFile"
+#	fi
+	SECFUNCuniqueLock --daemonwait
+	secDaemonsControl.sh --register
 	
 	secSayStack --clearbuffer #to stop saying loads of useless information.. when this app is restarted..
 	
@@ -400,6 +403,8 @@ function FUNCdaemon() {
 	varset anIgnorePids
 	while true; do
 		SECFUNCvarReadDB
+		#secDaemonsControl.sh --checkhold #DO NOT hold this critical script execution!!!
+		
 		if $bDebugFakeTmpr;then
 			tmprCurrent=$tmprCurrentFake
 		else
@@ -490,7 +495,7 @@ function FUNCdaemon() {
 }
 
 function FUNCcheckIfDaemonRunningOrExit() {
-	if ! $isDaemonRunning;then
+	if ! $SECbDaemonWasAlreadyRunning;then
 		echoc -p "daemon not running!"
 		exit 1
 	fi
@@ -502,9 +507,9 @@ varset --default bJustStopPid=false
 varset --default bDoLowFpsLimiting=false
 varset --default bOverrideForceStopNow=false
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
-while [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	b2ndIsParam=false
-	if [[ -n "$2" ]] && [[ "${2:0:1}" != "-" ]];then
+	if [[ -n "${2-}" ]] && [[ "${2:0:1}" != "-" ]];then
 		b2ndIsParam=true
 	fi
 	

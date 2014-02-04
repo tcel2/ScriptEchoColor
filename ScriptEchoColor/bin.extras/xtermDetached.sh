@@ -33,22 +33,37 @@ eval `secinit`
 bDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
+bKillSkip=false
+export bDaemon=false
+export nNice=0
+nDisplay="$DISPLAY"
+strLogFile=""
 export nExitWait=0
-varset strTitle="Xterm_Detached"
+strTitleDefault="Xterm_Detached" #useless?
+varset strTitle="$strTitleDefault"
+strTitleForce=""
 while [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp
 		exit
+	elif [[ "$1" == "--nice" ]];then #help <nice>
+		shift
+		nNice=$1
+	elif [[ "$1" == "--display" ]];then #help <display>
+		shift
+		nDisplay=$1
+	elif [[ "$1" == "--daemon" ]];then #help <display>
+		bDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
-		varset strTitle="$1"
-		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
-			echoc -p "title '$strTitle' contains invalid characters..."
-			echoc -w "exiting..."
-			exit 1
-		fi
+		strTitleForce="`SECFUNCfixId "$1"`"
+#		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
+#			echoc -p "title '$strTitle' contains invalid characters..."
+#			echoc -w "exiting..."
+#			exit 1
+#		fi
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
 	elif [[ "$1" == "--waitonexit" ]];then #help <seconds> wait seconds before exiting
@@ -56,11 +71,11 @@ while [[ "${1:0:2}" == "--" ]]; do
 		nExitWait="$1"
 	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
-	elif [[ "$1" == "--log" ]];then #TODO
-		echo "TODO: implement auto-log"
-		echoc -p "not implemented yet"
-		echoc -w
-		exit 1
+	elif [[ "$1" == "--killskip" ]];then #help to xterm not be killed
+		bKillSkip=true
+	elif [[ "$1" == "--log" ]];then #help <logFile>
+		shift
+		strLogFile="$1"
 	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
 		bWaitDBsymlink=false
 	else
@@ -73,19 +88,17 @@ done
 
 #echo "Remaining Params: $@"
 
-# to avoid error message
-eval "function $strTitle () { local ln=0; };export -f $strTitle"
-#type $strTitle
+if [[ -n "$strTitleForce" ]];then
+	varset strTitle="$strTitleForce"
+else
+	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
+	varset strTitle="`SECFUNCfixId "$1"`"
+	#shift # do NOT use shift here!!!
+fi
 
-# konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
-#xterm -e "echo \"TEMP xterm...\"; konsole --noclose -e bash -c \"FUNCinit;FUNCcheckLoop\""&
-
-#xterm -e "echo \"TEMP xterm...\"; xterm -maximized -e \"FUNCFireWall\""& #maximize dont work properly...
-
-#params="$@"
-strDoNotClose=""
-if $bDoNotClose;then
-	strDoNotClose=";bash;"
+export strSudoPrefix=""
+if((nNice<0));then
+	strSudoPrefix="sudo -k nice -n $nNice "
 fi
 
 strSkipCascade=""
@@ -93,13 +106,62 @@ if $bSkipCascade;then
 	strSkipCascade=" #skipCascade"
 fi
 
+strKillSkip=""
+if $bKillSkip;then
+	strKillSkip="#kill=skip"
+fi
+
+cmdLogFile=""
+if [[ -n "$strLogFile" ]];then
+	cmdLogFile="|tee \"$strLogFile\""
+fi
+
+strDoNotClose=""
+if $bDoNotClose;then
+	strDoNotClose=";bash"
+fi
+
+# trick to avoid error message
+strPseudoFunctionId="${strTitle}_PseudoFunction"
+while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
+	# the identifier must not be being used already by file, function, alias etc...
+	strPseudoFunctionId="${strPseudoFunctionId}_"
+done
+#eval "function $strPseudoFunctionId () { local ln=0; };export -f $strPseudoFunctionId"
+eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strDoNotClose}; };export -f $strPseudoFunctionId"
+#type $strPseudoFunctionId
+
+# konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
+#xterm -e "echo \"TEMP xterm...\"; konsole --noclose -e bash -c \"FUNCinit;FUNCcheckLoop\""&
+
+#xterm -e "echo \"TEMP xterm...\"; xterm -maximized -e \"FUNCFireWall\""& #maximize dont work properly...
+
+#params="$@"
+if $bDaemon;then
+	if [[ "$strTitle" == "$strTitleDefault" ]];then
+		echoc -p "Daemons requires non default title to create the unique lock..."
+		echoc -w 
+		exit 1
+	fi
+fi
+
 #params=`SECFUNCparamsToEval --escapequotes "$@"`"${strDoNotClose}${strSkipCascade}"
+############# THIS FUNCTION MUST BE HERE AFTER OPTIONS #######
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
 	eval `secinit`
 	
-	echo "$FUNCNAME:Exec: $strFUNCexecParams"
-	eval $strFUNCexecParams
+	if $bDaemon;then
+		while true;do
+			SECFUNCuniqueLock --daemon $strTitle #SECFUNCdaemonUniqueLock $strTitle
+			if ! $SECbDaemonWasAlreadyRunning;then
+				break
+			fi
+		done
+	fi
+	
+	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
+	eval ${strSudoPrefix} $strFUNCexecParams
 	
 	if((nExitWait>0));then
 		echoc -w -t $nExitWait #wait some time so any log can be read..
@@ -108,7 +170,9 @@ function FUNCexecParams() {
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
-strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e '$strTitle;FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
+
+#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
+strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
 #echo -e "$strExec"
 
@@ -116,6 +180,7 @@ xterm -e "$strExec"&
 pidXtermTemp=$!
 # wait for the child to open (it has xterm temp as parent!)
 while ! ps --ppid $pidXtermTemp; do
+		ps -o pid,ppid,comm -p $pidXtermTemp
     sleep 1
 done
 if $bWaitDBsymlink;then

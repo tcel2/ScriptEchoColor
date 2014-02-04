@@ -44,7 +44,7 @@ sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_UR
 #	bSkipNautilusCheckNow="false"
 #fi
 
-bGoFastOnce=false
+export bGoFastOnce=false
 varset --default bInterruptAsk=false
 
 ############### OPTIONS
@@ -52,7 +52,7 @@ varset --default bInterruptAsk=false
 bAddFilesMode=false
 SECFUNCvarSet --default --show bAutoSync=false
 bDaemon=false
-bCmpData=false
+export bCmpData=false
 bSkipNautilusCheckNow=false
 bWait=false
 bLookForChanges=false
@@ -60,42 +60,43 @@ bLsNot=false
 bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
-bBackgroundWork=false
+export bBackgroundWork=false
 bAutoGit=false
-while [[ "${1:0:2}" == "--" ]]; do
-	if [[ "$1" == "--help" ]]; then #@help: this help
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+	if [[ "$1" == "--help" ]]; then #help: show this help
 		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
-		grep "#@help" "$0" |grep -v grep |sed -r 's".*\"[$]1\" == \"(--[[:alnum:]]*)\".*#@help:(.*)$"\t\1\t\2"'
+		#grep "#@help" "$0" |grep -v grep |sed -r 's".*\"[$]1\" == \"(--[[:alnum:]]*)\".*#@help:(.*)$"\t\1\t\2"'
+		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--daemon" ]]; then #@help: runs automatically forever
+	elif [[ "$1" == "--daemon" ]]; then #help: runs automatically forever
 		bDaemon=true
 		#bLookForChanges=true
-	elif [[ "$1" == "--lookforchanges" ]]; then #@help: look for changes and update, is automatically set with --daemon option
+	elif [[ "$1" == "--lookforchanges" ]]; then #help: look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
-	elif [[ "$1" == "--wait" ]]; then #@help: will wait a key press before exiting
+	elif [[ "$1" == "--wait" ]]; then #help: will wait a key press before exiting
 		bWait=true
-	elif [[ "$1" == "--skipnautilus" ]]; then #@help: 
+	elif [[ "$1" == "--skipnautilus" ]]; then #help: 
 		bSkipNautilusCheckNow=true
-	elif [[ "$1" == "--addfiles" ]]; then #@help: <files...> add files to ubuntu one! this is also default option if the param is a file, no need to put this option.
+	elif [[ "$1" == "--addfiles" ]]; then #help: <files...> add files to ubuntu one! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
-	elif [[ "$1" == "--cmpdata" ]]; then #@help: if size and time are equal, compare data for differences
+	elif [[ "$1" == "--cmpdata" ]]; then #help: if size and time are equal, compare data for differences
 		bCmpData=true
-	elif [[ "$1" == "--confirmalways" ]]; then #@help: will always accept to update the changes on the first check loop
+	elif [[ "$1" == "--confirmalways" ]]; then #help: will always accept to update the changes on the first check loop
 		bConfirmAlways=true
-	elif [[ "$1" == "--background" ]]; then #@help: between each copy will be added a delay
+	elif [[ "$1" == "--background" ]]; then #help: between each copy will be added a delay
 		bBackgroundWork=true
-	elif [[ "$1" == "--autogit" ]]; then #@help: all files at Ubuntu One will be versioned (with history)
+	elif [[ "$1" == "--autogit" ]]; then #help: all files at Ubuntu One will be versioned (with history)
 		bAutoGit=true
-	elif [[ "$1" == "--autosync" ]]; then #@help: will automatically copy the changes without asking
+	elif [[ "$1" == "--autosync" ]]; then #help: will automatically copy the changes without asking
 		SECFUNCvarSet --show bAutoSync=true
-	elif [[ "$1" == "--lsr" ]]; then #@help: will list what files, of current folder recursively, are at ubuntu one!
+	elif [[ "$1" == "--lsr" ]]; then #help: will list what files, of current folder recursively, are at ubuntu one!
 		ls -lR "$HOME/Ubuntu One/`pwd |sed "s'$HOME/''"`"
 		exit 0
-	elif [[ "$1" == "--lsnot" ]]; then #@help: will list files of current folder are NOT at ubuntu one (use with --addfiles to show a dialog at X to select files to add!)
+	elif [[ "$1" == "--lsnot" ]]; then #help: will list files of current folder are NOT at ubuntu one (use with --addfiles to show a dialog at X to select files to add!)
 		bLsNot=true
-	elif [[ "$1" == "--lsmisshist" ]]; then #@help: will list missing files on ubuntu one folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
+	elif [[ "$1" == "--lsmisshist" ]]; then #help: will list missing files on ubuntu one folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
 		bLsMissHist=true
-	elif [[ "$1" == "--recreatehist" ]]; then #@help: will recreate the history file based on what is at Ubuntu One folder..
+	elif [[ "$1" == "--recreatehist" ]]; then #help: will recreate the history file based on what is at Ubuntu One folder..
 		bRecreateHistory=true
 	else	
 		echoc -p "invalid option $1"
@@ -279,8 +280,15 @@ function FUNClsNot() { #synchronize like
 ################### MAIN CODES ######################################
 
 if $bDaemon;then
+	SECFUNCuniqueLock --daemonwait
+	
+	strBkgWrkopt=""
+	if $bCmpData;then
+		strBkgWrkopt="--background"
+	fi
+	
 	while true; do
-		nice -n 19 $0 --lookforchanges --confirmalways --background
+		nice -n 19 $0 --lookforchanges --confirmalways $strBkgWrkopt
 		echoc -w -t 5 "daemons sleep too..."
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
@@ -293,7 +301,7 @@ if $bDaemon;then
 fi
 
 # default is to add a file if it is a param.
-if [[ -f "$1" ]]; then
+if [[ -f "${1-}" ]]; then
 	bAddFilesMode=true
 fi
 
@@ -425,9 +433,9 @@ elif $bLookForChanges;then
 			\( -not -xtype d \) \
 			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
 		if $bAutoGit;then
-			git init #no problem as I read
-			git add --all #add missing files on git
-			git commit -m "`SECFUNCdtTimePrettyNow`"
+			echoc -x "git init" #no problem as I read
+			echoc -x "git add --all" #add missing files on git
+			echoc -x "git commit -m \"`SECFUNCdtTimePrettyNow`\""
 		fi
 		
 		bGoFastOnce=false #controlled by FUNCinterruptAsk

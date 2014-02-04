@@ -25,6 +25,8 @@
 #set -x #@@@ comment
 eval `secinit`
 
+SECFUNCuniqueLock --daemonwait
+
 waitStart=3
 delayRaiseTabOutliner=0.1
 screenLeftMarginOpen=10
@@ -90,7 +92,7 @@ function FUNCwindowAtMouse() {
 }
 
 bDebugInfo=false
-while [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--debug" ]];then
 		bDebugInfo=true
 	fi

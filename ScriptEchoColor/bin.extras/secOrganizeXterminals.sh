@@ -33,7 +33,7 @@ trap 'FUNCtrapInt' INT
 SECFUNCvarSet --default basePosX=0
 SECFUNCvarSet --default basePosY=0
 bDaemon=false
-while [[ -n "$1" ]]; do
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--daemon" ]]; then
 		bDaemon=true
 	elif [[ "$1" == "--viewport" ]]; then
@@ -45,6 +45,9 @@ while [[ -n "$1" ]]; do
 		echo "options: [--viewport <basePosX>x<basePosY>] [--daemon]"
 		echo "ex.: $0 --viewport 1024x0 #so windows are placed at 2nd viewport/face on unity/compiz"
 		echo "append '#skipCascade' to commands like: xterm -e \"ls #skipCascade\", so such terminals wont be cascaded!"
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
 	fi
 	
 	shift
@@ -107,12 +110,13 @@ function FUNCwindowList() {
 ###################### MAIN CODE
 
 if $bDaemon;then
-	if SECFUNCuniqueLock; then
-		SECFUNCvarSetDB -f
-	else
-		echoc -p "already running..."
-		exit 1
-	fi
+#	if SECFUNCuniqueLock; then
+#		SECFUNCvarSetDB -f
+#	else
+#		echoc -p "already running..."
+#		exit 1
+#	fi
+	SECFUNCuniqueLock --daemonwait
 fi
 
 ###### CONFIG 
@@ -130,6 +134,7 @@ windowBorderSize=5 #2 #5
 ############## DAEMON LOOP
 
 bCascadeForceNow=false #set at INT trap
+strPidListPrevious=""
 if $bDaemon; then
 	echoc -x "renice -n 19 -p $$"
 	while true; do 

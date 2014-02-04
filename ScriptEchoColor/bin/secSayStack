@@ -236,9 +236,9 @@ function FUNCsayStack() {
  	FUNCechoDbgSS "pids: script $$, instance $selfMainFunctionPid, parent $PPID"
  	
   ####################### options
-	while [[ "${1:0:2}" == "--" ]]; do
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bNextIsParam=false #otherwise is option
-		if [[ -n "$2" ]] && [[ "${2:0:1}" != "-" ]];then
+		if [[ -n "${2-}" ]] && [[ "${2:0:1}" != "-" ]];then
 			bNextIsParam=true
 		fi
 		

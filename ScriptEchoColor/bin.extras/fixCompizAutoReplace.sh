@@ -27,6 +27,10 @@ trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
 
 ################# init 
 eval `secinit`
+
+SECFUNCuniqueLock --daemonwait
+secDaemonsControl.sh --register
+
 bAskReplaceKill=false
 selfName=`basename "$0"`
 
@@ -85,8 +89,9 @@ function FUNCisCompizRunning() {
 }
 
 function FUNCwindowForPid() {
-	local pidXterm=$1
-	local class=$2
+	local pidXterm=${1-}
+	shift
+	local class=${1-}
 	
 	local listWindowId
 	local windowId
@@ -108,8 +113,9 @@ function FUNCwindowForPid() {
 }
 
 function FUNCmoveWindow() {
-	local pidXterm=$1
-	local class=$2
+	local pidXterm=${1-}
+	shift
+	local class=${1-}
 	
 	local windowId=`FUNCwindowForPid $pidXterm $class`
 	local posX
@@ -126,7 +132,7 @@ function FUNCmoveWindow() {
 }
 
 ############### main
-while [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--sleepandreplaceonce" ]];then #<delay> sleep for n seconds and replace once initially (good for startup)
 		shift
 		delay=$1
@@ -139,12 +145,42 @@ while [[ "${1:0:1}" == "-" ]];do
 		export strDialogTitle="Dialog - $selfName"
 		
 		function FUNCtoggleDiagOnTop(){
+#			while true; do
+#				nWindowIdDialog=`xdotool search "$strDialogTitle" 2>/dev/null`
+#				
+#				if xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
+#					while true; do
+#						if ! xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
+#							return # exit function
+#						fi
+#						#wmctrl -i -r $nWindowIdDialog -b add,above;
+#						wmctrl -i -r $nWindowIdDialog -b toggle,above;
+#						sleep 1
+#					done
+#				fi
+
+#				sleep 1
+#			done
+			
+			local lbAtLeastOnceOnTop=false
 			while true; do
 				nWindowIdDialog=`xdotool search "$strDialogTitle" 2>/dev/null`
+				
+				local lbHasPid=false
 				if xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
-					wmctrl -i -r $nWindowIdDialog -b toggle,above;
-					break
+					lbHasPid=true
 				fi
+				
+				if $lbHasPid;then
+					#wmctrl -i -r $nWindowIdDialog -b add,above;
+					wmctrl -i -r $nWindowIdDialog -b toggle,above;
+					lbAtLeastOnceOnTop=true
+				fi
+				
+				if $lbAtLeastOnceOnTop && ! $lbHasPid;then
+					return;
+				fi
+				
 				sleep 1
 			done
 		}
@@ -196,7 +232,7 @@ while true; do
     count=0
 		while true; do
 			if FUNCisCompizRunning; then
-				FUNCmoveWindow $pidXterm xterm
+				#FUNCmoveWindow $pidXterm xterm
 				break;
 			else
 				FUNCechoErr "waiting for compiz to startup..."

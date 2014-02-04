@@ -34,14 +34,7 @@ cfgExt="AtFastMedia"
 
 mkdir -p "$cfgPath"
 
-#isDaemonRunning=false
-#if SECFUNCuniqueLock --quiet; then
-#	SECFUNCvarSetDB -f
-#else
-#	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
-#	isDaemonRunning=true
-#fi
-SECFUNCdaemonUniqueLock
+SECFUNCuniqueLock --daemon #--daemonwait will be set after, here is just to attach the same db of the daemon
 
 ########### INTERNAL VARIABLES
 
@@ -240,7 +233,7 @@ function FUNCsetFastMedia() {
 ########### MAIN
 
 bDaemon=false
-while [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--daemon" ]];then #help checks if configured files exist in the setup fast media (memory/SSD/etc) and copies them there; otherwise if that midia is not available, removes all symlinks and renames the real files to their original names.
 		bDaemon=true
 	elif [[ "$1" == "--add" ]];then #help adds a file to be speed up
@@ -278,11 +271,12 @@ while [[ "${1:0:1}" == "-" ]];do
 done
 
 if $bDaemon;then
-	if $SECisDaemonRunning;then
-		echoc -p "daemon already running"
-		echoc -w
-		exit 1
-	fi
+#	if $SECbDaemonWasAlreadyRunning;then
+#		echoc -p "daemon already running"
+#		echoc -w
+#		exit 1
+#	fi
+	SECFUNCuniqueLock --daemonwait
 	
 	while [[ ! -d "$fastMedia" ]];do
 		echoc -t 1 -w "configure fast media path"

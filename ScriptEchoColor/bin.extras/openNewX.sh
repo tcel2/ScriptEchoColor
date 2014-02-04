@@ -27,7 +27,7 @@
 ########################## INIT AND VARS #####################################
 eval `secinit`
 
-SECFUNCdaemonUniqueLock #SECisDaemonRunning
+SECFUNCuniqueLock --daemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
 #SECFUNCvarShow bUseXscreensaver
 
 #alias ps='echoc -x ps' #good to debug the bug

@@ -23,6 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 eval `secinit`
+SECFUNCuniqueLock --daemonwait
 
 renice -n 19 $$
 
@@ -76,6 +77,7 @@ function FUNCcheck { #help <regexToMatch> <problemReportMessage> [customTitle]
 }
 
 bFirstLoop=true
+bLog=false
 FUNCupdateLastId
 while true; do
   totLines=`FUNCdmesg |wc -l`
