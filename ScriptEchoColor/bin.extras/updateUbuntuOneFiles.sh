@@ -61,7 +61,7 @@ bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
 export bBackgroundWork=false
-bAutoGit=false
+export bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help: show this help
 		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
@@ -368,7 +368,7 @@ elif $bLsMissHist; then
 	
 	IFS="$bkpIFS"
 elif $bAddFilesMode; then
-	while [[ -n "$1" ]]; do
+	while [[ -n "${1-}" ]]; do
 		strFile="$1"
 		
 		# if it is relative path

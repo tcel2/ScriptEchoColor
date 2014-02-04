@@ -133,7 +133,11 @@ if $bDaemon;then
 		secDaemonsControl.sh --checkhold
 		FUNClist
 		#sleep 10
-		read -n 1 -t 10 #allows hit enter to refresh now
+		#read -n 1 -t 10 #allows hit enter to refresh now
+		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all"; case "`secascii $?`" in 
+			h)$strSelfName --holdall;; 
+			r)$strSelfName --releaseall;; 
+		esac
 	done
 	exit
 fi
