@@ -61,7 +61,7 @@ bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
 export bBackgroundWork=false
-export bAutoGit=false
+varset --default --show bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help: show this help
 		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
@@ -149,6 +149,7 @@ function FUNCinterruptAsk() {
 };export -f FUNCinterruptAsk
 
 function FUNCcopy() {
+	#return
 	FUNCtrap
 	eval `secinit`
 	SECFUNCvarReadDB
@@ -432,6 +433,7 @@ elif $bLookForChanges;then
 			-and \
 			\( -not -xtype d \) \
 			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
+		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
 			echoc -x "git init" #no problem as I read
 			echoc -x "git add --all" #add missing files on git
