@@ -30,6 +30,11 @@ eval `secinit`
 
 #echo "parms: $@";echoc -w
 
+: ${SECbTermLog:=false}
+if [[ "$SECbTermLog" != "true" ]];then
+	export SECbTermLog=false
+fi
+
 bDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
@@ -42,9 +47,15 @@ export nExitWait=0
 strTitleDefault="Xterm_Detached" #useless?
 varset strTitle="$strTitleDefault"
 strTitleForce=""
+bLog=$SECbTermLog
 while [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
+		echo "Opens a terminal that will keep running after its parent terminal ends execution."
+		echo -e "\t[options] <CommandToBeRun>"
+		echo "User can set:"
+		echo -e "\tSECbTermLog=<<true>|<false>> so log file will be automatically created."
+		echo
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp
 		exit
@@ -73,9 +84,14 @@ while [[ "${1:0:2}" == "--" ]]; do
 		bSkipCascade=true
 	elif [[ "$1" == "--killskip" ]];then #help to xterm not be killed
 		bKillSkip=true
-	elif [[ "$1" == "--log" ]];then #help <logFile>
+	elif [[ "$1" == "--log" ]];then #help log all the output to automatic file
+		bLog=true
+	elif [[ "$1" == "--nolog" ]];then #help disable automatic log
+		bLog=false
+	elif [[ "$1" == "--logcustom" ]];then #help <logFile>
 		shift
 		strLogFile="$1"
+		bLog=true
 	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
 		bWaitDBsymlink=false
 	else
@@ -112,8 +128,32 @@ if $bKillSkip;then
 fi
 
 cmdLogFile=""
-if [[ -n "$strLogFile" ]];then
-	cmdLogFile="|tee \"$strLogFile\""
+if $bLog;then
+	if [[ -z "$strLogFile" ]];then
+		strLogFile="$HOME/.ScriptEchoColor/SEC.App.log/$strTitle.log"		
+	fi
+	
+#	if [[ -x "$strLogFile" ]];then
+#		# may cause trouble on non linux fs
+#		echoc -p "invalid log file '$strLogFile' is executable..."
+#		exit 1
+#	fi
+	
+	if [[ -n "$strLogFile" ]];then
+		mkdir -vp "`dirname "$strLogFile"`"
+		
+		# create file
+		echo -n >>"$strLogFile"
+		
+		if [[ ! -f "$strLogFile" ]];then
+			echoc -p "invalid log file '$strLogFile'"
+			exit 1
+		fi
+		
+		cmdLogFile="|tee \"$strLogFile\""
+	fi
+	
+	echoc --info "Log at: '$strLogFile'"
 fi
 
 strDoNotClose=""
@@ -210,4 +250,10 @@ fi
 #echoc -x "kill -SIGINT $pidXtermTemp"
 kill -SIGINT $pidXtermTemp
 #echoc -w -t 5
+
+if $bLog;then
+	if echoc -q "watch log?";then
+		tail -f "$strLogFile"
+	fi
+fi
 

@@ -890,7 +890,7 @@ function SECFUNCshowHelp() {
 		
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
 	else
-		echo "`basename "$0"` help:"
+		echo "Help options for `basename "$0"`:"
 	fi
 	
 	# for script options or function options
