@@ -42,12 +42,12 @@ bKillSkip=false
 export bDaemon=false
 export nNice=0
 nDisplay="$DISPLAY"
-strLogFile=""
 export nExitWait=0
 strTitleDefault="Xterm_Detached" #useless?
 varset strTitle="$strTitleDefault"
 strTitleForce=""
-bLog=$SECbTermLog
+export bLog=$SECbTermLog
+export strLogFile=""
 while [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -211,12 +211,20 @@ function FUNCexecParams() {
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
 
+#function FUNCwatchLog() {
+#	if $bLog;then
+#		#if echoc -q "watch log?";then
+#		tail -f "$strLogFile"
+#		#fi
+#	fi
+#};export -f FUNCwatchLog
+
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
 strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
 #echo -e "$strExec"
 
-xterm -e "$strExec"&
+xterm -display "$nDisplay" -e "$strExec"&
 pidXtermTemp=$!
 # wait for the child to open (it has xterm temp as parent!)
 while ! ps --ppid $pidXtermTemp; do
@@ -248,12 +256,8 @@ if $bWaitDBsymlink;then
 fi
 #echoc -w -t 60 "waiting 60s so child shells have a chance to hook on the SEC DB..."
 #echoc -x "kill -SIGINT $pidXtermTemp"
+#if ! $bLog;then
 kill -SIGINT $pidXtermTemp
+#fi
 #echoc -w -t 5
-
-if $bLog;then
-	if echoc -q "watch log?";then
-		tail -f "$strLogFile"
-	fi
-fi
 
