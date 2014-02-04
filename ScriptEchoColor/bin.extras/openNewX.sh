@@ -33,7 +33,7 @@ SECFUNCuniqueLock --daemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
 #alias ps='echoc -x ps' #good to debug the bug
 
 SECFUNCvarGet SEC_SAYVOL
-if [[ -z "$SEC_SAYVOL" ]];then
+if [[ -z "${SEC_SAYVOL-}" ]];then
 	export SEC_SAYVOL=15 #from 0 to 100 #this should be controlled by external scripts...
 fi
 
@@ -326,6 +326,7 @@ function FUNCscript() {
   	
 		local ldelay=10
 		local lbStopped=false
+		SECONDS=0
 		while true;do
 			SECFUNCvarReadDB
 			if openNewX.sh --script isScreenLocked;then
@@ -348,7 +349,7 @@ function FUNCscript() {
 				break
 			fi
 			
-			echo "INFO: Wait, but exit if game exits..."
+			echo -e "exit if game exits...(${SECONDS}s)\r"
 			sleep $ldelay
 		done
 	else
@@ -372,12 +373,12 @@ function FUNCkeepJwmAlive() {
 			break
 		fi
 		
-		if ! ps -p $pidJWM; then
+		if ! ps --no-headers -p $pidJWM; then
 			jwm -display :1&
 			pidJWM=$!
 		fi
 		
-		sleep 5
+		sleep 10
 	done
 };export -f FUNCkeepJwmAlive
 
@@ -390,8 +391,9 @@ function FUNCwaitX1exit() {
 };export -f FUNCwaitX1exit
 
 function FUNCxtermDetached() {
+	local lcmdWaitX1exit=""
 	if [[ "$1" == "--waitx1exit" ]];then
-		waitX1exit="FUNCwaitX1exit"
+		lcmdWaitX1exit="FUNCwaitX1exit;"
 		shift
 	fi
 	
@@ -401,7 +403,7 @@ function FUNCxtermDetached() {
 #		$params
 #	};export -f FUNCxtermDetachedExec
 	
-	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$waitX1exit\";echoc -w"&
+	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$lcmdWaitX1exit\";echoc -w"&
 	local pidXterm=$!
 	
 	# wait for the child (with the $params) to open
@@ -504,7 +506,7 @@ while [[ ${1:0:2} == "--" ]]; do
   	bReturnToX0=true
   elif [[ "$1" == "--customcmd" ]]; then #opt custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
   	shift
-  	customCmd=("${customCmd[@]}" "$1")
+  	customCmd=("${customCmd[@]-}" "$1")
   	strCustomCmd=`echo " Meta+${#customCmd[*]} EXEC: $1"`
   	echo "$strCustomCmd"
   	strCustomCmdHelp="$strCustomCmdHelp$strCustomCmd\n"
@@ -755,19 +757,19 @@ if $useJWM; then
   FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
 fi
 
-xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma #kill=skip"&
+xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma;sleep 60; #kill=skip"&
 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
+xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
 
 #initializes the cicle of configurations!
-xterm -display :1 -e "$0 --script nvidiaCicle" #not threaded/child so the speech does not interfere with some games sound initialization check
+xterm -display :1 -e "$0 --script nvidiaCicle;sleep 60; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
 
 sleep 2 #@@@!!! TODO improve with qdbus waiting for jwm?
 #SECFUNCvarShow bUseXscreensaver #@@@r
-xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCchildScreenAutoLock\""&
+xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCchildScreenAutoLock; #kill=skip\""&
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 

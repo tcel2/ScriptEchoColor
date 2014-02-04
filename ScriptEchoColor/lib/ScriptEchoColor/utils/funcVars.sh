@@ -197,7 +197,7 @@ function SECFUNCvarGet() { #<varname> [arrayIndex] if var is an array, you can u
   else
 		#@@@R local varWithCurrencySign=`echo '$'$1`
 		#@@@R eval 'echo "'$varWithCurrencySign'"'
-		eval 'echo "$'$1'"'
+		eval 'echo "${'$1'-}"'
 	fi
 }
 function SECFUNCfixPliq() {
@@ -388,9 +388,9 @@ function SECFUNCvarWaitValue() { #[OPTIONS] <var> <value> [delay]: wait until va
 		shift
 	done
 	
-	local l_var=$1
-	local l_valueCheck="$2"
-	local l_delay=$3
+	local l_var=${1-}
+	local l_valueCheck="${2-}"
+	local l_delay=${3-}
 	if [[ -z "$l_delay" ]]; then
 		l_delay=1
 	fi

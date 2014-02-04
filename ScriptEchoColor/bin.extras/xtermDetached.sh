@@ -26,6 +26,7 @@
 
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile"
 eval `secinit`
+#selfName="`basename "$0"`" #TODO why became the caller script name?
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile";echoc -w 
 
 #echo "parms: $@";echoc -w
@@ -48,7 +49,8 @@ varset strTitle="$strTitleDefault"
 strTitleForce=""
 export bLog=$SECbTermLog
 export strLogFile=""
-while [[ "${1:0:2}" == "--" ]]; do
+echoc --info "Options: $@"
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Opens a terminal that will keep running after its parent terminal ends execution."
@@ -150,7 +152,7 @@ if $bLog;then
 			exit 1
 		fi
 		
-		cmdLogFile="|tee \"$strLogFile\""
+		cmdLogFile=" 2>&1 |tee \"$strLogFile\""
 	fi
 	
 	echoc --info "Log at: '$strLogFile'"
@@ -162,7 +164,7 @@ if $bDoNotClose;then
 fi
 
 # trick to avoid error message
-strPseudoFunctionId="${strTitle}_PseudoFunction"
+strPseudoFunctionId="${strTitle}_Title"
 while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	# the identifier must not be being used already by file, function, alias etc...
 	strPseudoFunctionId="${strPseudoFunctionId}_"
