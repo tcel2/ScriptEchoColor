@@ -26,7 +26,9 @@
 
 renice -n 19 -p $$
 eval `secinit`
-trap 'FUNCtrapInt' INT
+
+#bAskNow=false
+#trap 'bAskNow=true;' INT #WHY the trap is not working!?!??!?!
 
 ############### PARAMS
 
@@ -54,13 +56,6 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 done
 
 ###################### FUNCTIONS
-
-function FUNCtrapInt() {
-	if echoc -q -t 2 "cascade now@Dy";then
-		bCascadeForceNow=true
-	fi
-	#echoc -w
-}
 
 function FUNCpidList() {
 	#ps -A -o pid,comm |grep "xterm\|rxvt" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
@@ -150,12 +145,14 @@ if $bDaemon; then
 		fi
 		
 		#if ! sleep 5; then break; fi; 
-		echo -ne "wait: ctrl+c for options..\r"
-		sleep 1 #`read` caused trouble with ctrl+c?
-#		if echoc -t 1 -q "tile now";then
-#			bCascadeForceNow=true
-#		fi
-		#echoc -w -t 10 #helps with ctrl+c
+		#echo -ne "wait: ctrl+c for options..\r"
+		#read -t 1 #sleep 1 #`read` caused trouble with ctrl+c?
+		#if $bAskNow;then
+			if echoc -n -q -t 10 "\rcascade now";then
+				bCascadeForceNow=true
+			fi
+			#bAskNow=false
+		#fi
 	done
 	exit 0
 fi
