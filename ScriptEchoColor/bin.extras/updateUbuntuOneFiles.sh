@@ -50,7 +50,7 @@ varset --default bInterruptAsk=false
 ############### OPTIONS
 
 bAddFilesMode=false
-SECFUNCvarSet --default --show bAutoSync=false
+varset --default --show bAutoSync=false
 bDaemon=false
 export bCmpData=false
 bSkipNautilusCheckNow=false
@@ -86,9 +86,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--background" ]]; then #help: between each copy will be added a delay
 		bBackgroundWork=true
 	elif [[ "$1" == "--autogit" ]]; then #help: all files at Ubuntu One will be versioned (with history)
-		bAutoGit=true
+		varset bAutoGit=true
 	elif [[ "$1" == "--autosync" ]]; then #help: will automatically copy the changes without asking
-		SECFUNCvarSet --show bAutoSync=true
+		varset --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #help: will list what files, of current folder recursively, are at ubuntu one!
 		ls -lR "$HOME/Ubuntu One/`pwd |sed "s'$HOME/''"`"
 		exit 0

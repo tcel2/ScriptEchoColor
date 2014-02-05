@@ -399,7 +399,7 @@ optRecreateConfigFile="--recreateconfigfile"
 optSay="--say"
 optWaitSay="--waitsay"
 optTest="--test"
-optThereCanOnlyBeOne="--tcobo"
+#optThereCanOnlyBeOne="--tcobo"
 optVersionCheck="--versioncheck"
 optVersion="--version"
 
@@ -435,13 +435,13 @@ bOptLogFileName=false
 bOptParentPidList=false
 bOptRecreateConfigFile=false
 bOptTest=false
-bOptThereCanOnlyBeOne=false
+#bOptThereCanOnlyBeOne=false
 
 bOptVersion=false
 bOptVersionCheck=false
 nOptVersionCheck=0
 
-strOptThereCanOnlyBeOneCmdPart=""
+#strOptThereCanOnlyBeOneCmdPart=""
 
 bAddYesNoQuestion=false
 bExecuteAsCommandLine=false
@@ -589,26 +589,26 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
 #          bOptLibSource=true 
 #          bOptLibSourceInit=true
 #          ;;
-      "${optThereCanOnlyBeOne:2}")
-#          shift; nOptThereCanOnlyBeOnePidSkip=$1
-#          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" >/dev/null 2>&1; then
-#            strOptPROBLEM="invalid pid, $nOptThereCanOnlyBeOnePidSkip is not running!"
+#      "${optThereCanOnlyBeOne:2}")
+##          shift; nOptThereCanOnlyBeOnePidSkip=$1
+##          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" >/dev/null 2>&1; then
+##            strOptPROBLEM="invalid pid, $nOptThereCanOnlyBeOnePidSkip is not running!"
+##            break
+##          fi
+#          shift; strOptThereCanOnlyBeOneCmdPart="$1"
+##          if ! ps -A |grep -q "$strOptThereCanOnlyBeOneCmdPart" \
+##             || \
+##             [[ -z "$strOptThereCanOnlyBeOneCmdPart" ]]; \
+##          then
+##            strOptPROBLEM="invalid cmdPart, '$strOptThereCanOnlyBeOneCmdPart' no process has it!"
+##            break
+##          fi
+#          if [[ -z "$strOptThereCanOnlyBeOneCmdPart" ]]; then
+#            strOptPROBLEM="requires cmdPart to be searched on proccesses command!"
 #            break
 #          fi
-          shift; strOptThereCanOnlyBeOneCmdPart="$1"
-#          if ! ps -A |grep -q "$strOptThereCanOnlyBeOneCmdPart" \
-#             || \
-#             [[ -z "$strOptThereCanOnlyBeOneCmdPart" ]]; \
-#          then
-#            strOptPROBLEM="invalid cmdPart, '$strOptThereCanOnlyBeOneCmdPart' no process has it!"
-#            break
-#          fi
-          if [[ -z "$strOptThereCanOnlyBeOneCmdPart" ]]; then
-            strOptPROBLEM="requires cmdPart to be searched on proccesses command!"
-            break
-          fi
-          bOptThereCanOnlyBeOne=true
-          ;;
+#          bOptThereCanOnlyBeOne=true
+#          ;;
       "${optSay:2}")
           bSay=true
           ;;
@@ -1526,7 +1526,7 @@ if $bOptHelp; then
     echo " ${optGfxTputmacs}: use tput smacs/rmacs gfx chars mode"
     echo " ${optGfxE294char}: use full gfx translation table"
     echo " ${optRecreateConfigFile}: will remove $strUserCfgFile to be recreated with defaults"
-    echo " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
+#    echo " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
 #    echo " ${optLibSource}: env vars and source libs, use like: eval \`echoc ${optLibSource}\`"
 #    echo " ${optLibSourceInit}: like ${optLibSource}, but also initialize everything"
     echo " ${optSay}: use festival to say the text!"
@@ -1933,49 +1933,49 @@ if $bOptHelpLibs; then
 	exit 0
 fi
 
-FUNCthereCanOnlyBeOne(){
-  # tcobo, good it be a function so all var names are kept local!
-  
-  local pidToSkip=$$ # begin skiping $$ that is this proccess! and so who called it and so on...
-  local runCommandToCheck="$1"
-  # not fail safe...
-  #local runCommandToCheck=`ps -o command -p $pidToSkip |tail -n 1`
-  #runCommandToCheck="`basename \"$runCommandToCheck\"`"
-  
-  local pid=$pidToSkip
-  local ppidListToSkip="$pidToSkip"
-  local sedTrimDigits='s"[ ]*\([[:digit:]]*\).*"\1"'
-  
-  while true; do
-    local ppid=`ps -o ppid -p $pid 2>&1 |tail -n 1 |sed "$sedTrimDigits"`
-    if((ppid==0));then 
-      break; 
-    fi
-    ppidListToSkip="$ppidListToSkip\|$ppid"
-    pid=$ppid
-  done
-  
-  #egrep does not work with more than 2 ors
-  local sedClearPPidListToSkipLines='s"^[ ]*\('"$ppidListToSkip"'\) .*""'
-  #echo "$sedClearPPidListToSkipLines" "$runCommandToCheck" >&2 #@@@ comment out
-  if ps -A -o pid,command \
-     |grep -v grep \
-     |sed "$sedClearPPidListToSkipLines" \
-     |grep -q "$runCommandToCheck"; \
-  then
-    return 1 # exit value of failure if someone else is found
-  fi
-  
-  return 0 # success if no one else if found
-}
-if $bOptThereCanOnlyBeOne; then
-  FUNCthereCanOnlyBeOne "$strOptThereCanOnlyBeOneCmdPart"
-  nRet=$?
-  if((nRet!=0));then
-    $strSelfName -p "'$strOptThereCanOnlyBeOneCmdPart' is already running..."
-  fi
-  exit $nRet
-fi
+#FUNCthereCanOnlyBeOne(){
+#  # tcobo, good it be a function so all var names are kept local!
+#  
+#  local pidToSkip=$$ # begin skiping $$ that is this proccess! and so who called it and so on...
+#  local runCommandToCheck="$1"
+#  # not fail safe...
+#  #local runCommandToCheck=`ps -o command -p $pidToSkip |tail -n 1`
+#  #runCommandToCheck="`basename \"$runCommandToCheck\"`"
+#  
+#  local pid=$pidToSkip
+#  local ppidListToSkip="$pidToSkip"
+#  local sedTrimDigits='s"[ ]*\([[:digit:]]*\).*"\1"'
+#  
+#  while true; do
+#    local ppid=`ps -o ppid -p $pid 2>&1 |tail -n 1 |sed "$sedTrimDigits"`
+#    if((ppid==0));then 
+#      break; 
+#    fi
+#    ppidListToSkip="$ppidListToSkip\|$ppid"
+#    pid=$ppid
+#  done
+#  
+#  #egrep does not work with more than 2 ors
+#  local sedClearPPidListToSkipLines='s"^[ ]*\('"$ppidListToSkip"'\) .*""'
+#  #echo "$sedClearPPidListToSkipLines" "$runCommandToCheck" >&2 #@@@ comment out
+#  if ps -A -o pid,command \
+#     |grep -v grep \
+#     |sed "$sedClearPPidListToSkipLines" \
+#     |grep -q "$runCommandToCheck"; \
+#  then
+#    return 1 # exit value of failure if someone else is found
+#  fi
+#  
+#  return 0 # success if no one else if found
+#}
+#if $bOptThereCanOnlyBeOne; then
+#  FUNCthereCanOnlyBeOne "$strOptThereCanOnlyBeOneCmdPart"
+#  nRet=$?
+#  if((nRet!=0));then
+#    $strSelfName -p "'$strOptThereCanOnlyBeOneCmdPart' is already running..."
+#  fi
+#  exit $nRet
+#fi
 
 FUNCturnOff(){
     eval "b=\$$1"

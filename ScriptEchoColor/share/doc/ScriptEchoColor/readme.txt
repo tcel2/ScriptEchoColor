@@ -44,7 +44,6 @@ TODO (fix at top):
 	--ocpt (one command per time option) to recognize ";" as command separator to execute it sequentially showing its output separatedly for each command (wait it exit)
   -qt 1 - with this option, after time ends, append "no" (or "yes" in case "@Dy") to the 
     question line to ppl know what was chosen...
-	--tcobo go to libs
 	-t 3 -x does not work, -x fails to execute, the (3s) becomes part of the command
   --help-extended acrescenter esse exemplo do EOF, ex.: echoc -x "`cat \
 <<EOF
@@ -93,8 +92,6 @@ NOTES (highlights) (for tech info look at CHANGES section):
 			--escapedchars to show what you would type with `echo -e`
 			--info easy coloring option
 			--alert easy coloring option
-    	"There can only be one!" --tcobo, helps to prevent running more 
-        than one script instance (experimental)
    
    
   v1.14:
@@ -142,7 +139,7 @@ CHANGES:
    fix to --help-extended when showing "graphics" mode messing the terminal...
    fix to secascii now converts codes to letters properly...
    improved clear key buffer from 1s to 0.1s delay! (read -t 0.1)
-   added option --tcobo to help preventing running more than one script instance
+   removed option --tcobo, the `SECFUNCuniqueLock --daemon` will take care of the unique run.
    fixed seclockfile useless error message.
    FIXED! 
     While testing echoc at xterm command line (not from scripts), I found that if you press
