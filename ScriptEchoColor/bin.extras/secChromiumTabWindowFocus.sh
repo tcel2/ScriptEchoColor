@@ -102,7 +102,7 @@ done
 while true; do
 	chromiumWindowId=""
 #	list=(`xdotool search Chromium 2>/dev/null`)
-#	for windowId in `echo ${list[*]}`; do 
+#	for windowId in `echo ${list[*]-}`; do 
 #		if xwininfo -id $windowId |grep "Window id" |egrep -oq " - Chromium\"$"; then
 #			SECFUNCvarSet --show chromiumWindowId=$windowId
 #			xwininfo -id $chromiumWindowId |grep "Window id" #report
@@ -132,7 +132,7 @@ while true; do
 	tabsOutlinerWindowId=""
 	tabsOutlinerWindowIdMoveable=""
 	list=(`xdotool search "Tabs Outliner" 2>/dev/null`)
-	for windowId in `echo ${list[*]}`; do 
+	for windowId in `echo ${list[*]-}`; do 
 		if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Tabs Outliner\"$"; then
 			SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
 #			echo ">a> $windowId"
@@ -164,7 +164,7 @@ while true; do
 	if ps -A -o cmd |grep -v grep |grep unity-panel-service -iq;then
 		#unityLauncherWindowId=`xdotool search unity-launcher`
 		list=(`xdotool search "unity-launcher" 2>/dev/null`)
-		for windowId in `echo ${list[*]}`; do 
+		for windowId in `echo ${list[*]-}`; do 
 			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"unity-launcher\"$"; then
 				SECFUNCvarSet --show unityLauncherWindowId=$windowId
 				xwininfo -id $unityLauncherWindowId |grep "Window id" #report
@@ -180,7 +180,7 @@ while true; do
 	gnomePanelWindowId=-1
 	if ps -A -o cmd |grep -v grep |grep gnome-panel -iq;then
 		list=(`xdotool search "Left Expanded Edge Panel" 2>/dev/null`)
-		for windowId in `echo ${list[*]}`; do 
+		for windowId in `echo ${list[*]-}`; do 
 			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Left Expanded Edge Panel\"$"; then
 				SECFUNCvarSet --show gnomePanelWindowId=$windowId
 				xwininfo -id $gnomePanelWindowId |grep "Window id" #report
