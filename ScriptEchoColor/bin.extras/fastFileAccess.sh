@@ -288,7 +288,7 @@ if $bDaemon;then
 		SECFUNCvarReadDB
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
 		if [[ ! -f "$cfgManagedFiles" ]];then

@@ -936,7 +936,10 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 }
 function SECFUNCcfgRead() {
 	#echo oi;eval `cat tst.db`;return
-	SECFUNCcfgFileName
+	if [[ -z "$SECcfgFileName" ]];then
+		SECFUNCcfgFileName
+	fi
+	
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
   	
@@ -980,7 +983,10 @@ function SECFUNCcfgWriteVar() { #set -x
 #		fi
 	fi
 	
-	SECFUNCcfgFileName
+	if [[ -z "$SECcfgFileName" ]];then
+		SECFUNCcfgFileName
+	fi
+	
 	if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
 		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"
 		return 1
@@ -1072,6 +1078,37 @@ function SECFUNCarraySize() {
 	set +u
 	eval echo "\${#${laArrayId}[@]}"
 	set -u
+}
+
+#function SECFUNCdaemonsControl() {
+#	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+#		if [[ "$1" == "--help" ]];then #SECFUNCdaemonsControl_help show this help
+#			SECFUNCshowHelp "$FUNCNAME"
+#			return
+#		elif [[ "$1" == "--set" ]];then #SECFUNCdaemonsControl_help set vars on daemons control main file
+#			shift
+#			local lstrVar="$1"
+#			shift
+#			local lstrValue="$1"
+#		else
+#			SECFUNCechoErrA "invalid option: $1"
+#			return 1
+#		fi
+#	done
+#	local lstrFile="$SEC_TmpFolder/SEC.DaemonsControl.tmp"
+#}
+function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
+	_SECFUNCdaemonCheckHold_SubShell() {
+		# to protect parent envinronment
+		local bHoldScripts=false
+		SECFUNCcfgFileName secDaemonsControl.sh
+		SECFUNCcfgRead
+		#echo "$SECcfgFileName";cat "$SECcfgFileName";echo "bHoldScripts=$bHoldScripts"
+		if $bHoldScripts;then
+			secDaemonsControl.sh --checkhold #will cause recursion if this function is called on that command...
+		fi
+	};export -f _SECFUNCdaemonCheckHold_SubShell
+	bash -c "_SECFUNCdaemonCheckHold_SubShell"
 }
 
 if [[ `basename "$0"` == "funcMisc.sh" ]];then

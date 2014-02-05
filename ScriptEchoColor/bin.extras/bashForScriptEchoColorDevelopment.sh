@@ -48,5 +48,6 @@ bash --rcfile <(echo '\
 		eval `secinit`;\
 		export PROMPT_COMMAND="$PROMPT_COMMAND;`echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "`";\
 		$SECcmdDevTmp;\
+		set +u;\
 	')
 

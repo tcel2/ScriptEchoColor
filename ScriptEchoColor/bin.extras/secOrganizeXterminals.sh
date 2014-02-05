@@ -146,7 +146,7 @@ if $bDaemon; then
 		fi
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
 		#if ! sleep 5; then break; fi; 

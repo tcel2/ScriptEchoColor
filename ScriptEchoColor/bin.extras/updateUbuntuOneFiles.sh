@@ -149,10 +149,11 @@ function FUNCinterruptAsk() {
 };export -f FUNCinterruptAsk
 
 function FUNCcopy() {
-	#return
-	FUNCtrap
-	eval `secinit`
-	SECFUNCvarReadDB
+	#FUNCtrap
+	#eval `secinit`
+	#SECFUNCvarReadDB
+	
+	SECFUNCdelay $FUNCNAME --init
 	
 	local bDoIt=$1
 	local strFile="$2"
@@ -163,6 +164,7 @@ function FUNCcopy() {
 		realFile=`readlink "$realFile"`
 	done
 	
+	#echo "bCmpData=$bCmpData"
 	if [[ -f "$realFile" ]];then
 		if((`stat -c%s "$realFile"`!=`stat -c%s "$pathUbuntuOne/$strFile"`));then
 			# check by size
@@ -208,10 +210,11 @@ function FUNCcopy() {
 	fi
 	
 	SECFUNCvarSet --showdbg nFilesCount=$((++nFilesCount))
-	echo -en "\r$nFilesCount\r"
 	
 	# `find` calling this can be very time consuming... so daemon control goes here too...
-	secDaemonsControl.sh --checkhold
+	if SECFUNCdelay ListOfFuncCopy --checkorinit 5;then
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+	fi
 	
 	FUNCinterruptAsk #can set bGoFastOnce to true
 	if ! $bGoFastOnce;then
@@ -219,6 +222,8 @@ function FUNCcopy() {
 			read -s -n 1 -t 1 -p "" #sleep 1
 		fi
 	fi
+	
+	echo -en "\r$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`\r"
 };export -f FUNCcopy
 
 function FUNCzenitySelectAndAddFilesUbuOne() {
@@ -293,7 +298,7 @@ if $bDaemon;then
 		echoc -w -t 5 "daemons sleep too..."
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
 		#if ! sleep 5; then exit 1; fi
@@ -422,17 +427,26 @@ elif $bLookForChanges;then
 		SECFUNCvarSet nFilesChangedCount=0
 		SECFUNCdelay --init
 		
-		find ./ \
-			\( -not -name "." -not -name ".." \) \
-			-and \
-			\( -not -path "./.git/*" \) \
-			-and \
-			\( -type f -or -type l \) \
-			-and \
-			\( -not -type d \) \
-			-and \
-			\( -not -xtype d \) \
-			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
+		SECFUNCdelay ListOfFuncCopy --init
+		strCmdFuncCopyList=`
+		find ./ \( -not -name "." -not -name ".." \) \
+			-and \( -not -path "./.git/*" \) \
+			-and \( -type f -or -type l \) \
+			-and \( -not -type d \) \
+			-and \( -not -xtype d \) |sed -r "s'.*'FUNCcopy $bDoIt \"&\";'"`
+		#echo $strCmdFuncCopyList;
+		eval $strCmdFuncCopyList
+#		find ./ \
+#			\( -not -name "." -not -name ".." \) \
+#			-and \
+#			\( -not -path "./.git/*" \) \
+#			-and \
+#			\( -type f -or -type l \) \
+#			-and \
+#			\( -not -type d \) \
+#			-and \
+#			\( -not -xtype d \) \
+#			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
 			echoc -x "git init" #no problem as I read

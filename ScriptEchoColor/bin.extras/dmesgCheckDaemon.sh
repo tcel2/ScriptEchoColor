@@ -133,7 +133,7 @@ EOF
   fi
   
 	if SECFUNCdelay daemonHold --checkorinit 5;then
-		secDaemonsControl.sh --checkhold
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 done
 

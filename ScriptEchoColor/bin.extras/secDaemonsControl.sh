@@ -49,7 +49,7 @@ bList=false
 bDaemon=false
 bRegisterOnly=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait
+	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
 		bCheckHold=true
 	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
 		bHoldAll=true
@@ -130,7 +130,7 @@ if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
 	FUNCregisterDaemon
 	while true;do
-		secDaemonsControl.sh --checkhold
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now

@@ -403,7 +403,7 @@ function FUNCdaemon() {
 	varset anIgnorePids
 	while true; do
 		SECFUNCvarReadDB
-		#secDaemonsControl.sh --checkhold #DO NOT hold this critical script execution!!!
+		#SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold #DO NOT hold this critical script execution!!!
 		
 		if $bDebugFakeTmpr;then
 			tmprCurrent=$tmprCurrentFake

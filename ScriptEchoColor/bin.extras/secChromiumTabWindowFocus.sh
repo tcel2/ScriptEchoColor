@@ -111,7 +111,7 @@ while true; do
 #	done
 	while true; do 
 		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
 		FUNCwindowAtMouse;
@@ -201,7 +201,7 @@ while true; do
 	previousChromeTabName=""
 	while true; do
 		if SECFUNCdelay daemonHold --checkorinit 5;then
-			secDaemonsControl.sh --checkhold
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
 		#if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
