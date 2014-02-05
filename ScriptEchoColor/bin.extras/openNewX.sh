@@ -757,15 +757,15 @@ if $useJWM; then
   FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
 fi
 
-xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma;sleep 60; #kill=skip"&
+xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma; #kill=skip"&
 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-xterm -geometry 50x1 -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
+xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
 
 #initializes the cicle of configurations!
-xterm -display :1 -e "$0 --script nvidiaCicle;sleep 60; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
+xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
 
 sleep 2 #@@@!!! TODO improve with qdbus waiting for jwm?
 #SECFUNCvarShow bUseXscreensaver #@@@r
