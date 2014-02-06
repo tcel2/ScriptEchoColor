@@ -512,7 +512,8 @@ while [[ ${1:0:2} == "--" ]]; do
   	bReturnToX0=true
   elif [[ "$1" == "--customcmd" ]]; then #opt custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
   	shift
-  	customCmd=("${customCmd[@]-}" "$1")
+  	#customCmd=("${customCmd[@]-}" "$1")
+  	customCmd+=("$1")
   	strCustomCmd=`echo " Meta+${#customCmd[*]} EXEC: $1"`
   	echo "$strCustomCmd"
   	strCustomCmdHelp="$strCustomCmdHelp$strCustomCmd\n"

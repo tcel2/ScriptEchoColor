@@ -347,7 +347,8 @@ function SECFUNCppidList() {
   local ppid=$$;
   while((ppid>=1));do 
     ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
-    pidList=(${pidList[*]} $ppid)
+    #pidList=(${pidList[*]} $ppid)
+    pidList+=($ppid)
     #echo $ppid; 
     if((ppid==1));then break; fi; 
   done
