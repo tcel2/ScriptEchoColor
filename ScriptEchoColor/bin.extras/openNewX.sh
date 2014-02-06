@@ -27,7 +27,9 @@
 ########################## INIT AND VARS #####################################
 eval `secinit`
 
+echo $SECvarFile
 SECFUNCuniqueLock --daemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
+echo $SECvarFile
 #SECFUNCvarShow bUseXscreensaver
 
 #alias ps='echoc -x ps' #good to debug the bug
@@ -150,10 +152,13 @@ function FUNCkeepGamma() { # some games reset the gamma on each restart
 };export -f FUNCkeepGamma
 
 function FUNCcicleGamma() {
+	#set -x
 	local nDirection=$1 #1 or -1
 	
-	SECFUNCvarSet --default fGamma 1.0
+	echo $SECvarFile
+	SECFUNCvarSet --show --default fGamma 1.0
 	SECFUNCvarGet pidOpenNewX
+	#SECFUNCvarGet fGamma
 	
 #	local lockFileGamma="/tmp/openNewX.gamma.lock"
 #	local lockFileGammaReal="${lockFileGamma}.$pidOpenNewX"
@@ -168,8 +173,8 @@ function FUNCcicleGamma() {
 #	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileGammaReal"
 	local lockGammaId="openNewX.gamma"
 #	FUNClockFile "$lockGammaId" $pidOpenNewX
-#	SECFUNCuniqueLock --pid $pidOpenNewX "$lockGammaId"
-	SECFUNCuniqueLock --pid $$ "$lockGammaId"
+#	SECFUNCuniqueLock --pid $pidOpenNewX --id "$lockGammaId"
+	SECFUNCuniqueLock --pid $$ --id "$lockGammaId"
 
 #	SECFUNCvarSet --default gammaLock 0
 #	SECFUNCvarWaitValue gammaLock 0
@@ -179,12 +184,12 @@ function FUNCcicleGamma() {
 	local nMin="0.25"
 	local nMax="10.0"
 	
-	SECFUNCvarSet fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
+	SECFUNCvarSet --show fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
 	if ((`bc <<< "$fGamma<$nMin"`)); then
-		SECFUNCvarSet fGamma=$nMax
+		SECFUNCvarSet --show fGamma=$nMax
 	fi
 	if ((`bc <<< "$fGamma>$nMax"`)); then
-		SECFUNCvarSet fGamma=$nMin
+		SECFUNCvarSet --show fGamma=$nMin
 	fi
 	
 #	if [[ "$fGamma" == "0.5" ]];then
@@ -207,9 +212,10 @@ function FUNCcicleGamma() {
 #	SECFUNCvarSet gammaLock 0
 #	rm -vf "$lockFileGamma"
 #	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
-#	SECFUNCuniqueLock --release --pid $pidOpenNewX "$lockGammaId"
+#	SECFUNCuniqueLock --release --pid $pidOpenNewX --id "$lockGammaId"
 	echoc --say "gamma $fGamma" #must say before releasing the lock!
-	SECFUNCuniqueLock --release --pid $$ "$lockGammaId"
+	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
+	#set +x
 };export -f FUNCcicleGamma
 
 function FUNCnvidiaCicle() {
@@ -219,7 +225,7 @@ function FUNCnvidiaCicle() {
 	SECFUNCvarSet --default nvidiaCurrent -1
 	
 	local lockId="openNewX.nvidia"
-	SECFUNCuniqueLock --pid $$ "$lockId"
+	SECFUNCuniqueLock --pid $$ --id "$lockId"
 	
 	limit=9 #99 and 999 are too slow...
 	count=0
@@ -253,7 +259,7 @@ function FUNCnvidiaCicle() {
 		fi
 	done
 	
-	SECFUNCuniqueLock --release --pid $$ "$lockId"
+	SECFUNCuniqueLock --release --pid $$ --id "$lockId"
 	
 	echoc --waitsay "n-vidia $nvidiaCurrent"
 	SECFUNCvarShow nvidiaCurrent
@@ -588,23 +594,26 @@ fi
 #fi
 
 # at this point, X1 will be managed by openNewX
-while true; do
-	if FUNCisX1running;then
-		if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then
-			echoc -x "$0 --killX1"
-		fi
-	else
-		while ! SECFUNCuniqueLock;do
-			echoc -p "Unable to create unique lock..."
-			echoc -w -t 3
-		done
-	
-		SECFUNCvarSetDB -f
-		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
-		
-		break
-	fi
-done
+echo $SECvarFile
+SECFUNCuniqueLock --daemonwait
+echo $SECvarFile
+#while true; do
+#	if FUNCisX1running;then
+#		if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then
+#			echoc -x "$0 --killX1"
+#		fi
+#	else
+#		while ! SECFUNCuniqueLock;do
+#			echoc -p "Unable to create unique lock..."
+#			echoc -w -t 3
+#		done
+#	
+#		SECFUNCvarSetDB -f
+#		#sleep 3 #Xorg seems to leave some trash on memory? how to detect it properly?
+#		
+#		break
+#	fi
+#done
 
 if $useJWM; then
   if $bRecreateRCfile || [[ ! -f "$HOME/.jwmrc" ]]; then

@@ -457,16 +457,11 @@ function SECFUNCdrawLine() { #[wordsAtMiddleOfLine] [lineFillChars]
 	echo "$lstrOutput"
 }
 
-function SECFUNCfixId() {
-	# removes all non-alphanumeric and non underscore
-	echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]//g'
-}
-
-alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\$FUNCNAME\" "
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
 function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: for functions and variables name.
 	local caller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--caller" ]];then #SECFUNCechoErr_help is the name of the function calling this one
+		if [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
 			shift
 			caller="${1}(): "
 		fi
@@ -479,20 +474,39 @@ function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: f
 	fi
 	return 0
 }
+alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
+function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
+	local caller=""
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
+			shift
+			caller="${1}(): "
+		fi
+		shift
+	done
+	
+	if SECFUNCvalidateId --caller "$caller" "$1";then
+		echo "$1" #id is ok
+	else
+		# removes all non-alphanumeric and non underscore
+		echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
+	fi
+}
+
 
 function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
 	local indexId="$FUNCNAME"
 	if [[ -n "${1-}" ]] && [[ "${1:0:2}" != "--" ]];then
-		if ! SECFUNCvalidateIdA "$1";then
-			return 1
-		fi
+#		if ! SECFUNCvalidateIdA "$1";then
+#			return 1
+#		fi
 #		if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
 #			SECFUNCechoErrA "invalid indexId '$1', only allowed alphanumeric id and underscores."
 #			return 1
 #		fi
-		indexId="$1"
+		indexId="`SECFUNCfixIdA $1`"
 		shift
 	fi
 	
@@ -721,7 +735,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	return 0
 }
 
-function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.\n\t[id] defaults to `basename $0`
+function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.
 	#set -x
 	local l_bRelease=false
 	local l_pid=$$
@@ -739,9 +753,9 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 			l_bQuiet=true
 		elif [[ "$1" == "--notquiet" ]];then #SECFUNCuniqueLock_help allow output to /dev/stdout
 			l_bQuiet=false
-		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help set the lock id, defaults to `basename $0`
+		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <id> set the lock id, if not set, the 'id' defaults to `basename $0`
 			shift
-			lstrId="$1"
+			lstrId="`SECFUNCfixId "$1"`"
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
 			shift
 			l_pid=$1
@@ -763,19 +777,19 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 		shift
 	done
 	
-	if ! SECFUNCvalidateIdA "$lstrId";then
-		return 1
-	fi
+#	if ! SECFUNCvalidateIdA "$lstrId";then
+#		return 1
+#	fi
 	
 	if ${lbDaemon:?};then #will call this self function, beware..
 		SECONDS=0
 		while true;do
 			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO WHY?
-			if SECFUNCuniqueLock --quiet "$lstrId"; then
+			if SECFUNCuniqueLock --quiet --id "$lstrId"; then
 				SECFUNCvarSetDB -f
 				SECnPidDaemon=$l_pid # ONLY after the lock has been acquired!
 			else
-				SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
+				SECFUNCvarSetDB `SECFUNCuniqueLock --id "$lstrId"` #allows intercommunication between proccesses started from different parents
 				SECbDaemonWasAlreadyRunning=true
 			fi
 			
