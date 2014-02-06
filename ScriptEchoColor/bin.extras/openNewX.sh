@@ -27,9 +27,9 @@
 ########################## INIT AND VARS #####################################
 eval `secinit`
 
-echo $SECvarFile
+ls -l $SECvarFile
 SECFUNCuniqueLock --daemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
-echo $SECvarFile
+ls -l $SECvarFile
 #SECFUNCvarShow bUseXscreensaver
 
 #alias ps='echoc -x ps' #good to debug the bug
@@ -155,7 +155,7 @@ function FUNCcicleGamma() {
 	#set -x
 	local nDirection=$1 #1 or -1
 	
-	echo $SECvarFile
+	ls -l $SECvarFile
 	SECFUNCvarSet --show --default fGamma 1.0
 	SECFUNCvarGet pidOpenNewX
 	#SECFUNCvarGet fGamma
@@ -594,9 +594,9 @@ fi
 #fi
 
 # at this point, X1 will be managed by openNewX
-echo $SECvarFile
+ls -l $SECvarFile
 SECFUNCuniqueLock --daemonwait
-echo $SECvarFile
+ls -l $SECvarFile
 #while true; do
 #	if FUNCisX1running;then
 #		if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then

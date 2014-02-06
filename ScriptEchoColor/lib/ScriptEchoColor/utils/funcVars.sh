@@ -861,7 +861,9 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	# config
 	local l_prefix="SEC"
 	local l_sufix="vars.tmp"
-	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.`basename "$0"`.$$.$l_sufix"
+	local lstrId="`basename "$0"`"
+	lstrId="`SECFUNCfixIdA --justfix "$lstrId"`"
+	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.$lstrId.$$.$l_sufix"
 	local l_basename=""
 	
 	# BEGIN WORK 

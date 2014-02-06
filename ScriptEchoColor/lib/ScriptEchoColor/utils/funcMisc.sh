@@ -477,20 +477,28 @@ function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: f
 alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	local caller=""
+	local lbJustFix=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
 			shift
 			caller="${1}(): "
+		elif [[ "$1" == "--justfix" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user
+			lbJustFix=true
+		else
+			SECFUNCechoErrA "invalid option $1"
+			return 1
 		fi
 		shift
 	done
 	
-	if SECFUNCvalidateId --caller "$caller" "$1";then
-		echo "$1" #id is ok
-	else
-		# removes all non-alphanumeric and non underscore
-		echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
+	if ! $lbJustFix;then
+		# just to inform invalid id to user be able to set it properly if wanted
+		SECFUNCvalidateId --caller "$caller" "$1"
 	fi
+	
+	# removes all non-alphanumeric and non underscore
+	#echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
+	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
 }
 
 
@@ -742,7 +750,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	local l_bQuiet=false
 	local lbDaemon=false
 	local lbWaitDaemon=false
-	local lstrId="`basename "$0" |tr '.-' '__'`"
+	local lstrId="`basename "$0"`"
 	SECnPidDaemon=0
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
@@ -755,7 +763,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 			l_bQuiet=false
 		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <id> set the lock id, if not set, the 'id' defaults to `basename $0`
 			shift
-			lstrId="`SECFUNCfixId "$1"`"
+			lstrId="$1"
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
 			shift
 			l_pid=$1
@@ -777,6 +785,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 		shift
 	done
 	
+	lstrId="`SECFUNCfixIdA --justfix "$lstrId"`"
 #	if ! SECFUNCvalidateIdA "$lstrId";then
 #		return 1
 #	fi
@@ -784,14 +793,20 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	if ${lbDaemon:?};then #will call this self function, beware..
 		SECONDS=0
 		while true;do
+			#set -x
 			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO WHY?
 			if SECFUNCuniqueLock --quiet --id "$lstrId"; then
 				SECFUNCvarSetDB -f
 				SECnPidDaemon=$l_pid # ONLY after the lock has been acquired!
 			else
+				#echo ">>>$SECvarFile,$lstrId,`SECFUNCuniqueLock --id "$lstrId"`"
+				#set -x
 				SECFUNCvarSetDB `SECFUNCuniqueLock --id "$lstrId"` #allows intercommunication between proccesses started from different parents
+				#set +x
+				#echo ">>>$SECvarFile"
 				SECbDaemonWasAlreadyRunning=true
 			fi
+			#set +x
 			
 			if ${lbWaitDaemon:?};then
 				if $SECbDaemonWasAlreadyRunning;then
