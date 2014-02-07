@@ -595,6 +595,11 @@ fi
 #fi
 
 # at this point, X1 will be managed by openNewX
+while FUNCisX1running;do
+	if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then
+		echoc -x "$0 --killX1"
+	fi
+done
 ls -l $SECvarFile
 SECFUNCuniqueLock --daemonwait
 ls -l $SECvarFile
