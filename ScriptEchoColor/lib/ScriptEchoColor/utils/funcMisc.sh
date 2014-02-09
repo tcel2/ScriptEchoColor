@@ -57,7 +57,7 @@ fi
 export SECfuncPrefix
 
 ###################### INTERNAL VARIABLES are set by functions ########
-: ${SECcfgFileName:=} #no need to export, each script must know its cfg file properly; a script calling another could mess that cfg filename if exported...
+: ${SECcfgFileName:=} #do NOT export, each script must know its cfg file properly; a script calling another could mess that other cfg filename if it is exported...
 
 : ${SECnPidDaemon:=0}
 export SECnPidDaemon
@@ -965,9 +965,9 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 }
 function SECFUNCcfgRead() { #read the cfg file and set all its env vars at current env
 	#echo oi;eval `cat tst.db`;return
-	#if [[ -z "$SECcfgFileName" ]];then
+	if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
-	#fi
+	fi
 	
 	if [[ "${1-}" == "--help" ]];then
 		SECFUNCshowHelp ${FUNCNAME}
@@ -1031,9 +1031,9 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 #		fi
 	fi
 	
-	#if [[ -z "$SECcfgFileName" ]];then
+	if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
-	#fi
+	fi
 	
 	if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
 		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"

@@ -212,9 +212,9 @@ function FUNCcopy() {
 	SECFUNCvarSet --showdbg nFilesCount=$((++nFilesCount))
 	
 	# `find` calling this can be very time consuming... so daemon control goes here too...
-	if SECFUNCdelay ListOfFuncCopy --checkorinit 5;then
-		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
-	fi
+#	if SECFUNCdelay ListOfFuncCopy --checkorinit 5;then
+#		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+#	fi
 	
 	FUNCinterruptAsk #can set bGoFastOnce to true
 	if ! $bGoFastOnce;then
@@ -297,9 +297,9 @@ if $bDaemon;then
 		nice -n 19 $0 --lookforchanges --confirmalways $strBkgWrkopt
 		echoc -w -t 5 "daemons sleep too..."
 		
-		if SECFUNCdelay daemonHold --checkorinit 5;then
+		#if SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
-		fi
+		#fi
 		
 		#if ! sleep 5; then exit 1; fi
 	done
