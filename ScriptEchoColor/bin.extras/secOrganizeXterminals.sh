@@ -148,7 +148,7 @@ if $bDaemon; then
 		#echo -ne "wait: ctrl+c for options..\r"
 		#read -t 1 #sleep 1 #`read` caused trouble with ctrl+c?
 		#if $bAskNow;then
-			if echoc -n -q -t 10 "\rcascade now";then
+			if echoc -n -q -t 60 "\rcascade now";then
 				bCascadeForceNow=true
 			fi
 			#bAskNow=false

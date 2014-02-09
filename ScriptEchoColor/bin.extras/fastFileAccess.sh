@@ -298,7 +298,7 @@ if $bDaemon;then
 		
 		if ! $bForceValidationOnce;then
 			if ! FUNCcheckCfgChanged;then
-				if echoc -t 10 -q "force validation?";then
+				if echoc -t 60 -q "force validation?";then
 					varset bForceValidationOnce=true
 				fi
 				continue

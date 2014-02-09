@@ -57,8 +57,7 @@ fi
 export SECfuncPrefix
 
 ###################### INTERNAL VARIABLES are set by functions ########
-: ${SECcfgFileName:=}
-export SECcfgFileName
+: ${SECcfgFileName:=} #no need to export, each script must know its cfg file properly; a script calling another could mess that cfg filename if exported...
 
 : ${SECnPidDaemon:=0}
 export SECnPidDaemon
@@ -943,7 +942,7 @@ function SECFUNCshowHelp() {
 
 function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
 	if [[ "${1-}" == "--help" ]];then
-		SECFUNCshowHelp ${FUNCNAME} \
+		SECFUNCshowHelp ${FUNCNAME}
 		return
 	fi
 	
@@ -955,19 +954,24 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	# SECcfgFileName is a global
 	if [[ -n "${1-}" ]];then
 		SECcfgFileName="$lpath/${1}.cfg"
-	fi
-	
-	if [[ -z "$SECcfgFileName" ]];then
+	#fi
+	else
+	#if [[ -z "$SECcfgFileName" ]];then
 		SECcfgFileName="$lpath/`basename "$0"`.cfg"
 	fi
 	
 	#echo "$lpath/${SECcfgFileName}.cfg"
 	#echo "$SECcfgFileName"
 }
-function SECFUNCcfgRead() {
+function SECFUNCcfgRead() { #read the cfg file and set all its env vars at current env
 	#echo oi;eval `cat tst.db`;return
-	if [[ -z "$SECcfgFileName" ]];then
+	#if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
+	#fi
+	
+	if [[ "${1-}" == "--help" ]];then
+		SECFUNCshowHelp ${FUNCNAME}
+		return
 	fi
 	
 	if [[ -f "$SECcfgFileName" ]];then
@@ -988,7 +992,21 @@ function SECFUNCcfgRead() {
   	SECFUNCfileLock --unlock "$SECcfgFileName"
   fi
 }
-function SECFUNCcfgWriteVar() { #set -x
+function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
+	local lbRemoveVar=false
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--remove" ]];then #SECFUNCcfgWriteVar_help remove the variable from config file
+			lbRemoveVar=true
+		elif [[ "${1-}" == "--help" ]];then
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			return 1
+		fi
+		shift
+	done
+	
 	# if var is being set, eval (do) it
 	local lbIsArray=false
 	if echo "$1" |grep -q "^[[:alnum:]_]*=";then # here the var will never be array
@@ -1013,9 +1031,9 @@ function SECFUNCcfgWriteVar() { #set -x
 #		fi
 	fi
 	
-	if [[ -z "$SECcfgFileName" ]];then
+	#if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
-	fi
+	#fi
 	
 	if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
 		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"
@@ -1057,8 +1075,10 @@ function SECFUNCcfgWriteVar() { #set -x
 	SECFUNCfileLock "$SECcfgFileName"
 	#set -x	
 	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
-	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName"
-	echo "${lstrToWrite};" >>"$SECcfgFileName"
+	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName" #will remove the variable line
+	if ! $lbRemoveVar;then
+		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
+	fi
 	#set +x
 #	if $lbIsArray;then
 #		local lstrMatchLineToRemove=`echo "$lstrArrayToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
@@ -1074,6 +1094,7 @@ function SECFUNCcfgWriteVar() { #set -x
 #	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }
+
 function SECFUNCshowFunctionsHelp() { #show functions specific help
 	#set -x
 	if [[ "${1-}" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
