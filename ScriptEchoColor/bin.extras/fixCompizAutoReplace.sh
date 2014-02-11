@@ -174,6 +174,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 				if $lbHasPid;then
 					#wmctrl -i -r $nWindowIdDialog -b add,above;
 					wmctrl -i -r $nWindowIdDialog -b toggle,above;
+					xdotool windowactivate $nWindowIdDialog
+					xdotool windowfocus $nWindowIdDialog
+					xdotool windowraise $nWindowIdDialog
 					lbAtLeastOnceOnTop=true
 				fi
 				

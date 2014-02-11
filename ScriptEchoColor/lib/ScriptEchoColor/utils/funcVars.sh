@@ -174,7 +174,7 @@ function SECFUNCvarIsArray() {
 
 function SECFUNCvarGet() { #<varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
   if `SECFUNCvarIsArray $1`;then
-  	if [[ -n "$2" ]]; then
+  	if [[ -n "${2-}" ]]; then
   		eval 'echo "${'$1'['$2']}"'
   	else
 	  	#declare |grep "^$1=(" |sed 's"^'$1'=""'
@@ -426,7 +426,7 @@ function SECFUNCvarWaitValue() { #[OPTIONS] <var> <value> [delay]: wait until va
 	done
 }
 function SECFUNCvarWaitRegister() { #<var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
-	local l_delay=$2
+	local l_delay=${2-}
 	if [[ -z "$l_delay" ]]; then
 		l_delay=1
 	fi
