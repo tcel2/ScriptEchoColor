@@ -140,10 +140,6 @@ if $bDaemon; then
 			bCascadeForceNow=false
 		fi
 		
-		if SECFUNCdelay daemonHold --checkorinit 5;then
-			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
-		fi
-		
 		#if ! sleep 5; then break; fi; 
 		#echo -ne "wait: ctrl+c for options..\r"
 		#read -t 1 #sleep 1 #`read` caused trouble with ctrl+c?
@@ -153,6 +149,10 @@ if $bDaemon; then
 			fi
 			#bAskNow=false
 		#fi
+		
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+		fi
 	done
 	exit 0
 fi

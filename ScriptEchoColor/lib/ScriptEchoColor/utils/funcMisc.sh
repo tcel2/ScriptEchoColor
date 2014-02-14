@@ -1162,6 +1162,17 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 	bash -c "_SECFUNCdaemonCheckHold_SubShell"
 }
 
+#function SECFUNCexit() { #useful to do 'before exit' tasks
+#	local lnStatus=$?
+#	if [[ -n "${1-}" ]];then
+#		lnStatus=$1
+#	fi
+#	
+#	SECFUNCvarWriteDB #to remove dups
+#	
+#	exit $nStatus
+#}
+
 if [[ `basename "$0"` == "funcMisc.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
