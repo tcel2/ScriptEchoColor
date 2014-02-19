@@ -135,7 +135,7 @@ NOTES (highlights) (for tech info look at CHANGES section):
 
 CHANGES:
   v1.15:
-   -t now supports floating like 0.25 etc!
+   -t now supports floating like 0.25  etc!
    fix to --help-extended when showing "graphics" mode messing the terminal...
    fix to secascii now converts codes to letters properly...
    improved clear key buffer from 1s to 0.1s delay! (read -t 0.1)
