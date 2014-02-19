@@ -25,6 +25,7 @@
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
+export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
 export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
@@ -1124,11 +1125,17 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 	done
 }
 
-function SECFUNCarraySize() {
+function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 	local laArrayId="$1"
+	local bWasNoUnset=false
+	if set -o |grep nounset |grep -q "on$";then
+		bWasNoUnset=true
+	fi
 	set +u
 	eval echo "\${#${laArrayId}[@]}"
-	set -u
+	if $bWasNoUnset;then
+		set -u
+	fi
 }
 
 #function SECFUNCdaemonsControl() {

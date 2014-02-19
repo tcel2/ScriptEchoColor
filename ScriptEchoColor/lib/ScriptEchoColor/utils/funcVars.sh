@@ -108,6 +108,7 @@ fi
 
 function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncInA
+	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >/dev/stderr
 	
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		local lfile="$1";
@@ -142,12 +143,13 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	
 	# Remove symlinks for dead pids
 	find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -exec bash -c "SECFUNCvarClearTmpFiles_removeFilesForDeadPids \"{}\"" \;
+	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >/dev/stderr
 	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
 	
-	SECFUNCvarClearTmpFiles #TODO create a maintenance daemon to clean tmp files and comment this?
+	SECFUNCvarClearTmpFiles& #TODO create a maintenance daemon to clean tmp files and comment this? after some tests it seems safe to just keep as child?
 	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
 	
 	SECFUNCdbgFuncOutA

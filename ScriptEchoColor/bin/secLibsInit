@@ -76,8 +76,10 @@ done
 
 # echo 'export SECinstallPath="`secGetInstallPath.sh`";' #at funcMisc
 # echo 'source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";' #at funcVars
-echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";"
-echo 'eval "`SECFUNCexportFunctions`";'
+#if ! ${SECinitialized-false};then #this breaks aliases :(
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";"
+	echo 'eval "`SECFUNCexportFunctions`";'
+#fi
 echo 'SECFUNCvarInit;'
 
 # DO NOT use `SECFUNCcfgRead` here, associative arrays will be messed up if not initialized BEFORE this.

@@ -41,6 +41,13 @@ trap '' HUP # this is required to --say work with terminals that close too fast 
 # !!! THIS LINE BELOW IS COLLECTED AT CREATEPACKAGE
 g_nVersion=1.15
 
+##set -u #enforces strong coding
+##SECinstallPath=`FUNCgetInstallPath`
+#SECinstallPath=`secGetInstallPath.sh`
+#source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
+##source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh" #already calls funcMisc
+eval `secinit`
+
 strMyEmail="teike@users.sourceforge.net"
 strSelfName="ScriptEchoColor"
 strClrKeyBufMsg="[clrkeybuf1s]"
@@ -57,11 +64,11 @@ eval 'tput sc' $stderr # Save current cursor position in case there is line repo
 strRestorePos=""
 
 shopt -s expand_aliases
-alias _hw='echo -ne "WARNING $strSelfName $FUNCNAME() ln$LINENO: " '$stderr # warning header
-alias _he='echo -ne "ERROR(send a bug report) $strSelfName $FUNCNAME() ln$LINENO: " '$stderr # error header
-##alias _hi='echo -n  "INFO $strSelfName $FUNCNAME() ln$LINENO: " '$stderr # info header
+alias _hw='echo -ne "WARNING $strSelfName ${FUNCNAME-}() ln$LINENO: " '$stderr # warning header
+alias _he='echo -ne "ERROR(send a bug report) $strSelfName ${FUNCNAME-}() ln$LINENO: " '$stderr # error header
+##alias _hi='echo -n  "INFO $strSelfName ${FUNCNAME-}() ln$LINENO: " '$stderr # info header
 
-alias _hi='FUNCmsg "INFO" "$FUNCNAME" "$LINENO"'
+alias _hi='FUNCmsg "INFO" "${FUNCNAME-}" "$LINENO"'
 
 strUnkownPossibleTermEmuList=""
 astrKnownTermEmulators=("gnome-terminal" "konsole" "login" "rxvt")
@@ -70,7 +77,7 @@ astrKnownTermEmulators=("gnome-terminal" "konsole" "login" "rxvt")
 strCommandAppendExitTest=';'\
 'SEC_nRet=\$?;'\
 'if((SEC_nRet!=0)); then '\
-' $strSelfName -Rb "\"$strColorProblem [exit \$SEC_nRet] \\\`$strCommandLine\\\` \"";'\
+' $strSelfName -Rb "\"$strColorProblem [exit \$SEC_nRet] \\\`${strCommandLine-}\\\` \"";'\
 ' exit \$SEC_nRet;'\
 'fi'
 
@@ -98,15 +105,15 @@ strCommandAppendExitTest=';'\
 ##fi
 
 # Fix wrong values to defaults
-case "$SEC_BEEP"        in mute | single | extra);; *)SEC_BEEP="single"      ;; esac
-case "$SEC_LOG_AVOID"   in true | false         );; *)SEC_LOG_AVOID=false    ;; esac
-case "$SEC_FORCESTDERR" in true | false         );; *)SEC_FORCESTDERR="false";; esac
-case "$SEC_CASESENS"    in true | false         );; *)SEC_CASESENS="false"   ;; esac
-case "$SEC_IGNORE_LIMITATIONS" in true | false  );; *)SEC_IGNORE_LIMITATIONS="true";; esac
-case "$SEC_SAYALWAYS"   in true | false         );; *)SEC_SAYALWAYS="false"   ;; esac
+case "${SEC_BEEP-}"        in mute | single | extra);; *)SEC_BEEP="single"      ;; esac
+case "${SEC_LOG_AVOID-}"   in true | false         );; *)SEC_LOG_AVOID=false    ;; esac
+case "${SEC_FORCESTDERR-}" in true | false         );; *)SEC_FORCESTDERR="false";; esac
+case "${SEC_CASESENS-}"    in true | false         );; *)SEC_CASESENS="false"   ;; esac
+case "${SEC_IGNORE_LIMITATIONS-}" in true | false  );; *)SEC_IGNORE_LIMITATIONS="true";; esac
+case "${SEC_SAYALWAYS-}"   in true | false         );; *)SEC_SAYALWAYS="false"   ;; esac
 #if((SEC_SAYVOL<0 || SEC_SAYVOL>100)) | [[ -z "$SEC_SAYVOL" ]];then SEC_SAYVOL=100;fi
-if [[ -z "$SEC_SAYVOL" ]] || ((SEC_SAYVOL<0));then SEC_SAYVOL=100;fi
-if [[ -z "$SEC_NICE" ]] || ((SEC_NICE<0)) || ((SEC_NICE>19));then SEC_NICE=0;fi
+if [[ -z "${SEC_SAYVOL-}" ]] || ((SEC_SAYVOL<0));then SEC_SAYVOL=100;fi
+if [[ -z "${SEC_NICE-}" ]] || ((SEC_NICE<0)) || ((SEC_NICE>19));then SEC_NICE=0;fi
 
 renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 
@@ -254,9 +261,6 @@ source "$strSpeedupFile"
 #  source "$strSetupCfgFile"
 #fi
 
-#SECinstallPath=`FUNCgetInstallPath`
-SECinstallPath=`secGetInstallPath.sh`
-
 FUNCdebug(){
   if [[ -z "$SEC_DEBUG" ]]; then
     return 0
@@ -268,11 +272,14 @@ FUNCdebug(){
   if [[ ! -a "$strFileDebug" ]]; then
     echo -n >>"$strFileDebug"
   fi
-  local strFileLock=`$SECinstallPath/bin/seclockfile "$strFileDebug"`;local nRet=$?
-  if(($nRet!=0)); then
-    _hw;echo -e "unable to lock file '$strFileDebug' to write this message:\n $strDateTime: $1" >/dev/stderr
-    return 1
-  fi
+  
+#  source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
+#  local strFileLock=`$SECinstallPath/bin/seclockfile "$strFileDebug"`;local nRet=$?
+#  if(($nRet!=0)); then
+#    _hw;echo -e "unable to lock file '$strFileDebug' to write this message:\n $strDateTime: $1" >/dev/stderr
+#    return 1
+#  fi
+  SECFUNCfileLock "$strFileDebug"
   
   if [[ "$SEC_DEBUG" == "true" ]]; then
     echo " $strDateTime: $1" >>"$strFileDebug"
@@ -287,7 +294,8 @@ FUNCdebug(){
     echo " $strDateTime: invalid SEC_DEBUG exported environment variable value '$SEC_DEBUG'" >>"$strFileDebug"
   fi
   
-  rm -f "$strFileLock"
+#  rm -f "$strFileLock"
+  SECFUNCfileLock --unlock "$strFileDebug"
 }
 
 FUNCmsg(){
@@ -462,6 +470,7 @@ bSay=false
 bWaitSay=false
 bShowCaller=false
 bStringQuestion=false
+bGfxModeOn=false
 
 bUnformatted=false
 strUnformatted=""
@@ -488,12 +497,12 @@ fi
 if $SEC_FORCESTDERR; then
   output="$stderr"
 fi
-if [[ "$SEC_LOG_DEFAULT" == "LOG" ]]; then
+if [[ "${SEC_LOG_DEFAULT-}" == "LOG" ]]; then
   bLogDef=true
   FUNCsetLogFile ## "$SEC_LOG_FILE"
 fi
 # Command line options
-strOpt="$1"
+strOpt="${1-}"
 chOpt=""
 strOptPROBLEM=""
 #if [[ -z "$strOpt" ]]; then bOptHelp=true; fi
@@ -728,7 +737,7 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
     done
     if [[ -n "$strOptPROBLEM" ]]; then break; fi
   fi
-  shift; strOpt="$1"
+  shift; strOpt="${1-}"
 done
 # Take care of options problems
 if ! $bOptHelp && ! $bOptHelpExtended; then
@@ -737,7 +746,7 @@ if ! $bOptHelp && ! $bOptHelpExtended; then
     strBeep=""
   fi
   if [[ -n "$strOptPROBLEM" ]]; then
-    echo -e "$strSelfName $FUNCNAME() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >/dev/stderr
+    echo -e "$strSelfName ${FUNCNAME-}() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >/dev/stderr
     exit 1
   fi
 fi
@@ -759,7 +768,7 @@ FUNCexecName(){
   # Find out the executable name from 'ps' command with column 'cmd' only ex.: 
   #  "/bin/bash script.sh" will return "bash"
   local nPid="$1"
-  local strLine="$2"
+  local strLine="${2-}"
   if [[ -z "$strLine" ]]; then
     strLine=`ps -p $nPid -o cmd |tail -n 1`
   fi
@@ -790,7 +799,7 @@ FUNCppidList(){
 ##  local bOnlyCommand=false
 ##  local bOnlyFullCmd=false
   local bOnlyExecName=false
-  while [[ -n "$1" ]]; do
+  while [[ -n "${1-}" ]]; do
     case "$1" in
       "hidecolumnnames") bShowColumnNames=false;;
       "onelineresult"  ) bOneLineResult=true;;
@@ -916,42 +925,53 @@ FUNCguessTermEmulator(){
 
 # last fmt before this execution
 strLastFmt=""
-strLastFmtFile="$strCfgPath/lastformat.arg"
-if [[ ! -a "$strLastFmtFile" ]]; then
-  echo -n >"$strLastFmtFile"
-fi
+#strLastFmtFile="$strCfgPath/lastformat.arg"
+#if [[ ! -a "$strLastFmtFile" ]]; then
+#  echo -n >"$strLastFmtFile"
+#fi
 
 FUNCkillSelf(){
   if(($1!=0)); then
     kill -SIGKILL $$
   fi
 }
+strArgPrefix="_SEC_ARG_PID_"
 FUNCargget(){
-  local strVar="$1"
+  local strVar="${1-}"
   if [[ -z "$strVar" ]]; then
-    strVar="PID_$PPID"
+    strVar="${strArgPrefix}$PPID"
   fi
-  $SECinstallPath/bin/secargget "$strLastFmtFile" "$strVar" -q #it echoes to stdout
+  #$SECinstallPath/bin/secargget "$strLastFmtFile" "$strVar" -q #it echoes to stdout
+  SECFUNCvarGet "$strVar"
   FUNCkillSelf $?
 }
-FUNCargset(){
-  local strVar="$2"
-  local optVar="--var="
-  if [[ "${strVar:0:${#optVar}}" == "$optVar" ]]; then
-    strVar="${strVar:${#optVar}}"
+FUNCargset(){ # [varId] <value> #only one parameter means there is only the value
+#  local strVar="${2-}"
+#  local optVar="--var="
+#  if [[ "${strVar:0:${#optVar}}" == "$optVar" ]]; then
+#    strVar="${strVar:${#optVar}}"
+#  fi
+#  if [[ -z "$strVar" ]]; then
+#    strVar="${strArgPrefix}$PPID"
+#  fi
+#  $SECinstallPath/bin/secargset "$strLastFmtFile" "$strVar" "$1"
+  if [[ -z "${2-}" ]];then
+    strVar="${strArgPrefix}$PPID"
+  	strValue="$1"
+  else
+  	strVar="$1"
+  	strValue="$2"
   fi
-  if [[ -z "$strVar" ]]; then
-    strVar="PID_$PPID"
-  fi
-  $SECinstallPath/bin/secargset "$strLastFmtFile" "$strVar" "$1"
+  SECFUNCvarSet "$strVar" "$strValue"
   FUNCkillSelf $?
 }
 FUNCargclr(){
   local strVar="$1"
   if [[ -z "$strVar" ]]; then
-    strVar="PID_$PPID"
+    strVar="${strArgPrefix}$PPID"
   fi
-  $SECinstallPath/bin/secargclr "$strLastFmtFile" "$strVar"
+  #$SECinstallPath/bin/secargclr "$strLastFmtFile" "$strVar"
+  SECFUNCvarUnset "$strVar"
   FUNCkillSelf $?
 }
 
@@ -959,46 +979,51 @@ FUNCargclr(){
 # minimum delay is 60 seconds (1 minute)
 nCurrentTime=`date +%s`
 
-if [[ `FUNCargget ScriptEchoColorVersion` != "$g_nVersion" ]]; then
-  echo -n >"$strLastFmtFile"
-  FUNCargset "$g_nVersion" --var="ScriptEchoColorVersion"
-fi
+#if [[ `FUNCargget ScriptEchoColorVersion` != "$g_nVersion" ]]; then
+#  echo -n >"$strLastFmtFile"
+#  #FUNCargset "$g_nVersion" --var="ScriptEchoColorVersion"
+#  FUNCargset "ScriptEchoColorVersion" "$g_nVersion"
+#fi
 
-strPIDsLastCleanTime=`FUNCargget PIDsLastCleanTime`
-if [[ -z "$strPIDsLastCleanTime" ]]; then
-  strPIDsLastCleanTime=$nCurrentTime
-  FUNCargset "$strPIDsLastCleanTime" --var="PIDsLastCleanTime"
-fi
-nPIDsLastCleanTime=$((strPIDsLastCleanTime)) # empty result in 0
+#strPIDsLastCleanTime=`FUNCargget PIDsLastCleanTime`
+#if [[ -z "$strPIDsLastCleanTime" ]]; then
+#  strPIDsLastCleanTime=$nCurrentTime
+#  #FUNCargset "$strPIDsLastCleanTime" --var="PIDsLastCleanTime"
+#  FUNCargset "PIDsLastCleanTime" "$strPIDsLastCleanTime"
+#fi
+#nPIDsLastCleanTime=$((strPIDsLastCleanTime)) # empty result in 0
 
-strTimeLastSystemBootArg=`FUNCargget TimeLastSystemBoot`
-strTimeLastSystemBoot=`who -b |tr -s " "`
-bCleanAllPids=false
-if [[ "$strTimeLastSystemBootArg" != "$strTimeLastSystemBoot" ]]; then
-  strTimeLastSystemBootArg="$strTimeLastSystemBoot"
-  FUNCargset "$strTimeLastSystemBootArg" --var="TimeLastSystemBoot"
-  bCleanAllPids=true
-fi
+#strTimeLastSystemBootArg=`FUNCargget TimeLastSystemBoot`
+#strTimeLastSystemBoot=`who -b |tr -s " "`
+#bCleanAllPids=false
+#if [[ "$strTimeLastSystemBootArg" != "$strTimeLastSystemBoot" ]]; then
+#  strTimeLastSystemBootArg="$strTimeLastSystemBoot"
+#  #FUNCargset "$strTimeLastSystemBootArg" --var="TimeLastSystemBoot"
+#  FUNCargset "TimeLastSystemBoot" "$strTimeLastSystemBootArg"
+#  bCleanAllPids=true
+#fi
 
-if(( (nCurrentTime-nPIDsLastCleanTime) >= 60 )) || $bCleanAllPids; then
-  strPIDsList=`grep "PID_" "$strLastFmtFile"`
-  nLines=`echo "$strPIDsList" |wc -l`
-  for((n=1;n<=nLines;n++)); do
-    strLine=`echo "$strPIDsList" |head -n $n |tail -n 1`
-    nPID=`expr "$strLine" : "PID_\(.*\)("`
-    #echo "DEBUG: nPID=$nPID" >&2
-    ps -p $nPID >/dev/null 2>&1
-    nRet=$?
-    if((nRet!=0)) || $bCleanAllPids; then # not found
-      FUNCargclr "PID_$nPID"
-    #??? else verify if active PID is from known terminal emulator?
-      FUNCdebug "CleanDeadPid: $strLine"
-    fi
-  done
-  FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
-elif(( (nCurrentTime-nPIDsLastCleanTime) < 0 )); then # in case of system date time change
-  FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
-fi
+#if(( (nCurrentTime-nPIDsLastCleanTime) >= 60 )) || $bCleanAllPids; then
+#  strPIDsList=`grep "${strArgPrefix}" "$strLastFmtFile"`
+#  nLines=`echo "$strPIDsList" |wc -l`
+#  for((n=1;n<=nLines;n++)); do
+#    strLine=`echo "$strPIDsList" |head -n $n |tail -n 1`
+#    nPID=`expr "$strLine" : "${strArgPrefix}\(.*\)("`
+#    #echo "DEBUG: nPID=$nPID" >&2
+#    ps -p $nPID >/dev/null 2>&1
+#    nRet=$?
+#    if((nRet!=0)) || $bCleanAllPids; then # not found
+#      FUNCargclr "${strArgPrefix}$nPID"
+#    #??? else verify if active PID is from known terminal emulator?
+#      FUNCdebug "CleanDeadPid: $strLine"
+#    fi
+#  done
+#  #FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
+#  FUNCargset "PIDsLastCleanTime" "$nCurrentTime"
+#elif(( (nCurrentTime-nPIDsLastCleanTime) < 0 )); then # in case of system date time change
+#  #FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
+#  FUNCargset "PIDsLastCleanTime" "$nCurrentTime"
+#fi
 
 str=`FUNCargget`
 strTermEmulator=`expr "$str" : "\(.*\);"` # faster than FUNCguessTermEmulator below..
@@ -1042,7 +1067,6 @@ if [[ "$SEC_IGNORE_LIMITATIONS" == "false" ]]; then
 fi
 
 strCommandWasMsg=`basename $0`" $@"
-
 
 FUNCtestIgnore(){
   local strTestIgnore=""
@@ -1293,7 +1317,7 @@ FUNCheaderExecOpt(){
       ;;
   esac
 }
-if [[ -n "$SEC_HEADEREXEC" ]]; then
+if [[ -n "${SEC_HEADEREXEC-}" ]]; then
   strOpt=""
   for((nCount=0;nCount<${#SEC_HEADEREXEC};nCount++));do
     char="${SEC_HEADEREXEC:nCount:1}"
@@ -1326,7 +1350,7 @@ fi
 
 # Fill up user text string
 n=0
-while [[ -n "$1" ]]; do
+while [[ -n "${1-}" ]]; do
 ##  if((n == 0)); then
 ##    strString="$strHeaderExec$strString"
 ##  fi
@@ -2120,9 +2144,9 @@ FUNCformatColor(){
   local strStringOK="" #$cmdOff
 
   local bRemoveFormat=false
-  if [[ "$2" == "RemoveFormat" ]]; then
+  if [[ "${2-}" == "RemoveFormat" ]]; then
     bRemoveFormat=true
-  elif [[ -n "$2" ]]; then
+  elif [[ -n "${2-}" ]]; then
     _he;eval echo "invalid parameter 2 value: $2" $stderr
   fi
 
@@ -2277,16 +2301,16 @@ FUNCformatColor(){
 `FUNCLastFmtAdd "strTypeE"`\
 `FUNCLastFmtAdd "strTypeFgL"`\
 `FUNCLastFmtAdd "strTypeBgL" uppercase`
-  if $bGfxModeOn; then
+  if ${bGfxModeOn}; then
     strLastFmt="$strLastFmt/graphic"
   fi
 
 }
 
 FUNCLastFmtAdd(){
-  eval "str=\$$1"
+  eval "str=\$${1}"
   shift
-  while [[ -n "$1" ]]; do
+  while [[ -n "${1-}" ]]; do
     if [[ "$1" == "lesslight" ]]; then
       if [[ "${str:0:5}" == "light" ]]; then
         str="${str:5}"
@@ -2310,7 +2334,7 @@ FUNCEQMArrayAdd(){
     if [[ "$char" == '/' ]]; then
       ((nEQMArray++))
     else
-      strEQMArray[$((nEQMArray-1))]="${strEQMArray[$((nEQMArray-1))]}$char"
+      strEQMArray[$((nEQMArray-1))]="${strEQMArray[$((nEQMArray-1))]-}$char"
     fi
   done
 }
@@ -2825,9 +2849,9 @@ FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pre
 
 FUNCdoTheEcho(){
   local strGoToBeginOfLine=""
-  if [[ "$1" == "GoToBeginOfLine" ]]; then
+  if [[ "${1-}" == "GoToBeginOfLine" ]]; then
     strGoToBeginOfLine=`echo -ne "\r"`
-  elif [[ -n "$1" ]]; then
+  elif [[ -n "${1-}" ]]; then
     _he;eval echo "invalid parameter 1 value: $1" $stderr
   fi
   
