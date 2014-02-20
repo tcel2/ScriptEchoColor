@@ -115,6 +115,7 @@ export bEcho=true
 export bBackupOldPrefix=true
 export bInstallExtras=false
 export bInstallExamples=false
+export bInstallMain=true
 
 while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--prefix" ]];then #help <path> set the main path to install everything
@@ -132,6 +133,8 @@ while [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--GoboPrefix" ]];then #help use gobolinux way of installing files!
 		shift
 		pathGoboPrefix="$1"
+	elif [[ "$1" == "--nomain" ]];then #help usefull to help on installing only extras and examples alone
+		bInstallMain=false
 	elif [[ "$1" == "--extras" ]];then #help install extras
 		bInstallExtras=true
 	elif [[ "$1" == "--examples" ]];then #help install examples
@@ -146,14 +149,14 @@ done
 if [[ -z "$pathInstallPrefix" ]];then
 	FUNCexit "ERROR: missing prefix path to install" 1
 fi
-if [[ -z "$pathLibPrefix" ]];then
-	pathLibPrefix="$pathInstallPrefix/lib"
-fi
 if [[ -z "$pathBinPrefix" ]];then
-	pathBinPrefix="$pathInstallPrefix/bin"
+	pathBinPrefix="$pathInstallPrefix/usr/bin"
+fi
+if [[ -z "$pathLibPrefix" ]];then
+	pathLibPrefix="$pathInstallPrefix/usr/lib"
 fi
 if [[ -z "$pathDocPrefix" ]];then
-	pathDocPrefix="$pathInstallPrefix/share/doc/ScriptEchoColor"
+	pathDocPrefix="$pathInstallPrefix/usr/share/doc/ScriptEchoColor"
 fi
 
 echo "INFO: Deploying at: $pathInstallPrefix"
@@ -181,19 +184,23 @@ FUNCexecEcho sudo mkdir -vp "$pathBinPrefix"
 FUNCexecEcho sudo mkdir -vp "$pathDocPrefix"
 
 ####### copy application
-#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.SVN/scriptechocolor/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
-#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
-#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/*" "$pathInstallPrefix" ; FUNCexitIfFail $?
-FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/share/doc/ScriptEchoColor/"* \
-	"$pathDocPrefix" ; FUNCexitIfFail $?
-FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/lib/"* \
-	"$pathLibPrefix" ; FUNCexitIfFail $?
-FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin/"* \
-	"$pathBinPrefix" ; FUNCexitIfFail $?
+if $bInstallMain;then
+	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.SVN/scriptechocolor/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
+	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
+	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/*" "$pathInstallPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/share/doc/ScriptEchoColor/"* \
+		"$pathDocPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/lib/"* \
+		"$pathLibPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin/"* \
+		"$pathBinPrefix" ; FUNCexitIfFail $?
+fi
+
 if $bInstallExtras;then
 	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.extras/"* \
 	"$pathBinPrefix" ; FUNCexitIfFail $?
 fi
+
 if $bInstallExamples;then
 	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.examples/"* \
 	"$pathBinPrefix" ; FUNCexitIfFail $?
