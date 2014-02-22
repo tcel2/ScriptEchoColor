@@ -919,7 +919,7 @@ FUNCguessTermEmulator(){
   if [[ -n "$strUnkownPossibleTermEmuList" ]]; then
     echo "(\"$strValidList\" \"$strUnkownPossibleTermEmuList\")"
   else
-    echo "$strValidList"
+    echo "($strValidList)"
   fi
 }
 
