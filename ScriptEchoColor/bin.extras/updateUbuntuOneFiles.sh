@@ -287,6 +287,7 @@ function FUNClsNot() { #synchronize like
 
 if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
+	#secDaemonsControl.sh --register
 	
 	strBkgWrkopt=""
 	if $bCmpData;then

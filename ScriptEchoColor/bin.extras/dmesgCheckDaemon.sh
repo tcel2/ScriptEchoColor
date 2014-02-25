@@ -23,7 +23,9 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 eval `secinit`
+
 SECFUNCuniqueLock --daemonwait
+#secDaemonsControl.sh --register
 
 renice -n 19 $$
 

@@ -277,6 +277,7 @@ if $bDaemon;then
 #		exit 1
 #	fi
 	SECFUNCuniqueLock --daemonwait
+	#secDaemonsControl.sh --register
 	
 	while [[ ! -d "$fastMedia" ]];do
 		echoc -t 1 -w "configure fast media path"

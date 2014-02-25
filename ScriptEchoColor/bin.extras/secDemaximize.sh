@@ -28,6 +28,7 @@ eval `secLibsInit`
 aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$")
 
 SECFUNCuniqueLock --daemonwait
+#secDaemonsControl.sh --register
 
 eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
 varset --show nScreenWidth=$nScreenWidth # to ease find code

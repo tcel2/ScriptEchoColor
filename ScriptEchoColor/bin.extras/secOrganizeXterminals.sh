@@ -112,6 +112,7 @@ if $bDaemon;then
 #		exit 1
 #	fi
 	SECFUNCuniqueLock --daemonwait
+	#secDaemonsControl.sh --register
 fi
 
 ###### CONFIG 

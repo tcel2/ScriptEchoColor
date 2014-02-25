@@ -26,6 +26,7 @@
 eval `secinit`
 
 SECFUNCuniqueLock --daemonwait
+#secDaemonsControl.sh --register
 
 waitStart=3
 delayRaiseTabOutliner=0.1

@@ -59,7 +59,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bList=true
 	elif [[ "$1" == "--daemon" ]];then #help loop --list
 		bDaemon=true
-	elif [[ "$1" == "--register" ]];then #help register the daemon to be listed, not controlled.
+	elif [[ "$1" == "--register" ]];then #help register the daemon (to be listed).
 		bRegisterOnly=true
 	elif [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp
@@ -128,7 +128,7 @@ fi
 
 if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
-	FUNCregisterDaemon
+	#FUNCregisterDaemon
 	while true;do
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		FUNClist

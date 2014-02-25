@@ -1156,8 +1156,13 @@ function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 #	local lstrFile="$SEC_TmpFolder/SEC.DaemonsControl.tmp"
 #}
 function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
+	: ${SECbDaemonRegistered:=false}
+	if ! $SECbDaemonRegistered;then
+		secDaemonsControl.sh --register
+		SECbDaemonRegistered=true
+	fi
 	_SECFUNCdaemonCheckHold_SubShell() {
-		# to protect parent envinronment
+		# IMPORTANT: subshell to protect parent envinronment variable SECcfgFileName
 		local bHoldScripts=false
 		SECFUNCcfgFileName secDaemonsControl.sh
 		SECFUNCcfgRead
