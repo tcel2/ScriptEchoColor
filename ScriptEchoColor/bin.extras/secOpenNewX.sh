@@ -854,8 +854,7 @@ while ps -p $pidX1 >/dev/null 2>&1; do
 done
 
 echoc --say "X1 closed"
-#echoc -w "exit"
+#echoc -w "exit..."
 #echoc -x "kill $pidZenity0"
 #echoc -w -t 5
-
 
