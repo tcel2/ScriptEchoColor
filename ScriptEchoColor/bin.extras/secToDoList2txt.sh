@@ -23,7 +23,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-##################### INIT/CFG
+##################### INIT/CFG/FUNCTIONS
 eval `secinit`
 
 bHTML=true
@@ -40,6 +40,13 @@ SECFUNCcfgFileName #to prepare the filename variable $SECcfgFileName
 
 function FUNCbluetoothChannel () {
 	sdptool browse "$1" |grep "Service Name: Object Push" -A 20 |grep "Channel: "|head -n 1 |tr -d ' ' |cut -d: -f2
+}
+
+function FUNCdebugVar () {
+	echoc --info "$1"
+	eval "echo \"\$$1\""
+	echoc -w
+	exit
 }
 
 ##################### OPTIONS
@@ -92,6 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	shift
 done
 
+################## SAVE/LOAD AUTO CONFIG
 if $bStoreConfiguration;then
 	echoc -x "rm -v \"$SECcfgFileName\""
 	SECFUNCcfgWriteVar strSDCardUUID
@@ -108,6 +116,7 @@ if ! $bHasOptions;then
 	fi
 fi
 
+################ CHOOSE FILE
 if [[ -z "${1-}" ]];then
 	if [[ -n "$strSDCardUUID" ]];then
 		strLinksTo="`readlink "$strDiskByUUIDpath/$strSDCardUUID"`"
@@ -145,22 +154,31 @@ strFileData=`cat "$strFile"`
 strFileData=`echo "$strFileData" |tr -d "\n" |sed 's"</[[:alnum:]]*>"&\n"g'`
 
 # create group array
+nIndexMax=0
 aGroupName=()
-eval `echo "$strFileData" |grep "^<group" |sed -r 's#^<group id="([[:digit:]]*)"><\!\[CDATA\[(.*)\]\]></group>$#aGroupName[\1]="\2";#'`
+eval `echo "$strFileData" |grep "^<group" |sed -r 's#\
+^<group id="([[:digit:]]*)"><\!\[CDATA\[(.*)\]\]></group>$#\
+if((\1>nIndexMax));then varset nIndexMax=\1;fi;aGroupName[\1]="\2";#'`
+varset --show aGroupName
+varset --show nIndexMax="$nIndexMax"
 
-nIndexBegin=0
-while [[ -z "${aGroupName[nIndexBegin]-}" ]];do
-	((nIndexBegin++))
-done
+#varset --show nIndexBegin=0
+#while [[ -z "${aGroupName[nIndexBegin]-}" ]];do
+#	((nIndexBegin++))
+#done
 
-nIndexEnd=$nIndexBegin
-while [[ -n "${aGroupName[nIndexEnd]-}" ]];do
-	((nIndexEnd++))
-done
+#varset --show nIndexEnd=$nIndexBegin
+#while [[ -n "${aGroupName[nIndexEnd]-}" ]];do
+#	((nIndexEnd++))
+#done
 
 # prepare output
 strFileOuput="${strFile}.txt"
-for((nIndex=nIndexBegin;nIndex<nIndexEnd;nIndex++));do
+#for((nIndex=nIndexBegin;nIndex<nIndexEnd;nIndex++));do
+for((nIndex=0;nIndex<=nIndexMax;nIndex++));do
+	if [[ -z "${aGroupName[nIndex]-}" ]];then
+		continue
+	fi
 	#strFileData=`echo "$strFileData" |sed "s;group=\"$nIndex\";group=\"${aGroupName[nIndex]}\";g"`
 	#echo
 	if [[ "${aGroupName[nIndex]:0:1}" != "-" ]];then
@@ -219,6 +237,10 @@ echoc --info "ORIGINAL: $strFile"
 echoc --info "TXT: $strFileOuput"
 echoc --info "HTML: $strFileOuputHTML"
 
+echoc -x "cp -v \"$strFileOuput\" \"$strBackupPath\" #simple backup"
+echoc -x "cp -v \"$strFileOuputHTML\" \"$strBackupPath\" #simple backup"
+
+############# SEND HTML THRU BLUETOOTH
 if [[ -n "$strBluetoothAddress" ]];then
 	nRet=1
 	while((nRet==1));do
