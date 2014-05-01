@@ -1,5 +1,4 @@
-#!/bin/bash
-# Copyright (C) 2004-2014 by Henrique Abdalla
+# Copyright (C) 2004-2012 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -22,12 +21,15 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit` #auto create DB based on pid
+include Makefile.cfg
 
-pidOtherScript=`ps -A -o pid,command |grep secExplShareEnvVarsA.sh |grep -v grep |sed -r 's"^[ ]*([[:digit:]]*) .*"\1"'`
-varsetdb $pidOtherScript #changes the auto created DB to be the other script DB
-
-while true; do
-	varset var1=`echoc -S "type new value"`
-done
-
+default:
+	@echo to install type: make install
+  
+install:
+	@echo "INSTALL"
+	mkdir -pv "$(INSTPREFIX)"
+	cp -vR "bin" "$(INSTPREFIX)"
+	cp -vR "doc" "$(INSTPREFIX)"
+	cp -vR "lib" "$(INSTPREFIX)"
+	@echo
