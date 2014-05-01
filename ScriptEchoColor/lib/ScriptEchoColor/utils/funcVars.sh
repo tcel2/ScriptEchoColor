@@ -129,7 +129,8 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 			SECFUNCdbgFuncOutA;return
 		else
 			# skip files that have symlinks pointing to it
-			local lnSymlinkToFileCount=`find $SEC_TmpFolder -maxdepth 1 -lname "$lfile" |wc -l`
+			#local lnSymlinkToFileCount="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -lname "$lfile" |wc -l`" #-ignore_readdir_race is not working...
+			local lnSymlinkToFileCount="`ls -l |egrep " -> $lfile$" |wc -l`"
 			if((lnSymlinkToFileCount>=1));then
 				SECFUNCechoDbgA "HAS SYMLINK: $lfile"
 				SECFUNCdbgFuncOutA;return
@@ -142,7 +143,14 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	};export -f SECFUNCvarClearTmpFiles_removeFilesForDeadPids;
 	
 	# Remove symlinks for dead pids
-	find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.vars.tmp" -exec bash -c "SECFUNCvarClearTmpFiles_removeFilesForDeadPids \"{}\"" \;
+	#find $SEC_TmpFolder -ignore_readdir_race -maxdepth 1 -name "SEC.*.vars.tmp" -exec bash -c "SECFUNCvarClearTmpFiles_removeFilesForDeadPids \"{}\"" \; #-ignore_readdir_race is not working...
+	#set -x
+	#find "$SEC_TmpFolder/" -maxdepth 1 -name "SEC.*.vars.tmp" 2>/dev/null |while read lstrFoundFile 2>/dev/null; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
+	#set +x
+	#local lfilesList="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -name "SEC.*.vars.tmp" 2>/dev/null`"
+	#local lfilesList="`ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null`"
+	#echo "$lfilesList" |while read lstrFoundFile 2>/dev/null; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
+	ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null |while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
 	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >/dev/stderr
 	SECFUNCdbgFuncOutA
 }
@@ -863,7 +871,8 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	# config
 	local l_prefix="SEC"
 	local l_sufix="vars.tmp"
-	local lstrId="`basename "$0"`"
+	local lstrCanonicalFileName="`readlink -f "$0"`"
+	local lstrId="`basename "$lstrCanonicalFileName"`"
 	lstrId="`SECFUNCfixIdA --justfix "$lstrId"`"
 	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.$lstrId.$$.$l_sufix"
 	local l_basename=""

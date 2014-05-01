@@ -958,7 +958,10 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	#fi
 	else
 	#if [[ -z "$SECcfgFileName" ]];then
-		SECcfgFileName="$lpath/`basename "$0"`.cfg"
+		local lstrCanonicalFileName="`readlink -f "$0"`"
+		#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >/dev/stderr
+		#SECcfgFileName="$lpath/`basename "$0"`.cfg"
+		SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
 	fi
 	
 	#echo "$lpath/${SECcfgFileName}.cfg"

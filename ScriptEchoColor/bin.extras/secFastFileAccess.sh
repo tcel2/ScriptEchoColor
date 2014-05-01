@@ -26,7 +26,8 @@
 
 eval `secLibsInit`
 
-selfName=`basename "$0"`
+canonicalSelfFileName="`readlink -f "$0"`"
+selfName="`basename "$canonicalSelfFileName"`"
 cfgPath="$HOME/.ScriptEchoColor/$selfName"
 cfgManagedFiles="$cfgPath/managedFiles.cfg"
 fastMedia="$cfgPath/.fastMedia"
@@ -287,6 +288,10 @@ if $bDaemon;then
 	varset bForceValidationOnce=true #will be initially forced once
 	while true; do
 		SECFUNCvarReadDB
+		
+		if $bForceDisableFastMedia;then
+			echoc --alert "Fast media disabled!"
+		fi
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
