@@ -110,6 +110,20 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncInA
 	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >/dev/stderr
 	
+	# a control file to clean once only after a delay
+	lstrClearControlFile="$SEC_TmpFolder/.SEC.ClearTmpFiles.LastDateTimeStamp"
+	if [[ ! -a "$lstrClearControlFile" ]];then
+		echo -n >"$lstrClearControlFile"
+	fi
+	local lnSecondsFile=`stat -c "%Y" "$lstrClearControlFile"`;
+	local lnSecondsNow=`date +"%s"`;
+	local lnSecondsDelay=$((lnSecondsNow-lnSecondsFile))
+	if((lnSecondsDelay>60));then #one minute delay
+		touch "$lstrClearControlFile"
+	else
+		SECFUNCdbgFuncOutA;return
+	fi
+	
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		local lfile="$1";
 		
