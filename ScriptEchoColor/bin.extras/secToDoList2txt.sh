@@ -35,7 +35,7 @@ if ! which echoc >/dev/null 2>&1 ; then
 fi
 
 strDiskByUUIDpath="/dev/disk/by-uuid/"
-varset --show strBackupPath="$HOME/Documents/"
+varset --show strBackupPath="`readlink -f "$HOME/Documents/"`"
 SECFUNCcfgFileName #to prepare the filename variable $SECcfgFileName
 
 function FUNCbluetoothChannel () {
@@ -60,6 +60,7 @@ fi
 strSDCardUUID=""
 strBluetoothAddress=""
 bStoreConfiguration=false
+varset bDoAllGroups=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echoc --info "Parser for xml exported from app @rToDo List@b for @rAndroid@b."
@@ -92,12 +93,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		exit
 	elif [[ "$1" == "--cfg" ]];then #help store all the setup made on the current command line for later automatic use in case there is no options in the command line then
 		bStoreConfiguration=true
+	elif [[ "$1" == "--doallgroups" ]];then #help will not ignore any groups
+		varset --show bDoAllGroups=true
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
 	shift
 done
+
+varset --show strFile="`readlink -f "${1-}"`"
 
 ################## SAVE/LOAD AUTO CONFIG
 if $bStoreConfiguration;then
@@ -117,7 +122,7 @@ if ! $bHasOptions;then
 fi
 
 ################ CHOOSE FILE
-if [[ -z "${1-}" ]];then
+if [[ -z "$strFile" ]];then
 	if [[ -n "$strSDCardUUID" ]];then
 		strLinksTo="`readlink "$strDiskByUUIDpath/$strSDCardUUID"`"
 		strDeviceName="`basename "$strLinksTo"`"
@@ -136,8 +141,6 @@ if [[ -z "${1-}" ]];then
 	else
 		varset --show strFile="`ls -1 $HOME/Documents/ToDoList_*.xml |sort |tail -n 1`"
 	fi
-else
-	strFile="$1"
 fi
 
 if [[ ! -f "$strFile" ]];then
@@ -181,7 +184,7 @@ for((nIndex=0;nIndex<=nIndexMax;nIndex++));do
 	fi
 	#strFileData=`echo "$strFileData" |sed "s;group=\"$nIndex\";group=\"${aGroupName[nIndex]}\";g"`
 	#echo
-	if [[ "${aGroupName[nIndex]:0:1}" != "-" ]];then
+	if $bDoAllGroups || [[ "${aGroupName[nIndex]:0:1}" != "-" ]];then
 		echo "GROUP: ${aGroupName[nIndex]}"
 		echo "$strFileData" \
 			|grep "^<item" \
@@ -237,8 +240,11 @@ echoc --info "ORIGINAL: $strFile"
 echoc --info "TXT: $strFileOuput"
 echoc --info "HTML: $strFileOuputHTML"
 
-echoc -x "cp -v \"$strFileOuput\" \"$strBackupPath\" #simple backup"
-echoc -x "cp -v \"$strFileOuputHTML\" \"$strBackupPath\" #simple backup"
+#echo ">>>`dirname "$strFileOuput"`"
+if [[ "`dirname "$strFileOuput"`" != "$strBackupPath" ]];then
+	echoc -x "cp -v \"$strFileOuput\" \"$strBackupPath\" #simple backup"
+	echoc -x "cp -v \"$strFileOuputHTML\" \"$strBackupPath\" #simple backup"
+fi
 
 ############# SEND HTML THRU BLUETOOTH
 if [[ -n "$strBluetoothAddress" ]];then
