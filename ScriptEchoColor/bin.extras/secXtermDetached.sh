@@ -110,7 +110,7 @@ if [[ -n "$strTitleForce" ]];then
 	varset strTitle="$strTitleForce"
 else
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
-	varset strTitle="`SECFUNCfixId "$1"`"
+	varset strTitle="`SECFUNCfixId --justfix "$1"`"
 	#shift # do NOT use shift here!!!
 fi
 
