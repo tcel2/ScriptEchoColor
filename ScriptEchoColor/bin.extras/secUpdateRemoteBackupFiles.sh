@@ -30,7 +30,6 @@ FUNCtrap
 eval `secinit`
 
 ############### INTERNAL CFG
-export pathUbuntuOne="$HOME/Ubuntu One"
 sedQuoteLines='s".*"\"&\""'
 sedRemoveHomePath="s;^$HOME;.;"
 sedQuoteLinesForZenitySelection="s;.*;false '&';"
@@ -46,6 +45,11 @@ sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_UR
 
 export bGoFastOnce=false
 varset --default bInterruptAsk=false
+
+############### USER CFG
+
+export pathRemoteBackupFolder=""
+SECFUNCcfgRead
 
 ############### OPTIONS
 
@@ -64,7 +68,7 @@ export bBackgroundWork=false
 varset --default --show bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help: show this help
-		echo "Updates files at Ubuntu One folder if they already exist there, relatively to your home folder."
+		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
 		#grep "#@help" "$0" |grep -v grep |sed -r 's".*\"[$]1\" == \"(--[[:alnum:]]*)\".*#@help:(.*)$"\t\1\t\2"'
 		SECFUNCshowHelp
 		exit 0
@@ -77,7 +81,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bWait=true
 	elif [[ "$1" == "--skipnautilus" ]]; then #help: 
 		bSkipNautilusCheckNow=true
-	elif [[ "$1" == "--addfiles" ]]; then #help: <files...> add files to ubuntu one! this is also default option if the param is a file, no need to put this option.
+	elif [[ "$1" == "--addfiles" ]]; then #help: <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
 	elif [[ "$1" == "--cmpdata" ]]; then #help: if size and time are equal, compare data for differences
 		bCmpData=true
@@ -85,19 +89,23 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #help: between each copy will be added a delay
 		bBackgroundWork=true
-	elif [[ "$1" == "--autogit" ]]; then #help: all files at Ubuntu One will be versioned (with history)
+	elif [[ "$1" == "--autogit" ]]; then #help: all files at Remote Backup Folder will be versioned (with history)
 		varset bAutoGit=true
 	elif [[ "$1" == "--autosync" ]]; then #help: will automatically copy the changes without asking
 		varset --show bAutoSync=true
-	elif [[ "$1" == "--lsr" ]]; then #help: will list what files, of current folder recursively, are at ubuntu one!
-		ls -lR "$HOME/Ubuntu One/`pwd |sed "s'$HOME/''"`"
+	elif [[ "$1" == "--lsr" ]]; then #help: will list what files, of current folder recursively, are at Remote Backup Folder!
+		ls -lR "$pathRemoteBackupFolder/`pwd |sed "s'$HOME/''"`"
 		exit 0
-	elif [[ "$1" == "--lsnot" ]]; then #help: will list files of current folder are NOT at ubuntu one (use with --addfiles to show a dialog at X to select files to add!)
+	elif [[ "$1" == "--lsnot" ]]; then #help: will list files of current folder are NOT at Remote Backup Folder (use with --addfiles to show a dialog at X to select files to add!)
 		bLsNot=true
-	elif [[ "$1" == "--lsmisshist" ]]; then #help: will list missing files on ubuntu one folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
+	elif [[ "$1" == "--lsmisshist" ]]; then #help: will list missing files on Remote Backup Folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
 		bLsMissHist=true
-	elif [[ "$1" == "--recreatehist" ]]; then #help: will recreate the history file based on what is at Ubuntu One folder..
+	elif [[ "$1" == "--recreatehist" ]]; then #help: will recreate the history file based on what is at Remote Backup Folder..
 		bRecreateHistory=true
+	elif [[ "$1" == "--setbkpfolder" ]]; then #help: this option should be run alone. This is a required setup of the folder that will be the target of remote backups, ex.: $HOME/Dropbox/Home
+		shift
+		pathRemoteBackupFolder="$1"
+		SECFUNCcfgWriteVar pathRemoteBackupFolder
 	else	
 		echoc -p "invalid option $1"
 		exit 1
@@ -105,6 +113,27 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	
 	shift
 done
+
+if [[ ! -d "$pathRemoteBackupFolder" ]];then
+	echoc -p "required setup with option: --setbkpfolder"
+	if [[ ! -a "$pathRemoteBackupFolder" ]];then
+		echoc -p "missing folder pathRemoteBackupFolder='$pathRemoteBackupFolder'"
+		if echoc -q "create folder '$pathRemoteBackupFolder'?";then
+			if ! mkdir -v "$pathRemoteBackupFolder";then
+				exit 1
+			fi
+		else
+			exit
+		fi
+	else
+		echoc -p "invalid folder pathRemoteBackupFolder='$pathRemoteBackupFolder'"
+		ls -l "$pathRemoteBackupFolder"
+		echoc -w
+		exit 1
+	fi
+fi
+
+echoc --info "pathRemoteBackupFolder='$pathRemoteBackupFolder'"
 
 ############### OPTIONS NAUTILUS WAY
 
@@ -166,18 +195,18 @@ function FUNCcopy() {
 	
 	#echo "bCmpData=$bCmpData"
 	if [[ -f "$realFile" ]];then
-		if((`stat -c%s "$realFile"`!=`stat -c%s "$pathUbuntuOne/$strFile"`));then
+		if((`stat -c%s "$realFile"`!=`stat -c%s "$pathRemoteBackupFolder/$strFile"`));then
 			# check by size
-			#echo "size changed `stat -c%s "$HOME/$strFile"`!=`stat -c%s "$pathUbuntuOne/$strFile"`"
+			#echo "size changed `stat -c%s "$HOME/$strFile"`!=`stat -c%s "$pathRemoteBackupFolder/$strFile"`"
 			bChanged=true;
-		elif((`stat -c%Y "$realFile"`!=`stat -c%Y "$pathUbuntuOne/$strFile"`));then
+		elif((`stat -c%Y "$realFile"`!=`stat -c%Y "$pathRemoteBackupFolder/$strFile"`));then
 			# check by last modification
-			#echo "modification time changed `stat -c%Y "$HOME/$strFile"`!=`stat -c%Y "$pathUbuntuOne/$strFile"`"
+			#echo "modification time changed `stat -c%Y "$HOME/$strFile"`!=`stat -c%Y "$pathRemoteBackupFolder/$strFile"`"
 			bChanged=true;
-	#	elif((`stat -c%Z "$realFile"`!=`stat -c%Z "$pathUbuntuOne/$strFile"`));then
+	#	elif((`stat -c%Z "$realFile"`!=`stat -c%Z "$pathRemoteBackupFolder/$strFile"`));then
 	#		# check by last change (same as modification)
 	#		bChanged=true;
-		elif $bCmpData && ! cmp -s "$HOME/$strFile" "$pathUbuntuOne/$strFile"; then
+		elif $bCmpData && ! cmp -s "$HOME/$strFile" "$pathRemoteBackupFolder/$strFile"; then
 	#		echo "data changed"
 			bChanged=true;
 		fi
@@ -185,19 +214,19 @@ function FUNCcopy() {
 		bChanged=true;
 	fi
 	
-	# do not allow symlinks on ubuntu one, must be real dada files
-	#ls -l "$pathUbuntuOne/$strFile"
-	if [[ -L "$pathUbuntuOne/$strFile" ]]; then
+	# do not allow symlinks on Remote Backup Folder, must be real dada files
+	#ls -l "$pathRemoteBackupFolder/$strFile"
+	if [[ -L "$pathRemoteBackupFolder/$strFile" ]]; then
 		bChanged=true;
 	fi
 	
 	if $bChanged; then
 		SECFUNCvarSet --showdbg nFilesChangedCount=$((++nFilesChangedCount))
 		
-		# this will remove from Ubuntu One, real files that are also missing at $HOME, so will sync properly (so wont work as backup)
-		cmdRm="trash -vf \"$pathUbuntuOne/$strFile\""
+		# this will remove from Remote Backup Folder, real files that are also missing at $HOME, so will sync properly (so wont work as backup)
+		cmdRm="trash -vf \"$pathRemoteBackupFolder/$strFile\""
 		
-		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathUbuntuOne/$strFile\""
+		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathRemoteBackupFolder/$strFile\""
 		if $bDoIt; then
 			echoc --info "working with: $strFile"
 			eval "$cmdRm"
@@ -223,10 +252,12 @@ function FUNCcopy() {
 		fi
 	fi
 	
-	echo -en "\r$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`\r"
+	# Progress report
+	#echo -en "\r$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`\r"
+	SECFUNCdrawLine --stay --left "$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`" " "
 };export -f FUNCcopy
 
-function FUNCzenitySelectAndAddFilesUbuOne() {
+function FUNCzenitySelectAndAddFiles() {
 	local listSelected=`zenity --list --checklist --column="" --column="file to add" "$@"`
 	#local listSelected="$1"
 	
@@ -237,14 +268,14 @@ function FUNCzenitySelectAndAddFilesUbuOne() {
 		echo "${alistSelected[@]}"
 		eval $0 --skipnautilus --addfiles "${alistSelected[@]}"
 	fi
-};export -f FUNCzenitySelectAndAddFilesUbuOne
+};export -f FUNCzenitySelectAndAddFiles
 
 function FUNClsNot() { #synchronize like
 	function FUNCfileCheck() { 
 		#echo "look for: $1"
 		local relativePath="$1"
 		local fileAtCurPath="$2"
-		local fileCheck="$HOME/Ubuntu One/$relativePath/$fileAtCurPath"; 
+		local fileCheck="$pathRemoteBackupFolder/$relativePath/$fileAtCurPath"; 
 		if [[ ! -f "$fileCheck" ]];then 
 			echo "$fileAtCurPath";
 		fi; 
@@ -255,7 +286,7 @@ function FUNClsNot() { #synchronize like
 	
 	listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileCheck \"$relativeToHome\" \"{}\"" \; |sort`
 	if [[ -n "$listOfFiles" ]];then
-		echoc --info "File list that are not at Ubuntu One:"
+		echoc --info "File list that are not at Remote Backup Folder:"
 		echo "$listOfFiles"
 	
 		if $bAddFilesMode;then
@@ -265,8 +296,8 @@ function FUNClsNot() { #synchronize like
 	
 			#listSelected=`zenity --list --checklist --column="" --column="file to add" "${alistOfFiles[@]}"`
 			
-			#FUNCzenitySelectAndAddFilesUbuOne "$listSelected"
-			FUNCzenitySelectAndAddFilesUbuOne "${alistOfFiles[@]}"
+			#FUNCzenitySelectAndAddFiles "$listSelected"
+			FUNCzenitySelectAndAddFiles "${alistOfFiles[@]}"
 #			if [[ -n "$listSelected" ]];then
 #				echoc --info "Selected files list:"
 #				echo "$listSelected"
@@ -279,7 +310,7 @@ function FUNClsNot() { #synchronize like
 
 		fi
 	else
-		echoc --info "All files are at Ubuntu One! "
+		echoc --info "All files are at Remote Backup Folder! "
 	fi
 };export -f FUNClsNot
 
@@ -323,9 +354,12 @@ if $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
 	mv -vf "$addFileHist" "${addFileHist}.old"
-	find "$pathUbuntuOne" -type f |sed -r "s'$pathUbuntuOne'$HOME'" |sort >"$addFileHist"
+	find "$pathRemoteBackupFolder" -type f |sed -r "s'$pathRemoteBackupFolder'$HOME'" |sort >"$addFileHist"
 	#cat "$addFileHist"
-	meld "$addFileHist" "${addFileHist}.old"
+	if echoc -t 3 -q "see differences on meld?";then
+		#echoc -x "diff \"$addFileHist\" \"${addFileHist}.old\""
+		meld "$addFileHist" "${addFileHist}.old"
+	fi
 elif $bLsMissHist; then
 	bkpIFS="$IFS"; #default is: " \t\n", hexa: 0x20,0x9,0xA, octa: 040,011,012
 	IFS=$'\n';
@@ -336,18 +370,18 @@ elif $bLsMissHist; then
 	for file in ${aAllFiles[@]};do
 		prefix=""
 		bMissingReal=false
-		bMissingUbu1=false
+		bMissingRBF=false
 		if [[ ! -e "$file" ]];then
 			prefix="${prefix}Real:"
 			bMissingReal=true
 		fi
-		if [[ ! -e "`echo "$file" |sed -r "s'^$HOME'$pathUbuntuOne'"`" ]];then
-			prefix="${prefix}Ubu1:"
-			bMissingUbu1=true
+		if [[ ! -e "`echo "$file" |sed -r "s'^$HOME'$pathRemoteBackupFolder'"`" ]];then
+			prefix="${prefix}RBF:"
+			bMissingRBF=true
 		fi
-		if $bMissingReal || $bMissingUbu1;then
+		if $bMissingReal || $bMissingRBF;then
 			echo "$prefix $file";
-			if ! $bMissingReal && $bMissingUbu1;then
+			if ! $bMissingReal && $bMissingRBF;then
 				aMissingFiles[$count]="false"
 				#aMissingFiles[$((count+1))]=`echo "$file" |sed "$sedRemoveHomePath"`
 				aMissingFiles[$((count+1))]=`echo "$file"`
@@ -362,8 +396,8 @@ elif $bLsMissHist; then
 		#eval aMissingFiles=(`echo "${aMissingFiles[@]}"`)
 		#listSelected=`zenity --list --checklist --column="" --column="file to add" "${aMissingFiles[@]}"`
 		
-		#FUNCzenitySelectAndAddFilesUbuOne "$listSelected"
-		FUNCzenitySelectAndAddFilesUbuOne "${aMissingFiles[@]}"
+		#FUNCzenitySelectAndAddFiles "$listSelected"
+		FUNCzenitySelectAndAddFiles "${aMissingFiles[@]}"
 #		if [[ -n "$listSelected" ]];then
 #			echoc --info "Selected files list:"
 #			echo "$listSelected"
@@ -385,8 +419,8 @@ elif $bAddFilesMode; then
 		
 		echoc --info "working with: $strFile"
 		
-		if [[ "${strFile:0:${#pathUbuntuOne}}" == "${pathUbuntuOne}" ]]; then
-			echoc -p "can only work with files outside of ubuntu one folder!!!"
+		if [[ "${strFile:0:${#pathRemoteBackupFolder}}" == "${pathRemoteBackupFolder}" ]]; then
+			echoc -p "can only work with files outside of Remote Backup Folder!!!"
 			continue
 		fi		
 		
@@ -396,7 +430,7 @@ elif $bAddFilesMode; then
 		fi
 		
 		# copy the file
-		strFileTarget="${pathUbuntuOne}/${strFile:${#HOME}}"
+		strFileTarget="${pathRemoteBackupFolder}/${strFile:${#HOME}}"
 		mkdir -vp "`dirname "$strFileTarget"`"
 		cp -vp "$strFile" "$strFileTarget"
 		
@@ -412,8 +446,8 @@ elif $bAddFilesMode; then
 elif $bLookForChanges;then
 	bDoItConfirmed=false
 	bDoIt=false
-	cd "$pathUbuntuOne"
-	echoc --info "Udpates Ubuntu One files if they exist there already."
+	cd "$pathRemoteBackupFolder"
+	echoc --info "Udpates Remote Backup Folder files if they exist there already."
 	nWaitDelay=$((60*30))
 	SECFUNCvarSet --default --show saidChangedAt=0
 	delayMinBetweenSays=10
@@ -423,7 +457,7 @@ elif $bLookForChanges;then
 		fi
 		
 		# list what will be done 1st
-		cd "$pathUbuntuOne"
+		cd "$pathRemoteBackupFolder"
 		SECFUNCvarSet nFilesCount=0
 		SECFUNCvarSet nFilesChangedCount=0
 		SECFUNCdelay --init
@@ -474,7 +508,7 @@ elif $bLookForChanges;then
 					((nFilesChangedCount>0)) && 
 					(((`date +"%s"`-saidChangedAt)>(60*delayMinBetweenSays)));
 			then
-				echoc --info --say "Ubuntu One Changed $nFilesChangedCount files."
+				echoc --info --say "Remote Backup Folder Changed $nFilesChangedCount files."
 				SECFUNCvarSet --show saidChangedAt=`date +"%s"`
 			fi
 			

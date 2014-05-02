@@ -48,6 +48,7 @@ function FUNCarrayFakeExport() {
 }
 export -f FUNCarrayFakeExport
 
+
 #example (works with bash 4.2.24):
 # source exportArray.sh
 # list=(a b c)
