@@ -422,16 +422,21 @@ function SECFUNCbcPrettyCalc() {
 function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	local lstrAlign="middle"
 	local lbStay=false
+	local lbTrunc=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdrawLine_help show help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-		elif [[ "$1" == "--left" ]];then #SECFUNCdrawLine_help align words at left
+		elif [[ "$1" == "--left" || "$1" == "-0" ]];then #SECFUNCdrawLine_help align words at left
 			lstrAlign="left"
-		elif [[ "$1" == "--right" ]];then #SECFUNCdrawLine_help align words at right
+		elif [[ "$1" == "--middle" || "$1" == "-1" ]];then #SECFUNCdrawLine_help align words at middle
+			lstrAlign="middle"
+		elif [[ "$1" == "--right" || "$1" == "-2" ]];then #SECFUNCdrawLine_help align words at right
 			lstrAlign="right"
 		elif [[ "$1" == "--stay" ]];then #SECFUNCdrawLine_help no newline at end, and appends \r
 			lbStay=true
+		elif [[ "$1" == "--notrunc" ]];then #SECFUNCdrawLine_help do not trunc line to fit columns
+			lbTrunc=false
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -468,8 +473,8 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	local lstrFill=`eval "printf \"%.0s${lstrFill}\" {1..${lnTerminalWidth}}"`
 	
 	case $lstrAlign in
-		middle) local lstrWordsMiddle=$lstrWords;;
 		left)   local lstrWordsLeft=$lstrWords;;
+		middle) local lstrWordsMiddle=$lstrWords;;
 		right)  local lstrWordsRight=$lstrWords;;
 	esac
 	
@@ -480,6 +485,13 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	if $lbStay;then
 		loptNewLine="-n"
 		loptCarryageReturn="\r"
+	fi
+	
+	#trunc
+	if $lbTrunc;then
+		if((${#lstrOutput}>lnTerminalWidth));then
+			lstrOutput="${lstrOutput:0:lnTerminalWidth}"
+		fi
 	fi
 	
 	echo -e $loptNewLine "$lstrOutput$loptCarryageReturn"
