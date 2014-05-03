@@ -36,6 +36,7 @@ sedQuoteLinesForZenitySelection="s;.*;false '&';"
 sedEncloseLineOnPliqs="s;.*;'&';"
 sedTrSeparatorToPliqs="s;[|];' ';g"
 addFileHist="$HOME/.`basename $0`.addFilesHistory.log"
+fileGitIgnoreList="$HOME/.`basename $0`.gitIgnore"
 sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 
 #
@@ -48,8 +49,9 @@ varset --default bInterruptAsk=false
 
 ############### USER CFG
 
-export pathRemoteBackupFolder=""
+export pathBackupsToRemote=""
 SECFUNCcfgRead
+echo $SECcfgFileName
 
 ############### OPTIONS
 
@@ -64,48 +66,52 @@ bLsNot=false
 bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
+fileToIgnoreOnGitAdd=""
 export bBackgroundWork=false
 varset --default --show bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-	if [[ "$1" == "--help" ]]; then #help: show this help
+	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
 		#grep "#@help" "$0" |grep -v grep |sed -r 's".*\"[$]1\" == \"(--[[:alnum:]]*)\".*#@help:(.*)$"\t\1\t\2"'
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--daemon" ]]; then #help: runs automatically forever
+	elif [[ "$1" == "--daemon" ]]; then #help runs automatically forever
 		bDaemon=true
 		#bLookForChanges=true
-	elif [[ "$1" == "--lookforchanges" ]]; then #help: look for changes and update, is automatically set with --daemon option
+	elif [[ "$1" == "--lookforchanges" ]]; then #help look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
-	elif [[ "$1" == "--wait" ]]; then #help: will wait a key press before exiting
+	elif [[ "$1" == "--wait" ]]; then #help will wait a key press before exiting
 		bWait=true
-	elif [[ "$1" == "--skipnautilus" ]]; then #help: 
+	elif [[ "$1" == "--skipnautilus" ]]; then #help 
 		bSkipNautilusCheckNow=true
-	elif [[ "$1" == "--addfiles" ]]; then #help: <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
+	elif [[ "$1" == "--addfiles" ]]; then #help <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
-	elif [[ "$1" == "--cmpdata" ]]; then #help: if size and time are equal, compare data for differences
+	elif [[ "$1" == "--cmpdata" ]]; then #help if size and time are equal, compare data for differences
 		bCmpData=true
-	elif [[ "$1" == "--confirmalways" ]]; then #help: will always accept to update the changes on the first check loop
+	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop
 		bConfirmAlways=true
-	elif [[ "$1" == "--background" ]]; then #help: between each copy will be added a delay
+	elif [[ "$1" == "--background" ]]; then #help between each copy will be added a delay
 		bBackgroundWork=true
-	elif [[ "$1" == "--autogit" ]]; then #help: all files at Remote Backup Folder will be versioned (with history)
+	elif [[ "$1" == "--autogit" ]]; then #help all files at Remote Backup Folder will be versioned (with history)
 		varset bAutoGit=true
-	elif [[ "$1" == "--autosync" ]]; then #help: will automatically copy the changes without asking
-		varset --show bAutoSync=true
-	elif [[ "$1" == "--lsr" ]]; then #help: will list what files, of current folder recursively, are at Remote Backup Folder!
-		ls -lR "$pathRemoteBackupFolder/`pwd |sed "s'$HOME/''"`"
-		exit 0
-	elif [[ "$1" == "--lsnot" ]]; then #help: will list files of current folder are NOT at Remote Backup Folder (use with --addfiles to show a dialog at X to select files to add!)
-		bLsNot=true
-	elif [[ "$1" == "--lsmisshist" ]]; then #help: will list missing files on Remote Backup Folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
-		bLsMissHist=true
-	elif [[ "$1" == "--recreatehist" ]]; then #help: will recreate the history file based on what is at Remote Backup Folder..
-		bRecreateHistory=true
-	elif [[ "$1" == "--setbkpfolder" ]]; then #help: this option should be run alone. This is a required setup of the folder that will be the target of remote backups, ex.: $HOME/Dropbox/Home
+	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
 		shift
-		pathRemoteBackupFolder="$1"
-		SECFUNCcfgWriteVar pathRemoteBackupFolder
+		fileToIgnoreOnGitAdd="$1"
+	elif [[ "$1" == "--autosync" ]]; then #help will automatically copy the changes without asking
+		varset --show bAutoSync=true
+	elif [[ "$1" == "--lsr" ]]; then #help will list what files, of current folder recursively, are at Remote Backup Folder!
+		ls -lR "$pathBackupsToRemote/`pwd |sed "s'$HOME/''"`"
+		exit 0
+	elif [[ "$1" == "--lsnot" ]]; then #help will list files of current folder are NOT at Remote Backup Folder (use with --addfiles to show a dialog at X to select files to add!)
+		bLsNot=true
+	elif [[ "$1" == "--lsmisshist" ]]; then #help will list missing files on Remote Backup Folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
+		bLsMissHist=true
+	elif [[ "$1" == "--recreatehist" ]]; then #help will recreate the history file based on what is at Remote Backup Folder..
+		bRecreateHistory=true
+	elif [[ "$1" == "--setbkpfolder" ]]; then #help this option should be run alone. This is a required setup of the folder that will be the target of remote backups, ex.: $HOME/Dropbox/Home
+		shift
+		pathBackupsToRemote="$1"
+		SECFUNCcfgWriteVar pathBackupsToRemote
 	else	
 		echoc -p "invalid option $1"
 		exit 1
@@ -114,26 +120,66 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	shift
 done
 
-if [[ ! -d "$pathRemoteBackupFolder" ]];then
+if [[ -z "$pathBackupsToRemote" ]];then
 	echoc -p "required setup with option: --setbkpfolder"
-	if [[ ! -a "$pathRemoteBackupFolder" ]];then
-		echoc -p "missing folder pathRemoteBackupFolder='$pathRemoteBackupFolder'"
-		if echoc -q "create folder '$pathRemoteBackupFolder'?";then
-			if ! mkdir -v "$pathRemoteBackupFolder";then
+	exit 1
+elif [[ ! -d "$pathBackupsToRemote" ]];then
+	if [[ ! -a "$pathBackupsToRemote" ]];then
+		echoc -p "missing folder pathBackupsToRemote='$pathBackupsToRemote'"
+		if echoc -q "create folder '$pathBackupsToRemote'?";then
+			if ! mkdir -v "$pathBackupsToRemote";then
 				exit 1
 			fi
 		else
 			exit
 		fi
 	else
-		echoc -p "invalid folder pathRemoteBackupFolder='$pathRemoteBackupFolder'"
-		ls -l "$pathRemoteBackupFolder"
+		echoc -p "invalid folder pathBackupsToRemote='$pathBackupsToRemote'"
+		ls -l "$pathBackupsToRemote"
 		echoc -w
 		exit 1
 	fi
 fi
 
-echoc --info "pathRemoteBackupFolder='$pathRemoteBackupFolder'"
+echoc --info "pathBackupsToRemote='$pathBackupsToRemote'"
+
+if [[ -n "$fileToIgnoreOnGitAdd" ]];then
+	if [[ ! -f "$fileToIgnoreOnGitAdd" ]];then
+		echoc -p "must be a file"
+		exit 1
+	fi
+	
+	if [[ "${fileToIgnoreOnGitAdd:0:2}" == "./" ]];then
+		fileToIgnoreOnGitAdd="`pwd`/${fileToIgnoreOnGitAdd:2}"
+	elif [[ "${fileToIgnoreOnGitAdd:0:1}" != "/" ]];then
+		fileToIgnoreOnGitAdd="`pwd`/$fileToIgnoreOnGitAdd"
+	fi
+	
+	echoc --info "git ignore: $fileToIgnoreOnGitAdd"
+	
+	if [[ "${fileToIgnoreOnGitAdd:0:${#pathBackupsToRemote}}" != "${pathBackupsToRemote}" ]];then
+		echoc -p "file must be under '$pathBackupsToRemote'"
+		exit 1
+	fi
+	
+	fileToIgnoreOnGitAdd="${fileToIgnoreOnGitAdd:${#pathBackupsToRemote}+1}"
+	echoc --info "git ignore: $fileToIgnoreOnGitAdd"
+	
+	if ! grep -q "$fileToIgnoreOnGitAdd" "$fileGitIgnoreList";then
+		fileIgnoreBkpTmp="${fileToIgnoreOnGitAdd}.gitIgnore.tmp"
+		pwdBkp="`pwd`"
+		cd "${pathBackupsToRemote}"
+		pwd
+		echoc -x "mv -v \"$fileToIgnoreOnGitAdd\" \"$fileIgnoreBkpTmp\""
+		echoc -x "git rm \"$fileToIgnoreOnGitAdd\""
+		echoc -x "mv -v \"$fileIgnoreBkpTmp\" \"$fileToIgnoreOnGitAdd\""
+		cd "$pwdBkp"
+		echo "$fileToIgnoreOnGitAdd" >>"$fileGitIgnoreList"
+	fi
+	
+	echoc -x "cat \"$fileGitIgnoreList\""
+	exit 0
+fi
 
 ############### OPTIONS NAUTILUS WAY
 
@@ -195,18 +241,18 @@ function FUNCcopy() {
 	
 	#echo "bCmpData=$bCmpData"
 	if [[ -f "$realFile" ]];then
-		if((`stat -c%s "$realFile"`!=`stat -c%s "$pathRemoteBackupFolder/$strFile"`));then
+		if((`stat -c%s "$realFile"`!=`stat -c%s "$pathBackupsToRemote/$strFile"`));then
 			# check by size
-			#echo "size changed `stat -c%s "$HOME/$strFile"`!=`stat -c%s "$pathRemoteBackupFolder/$strFile"`"
+			#echo "size changed `stat -c%s "$HOME/$strFile"`!=`stat -c%s "$pathBackupsToRemote/$strFile"`"
 			bChanged=true;
-		elif((`stat -c%Y "$realFile"`!=`stat -c%Y "$pathRemoteBackupFolder/$strFile"`));then
+		elif((`stat -c%Y "$realFile"`!=`stat -c%Y "$pathBackupsToRemote/$strFile"`));then
 			# check by last modification
-			#echo "modification time changed `stat -c%Y "$HOME/$strFile"`!=`stat -c%Y "$pathRemoteBackupFolder/$strFile"`"
+			#echo "modification time changed `stat -c%Y "$HOME/$strFile"`!=`stat -c%Y "$pathBackupsToRemote/$strFile"`"
 			bChanged=true;
-	#	elif((`stat -c%Z "$realFile"`!=`stat -c%Z "$pathRemoteBackupFolder/$strFile"`));then
+	#	elif((`stat -c%Z "$realFile"`!=`stat -c%Z "$pathBackupsToRemote/$strFile"`));then
 	#		# check by last change (same as modification)
 	#		bChanged=true;
-		elif $bCmpData && ! cmp -s "$HOME/$strFile" "$pathRemoteBackupFolder/$strFile"; then
+		elif $bCmpData && ! cmp -s "$HOME/$strFile" "$pathBackupsToRemote/$strFile"; then
 	#		echo "data changed"
 			bChanged=true;
 		fi
@@ -215,8 +261,8 @@ function FUNCcopy() {
 	fi
 	
 	# do not allow symlinks on Remote Backup Folder, must be real dada files
-	#ls -l "$pathRemoteBackupFolder/$strFile"
-	if [[ -L "$pathRemoteBackupFolder/$strFile" ]]; then
+	#ls -l "$pathBackupsToRemote/$strFile"
+	if [[ -L "$pathBackupsToRemote/$strFile" ]]; then
 		bChanged=true;
 	fi
 	
@@ -224,9 +270,9 @@ function FUNCcopy() {
 		SECFUNCvarSet --showdbg nFilesChangedCount=$((++nFilesChangedCount))
 		
 		# this will remove from Remote Backup Folder, real files that are also missing at $HOME, so will sync properly (so wont work as backup)
-		cmdRm="trash -vf \"$pathRemoteBackupFolder/$strFile\""
+		cmdRm="trash -vf \"$pathBackupsToRemote/$strFile\""
 		
-		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathRemoteBackupFolder/$strFile\""
+		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathBackupsToRemote/$strFile\""
 		if $bDoIt; then
 			echoc --info "working with: $strFile"
 			eval "$cmdRm"
@@ -275,7 +321,7 @@ function FUNClsNot() { #synchronize like
 		#echo "look for: $1"
 		local relativePath="$1"
 		local fileAtCurPath="$2"
-		local fileCheck="$pathRemoteBackupFolder/$relativePath/$fileAtCurPath"; 
+		local fileCheck="$pathBackupsToRemote/$relativePath/$fileAtCurPath"; 
 		if [[ ! -f "$fileCheck" ]];then 
 			echo "$fileAtCurPath";
 		fi; 
@@ -354,7 +400,7 @@ if $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
 	mv -vf "$addFileHist" "${addFileHist}.old"
-	find "$pathRemoteBackupFolder" -type f |sed -r "s'$pathRemoteBackupFolder'$HOME'" |sort >"$addFileHist"
+	find "$pathBackupsToRemote" -type f |sed -r "s'$pathBackupsToRemote'$HOME'" |sort >"$addFileHist"
 	#cat "$addFileHist"
 	if echoc -t 3 -q "see differences on meld?";then
 		#echoc -x "diff \"$addFileHist\" \"${addFileHist}.old\""
@@ -375,7 +421,7 @@ elif $bLsMissHist; then
 			prefix="${prefix}Real:"
 			bMissingReal=true
 		fi
-		if [[ ! -e "`echo "$file" |sed -r "s'^$HOME'$pathRemoteBackupFolder'"`" ]];then
+		if [[ ! -e "`echo "$file" |sed -r "s'^$HOME'$pathBackupsToRemote'"`" ]];then
 			prefix="${prefix}RBF:"
 			bMissingRBF=true
 		fi
@@ -419,7 +465,7 @@ elif $bAddFilesMode; then
 		
 		echoc --info "working with: $strFile"
 		
-		if [[ "${strFile:0:${#pathRemoteBackupFolder}}" == "${pathRemoteBackupFolder}" ]]; then
+		if [[ "${strFile:0:${#pathBackupsToRemote}}" == "${pathBackupsToRemote}" ]]; then
 			echoc -p "can only work with files outside of Remote Backup Folder!!!"
 			continue
 		fi		
@@ -430,7 +476,7 @@ elif $bAddFilesMode; then
 		fi
 		
 		# copy the file
-		strFileTarget="${pathRemoteBackupFolder}/${strFile:${#HOME}}"
+		strFileTarget="${pathBackupsToRemote}/${strFile:${#HOME}}"
 		mkdir -vp "`dirname "$strFileTarget"`"
 		cp -vp "$strFile" "$strFileTarget"
 		
@@ -446,7 +492,7 @@ elif $bAddFilesMode; then
 elif $bLookForChanges;then
 	bDoItConfirmed=false
 	bDoIt=false
-	cd "$pathRemoteBackupFolder"
+	cd "$pathBackupsToRemote"
 	echoc --info "Udpates Remote Backup Folder files if they exist there already."
 	nWaitDelay=$((60*30))
 	SECFUNCvarSet --default --show saidChangedAt=0
@@ -457,7 +503,7 @@ elif $bLookForChanges;then
 		fi
 		
 		# list what will be done 1st
-		cd "$pathRemoteBackupFolder"
+		cd "$pathBackupsToRemote"
 		SECFUNCvarSet nFilesCount=0
 		SECFUNCvarSet nFilesChangedCount=0
 		SECFUNCdelay --init
@@ -485,7 +531,11 @@ elif $bLookForChanges;then
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
 			echoc -x "git init" #no problem as I read
-			echoc -x "git add --all" #add missing files on git
+			git config core.excludesfile "$fileGitIgnoreList"
+#			if [[ ! -a "$pathBackupsToRemote/.gitignore" ]];then
+#				echo -n >"$pathBackupsToRemote/.gitignore"
+#			fi
+			echoc -x "git add -v --all" #add missing files on git
 			echoc -x "git commit -m \"`SECFUNCdtTimePrettyNow`\""
 		fi
 		
