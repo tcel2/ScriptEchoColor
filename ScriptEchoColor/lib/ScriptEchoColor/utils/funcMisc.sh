@@ -1216,6 +1216,19 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 	bash -c "_SECFUNCdaemonCheckHold_SubShell"
 }
 
+function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a real file (not the symlink) is not active (has not been updated or touch)
+	local lfile="`readlink -f "$1"`"
+	if [[ ! -a "$lfile" ]];then
+		SECFUNCechoErrA "invalid file '$lfile'"
+		return 1
+	fi
+	
+	local lnSecondsFile=`stat -c "%Y" "$lfile"`;
+	local lnSecondsNow=`date +"%s"`;
+	local lnSecondsDelay=$((lnSecondsNow-lnSecondsFile))
+	echo "$lnSecondsDelay"
+}
+
 #function SECFUNCexit() { #useful to do 'before exit' tasks
 #	local lnStatus=$?
 #	if [[ -n "${1-}" ]];then

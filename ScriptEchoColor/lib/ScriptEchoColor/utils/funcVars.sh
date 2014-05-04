@@ -130,10 +130,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	if [[ ! -a "$lstrClearControlFile" ]];then
 		echo -n >"$lstrClearControlFile"
 	fi
-	local lnSecondsFile=`stat -c "%Y" "$lstrClearControlFile"`;
-	local lnSecondsNow=`date +"%s"`;
-	local lnSecondsDelay=$((lnSecondsNow-lnSecondsFile))
-	if $lbForce || ((lnSecondsDelay>60));then #one minute delay
+	if $lbForce || ((`SECFUNCfileSleepDelay "$lstrClearControlFile"`>60));then #one minute delay
 		touch "$lstrClearControlFile"
 	else
 		SECFUNCdbgFuncOutA;return
@@ -155,6 +152,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		fi
 		
 		if ps -p $lnPid >/dev/null 2>&1; then 
+			# skip files that have active pid
 			SECFUNCdbgFuncOutA;return
 		else
 			# skip files that have symlinks pointing to it
@@ -162,6 +160,11 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 			local lnSymlinkToFileCount="`ls -l |egrep " -> $lfile$" |wc -l`"
 			if((lnSymlinkToFileCount>=1));then
 				SECFUNCechoDbgA "HAS SYMLINK: $lfile"
+				SECFUNCdbgFuncOutA;return
+			fi
+			
+			# skip files the were last active (modified or touch) for less than 10 minutes #TODO this is a hack, a child process should fastly link to parent file but "sometimes it seems to not happen"? would require confirmation...
+			if((`SECFUNCfileSleepDelay "$lfile"`<600));then
 				SECFUNCdbgFuncOutA;return
 			fi
 			
