@@ -108,6 +108,21 @@ fi
 
 function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncInA
+	
+	local lbForce=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+		if [[ "$1" == "--force" ]]; then #SECFUNCvarSet_help will force clean now
+			lbForce=true
+		elif [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		else
+			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			return 1
+		fi
+		shift
+	done
+	
 	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >/dev/stderr
 	
 	# a control file to clean once only after a delay
@@ -118,7 +133,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	local lnSecondsFile=`stat -c "%Y" "$lstrClearControlFile"`;
 	local lnSecondsNow=`date +"%s"`;
 	local lnSecondsDelay=$((lnSecondsNow-lnSecondsFile))
-	if((lnSecondsDelay>60));then #one minute delay
+	if $lbForce || ((lnSecondsDelay>60));then #one minute delay
 		touch "$lstrClearControlFile"
 	else
 		SECFUNCdbgFuncOutA;return
@@ -127,7 +142,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		local lfile="$1";
 		
-		if [[ ! -a "$lfile" ]];then
+		if [[ ! -f "$lfile" ]] && [[ ! -L "$lfile" ]];then
 			return
 		fi
 		
