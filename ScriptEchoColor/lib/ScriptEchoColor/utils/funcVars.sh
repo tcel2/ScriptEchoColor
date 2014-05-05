@@ -139,10 +139,16 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		local lfile="$1";
 		
+		# the file must exist
 		if [[ ! -f "$lfile" ]] && [[ ! -L "$lfile" ]];then
 			return
 		fi
 		
+		if [[ -L "$lfile" ]] && [[ ! -a "$lfile" ]];then
+			SECFUNCechoWarnA "the symlink '$lfile -> `readlink "$lfile"`' is broken..."
+		fi
+		
+		# the pid must be written properly
 		local lsedPidFromFile='s".*[.]([[:digit:]]*)[.]vars[.]tmp$"\1"';
 		local lnPid=`echo "$lfile" |sed -r "$lsedPidFromFile"`;
 		# bad filename
@@ -151,27 +157,28 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		
+		# the pid must NOT be running
 		if ps -p $lnPid >/dev/null 2>&1; then 
 			# skip files that have active pid
 			SECFUNCdbgFuncOutA;return
-		else
-			# skip files that have symlinks pointing to it
-			#local lnSymlinkToFileCount="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -lname "$lfile" |wc -l`" #-ignore_readdir_race is not working...
-			local lnSymlinkToFileCount="`ls -l |egrep " -> $lfile$" |wc -l`"
-			if((lnSymlinkToFileCount>=1));then
-				SECFUNCechoDbgA "HAS SYMLINK: $lfile"
-				SECFUNCdbgFuncOutA;return
-			fi
-			
-			# skip files the were last active (modified or touch) for less than 10 minutes #TODO this is a hack, a child process should fastly link to parent file but "sometimes it seems to not happen"? would require confirmation...
-			if((`SECFUNCfileSleepDelay "$lfile"`<600));then
-				SECFUNCdbgFuncOutA;return
-			fi
-			
-			if ! SECFUNCexecA rm -f "$lfile";then
-				SECFUNCechoErrA "rm failed for: $lfile"
-			fi
-		fi;
+		fi
+		
+		# the file must NOT have symlinks pointing to it
+		#local lnSymlinkToFileCount="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -lname "$lfile" |wc -l`" #-ignore_readdir_race is not working...
+		local lnSymlinkToFileCount="`ls -l |egrep " -> $lfile$" |wc -l`"
+		if((lnSymlinkToFileCount>=1));then
+			SECFUNCechoDbgA "HAS SYMLINK: $lfile"
+			SECFUNCdbgFuncOutA;return
+		fi
+		
+		# skip files the were last active (modified or touch) for less than 10 minutes #TODO this is a hack, a child process should fastly link to parent file but "sometimes it seems to not happen"? would require confirmation...; can this cause a problem that a new pid may be the same of an old pid and so try to use the same file?
+		if((`SECFUNCfileSleepDelay "$lfile"`<600));then
+			SECFUNCdbgFuncOutA;return
+		fi
+		
+		if ! SECFUNCexecA rm -f "$lfile";then
+			SECFUNCechoErrA "rm failed for: $lfile"
+		fi
 	};export -f SECFUNCvarClearTmpFiles_removeFilesForDeadPids;
 	
 	# Remove symlinks for dead pids

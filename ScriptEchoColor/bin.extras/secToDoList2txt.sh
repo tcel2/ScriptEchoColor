@@ -188,9 +188,16 @@ for((nIndex=0;nIndex<=nIndexMax;nIndex++));do
 		echo "GROUP: ${aGroupName[nIndex]}"
 		echo "$strFileData" \
 			|grep "^<item" \
-			|grep -v "status=\"2\"" \
+			|grep "status=\"0\"" \
 			|grep "group=\"$nIndex\"" \
-			|sed -r 's".*<!\[CDATA\[(.*)\]\]>.*" - \1"'
+			|sed -r 's".*<!\[CDATA\[(.*)\]\]>.*" + \1"' \
+			|sort
+		echo "$strFileData" \
+			|grep "^<item" \
+			|grep "status=\"1\"" \
+			|grep "group=\"$nIndex\"" \
+			|sed -r 's".*<!\[CDATA\[(.*)\]\]>.*" ? \1"' \
+			|sort
 	fi
 done >"$strFileOuput"
 

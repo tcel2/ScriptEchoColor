@@ -1216,9 +1216,29 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 	bash -c "_SECFUNCdaemonCheckHold_SubShell"
 }
 
-function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a real file (not the symlink) is not active (has not been updated or touch)
-	local lfile="`readlink -f "$1"`"
-	if [[ ! -a "$lfile" ]];then
+function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a file is not active (has not been updated or touch)
+	
+	local lbReal=false
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--real" ]];then #SECFUNCfileSleepDelay_help force the file checked to be the real one, not symlinks
+			lbReal=true
+		elif [[ "${1-}" == "--help" ]];then
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		else
+			SECFUNCechoErrA "invalid option: $1"
+			return 1
+		fi
+		shift
+	done
+	
+	local lfile="$1"
+	
+	if $lbReal;then
+		lfile="`readlink -f "$lfile"`"
+	fi
+	
+	if [[ ! -f "$lfile" ]] && [[ ! -L "$lfile" ]];then
 		SECFUNCechoErrA "invalid file '$lfile'"
 		return 1
 	fi
