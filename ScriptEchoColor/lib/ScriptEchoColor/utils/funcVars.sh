@@ -165,9 +165,9 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		
 		# the file must NOT have symlinks pointing to it
 		#local lnSymlinkToFileCount="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -lname "$lfile" |wc -l`" #-ignore_readdir_race is not working...
-		local lnSymlinkToFileCount="`ls -l |egrep " -> $lfile$" |wc -l`"
+		local lnSymlinkToFileCount="`ls -l "$SEC_TmpFolder/SEC."*".vars.tmp" |egrep " -> $lfile$" |wc -l`"
 		if((lnSymlinkToFileCount>=1));then
-			SECFUNCechoDbgA "HAS SYMLINK: $lfile"
+			SECFUNCechoDbgA "HAS $lnSymlinkToFileCount SYMLINK(s): $lfile"
 			SECFUNCdbgFuncOutA;return
 		fi
 		
@@ -191,6 +191,8 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	#echo "$lfilesList" |while read lstrFoundFile 2>/dev/null; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
 	ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null |while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
 	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >/dev/stderr
+	
+	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
 	SECFUNCdbgFuncOutA
 }
 function SECFUNCvarInit() { #generic vars initializer
