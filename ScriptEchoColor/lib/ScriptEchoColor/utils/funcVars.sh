@@ -109,6 +109,7 @@ fi
 function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncInA
 	
+	local lnDelayToBeOld=600 #in seconds
 	local lbForce=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--force" ]]; then #SECFUNCvarSet_help will force clean now
@@ -171,10 +172,11 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 			SECFUNCdbgFuncOutA;return
 		fi
 		
+		# now only old files will be on the list! this is not needed..
 		# skip files the were last active (modified or touch) for less than 10 minutes #TODO this is a hack, a child process should fastly link to parent file but "sometimes it seems to not happen"? would require confirmation...; can this cause a problem that a new pid may be the same of an old pid and so try to use the same file?
-		if((`SECFUNCfileSleepDelay "$lfile"`<600));then
-			SECFUNCdbgFuncOutA;return
-		fi
+#		if((`SECFUNCfileSleepDelay "$lfile"`<lnDelayToBeOld));then
+#			SECFUNCdbgFuncOutA;return
+#		fi
 		
 		if ! SECFUNCexecA rm -f "$lfile";then
 			SECFUNCechoErrA "rm failed for: $lfile"
@@ -189,7 +191,22 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	#local lfilesList="`find "$SEC_TmpFolder/" -ignore_readdir_race -maxdepth 1 -name "SEC.*.vars.tmp" 2>/dev/null`"
 	#local lfilesList="`ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null`"
 	#echo "$lfilesList" |while read lstrFoundFile 2>/dev/null; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
-	ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null |while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
+	#ls "$SEC_TmpFolder/SEC."*".vars.tmp" 2>/dev/null |while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
+	
+	# creates a file to use as reference of time that when `ls` by time its position is the delimiter; so files older than it will be after it!
+	local lnTimeLimitReference="`date +"%s"`"
+	lnTimeLimitReference=$((lnTimeLimitReference-lnDelayToBeOld))
+	lstrTimeLimitFile="$SEC_TmpFolder/.SEC.ClearTmpFiles.TimeLimit"
+	if [[ ! -f "$lstrTimeLimitFile" ]];then
+		echo -n >"$lstrTimeLimitFile"
+	fi
+	touch --date="@${lnTimeLimitReference}" "$lstrTimeLimitFile"
+	local lnLimitOfFilesToWorkWith="`ls "$SEC_TmpFolder/SEC."*".vars.tmp" |wc -l`"
+	ls "$SEC_TmpFolder/.SEC.ClearTmpFiles.TimeLimit" "$SEC_TmpFolder/SEC."*".vars.tmp" -t \
+		|grep "$SEC_TmpFolder/.SEC.ClearTmpFiles.TimeLimit" -A $lnLimitOfFilesToWorkWith \
+		|tail -n +2 2>/dev/null \
+		|while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
+	
 	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >/dev/stderr
 	
 	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
