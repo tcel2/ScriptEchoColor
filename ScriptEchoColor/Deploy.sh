@@ -112,7 +112,7 @@ export pathGoboPrefix=""
 
 export bWait=false
 export bEcho=true
-export bBackupOldPrefix=true
+export bBackupOldPrefix=false
 export bInstallExtras=false
 export bInstallExamples=false
 export bInstallMain=true
@@ -128,12 +128,12 @@ while [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--help" ]];then
 		grep "#help" "$selfFile" |grep -v grep
 		FUNCexit
-	elif [[ "$1" == "--no-bkp" ]];then #help do NOT backup old prefix before installing
-		bBackupOldPrefix=false
-	elif [[ "$1" == "--GoboPrefix" ]];then #help use gobolinux way of installing files!
+	elif [[ "$1" == "--bkp" ]];then #help backup old prefix before installing
+		bBackupOldPrefix=true
+	elif [[ "$1" == "--LikeGoboPrefix" ]];then #help simulates the way gobolinux uses to install files!
 		shift
 		pathGoboPrefix="$1"
-	elif [[ "$1" == "--nomain" ]];then #help usefull to help on installing only extras and examples alone
+	elif [[ "$1" == "--no-main" ]];then #help usefull to help on installing only extras and examples alone
 		bInstallMain=false
 	elif [[ "$1" == "--extras" ]];then #help install extras
 		bInstallExtras=true
