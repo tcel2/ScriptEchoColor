@@ -46,6 +46,7 @@ g_nVersion=1.15
 #SECinstallPath=`secGetInstallPath.sh`
 #source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 ##source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh" #already calls funcMisc
+SECvarCheckScriptSelfNameParentChange=false
 eval `secinit`
 
 strMyEmail="teike@users.sourceforge.net"

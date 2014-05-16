@@ -61,6 +61,11 @@ if [[ "$SECvarShortFuncsAliases" != "false" ]]; then
 	export SECvarShortFuncsAliases=true
 fi
 
+: ${SECvarCheckScriptSelfNameParentChange:=true}
+if [[ "$SECvarCheckScriptSelfNameParentChange" != "false" ]]; then
+	export SECvarCheckScriptSelfNameParentChange=true
+fi
+
 # other important initializers
 #: ${SECvars=}
 if ${SECvars:+false};then
@@ -85,6 +90,8 @@ fi
 #fi
 
 : ${SECvarFile=}
+: ${SECscriptSelfName=}
+: ${SECscriptSelfNameParent=}
 
 # function aliases for easy coding
 : ${SECvarPrefix:=var} #this prefix can be setup by the user
@@ -212,11 +219,50 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
 	SECFUNCdbgFuncOutA
 }
+function SECFUNCscriptSelfNameSet() {
+	local lbScriptNameChanged=false
+	local lSECscriptSelfName="`basename $0`"
+	SECFUNCechoDbgA "lSECscriptSelfName=$lSECscriptSelfName"
+#	if [[ "$SECscriptSelfName" != "$lSECscriptSelfName" ]];then
+#		export SECscriptSelfNameParent="$SECscriptSelfName"
+#	fi
+#	export SECscriptSelfName="$lSECscriptSelfName"
+	if [[ -n "$SECscriptSelfName" ]];then
+		if [[ "$lSECscriptSelfName" != "$SECscriptSelfName" ]];then
+			lbScriptNameChanged=true
+		fi
+	fi
+	SECFUNCechoDbgA "lbScriptNameChanged=$lbScriptNameChanged"
+	
+	SECFUNCechoDbgA "SECscriptSelfNameParent=$SECscriptSelfNameParent"
+	SECFUNCechoDbgA "SECscriptSelfName=$SECscriptSelfName"
+	export SECscriptSelfNameParent="$SECscriptSelfName"
+	export SECscriptSelfName="$lSECscriptSelfName"
+	SECFUNCechoDbgA "SECscriptSelfNameParent=$SECscriptSelfNameParent"
+	SECFUNCechoDbgA "SECscriptSelfName=$SECscriptSelfName"
+	
+	if [[ -n "$SECscriptSelfNameParent" ]];then
+		if [[ "$SECscriptSelfNameParent" != "$SECscriptSelfName" ]];then
+			lbScriptNameChanged=true
+		fi
+	fi
+	
+	SECFUNCechoDbgA "SECvarCheckScriptSelfNameParentChange=$SECvarCheckScriptSelfNameParentChange"
+	#ls -l "$SECvarFile"
+	if $lbScriptNameChanged;then
+		if [[ -L "$SECvarFile" ]];then
+			if $SECvarCheckScriptSelfNameParentChange;then
+				SECFUNCechoWarnA "parent script '$SECscriptSelfNameParent' differs from current script '$SECscriptSelfName' but they have the same DB file where '$SECvarFile' is a symlink. To disable this message: export SECvarCheckScriptSelfNameParentChange=false;";
+			fi
+		fi
+	fi
+}
 function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	SECFUNCvarClearTmpFiles& #TODO create a maintenance daemon to clean tmp files and comment this? after some tests it seems safe to just keep as child?
 	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
+	SECFUNCscriptSelfNameSet # must come after DB is set
 	
 	SECFUNCdbgFuncOutA
 }

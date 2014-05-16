@@ -27,7 +27,13 @@ function FUNCtrap() {
 	#TODO `find` exits if ctrl+c is pressed, why? #trap 'echo "ctrl+c pressed...";varset bInterruptAsk=true;' INT
 };export -f FUNCtrap
 FUNCtrap
-eval `secinit`
+#echo "SECscriptSelfNameParent=$SECscriptSelfNameParent"
+#echo "SECscriptSelfName=$SECscriptSelfName"
+eval `secinit`;
+#if [[ -L "$SECvarFile" ]];then	echoc --alert "warning $SECvarFile is for child pid";fi;
+#ps -p $PPID
+#echo "SECscriptSelfNameParent=$SECscriptSelfNameParent"
+#echo "SECscriptSelfName=$SECscriptSelfName"
 
 ############### INTERNAL CFG
 sedQuoteLines='s".*"\"&\""'
@@ -67,6 +73,7 @@ bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
+varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
 export bBackgroundWork=false
 varset --default --show bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
@@ -80,6 +87,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		#bLookForChanges=true
 	elif [[ "$1" == "--lookforchanges" ]]; then #help look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
+	elif [[ "$1" == "--purgemissingfiles" ]]; then #help will remove files at RBF that are missing on the real folders, only works with --lookforchanges
+		varset --show bUseAsBackup=false #varset because it is used on function called by find, so it will be easly exported this way also
 	elif [[ "$1" == "--wait" ]]; then #help will wait a key press before exiting
 		bWait=true
 	elif [[ "$1" == "--skipnautilus" ]]; then #help 
@@ -88,7 +97,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bAddFilesMode=true
 	elif [[ "$1" == "--cmpdata" ]]; then #help if size and time are equal, compare data for differences
 		bCmpData=true
-	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop
+	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop, is automatically set with --daemon option
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #help between each copy will be added a delay
 		bBackgroundWork=true
@@ -236,7 +245,7 @@ function FUNCcopy() {
 	
 	realFile="$HOME/$strFile"
 	while [[ -L "$realFile" ]];do
-		realFile=`readlink "$realFile"`
+		realFile=`readlink -f "$realFile"`
 	done
 	
 	#echo "bCmpData=$bCmpData"
@@ -257,7 +266,12 @@ function FUNCcopy() {
 			bChanged=true;
 		fi
 	else
-		bChanged=true;
+		if ! $bUseAsBackup;then
+			echoc --info "Removing backup of missing file: '$realFile'"
+			bChanged=true;
+		else
+			echoc --info "Keeping backup of missing file: '$realFile'"
+		fi
 	fi
 	
 	# do not allow symlinks on Remote Backup Folder, must be real dada files
@@ -410,6 +424,7 @@ elif $bLsMissHist; then
 	bkpIFS="$IFS"; #default is: " \t\n", hexa: 0x20,0x9,0xA, octa: 040,011,012
 	IFS=$'\n';
 	
+	echoc --info "Add files history: '$addFileHist'"
 	aAllFiles=(`cat "$addFileHist"`);
 	count=0
 	echo "Missing Files:"

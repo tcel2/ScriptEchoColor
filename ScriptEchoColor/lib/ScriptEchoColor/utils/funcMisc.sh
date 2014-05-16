@@ -57,6 +57,9 @@ fi
 : ${SECfuncPrefix:=sec} #this prefix can be setup by the user
 export SECfuncPrefix
 
+# this variable can be a function name to be debugged, only debug lines on that funcion will be shown
+: ${SEC_DEBUG_FUNC:=}
+
 ###################### INTERNAL VARIABLES are set by functions ########
 : ${SECcfgFileName:=} #do NOT export, each script must know its cfg file properly; a script calling another could mess that other cfg filename if it is exported...
 
@@ -160,7 +163,7 @@ function SECFUNCechoErr() { #echo error messages
 #	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
 #fi
 
-alias SECFUNCechoDbgA="SECFUNCechoDbg --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoDbgA="SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
 		return 0
@@ -168,6 +171,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	
 	###### options
 	local caller=""
+	local lstrFuncCaller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
@@ -176,6 +180,9 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoDbg_help is the name of the function calling this one
 			shift
 			caller="${1}: "
+		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoDbg_help <FUNCNAME> will show debug only if the caller function matches SEC_DEBUG_FUNC in case it is not empty
+			shift
+			lstrFuncCaller="${1}"
 		else
 			SECFUNCechoErrA "invalid option $1"
 			return 1
@@ -184,7 +191,19 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	done
 	
 	###### main code
-	if [[ "$SEC_DEBUG" == "true" ]];then
+	local lbDebug=true
+	
+	if [[ "$SEC_DEBUG" != "true" ]];then
+		lbDebug=false
+	fi
+	
+	if [[ -n "$SEC_DEBUG_FUNC" ]];then
+		if [[ "$lstrFuncCaller" != "$SEC_DEBUG_FUNC" ]];then
+			lbDebug=false
+		fi
+	fi
+	
+	if $lbDebug;then
 		local l_output="SECDEBUG[`SECFUNCdtNow`]: ${caller}$@"
 		if $SEC_MsgColored;then
 			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >/dev/stderr
