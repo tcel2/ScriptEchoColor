@@ -809,7 +809,9 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	local l_bQuiet=false
 	local lbDaemon=false
 	local lbWaitDaemon=false
-	local lstrId="`basename "$0"`"
+	#local lstrId="`basename "$0"`"
+	local lstrCanonicalFileName="`readlink -f "$0"`"
+	local lstrId="`basename "$lstrCanonicalFileName"`"
 	SECnPidDaemon=0
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help

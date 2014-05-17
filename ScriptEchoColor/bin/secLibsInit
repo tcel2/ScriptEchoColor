@@ -77,7 +77,7 @@ done
 # echo 'export SECinstallPath="`secGetInstallPath.sh`";' #at funcMisc
 # echo 'source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";' #at funcVars
 #if ! ${SECinitialized-false};then #this breaks aliases :(
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";"
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
 	echo 'eval "`SECFUNCexportFunctions`";'
 #fi
 echo 'SECFUNCvarInit;'
