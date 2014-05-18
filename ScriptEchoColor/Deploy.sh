@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-trap 'bEcho=false;bWait=false;echo "(ctrl+c pressed, exiting...)";reset;sudo -k;exit 2;' INT
+trap 'bEcho=false;bWait=false;echo "(ctrl+c pressed, exiting...)";reset;exit 2;' INT
 
 ####### internal config/setup ############################################
 #alias sudo='FUNCwaitEcho $LINENO;sudo '
@@ -87,6 +87,37 @@ function FUNCexitIfFail() {
 	fi
 };export -f FUNCexitIfFail
 
+function FUNCcpChown() {
+	local lstrPathAndFile="$1"
+	shift
+	local lstrBasePathTo="$1"
+	
+	local lstrFinalPathAndFile="$lstrBasePathTo/$lstrPathAndFile"
+	local lstrFinalPathTo="`dirname "$lstrFinalPathAndFile"`"
+	if [[ ! -d "$lstrFinalPathTo" ]];then
+		mkdir -vp "$lstrFinalPathTo"; FUNCexitIfFail $?
+	fi
+	#cp -vf "$lstrPathAndFile" "$lstrBasePathTo"; FUNCexitIfFail $?
+	cp -vf "$lstrPathAndFile" "$lstrFinalPathAndFile"; FUNCexitIfFail $?
+	chown -v root:root "$lstrFinalPathAndFile"; FUNCexitIfFail $?
+	echo
+};export -f FUNCcpChown
+
+function FUNCfindCpChown() {
+	local lstrPathFrom="$1"
+	shift
+	local lstrPathTo="$1"
+	
+	local lstrPwdBkp="`pwd`"
+	cd "$lstrPathFrom/"; FUNCexitIfFail $?
+	#find -not -type d -exec bash -c "FUNCcpChown \"{}\" \"$lstrPathTo\"" \;; FUNCexitIfFail $?
+	local lstrFile=""
+	find -not -type d |while read lstrFile; do
+		FUNCcpChown "$lstrFile" "$lstrPathTo"
+	done; FUNCexitIfFail $?
+	cd "$lstrPwdBkp"
+};export -f FUNCfindCpChown
+
 #function FUNCwaitEcho() {
 #	local lnLineToBePrinted="$1" #not that good if command has more than one line...
 #	if $bEcho;then
@@ -128,7 +159,7 @@ while [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--help" ]];then
 		grep "#help" "$selfFile" |grep -v grep
 		FUNCexit
-	elif [[ "$1" == "--bkp" ]];then #help backup old prefix before installing
+	elif [[ "$1" == "--bkp" ]];then #help backup old prefix before installing (only gobo prefix)
 		bBackupOldPrefix=true
 	elif [[ "$1" == "--LikeGoboPrefix" ]];then #help simulates the way gobolinux uses to install files!
 		shift
@@ -140,14 +171,22 @@ while [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--examples" ]];then #help install examples
 		bInstallExamples=true
 	else
-		FUNCexit "ERROR: invalid option '$1'" 1
+		FUNCexit "invalid option '$1'" 1
 	fi
 	shift
 done
 
 ####### MAIN CODE #########################################################
+if((UID!=0));then #all sudo cmds on this script became redundant!
+	FUNCexit "must be run as root" 1	
+fi
+
+if [[ "$pathGoboPrefix" == "/" ]];then
+	FUNCexit "invalid gobo prefix, should be ex.: '/Programs'" 1
+fi
+
 if [[ -z "$pathInstallPrefix" ]];then
-	FUNCexit "ERROR: missing prefix path to install" 1
+	FUNCexit "missing prefix path to install" 1
 fi
 if [[ -z "$pathBinPrefix" ]];then
 	pathBinPrefix="$pathInstallPrefix/usr/bin"
@@ -162,10 +201,10 @@ fi
 echo "INFO: Deploying at: $pathInstallPrefix"
 
 ####### clean previously deployed
-if $bBackupOldPrefix;then
+if $bBackupOldPrefix && [[ -d "$pathGoboPrefix" ]];then
 	if [[ "${pathInstallPrefix:0:${#pathGoboPrefix}}" == "$pathGoboPrefix" ]];then
 		if [[ -d "$pathInstallPrefix" ]];then
-			FUNCexecEcho sudo mv -v "$pathInstallPrefix" "${pathInstallPrefix}.dtBkp`date +"%Y%m%d_%H%M%S_%N"`" #to be able to revert easly
+			FUNCexecEcho mv -v "$pathInstallPrefix" "${pathInstallPrefix}.dtBkp`date +"%Y%m%d_%H%M%S_%N"`" #to be able to revert easly
 	#	else
 	#		echo "nothing to backup at: "
 		fi
@@ -175,47 +214,46 @@ if $bBackupOldPrefix;then
 fi
 
 ####### prepare paths for new deploy
-FUNCexecEcho sudo mkdir -vp "$pathInstallPrefix"
 if [[ ! -d "$pathInstallPrefix" ]];then
-	FUNCexit "ERROR: failed to create prefix path '$pathInstallPrefix'" 1
+	FUNCexecEcho mkdir -vp "$pathInstallPrefix"
 fi
-FUNCexecEcho sudo mkdir -vp "$pathLibPrefix"
-FUNCexecEcho sudo mkdir -vp "$pathBinPrefix"
-FUNCexecEcho sudo mkdir -vp "$pathDocPrefix"
+if [[ ! -d "$pathInstallPrefix" ]];then
+	FUNCexit "failed to create prefix path '$pathInstallPrefix'" 1
+fi
+
+if [[ ! -d "$pathLibPrefix" ]];then
+	FUNCexecEcho mkdir -vp "$pathLibPrefix"
+fi
+if [[ ! -d "$pathBinPrefix" ]];then
+	FUNCexecEcho mkdir -vp "$pathBinPrefix"
+fi
+if [[ ! -d "$pathDocPrefix" ]];then
+	FUNCexecEcho mkdir -vp "$pathDocPrefix"
+fi
 
 ####### copy application
 if $bInstallMain;then
-	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.SVN/scriptechocolor/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
-	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor" $pathGoboPrefix/Applications/ ; FUNCexitIfFail $?
-	#FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/*" "$pathInstallPrefix" ; FUNCexitIfFail $?
-	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/share/doc/ScriptEchoColor/"* \
-		"$pathDocPrefix" ; FUNCexitIfFail $?
-	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/lib/"* \
-		"$pathLibPrefix" ; FUNCexitIfFail $?
-	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin/"* \
-		"$pathBinPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho FUNCfindCpChown "share/doc/ScriptEchoColor/" "$pathDocPrefix"; FUNCexitIfFail $?
+	FUNCexecEcho FUNCfindCpChown "lib/" "$pathLibPrefix"; FUNCexitIfFail $?
+	FUNCexecEcho FUNCfindCpChown "bin/" "$pathBinPrefix"; FUNCexitIfFail $?
 fi
 
 if $bInstallExtras;then
-	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.extras/"* \
-	"$pathBinPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho FUNCfindCpChown "bin.extras/"	"$pathBinPrefix"; FUNCexitIfFail $?
 fi
 
 if $bInstallExamples;then
-	FUNCexecEcho sudo cp -vrf "$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.examples/"* \
-	"$pathBinPrefix" ; FUNCexitIfFail $?
+	FUNCexecEcho FUNCfindCpChown "bin.examples/"	"$pathBinPrefix"; FUNCexitIfFail $?
 fi
-
-FUNCexecEcho sudo chown -vR root:root "$pathInstallPrefix" ; FUNCexitIfFail $?
 
 # Symlinks to GoboPrefix !
 if [[ -n "$pathGoboPrefix" ]] && [[ -d "$pathGoboPrefix" ]]; then
 	####### symlink EXECUTABLES
 	#pathApplications=`dirname "$pathInstallPrefix"`
 	
-	FUNCexecEcho sudo ln -vsf "$pathBinPrefix/"* $pathGoboPrefix/Executables/ ; FUNCexitIfFail $?
+	FUNCexecEcho ln -vsf "$pathBinPrefix/"* $pathGoboPrefix/Executables/ ; FUNCexitIfFail $?
 #	if $bInstallExtras;then
-#		FUNCexecEcho sudo ln -vsf "$pathInstallPrefix/bin.extras/"* $pathGoboPrefix/Executables/ ; FUNCexitIfFail $?
+#		FUNCexecEcho ln -vsf "$pathInstallPrefix/bin.extras/"* $pathGoboPrefix/Executables/ ; FUNCexitIfFail $?
 #	fi
 
 	####### copy LIBs
@@ -227,9 +265,9 @@ if [[ -n "$pathGoboPrefix" ]] && [[ -d "$pathGoboPrefix" ]]; then
 		#bEcho=false
 		echo "$FUNCNAME: working with '$1'"; 
 		if [[ -d "$workFrom/$1" ]]; then 
-			FUNCexecEcho sudo mkdir -vp "$workTo/$1" ; FUNCexitIfFail $?
+			FUNCexecEcho mkdir -vp "$workTo/$1" ; FUNCexitIfFail $?
 		elif [[ -f "$workFrom/$1" ]]; then
-			FUNCexecEcho sudo cp -vf "$workFrom/$1" "$workTo/$1" ; FUNCexitIfFail $?
+			FUNCexecEcho cp -vf "$workFrom/$1" "$workTo/$1" ; FUNCexitIfFail $?
 		else
 			ls "$workFrom/$1" ; FUNCexitIfFail $?
 		fi
@@ -240,6 +278,7 @@ if [[ -n "$pathGoboPrefix" ]] && [[ -d "$pathGoboPrefix" ]]; then
 fi
 
 ####### END
-ls -lR "$pathInstallPrefix"
+#ls -lR "$pathInstallPrefix"
+echo "Installed at: '$pathInstallPrefix'"
 FUNCexit
 
