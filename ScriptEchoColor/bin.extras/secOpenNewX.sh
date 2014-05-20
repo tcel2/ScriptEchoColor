@@ -242,14 +242,14 @@ function FUNCnvidiaCicle() {
 			#@@@R echoc -x "nvidia-settings --config=$l_cfgFile --load-config-only" #is slow...
 			strEval="nvidia-settings --config=$l_cfgFile --load-config-only"
 			if ! echoc -x "$strEval"; then
-				echoc -w
+				echoc -w -t 3
 			fi
 			break
 		fi
 		
 		((count++))
 		if((count>limit));then
-			echoc -w -p "there is no nvidia config file?"
+			echoc -t 3 --alert "there is no nvidia config file?"
 			break
 		fi
 		
@@ -676,16 +676,16 @@ if $useJWM; then
           <Key mask="4" key="T">exec:xterm -e "FUNCsayTime #kill=skip"</Key>
           <Key mask="4" key="X">exec:xterm -e "FUNCechocInitBashInteractive #kill=skip"</Key>
           <Key mask="4" key="Z">exec:xterm -display :0 -e "FUNCechocInitBashInteractive #kill=skip"</Key>
-          <Key mask="4" key="1">exec:'"xterm -e \"${customCmd[0]}\" #kill=skip"'</Key>
-          <Key mask="4" key="2">exec:'"xterm -e \"${customCmd[1]}\" #kill=skip"'</Key>
-          <Key mask="4" key="3">exec:'"xterm -e \"${customCmd[2]}\" #kill=skip"'</Key>
-          <Key mask="4" key="4">exec:'"xterm -e \"${customCmd[3]}\" #kill=skip"'</Key>
-          <Key mask="4" key="5">exec:'"xterm -e \"${customCmd[4]}\" #kill=skip"'</Key>
-          <Key mask="4" key="6">exec:'"xterm -e \"${customCmd[5]}\" #kill=skip"'</Key>
-          <Key mask="4" key="7">exec:'"xterm -e \"${customCmd[6]}\" #kill=skip"'</Key>
-          <Key mask="4" key="8">exec:'"xterm -e \"${customCmd[7]}\" #kill=skip"'</Key>
-          <Key mask="4" key="9">exec:'"xterm -e \"${customCmd[8]}\" #kill=skip"'</Key>
-          <Key mask="4" key="0">exec:'"xterm -e \"${customCmd[9]}\" #kill=skip"'</Key>
+          <Key mask="4" key="1">exec:'"xterm -e \"${customCmd[0]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="2">exec:'"xterm -e \"${customCmd[1]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="3">exec:'"xterm -e \"${customCmd[2]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="4">exec:'"xterm -e \"${customCmd[3]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="5">exec:'"xterm -e \"${customCmd[4]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="6">exec:'"xterm -e \"${customCmd[5]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="7">exec:'"xterm -e \"${customCmd[6]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="8">exec:'"xterm -e \"${customCmd[7]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="9">exec:'"xterm -e \"${customCmd[8]-}\" #kill=skip"'</Key>
+          <Key mask="4" key="0">exec:'"xterm -e \"${customCmd[9]-}\" #kill=skip"'</Key>
         </JWM>' \
       >>"$HOME/.jwmrc"
       

@@ -280,9 +280,9 @@ if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
 	#secDaemonsControl.sh --register
 	
-	while [[ ! -d "$fastMedia" ]];do
-		echoc -t 1 -w "configure fast media path"
-	done
+#	while [[ ! -d "$fastMedia" ]];do
+#		echoc -t 1 -w "configure fast media path"
+#	done
 	echoc --info "Fast Media set at: `readlink "$fastMedia"`"
 	
 	varset bForceValidationOnce=true #will be initially forced once
