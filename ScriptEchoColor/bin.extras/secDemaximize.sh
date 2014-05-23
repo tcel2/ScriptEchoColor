@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ########### INIT
-eval `secLibsInit`
+eval `secinit`
 aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$")
 
 SECFUNCuniqueLock --daemonwait
@@ -41,8 +41,8 @@ varset --show nRestoreFixXpos=5 #help restoring to non maximized window X displa
 varset --show nRestoreFixYpos=27 #help restoring to non maximized window Y displacement fix...
 varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
-selfName=`basename "$0"`
-strLogFile="$SEC_TmpFolder/SEC.$selfName.log"
+#selfName=`basename "$0"`
+strLogFile="$SEC_TmpFolder/SEC.$SECscriptSelfName.log"
 
 ########### FUNCTIONS
 function FUNCvalidateNumber() {
