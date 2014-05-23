@@ -1,3 +1,4 @@
+tail -n +2 $0;exit
 # Share environment variables between pids:
 
 # open a shell and run:

@@ -1,3 +1,4 @@
+tail -n +2 $0;exit
 # Synchronized change of variables by 2 or more scripts, granting consistent values on each script code execution
 
 # open a shell and run:
