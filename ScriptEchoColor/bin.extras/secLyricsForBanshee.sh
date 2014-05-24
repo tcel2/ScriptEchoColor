@@ -24,6 +24,8 @@
 
 eval `secinit`
 
+SECFUNCuniqueLock --daemonwait
+
 strFileLyricsTmp="/tmp/$SECscriptSelfName.lyrics.tmp"
 strPathLyrics="$HOME/.cache/banshee-1/extensions/lyrics/"
 
@@ -69,44 +71,52 @@ pidLess=""
 strMusic="";
 while true; do
 	pidBanshee="`pgrep banshee`"
-	read strMusicNew < <(\
-		echo "`xdotool search --pid $pidBanshee 2>/dev/null`" |\
-			while read nWindowId;do \
-				xdotool getwindowname $nWindowId |grep -v "^Banshee";\
-			done);
-	if [[ "$strMusicNew" != "$strMusic" ]];then \
-		if [[ -n "$pidLess" ]] && ps -p $pidLess 2>/dev/null;then
-			echoc -x "kill $pidLess"
-			
-			#echoc -x "wait $pidLess"
-			while ps -p $pidLess 2>&1 >/dev/null;do
-				echoc -w -t 1 "waiting pid $pidLess terminate..."
-			done
-		fi
-		strMusic="$strMusicNew";
-		echoc -t 1 --info "$strMusic";
-		strLyricsFile="`echo "$strMusic" |sed -r "s'(.*) by (.*) - Banshee Media Player$'\2_\1.lyrics'"`"
-		export strLyricsFile="$strPathLyrics/$strLyricsFile";
-		#echoc -w 60
-		if [[ -f "$strLyricsFile" ]];then
-			if $bGraphicalDialog;then
-				#cat "$strLyricsFile" >"$strFileLyricsTmp"
-				ln -sf "$strLyricsFile" "$strFileLyricsTmp"
-				echoc -x "enscript -f \"Times-Roman14\" \"`readlink -f "$strFileLyricsTmp"`\" -p \"${strFileLyricsTmp}.pdf\""
-			else
-				cat "$strLyricsFile" |less & pidLess="$!"
-			fi
-		else
-			echoc --alert "File not found: '$strLyricsFile'"
-		fi
-		#pidLess="$(sh -c 'cat "$strLyricsFile" |less & echo ${!}')" #less wont work this way
-	fi;
 	
-	if $bCloseWithWindow;then
-		if ! ps -p $pidGfxReader 2>&1 >/dev/null;then
-			echoc --info "lyrics window closed"
-			break;
+	if [[ -n "$pidBanshee" ]];then
+		read strMusicNew < <(\
+			echo "`xdotool search --pid $pidBanshee 2>/dev/null`" |\
+				while read nWindowId;do \
+					xdotool getwindowname $nWindowId |grep -v "^Banshee";\
+				done);
+				
+		if [[ "$strMusicNew" != "$strMusic" ]];then \
+			if [[ -n "$pidLess" ]] && ps -p $pidLess 2>/dev/null;then
+				echoc -x "kill $pidLess"
+			
+				#echoc -x "wait $pidLess"
+				while ps -p $pidLess 2>&1 >/dev/null;do
+					echoc -w -t 1 "waiting pid $pidLess terminate..."
+				done
+			fi
+			strMusic="$strMusicNew";
+			echoc -t 1 --info "$strMusic";
+			strLyricsFile="`echo "$strMusic" |sed -r "s'(.*) by (.*) - Banshee Media Player$'\2_\1.lyrics'"`"
+			export strLyricsFile="$strPathLyrics/$strLyricsFile";
+			#echoc -w 60
+			if [[ -f "$strLyricsFile" ]];then
+				if $bGraphicalDialog;then
+					#cat "$strLyricsFile" >"$strFileLyricsTmp"
+					ln -sf "$strLyricsFile" "$strFileLyricsTmp"
+					echoc -x "enscript -f \"Times-Roman14\" \"`readlink -f "$strFileLyricsTmp"`\" -p \"${strFileLyricsTmp}.pdf\""
+				else
+					cat "$strLyricsFile" |less & pidLess="$!"
+				fi
+			else
+				echoc --alert "File not found: '$strLyricsFile'"
+			fi
+			#pidLess="$(sh -c 'cat "$strLyricsFile" |less & echo ${!}')" #less wont work this way
+		fi;
+	
+		if $bCloseWithWindow;then
+			if ! ps -p $pidGfxReader 2>&1 >/dev/null;then
+				echoc --info "lyrics window closed"
+				break;
+			fi
 		fi
+	fi
+	
+	if SECFUNCdelay daemonHold --checkorinit 5;then
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	
 	sleep 3;
