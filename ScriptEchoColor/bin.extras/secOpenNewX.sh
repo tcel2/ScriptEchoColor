@@ -541,10 +541,14 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
 #      echoc -x "sudo -k kill -SIGKILL $pidX1"
 #      #read -n 1
 #    fi
-    if pidX1=`FUNCisX1running`;then
-	    echo "pidX1=$pidX1"
-      ps -p $pidX1
-      echoc -x "sudo -k kill -SIGKILL $pidX1"
+    if varset --show pidX1="`FUNCisX1running`";then
+	    #echo "pidX1=$pidX1"
+      echoc -x "ps -p $pidX1"
+      if [[ "$pidX1" == "`pgrep -t tty8,tty9 -x Xorg`" ]];then
+	      echoc -x "sudo -k pkill -t tty8,tty9 -x Xorg"
+	    else
+	      echoc -x "sudo -k kill -SIGKILL $pidX1"
+      fi
     fi
     
   	# kill xscreensaver if it was used at :1

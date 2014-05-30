@@ -49,6 +49,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
+if [[ ! -f "${strFileLyricsTmp}.pdf" ]];then
+	# evince will auto-refresh if the file already exists
+	echo |enscript -p "${strFileLyricsTmp}.pdf"
+fi
+
 pidGfxReader=""
 if $bGraphicalDialog;then
 	#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&

@@ -44,7 +44,7 @@ export bDaemon=false
 export nNice=0
 nDisplay="$DISPLAY"
 export nExitWait=0
-strTitleDefault="Xterm_Detached" #useless?
+strTitleDefault="Xterm_Detached" #TODO check if this is useless?
 varset strTitle="$strTitleDefault"
 strTitleForce=""
 export bLog=$SECbTermLog
@@ -203,7 +203,11 @@ function FUNCexecParams() {
 	fi
 	
 	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
-	eval ${strSudoPrefix} $strFUNCexecParams
+	eval ${strSudoPrefix} $strFUNCexecParams; nRet=$?
+	if((nRet!=0));then
+		echoc -p "returned $nRet"
+		echoc -w
+	fi
 	
 	if((nExitWait>0));then
 		echoc -w -t $nExitWait #wait some time so any log can be read..
