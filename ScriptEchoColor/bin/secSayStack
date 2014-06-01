@@ -54,6 +54,7 @@ function FUNCsayStack() {
 	local strSayId="$SEC_SAYID"
 	local bResume=false
 	local strDaemonSays="Say stack daemon initialized."
+	local bClearCache=false
   
   function FUNCechoDbgSS() { 
   	SECFUNCechoDbgA --caller "FUNCsayStack" "$1"; 
@@ -190,20 +191,46 @@ function FUNCsayStack() {
 		local fileAudio="${2-}" #optional
 		
 		local cacheFile="$_SECSAYcacheFolder/$md5sumText"
-		if [[ -f "$cacheFile" ]];then
+		local cacheFileReal="`readlink -f "$cacheFile"`"
+		if [[ -f "$cacheFileReal" ]] && ((`stat -c "%s" "$cacheFileReal"`>0));then
 			SECFUNCechoDbgA "cache exists: $cacheFile"
 			return 0
 		else
 			SECFUNCechoDbgA "cache missing: $cacheFile"
+			# mainly to remove invalid (size=0) files
+			FUNCexecSS rm "$cacheFile"
+			FUNCexecSS rm "$cacheFileReal"
 		fi
 		
 		if [[ -f "$fileAudio" ]];then
 			FUNCexecSS cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
 			SECFUNCechoDbgA "SEC_SAYMP3=$SEC_SAYMP3"
 			if $SEC_SAYMP3;then
-				avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b 32k "$_SECSAYcacheFolder/${md5sumText}.mp3"
-				rm "$_SECSAYcacheFolder/${md5sumText}"
-				ln -s "$_SECSAYcacheFolder/${md5sumText}.mp3" "$_SECSAYcacheFolder/${md5sumText}"
+				local lbConversionWorked=false
+				local lnBitRate=32
+				
+				if ! $lbConversionWorked;then
+					if ! FUNCexecSS avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+						SECFUNCechoErrA "avconv failed."
+						rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
+					else
+						lbConversionWorked=true
+					fi
+				fi
+				
+				if ! $lbConversionWorked;then
+					if ! FUNCexecSS ffmpeg -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+						SECFUNCechoErrA "ffmpeg failed."
+						rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
+					else
+						lbConversionWorked=true
+					fi
+				fi
+				
+				if $lbConversionWorked;then
+					rm "$_SECSAYcacheFolder/${md5sumText}"
+					ln -s "$_SECSAYcacheFolder/${md5sumText}.mp3" "$_SECSAYcacheFolder/${md5sumText}"
+				fi
 			fi
 		fi
 		return 1
@@ -252,6 +279,8 @@ function FUNCsayStack() {
 		  SEC_SAYVOL="$1"
 		elif [[ "$1" == "--nomp3" ]];then #FUNCsayStack_help do not use mp3 format, but cache files will be about 10x bigger...
 			SEC_SAYMP3=false
+		elif [[ "$1" == "--clearcache" ]];then #FUNCsayStack_help all audio files on cache will be removed
+			bClearCache=true
 		elif [[ "$1" == "--daemon" ]];then #FUNCsayStack_help keeps running and takes care of all speak requests with log
 			bDaemon=true
 		elif [[ "$1" == "--waitsay" ]];then #FUNCsayStack_help only exit after the saying of the specified text has finished
@@ -298,6 +327,10 @@ function FUNCsayStack() {
 	local sayText="${1-}" #last param
 	sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
 	local md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
+	if $bClearCache;then
+		FUNCexecSS trash "$_SECSAYcacheFolder"
+		return #exit_FUNCsayStack: clear cache must be called alone (why?)
+	fi
 	FUNCexecSS mkdir -p "$_SECSAYcacheFolder"
 	if $bDaemon;then
 		sayText="${strDaemonSays}${sayText}"

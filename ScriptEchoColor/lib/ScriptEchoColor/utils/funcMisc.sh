@@ -30,7 +30,7 @@ export SECinstallPath="`secGetInstallPath.sh`";
 export _SECselfFile_funcMisc="$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
 #export _SECbugFixDate="(3600*3)" #to fix from: "31/12/1969 21:00:00.000000000" ...
-export _SECbugFixDate="0" #seems to be working now
+export _SECbugFixDate="0" #seems to be working now...
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
@@ -652,7 +652,9 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 		elif [[ "$1" == "--getpretty" ]];then #SECFUNCdelay_help get full delay pretty time
 			if ! _SECFUNCdelayValidateIndexIdForOption "$1";then return 1;fi
 			local delay=`SECFUNCdelay $indexId --get`
-			SECFUNCtimePretty "$delay"
+			#SECFUNCtimePretty "$delay"
+			local lnFixDate="(3600*3)" #to fix from: "31/12/1969 21:00:00.000000000" ...
+			SECFUNCtimePretty `SECFUNCbcPrettyCalc "$delay+$lnFixDate"`
 			return
 		elif [[ "$1" == "--now" ]];then #SECFUNCdelay_help get time now since epoch in seconds
 			SECFUNCdtNow
