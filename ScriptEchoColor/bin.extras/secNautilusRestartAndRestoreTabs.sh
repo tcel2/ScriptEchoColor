@@ -24,67 +24,131 @@
 
 eval `secinit`
 
+astrNewTabs=("$@")
+
 if ! nPidNautilus=`pgrep nautilus`;then
 	echoc -p "nautilus is not running"
 	exit 1
 fi
 
+echoc --info "Optional parameters can be a tab locations to be added to a running nautilus."
+echoc --info "Unexpectedly it is usefull to mix all nautilus windows in a single multi-tabs window!"
 echoc --alert "WARNING: This is extremely experimental code, the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
 echoc --alert "WARNING: the window typing is blind, if another window pops up the typing will happen on that window and not at nautilus!"
 if ! echoc -q "continue?";then
 	exit
 fi
 
+function FUNCnautilusFocus() {
+	#the last ones seems the right one, still a blind guess anyway...
+	#xdotool windowactivate `xdotool search "^nautilus$" |tail -n 1` 
+	xdotool windowactivate `xdotool search --pid $nPidNautilus 2>/dev/null |tail -n 1` 2>/dev/null 
+}
+
+function FUNCaddTab() {
+	local lnSafeDelay="1.0"
+	local lbSkipTab=false
+	if [[ "$1" == "--SkipAddTab" ]];then
+		lbSkipTab=true
+		shift
+	fi
+	local lstrOpenLocation="$1"
+	
+	if [[ ! -d "$lstrOpenLocation" ]];then
+		echoc -p "invalid location '$lstrOpenLocation'"
+		return 1
+	fi
+
+	echoc --info "Working With: '$lstrOpenLocation'";
+	
+	if ! $lbSkipTab;then
+		FUNCnautilusFocus
+		xdotool key "ctrl+t" 2>/dev/null;sleep $lnSafeDelay
+	fi
+
+	FUNCnautilusFocus
+	xdotool key "ctrl+l" 2>/dev/null;sleep $lnSafeDelay
+	
+	#xdotool type --delay 300 "$lstrOpenLocation" 2>/dev/null;sleep 1
+	echo -n "$lstrOpenLocation" |xclip -selection "clip-board" -in
+	FUNCnautilusFocus
+	xdotool key "ctrl+v" 2>/dev/null;sleep $lnSafeDelay
+
+	FUNCnautilusFocus
+	xdotool key Return 2>/dev/null;sleep $lnSafeDelay
+}
+
 sedUrlDecoder='s % \\\\x g'
 astrOpenLocations=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
+
+bJustAddTab=false
+if [[ -n "${astrNewTabs[0]-}" ]];then
+	bJustAddTab=true
+	astrOpenLocations=()
+	for strNewTab in "${astrNewTabs[@]}";do
+		astrOpenLocations+=("$strNewTab")
+		#FUNCaddTab "$strNewTab"
+	done
+	#exit 0
+fi
+
+varset --show astrOpenLocations
 
 strClipboardBkp="`xclip -selection "clip-board" -out`"
 if((${#astrOpenLocations[@]}>0));then
 	SECFUNCdelay --init
-	echoc --say --alert "wait script finish its execution as commands will be typed on the top window..." #could find no workaround for that to type directly on specified window id ...
+	echoc --say --alert "wait script finish its execution as commands will be typed on the top window..." #could find no workaround that could type directly on specified window id ...
 	
-	echo "astrOpenLocations=(${astrOpenLocations[@]})"
+	if ! $bJustAddTab;then
+		echoc -x "nautilus -q"
+		echoc -w -t 3 #TODO alternatively check it stop running
+		echoc -x "nautilus >/tmp/nautilus.log 2>&1 &"
+		nPidNautilus=`pgrep nautilus`
+		echoc -w -t 3 #TODO check it is running
+	fi
 
-	echoc -x "nautilus -q"
-	echoc -w -t 3
-	echoc -x "nautilus&"
-	nPidNautilus=`pgrep nautilus`
-	echoc -w -t 3
-	
-	function FUNCnautilusFocus() {
-		#the last ones seems the right one, still a blind guess anyway...
-		#xdotool windowactivate `xdotool search "^nautilus$" |tail -n 1` 
-		xdotool windowactivate `xdotool search --pid $nPidNautilus |tail -n 1` 
-	}
-	
 	FUNCnautilusFocus
-	
 	bFirst=true
+	if $bJustAddTab;then
+		bFirst=false
+	fi
 	for strOpenLocation in "${astrOpenLocations[@]}"; do 
 		#echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@' |sed "$sedUrlDecoder" |xargs printf;echo
-		strOpenLocation=`echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@'`
-		strOpenLocation=`echo "$strOpenLocation" |sed "$sedUrlDecoder"`
-		strOpenLocation=`echo "$strOpenLocation" |xargs printf`
-		echoc --info "Working With: '$strOpenLocation'";
+#		strOpenLocation=`echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@'`
+#		strOpenLocation=`echo "$strOpenLocation" |sed "$sedUrlDecoder"`
+#		strOpenLocation=`echo "$strOpenLocation" |xargs printf`
+		strOpenLocation=`echo "$strOpenLocation" \
+			|sed -r 's@^file://(.*)@\1@' \
+			|sed "$sedUrlDecoder" \
+			|sed 's;.*;"&";' \
+			|xargs printf`
 		
+		strSkipAddTab=""
 		if $bFirst;then
+			strSkipAddTab="--SkipAddTab"
 			bFirst=false
-		else
-			FUNCnautilusFocus
-			xdotool key "ctrl+t";sleep 1
 		fi
-
-		FUNCnautilusFocus
-		xdotool key "ctrl+l";sleep 1
 		
-		#xdotool type --delay 300 "$strOpenLocation";sleep 1
-		echo -n "$strOpenLocation" |xclip -selection "clip-board" -in
-		FUNCnautilusFocus
-		xdotool key "ctrl+v";sleep 1
+		FUNCaddTab $strSkipAddTab "$strOpenLocation"
+		
+#		if $bFirst;then
+#			bFirst=false
+#		else
+#			FUNCnautilusFocus
+#			xdotool key "ctrl+t";sleep 1
+#		fi
 
-		xdotool key Return
+#		FUNCnautilusFocus
+#		xdotool key "ctrl+l";sleep 1
+#		
+#		#xdotool type --delay 300 "$strOpenLocation";sleep 1
+#		echo -n "$strOpenLocation" |xclip -selection "clip-board" -in
+#		FUNCnautilusFocus
+#		xdotool key "ctrl+v";sleep 1
+
+#		xdotool key Return
 	
-		sleep 1
+#		sleep 1
 	done
 	
 	echoc --info --say "Finished restoring nautilus tabs, it took `SECFUNCdelay --getsec` seconds."
