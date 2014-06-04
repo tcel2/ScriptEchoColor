@@ -23,8 +23,8 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ################# INIT
-export SEC_WARN=false #without this, generates too much log on stress tests..
-export SECnLockRetryDelay=3000
+export SEC_BUGTRACK=true
+export SECnLockRetryDelay=3000 #helps easy on cpu with loads (50+) of concurrent executions
 eval `secinit`
 strLogFile="$SEC_TmpFolder/SEC.$SECscriptSelfName.log"
 
@@ -57,6 +57,7 @@ if $bShowLog;then
 fi
 
 ######################### MAIN
+sleep "`SECFUNCbcPrettyCalc "$((RANDOM%SECnLockRetryDelay))/1000"`" #counting on luck to put concurrent calls less concurrent on checks for locks :P
 SECFUNCuniqueLock --daemonwait #allow only one to be run per time like in a queue
 
 echo "ToExec.: `SECFUNCdtTimePrettyNow`, BASHPID=$BASHPID, cmd='$@'" >>"$strLogFile"

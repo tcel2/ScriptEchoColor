@@ -837,13 +837,13 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	
 	function SECFUNCfileLock_LockingPidTrick_set() {
 		local lstrQuickLockFileName="$1"
-		SECFUNCechoDbgA "trick by setting pid='$$' at lstrQuickLockFileName='$lstrQuickLockFileName' timestamp"
-		touch --no-dereference --date "@$$" "$lstrQuickLockFileName";nRet=$?; #do not send err output to /dev/stderr
+		SECFUNCechoDbgA "trick by setting pid at lstrQuickLockFileName='$lstrQuickLockFileName' timestamp"
+		touch --no-dereference --date "@$$" "$lstrQuickLockFileName";nRet=$?; #do not send error msgs output to /dev/stderr
 		if((nRet==0));then 
 			return 0
 		else
 			# could be a warning but in this case, it should not have happened so I will threat as an error...
-			SECFUNCechoBugtrackA "touch lstrQuickLockFileName='$lstrQuickLockFileName' with pid='$$' failed nRet='$nRet'"
+			SECFUNCechoBugtrackA "touch lstrQuickLockFileName='$lstrQuickLockFileName' with pid failed nRet='$nRet'"
 			return 1
 		fi
 	}
@@ -870,40 +870,45 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 				break;
 			fi
 			
-			# valid pid
 			if ((lnPidTrick>0 && lnPidTrick<=lnPidMax));then
+				# valid pid
 				echo -n "$lnPidTrick"
 				break
 			else
 				if SECFUNCdelay "`SECFUNCfixIdA "${FUNCNAME}"`" --checkorinit 3;then
-					# an invalid lnPidTrick is the real creation timestamp of the symlink
-					SECFUNCechoWarnA "invalid lnPidTrick='$lnPidTrick', waiting trick touch at lstrQuickLockFileName='$lstrQuickLockFileName' for `SECFUNCfileSleepDelay "$lstrQuickLockFileName"`s"
+					# the invalid lnPidTrick is the real creation timestamp of the symlink
+					SECFUNCechoBugtrackA "invalid lnPidTrick='$lnPidTrick', waiting trick touch at lstrQuickLockFileName='$lstrQuickLockFileName' for `SECFUNCfileSleepDelay "$lstrQuickLockFileName"`s"
 				fi
 			fi
 			
-			sleep 0.1
+			sleep "$lfSleepDelay"
 		done
 	}
 	function SECFUNCfileLock_QuickLock_remove(){
-		local lbForce=false
-		if [[ "$1" == "--force" ]];then
-			lbForce=true
+		local lnForceToPid=-1
+		if [[ "$1" == "--forcetopid" ]];then
 			shift
+			lnForceToPid="$1"
 		fi
 		local lstrQuickLockFileName="$1"
-
+		
+		# on stressing concurrent calls, the file may have changed and so the pid
 		local lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 		
 		local lbRemove=false
 		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
 			lbRemove=true
 		fi
-		if $lbForce;then
+		if((lnForceToPid!=-1)) && ((lnForceToPid==lnPidQuick));then
 			lbRemove=true
 		fi
 		
 		if $lbRemove;then
-			rm "$lstrQuickLockFileName" 2>/dev/null
+			if((lnPidQuick!=-1));then
+				# even after all checks, on stressing concurrent calls, when reaching here, the file may have changed... #TODO how to uniquely identify a symlink?
+				rm "$lstrQuickLockFileName" 2>/dev/null;local lnRet=$?
+				#SECFUNCechoBugtrackA "lbForce='$lbForce' lnPidQuick='$lnPidQuick' lstrQuickLockFileName='$lstrQuickLockFileName' lnRet='$lnRet'"
+			fi
 		fi
 	}
 	function SECFUNCfileLock_QuickLock(){ # will wait til get the quick lock (will remove the lock if its locking pid dies)
@@ -912,25 +917,35 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		local lnPidQuick
 		lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
-			SECFUNCechoWarnA "pid='$$' already has lstrQuickLockFileName='$lstrQuickLockFileName'"
+			SECFUNCechoWarnA "pid already has lstrQuickLockFileName='$lstrQuickLockFileName'"
 		else
-			while ! ln -s "$lfile" "$lstrQuickLockFileName" 2>/dev/null;do
-				if $lbNoWait;then
-					lnNoWaitReturn=1
-					return 1 #has no file to remove
-				fi
-			
-				if SECFUNCdelay "`SECFUNCfixIdA --justfix "${FUNCNAME}_${lstrQuickLockFileName}"`" --checkorinit 3;then
-					lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
-					if ps -p $lnPidQuick >/dev/null 2>&1;then
-						SECFUNCechoWarnA "lstrQuickLockFileName='$lstrQuickLockFileName' still locked with pid $lnPidQuick"
-					else
-						SECFUNCfileLock_QuickLock_remove --force "$lstrQuickLockFileName"
+			#TODO create a symlink as $lstrQuickLockFileName.$$, symlink $lstrQuickLockFileName to it; on removing, remove $lstrQuickLockFileName.$$ and only remove $lstrQuickLockFileName if broken! 
+			while true;do #TODO <- this while is the concurrent bug workaround, not good?
+				while ! ln -s "$lfile" "$lstrQuickLockFileName" 2>/dev/null;do
+					if $lbNoWait;then
+						lnNoWaitReturn=1
+						return 1 #has no file to remove
 					fi
+			
+					if SECFUNCdelay "`SECFUNCfixIdA --justfix "${FUNCNAME}_${lstrQuickLockFileName}"`" --checkorinit 3;then
+						lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
+						if((lnPidQuick!=-1));then #-1 means the file already does not exist
+							if ps -p $lnPidQuick >/dev/null 2>&1;then
+								SECFUNCechoWarnA "lstrQuickLockFileName='$lstrQuickLockFileName' still locked with pid $lnPidQuick"
+							else
+								SECFUNCechoWarnA "no lnPidQuick='$lnPidQuick', removing lstrQuickLockFileName='$lstrQuickLockFileName'"
+								#TODO BUG, the guess is: on stressing concurrent calls, one will detect and remove, the other will detect too at the same time, but when trying to remove, will remove another newly created one before it have been touched! :(, some way to uniquely identify a file and uniquely remove it even it has the same canonical filename is required...
+								SECFUNCfileLock_QuickLock_remove --forcetopid $lnPidQuick "$lstrQuickLockFileName"
+							fi
+						fi
+					fi
+					sleep "$lfSleepDelay"
+				done
+				#TODO this is the concurrent bug workaround, not good?
+				if SECFUNCfileLock_LockingPidTrick_set "$lstrQuickLockFileName";then
+					break
 				fi
-				sleep 0.1
 			done
-			SECFUNCfileLock_LockingPidTrick_set "$lstrQuickLockFileName"
 		fi
 		return 0
 	}
@@ -980,7 +995,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			SECFUNCfileLock_removeLock
 			return 0
 		else
-			SECFUNCechoWarnA "cant unlock, llockingPid=$llockingPid differs from this pid='$$'"
+			SECFUNCechoWarnA "cant unlock, llockingPid=$llockingPid differs from this pid"
 			return 1
 		fi
 	elif $lbCheckIfIsLocked;then
@@ -989,9 +1004,9 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		else
 			return 1		
 		fi
-	else # try to set/acquire the lock
+	else # try to set/acquire the REAL FILE lock
 		if(($$==$llockingPid));then
-			SECFUNCechoWarnA "pid='$$' already has lfileLock='$lfileLock'"
+			SECFUNCechoWarnA "pid already has lfileLock='$lfileLock'"
 		else
 		
 			if SECFUNCfileLock_QuickLock "$lfileLockQUICKLOCKacquire";then
@@ -1014,7 +1029,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 						fi
 					fi
 				
-					sleep 0.1
+					sleep "$lfSleepDelay"
 				done
 				# THIS LINE MUST BE REACHED to remove the lock!
 				SECFUNCfileLock_QuickLock_remove "$lfileLockQUICKLOCKacquire"
