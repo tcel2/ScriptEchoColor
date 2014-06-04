@@ -35,7 +35,7 @@ echoc --info "Optional parameters can be a tab locations to be added to a runnin
 echoc --info "Unexpectedly it is usefull to mix all nautilus windows in a single multi-tabs window!"
 echoc --alert "WARNING: This is extremely experimental code, the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
 echoc --alert "WARNING: the window typing is blind, if another window pops up the typing will happen on that window and not at nautilus!"
-if ! echoc -q "continue?";then
+if ! echoc -q "continue at your own risk?";then
 	exit
 fi
 
