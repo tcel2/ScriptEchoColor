@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+trap 'bShowLogToggle=true;' USR1
+
 eval `secinit`
 
 # THIS FILE IS BASE TO THE FILE LOCK SYSTEM
@@ -36,10 +38,45 @@ fi
 #TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid
 #TODO AllowedPid file be named with the md5sum and containing the pid
 
+function SECFUNCremoveRequest() {
+	local lnToRemove="$1"
+
+	local lnTotal=`SECFUNCarraySize astrRequests`
+	for((i=0;i<lnTotal;i++))do
+		if [[ "${astrRequests[i]}" == "$lnToRemove" ]];then
+			astrRequests[i]=""
+		fi
+	done
+	
+	if grep -qx "$lnToRemove" "$SECstrLockFileRequests" 2>/dev/null;then
+		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
+	fi
+	
+	if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
+		rm "$SECstrLockFileAllowedPid"
+	fi
+	
+	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests";then
+		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRemoveRequests"
+		return 0
+	else
+		return 1
+	fi
+}
+
 bShowLog=true
+bShowLogToggle=false
 # check requests
 while true;do
 	astrRequests=()
+	
+	astrRemoveRequests=(`cat "$SECstrLockFileRemoveRequests"`)
+	if((`SECFUNCarraySize astrRemoveRequests`>0));then
+		for strRemoveRequest in ${astrRemoveRequests[@]};do
+			SECFUNCremoveRequest $strRemoveRequest
+		done
+	fi
+	
 	if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		# if this script is restarted, wont break last pid already granted lock rights
 		astrRequests+=(`cat "$SECstrLockFileAllowedPid"`)
@@ -60,17 +97,47 @@ while true;do
 			if [[ -n "$nAllowedPid" ]] && [[ -d "/proc/$nAllowedPid" ]];then
 				# set allowed pid
 				echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
-			
+				
+				if $bShowLogToggle;then
+					if $bShowLog;then
+						bShowLog=false
+					else
+						bShowLog=true
+					fi
+					bShowLogToggle=false
+				fi
+				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
-					echo "Allowed Pid at `date`: $nAllowedPid"
+					echo "Allowed Pid at `date`: $nAllowedPid" |tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active
 				while [[ -d "/proc/$nAllowedPid" ]];do
-					# check if allowed pid file was removed (by allowed pid)
+					if SECFUNCdelay "nAllowedPid" --checkorinit 1;then
+#						# keep removing current from the requests queue
+#						if grep -qx "$nAllowedPid" "$SECstrLockFileRequests" 2>/dev/null;then
+#							# nAllowedPid has been already consumed from astrRequests
+#							sed -i "/^${nAllowedPid}$/d" "$SECstrLockFileRequests"
+#						fi
+#					
+#						if grep -qx "$nAllowedPid" "$SECstrLockFileRemoveRequests";then
+#							# accept the removal request and inform it will be done
+#							sed -i "/^${nAllowedPid}$/d" "$SECstrLockFileRemoveRequests"
+#							# remove the request
+#							rm "$SECstrLockFileAllowedPid"
+#						fi
+						
+						SECFUNCremoveRequest $nAllowedPid
+#						if SECFUNCremoveRequest $nAllowedPid;then
+#							rm "$SECstrLockFileAllowedPid"
+#						fi
+					fi
+					
+					# check if allowed pid file was removed (by itself or here)
 					if [[ ! -f "$SECstrLockFileAllowedPid" ]];then
 						break
 					fi
+					
 					sleep 0.1;
 				done
 			fi
