@@ -894,20 +894,19 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		
 		# on stressing concurrent calls, the file may have changed and so the pid
 		local lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
+		if((lnPidQuick!=-1));then
+			local lbRemove=false
+			if(($$==$lnPidQuick));then
+				lbRemove=true
+			fi
+			if((lnForceToPid!=-1)) && ((lnForceToPid==lnPidQuick));then
+				lbRemove=true
+			fi
 		
-		local lbRemove=false
-		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
-			lbRemove=true
-		fi
-		if((lnForceToPid!=-1)) && ((lnForceToPid==lnPidQuick));then
-			lbRemove=true
-		fi
-		
-		if $lbRemove;then
-			if((lnPidQuick!=-1));then
-				# even after all checks, on stressing concurrent calls, when reaching here, the file may have changed... #TODO how to uniquely identify a symlink?
-				rm "$lstrQuickLockFileName" 2>/dev/null;local lnRet=$?
-				#SECFUNCechoBugtrackA "lbForce='$lbForce' lnPidQuick='$lnPidQuick' lstrQuickLockFileName='$lstrQuickLockFileName' lnRet='$lnRet'"
+			if $lbRemove;then
+					# even after all checks, on stressing concurrent calls, when reaching here, the file may have changed... #TODO how to uniquely identify a symlink?
+					rm "$lstrQuickLockFileName" 2>/dev/null;local lnRet=$?
+					#SECFUNCechoBugtrackA "lbForce='$lbForce' lnPidQuick='$lnPidQuick' lstrQuickLockFileName='$lstrQuickLockFileName' lnRet='$lnRet'"
 			fi
 		fi
 	}
@@ -916,7 +915,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		
 		local lnPidQuick
 		lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
-		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
+		if(($$==$lnPidQuick));then
 			SECFUNCechoWarnA "pid already has lstrQuickLockFileName='$lstrQuickLockFileName'"
 		else
 			#TODO create a symlink as $lstrQuickLockFileName.$$, symlink $lstrQuickLockFileName to it; on removing, remove $lstrQuickLockFileName.$$ and only remove $lstrQuickLockFileName if broken! 
