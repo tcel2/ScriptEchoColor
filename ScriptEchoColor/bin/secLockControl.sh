@@ -39,29 +39,32 @@ fi
 #TODO AllowedPid file be named with the md5sum and containing the pid
 
 function SECFUNCremoveRequest() {
+	SECFUNCdbgFuncInA;
 	local lnToRemove="$1"
 
-	local lnTotal=`SECFUNCarraySize astrRequests`
-	for((i=0;i<lnTotal;i++))do
-		if [[ "${astrRequests[i]}" == "$lnToRemove" ]];then
-			astrRequests[i]=""
-		fi
-	done
-	
-	if grep -qx "$lnToRemove" "$SECstrLockFileRequests" 2>/dev/null;then
-		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
-	fi
-	
-	if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
-		rm "$SECstrLockFileAllowedPid"
-	fi
-	
 	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests";then
+		local lnTotal=`SECFUNCarraySize astrRequests`
+		for((i=0;i<lnTotal;i++))do
+			if [[ "${astrRequests[i]}" == "$lnToRemove" ]];then
+				astrRequests[i]=""
+			fi
+		done
+		
+		if grep -qx "$lnToRemove" "$SECstrLockFileRequests" 2>/dev/null;then
+			sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
+		fi
+		
+		if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
+			rm "$SECstrLockFileAllowedPid"
+		fi
+		
+		# last thing. this informs the QuickLock to proceed..
 		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRemoveRequests"
-		return 0
+		SECFUNCdbgFuncOutA;return 0
 	else
-		return 1
+		SECFUNCdbgFuncOutA;return 1
 	fi
+	SECFUNCdbgFuncOutA;
 }
 
 bShowLog=true
@@ -135,6 +138,7 @@ while true;do
 					
 					# check if allowed pid file was removed (by itself or here)
 					if [[ ! -f "$SECstrLockFileAllowedPid" ]];then
+						SECFUNCechoDbgA "was removed SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
 						break
 					fi
 					

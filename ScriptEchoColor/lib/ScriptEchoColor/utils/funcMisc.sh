@@ -906,12 +906,18 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	function SECFUNCfileLock_QuickLockI_remove(){ # simple INTERMEDIARY quick lock remover
 		SECFUNCdbgFuncInA;
 		local lnToPid=$$
-		if [[ "$1" == "--forcetopid" ]];then
+		while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+			if [[ "$1" == "--forcetopid" ]];then
+				shift
+				lnToPid="$1"
+			else
+				_SECFUNCcriticalForceExit
+			fi
 			shift
-			lnToPid="$1"
-		fi
+		done
 		local lstrQuickLockFileName="$1"
 		
+		#SECFUNCexecA rm "${lstrQuickLockFileName}.$lnToPid" #>/dev/null 2>&1
 		rm "${lstrQuickLockFileName}.$lnToPid" >/dev/null 2>&1
 		SECFUNCdbgFuncOutA;
 	}
@@ -944,10 +950,15 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	function SECFUNCfileLock_LockControl(){ # used for maintenance by removing the QuickLock file
 		SECFUNCdbgFuncInA;
 		local lbRemoveOnly=false
-		if [[ "$1" == "--removeonly" ]];then
-			lbRemoveOnly=true
-		fi
-		local lstrQuickLockFileName="$1"
+		while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+			if [[ "$1" == "--removeonly" ]];then
+				lbRemoveOnly=true
+			else
+				_SECFUNCcriticalForceExit
+			fi
+			shift
+		done
+		local lstrQuickLockFileName="${1-}"
 		
 		if $lbRemoveOnly;then
 			# add a removal request
@@ -963,8 +974,10 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		fi
 		
 		# USE OF LockControl
+		#SECFUNCechoBugtrackA "`ls -l "$SECstrLockFileAllowedPid" |tail -n 1`"
 		if [[ -f "$SECstrLockFileAllowedPid" ]] && (($$==`cat "$SECstrLockFileAllowedPid"`));then
 			# QUICKLOCK remover
+			SECFUNCechoBugtrackA "match SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
 			# check if quick lock is a broken symlink
 			if [[ -L "$lstrQuickLockFileName" ]] && [[ ! -f "$lstrQuickLockFileName" ]];then
 				# remove the quick lock symlink that points to the INTERMEDIARY one
