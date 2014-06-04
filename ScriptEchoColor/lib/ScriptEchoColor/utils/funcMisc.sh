@@ -44,6 +44,16 @@ if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
 	export SEC_DEBUG=false # of course, np if already "false"
 fi
 
+: ${SEC_WARN:=false}
+if [[ "$SEC_WARN" != "true" ]]; then #compare to inverse of default value
+	export SEC_WARN=false # of course, np if already "false"
+fi
+
+: ${SEC_BUGTRACK:=false}
+if [[ "$SEC_BUGTRACK" != "true" ]]; then #compare to inverse of default value
+	export SEC_BUGTRACK=false # of course, np if already "false"
+fi
+
 : ${SEC_MsgColored:=true}
 if [[ "$SEC_MsgColored" != "false" ]];then
 	export SEC_MsgColored=true
@@ -60,6 +70,16 @@ export SECfuncPrefix
 
 # this variable can be a function name to be debugged, only debug lines on that funcion will be shown
 : ${SEC_DEBUG_FUNC:=}
+export SEC_DEBUG_FUNC
+
+# between each lock check, validation or attempt, this is the sleep delay
+: ${SECnLockRetryDelay:=100} #in miliseconds
+if((SECnLockRetryDelay<1));then
+	SECnLockRetryDelay=1
+elif((SECnLockRetryDelay>10000));then
+	SECnLockRetryDelay=10000
+fi
+export SECnLockRetryDelay
 
 ###################### INTERNAL VARIABLES are set by functions ########
 : ${SECcfgFileName:=} #do NOT export, each script must know its cfg file properly; a script calling another could mess that other cfg filename if it is exported...
@@ -216,6 +236,10 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 
 alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
+	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
+		return 0
+	fi
+	
 	###### options
 	local caller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
@@ -241,6 +265,44 @@ function SECFUNCechoWarn() {
 	else
 		echo "${l_output}" >/dev/stderr
 	fi
+}
+
+alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
+function SECFUNCechoBugtrack() { 
+	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
+		return 0
+	fi
+	
+	###### options
+	local caller=""
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+		if [[ "$1" == "--help" ]];then #SECFUNCechoBugtrack_help show this help
+			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--caller" ]];then #SECFUNCechoBugtrack_help is the name of the function calling this one
+			shift
+			caller="${1}: "
+		else
+			SECFUNCechoErrA "invalid option $1"
+			return 1
+		fi
+		shift
+	done
+	
+	###### main code
+	local l_output="SECBUGTRACK[`SECFUNCdtNow`]: ${caller}$@"
+	if $SEC_MsgColored;then
+		echo -e "\E[0m\E[36m${l_output}\E[0m" >/dev/stderr
+	else
+		echo "${l_output}" >/dev/stderr
+	fi
+}
+
+function _SECFUNCcriticalForceExit() {
+	while true;do
+		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
+	done
 }
 
 function SECFUNCparamsToEval() {
@@ -395,6 +457,8 @@ function SECFUNCppidListToGrep() {
 function SECFUNCbcPrettyCalc() {
 	local bCmpMode=false
 	local bCmpQuiet=false
+	local lnScale=2
+	local lbRound=true
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help --help show this help
 			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
@@ -405,36 +469,65 @@ function SECFUNCbcPrettyCalc() {
 		elif [[ "$1" == "--cmpquiet" ]];then #SECFUNCbcPrettyCalc_help return comparison as execution value for $? where 0=true 1=false
 			bCmpMode=true
 			bCmpQuiet=true
+		elif [[ "$1" == "--scale" ]];then #SECFUNCbcPrettyCalc_help scale is the decimal places shown to the right of the dot
+			shift
+			lnScale=$1
+		elif [[ "$1" == "--trunc" ]];then #SECFUNCbcPrettyCalc_help default is to round the decimal value
+			lbRound=false
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift
 	done
+	local lstrOutput="$1"
 	
+	if $lbRound;then
+		lstrOutput="`bc <<< "scale=$((lnScale+1));$lstrOutput"`"
+		
+		local lstrSignal="+"
+		if [[ "${lstrOutput:0:1}" == "-" ]];then
+			lstrSignal="-"
+		fi
+		lstrOutput=`bc <<< "scale=${lnScale};\
+			((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`
+			
+#		local lstrLcNumericBkp="$LC_NUMERIC"
+#		export LC_NUMERIC="en_US.UTF-8" #force "." as decimal separator to make printf work...
+#		lstrOutput="`printf "%0.${lnScale}f" "${lstrOutput}"`"
+#		export LC_NUMERIC="$lstrLcNumericBkp"
+#	else
+#		lstrOutput="`bc <<< "scale=$lnScale;($lstrOutput)/1.0;"`"
+	fi
 	
-	#if delay is less than 1s prints leading "0" like "0.123" instead of ".123"
-	local output=`bc <<< "x=($1); if(x==0) print \"0.0\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`
+	local lstrZeroDotZeroes="0"
+	if((lnScale>0));then
+		lstrZeroDotZeroes="0.`eval "printf '0%.0s' {1..$lnScale}"`"
+	fi
+	
+	#TODO: what is this comment??? -> if delay is less than 1s prints leading "0" like "0.123" instead of ".123"
+	local lstrOutput=`bc <<< "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`
+	
 	
 	if $bCmpMode;then
-		if [[ "$output" == "1" ]];then
+		if [[ "${lstrOutput:0:1}" == "1" ]];then
 			if $bCmpQuiet;then
 				return 0
 			else
 				echo -n "true"
 			fi
-		elif [[ "$output" == "0.0" ]];then
+		elif [[ "${lstrOutput:0:1}" == "0" ]];then
 			if $bCmpQuiet;then
 				return 1
 			else
 				echo -n "false"
 			fi
 		else
-		  SECFUNCechoErrA "invalid result for comparison output: '$output'"
+		  SECFUNCechoErrA "invalid result for comparison lstrOutput: '$lstrOutput'"
 		  return 2
 		fi
 	else
-		echo -n "$output"
+		echo -n "$lstrOutput"
 	fi
 	
 }
@@ -641,8 +734,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	if $lbCheckOrInit && ( $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow );then
 		SECFUNCechoErrA "--checkorinit must be used without other options"
 		SECFUNCdelay --help |grep "\-\-checkorinit"
-		read -n 1 -p "press ctrl+c to fix your code" >&2
-		return 1
+		_SECFUNCcriticalForceExit
 	fi
 	
 	function SECFUNCdelay_init(){
@@ -674,8 +766,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 		if [[ -z "$nCheckDelayAt" ]] || [[ -n `echo "$nCheckDelayAt" |tr -d '[:digit:].'` ]];then
 			SECFUNCechoErrA "required valid <delayLimit>, can be float"
 			SECFUNCdelay --help |grep "\-\-checkorinit"
-			read -n 1 -p "press ctrl+c to fix your code" >&2
-			return 1
+			_SECFUNCcriticalForceExit
 		fi
 		
 		if ! _SECFUNCdelayValidateIndexIdForOption --quiet-- "--checkorinit";then
@@ -721,7 +812,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	
 	local lfile="${1-}" #can be with full path
 	if [[ ! -f "$lfile" ]];then
-		SECFUNCechoErrA "file '$lfile' does not exist (if symlink must point to a file)"
+		SECFUNCechoErrA "file='$lfile' does not exist (if symlink must point to a file)"
 		return 1
 	fi
 	lfile=`readlink -f "$lfile"`
@@ -730,38 +821,90 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	local lmd5sum="`echo "$lfile" |md5sum |sed -r "$lsedMd5sumOnly"`"
 	local lfileLock="$SEC_TmpFolder/.SEC.FileLock.$lmd5sum.lock"	
 	local lfileLockPid="${lfileLock}.pid"	
-	local lfileLockValidateQUICKLOCK="${lfileLock}.QUICKLOCK.toValidateCurrentLock"	
-	local lfileLockTryToAcquireQUICKLOCK="${lfileLock}.QUICKLOCK.toTryToAquireTheLock"	
+	local lfileLockQUICKLOCKvalidate="${lfileLock}.QUICKLOCK.toValidateCurrentLock"	
+	local lfileLockQUICKLOCKacquire="${lfileLock}.QUICKLOCK.toTryToAquireTheLock"	
 	local llockingPid=-1 #no pid can be -1 right?
 	local lnPidMax="`cat /proc/sys/kernel/pid_max`"
 	local lnNoWaitReturn=0
+	local lfSleepDelay="`SECFUNCbcPrettyCalc --scale 3 "$SECnLockRetryDelay/1000.0"`"
+	
+	#if [[ "$lfSleepDelay" == "0.000" ]];then
+	if SECFUNCbcPrettyCalc --cmpquiet "$lfSleepDelay<0.001";then
+		SECFUNCechoBugtrackA "SECnLockRetryDelay='$SECnLockRetryDelay' but lfSleepDelay='$lfSleepDelay'"
+		#lfSleepDelay="0.001"
+		lfSleepDelay="0.1" #seems something went wrong so use default
+	fi
 	
 	function SECFUNCfileLock_LockingPidTrick_set() {
-		SECFUNCechoDbgA "trick by setting pid '$$' at symlink '$1' timestamp"
-		touch --no-dereference --date "@$$" "$1"
+		local lstrQuickLockFileName="$1"
+		SECFUNCechoDbgA "trick by setting pid='$$' at lstrQuickLockFileName='$lstrQuickLockFileName' timestamp"
+		touch --no-dereference --date "@$$" "$lstrQuickLockFileName";nRet=$?; #do not send err output to /dev/stderr
+		if((nRet==0));then 
+			return 0
+		else
+			# could be a warning but in this case, it should not have happened so I will threat as an error...
+			SECFUNCechoBugtrackA "touch lstrQuickLockFileName='$lstrQuickLockFileName' with pid='$$' failed nRet='$nRet'"
+			return 1
+		fi
 	}
 	function SECFUNCfileLock_LockingPidTrick_get() {
 		# the pid is trickly stored in the symlink timestamp
+		local lstrQuickLockFileName="$1"
 		
-		# if the timestamp is greater than lnPidMax, it is a expected to be real timestamp so there is no pid stored there, if the machine gets it time set too much near Epoch, this will fail...
-		local lnSysTime="`date +"%s"`" #ToTest: local lnSysTime="$lnPidMax"
+		# CRITICAL CHECK: if the timestamp is greater than lnPidMax, it is a expected to be real timestamp so there is no pid stored there, if the machine gets it time set too much near Epoch, this will fail...
+		local lnSysTime="`date +"%s"`" 
+		#local lnSysTime="$lnPidMax" #TO TEST
 		local lstrMinDate="`date --date="@$lnPidMax"`"
 		#SECFUNCechoDbgA "lnSysTime=$lnSysTime;lnPidMax=$lnPidMax"
 		if((lnSysTime<=lnPidMax));then
-			SECFUNCechoErrA "unable to work with a system date time '`date`' set to before than '$lstrMinDate'"
-			exit 1
+			SECFUNCechoErrA "unable to work with a system date time '`date`' set to before than lstrMinDate='$lstrMinDate'"
+			_SECFUNCcriticalForceExit
 		fi
 		
-		local lnPidTrick="`stat -c %Y "$1" 2>/dev/null`"
-		if [[ -n "$lnPidTrick" ]] && ((lnPidTrick>0 && lnPidTrick<=lnPidMax));then
-			echo -n "$lnPidTrick"
-		else
-			echo -n "-1"
-		fi
+		while true; do
+			local lnPidTrick="`stat -c %Y "$lstrQuickLockFileName" 2>/dev/null`"
+			
+			# file does not exist anymore
+			if [[ -z "$lnPidTrick" ]];then
+				echo -n "-1"
+				break;
+			fi
+			
+			# valid pid
+			if ((lnPidTrick>0 && lnPidTrick<=lnPidMax));then
+				echo -n "$lnPidTrick"
+				break
+			else
+				if SECFUNCdelay "`SECFUNCfixIdA "${FUNCNAME}"`" --checkorinit 3;then
+					# an invalid lnPidTrick is the real creation timestamp of the symlink
+					SECFUNCechoWarnA "invalid lnPidTrick='$lnPidTrick', waiting trick touch at lstrQuickLockFileName='$lstrQuickLockFileName' for `SECFUNCfileSleepDelay "$lstrQuickLockFileName"`s"
+				fi
+			fi
+			
+			sleep 0.1
+		done
 	}
 	function SECFUNCfileLock_QuickLock_remove(){
+		local lbForce=false
+		if [[ "$1" == "--force" ]];then
+			lbForce=true
+			shift
+		fi
 		local lstrQuickLockFileName="$1"
-		rm "$lstrQuickLockFileName" 2>/dev/null
+
+		local lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
+		
+		local lbRemove=false
+		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
+			lbRemove=true
+		fi
+		if $lbForce;then
+			lbRemove=true
+		fi
+		
+		if $lbRemove;then
+			rm "$lstrQuickLockFileName" 2>/dev/null
+		fi
 	}
 	function SECFUNCfileLock_QuickLock(){ # will wait til get the quick lock (will remove the lock if its locking pid dies)
 		local lstrQuickLockFileName="$1"
@@ -769,7 +912,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		local lnPidQuick
 		lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
-			SECFUNCechoWarnA "pid '$$' already has lstrQuickLockFileName '$lstrQuickLockFileName'"
+			SECFUNCechoWarnA "pid='$$' already has lstrQuickLockFileName='$lstrQuickLockFileName'"
 		else
 			while ! ln -s "$lfile" "$lstrQuickLockFileName" 2>/dev/null;do
 				if $lbNoWait;then
@@ -780,9 +923,9 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 				if SECFUNCdelay "`SECFUNCfixIdA --justfix "${FUNCNAME}_${lstrQuickLockFileName}"`" --checkorinit 3;then
 					lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 					if ps -p $lnPidQuick >/dev/null 2>&1;then
-						SECFUNCechoWarnA "lstrQuickLockFileName '$lstrQuickLockFileName' still locked with pid $lnPidQuick"
+						SECFUNCechoWarnA "lstrQuickLockFileName='$lstrQuickLockFileName' still locked with pid $lnPidQuick"
 					else
-						SECFUNCfileLock_QuickLock_remove "$lstrQuickLockFileName"
+						SECFUNCfileLock_QuickLock_remove --force "$lstrQuickLockFileName"
 					fi
 				fi
 				sleep 0.1
@@ -798,7 +941,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	}
 	
 	SECFUNCfileLock_validate(){
-		SECFUNCfileLock_QuickLock "$lfileLockValidateQUICKLOCK"
+		SECFUNCfileLock_QuickLock "$lfileLockQUICKLOCKvalidate"
 	
 		# validate lock
 		if [[ -f "$lfileLockPid" ]];then
@@ -808,10 +951,10 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 				if [[ -n "`echo "$llockingPid" |tr -d "[:digit:]"`" ]];then
 					# must have only digits
 					# if after removing all digits anything else remains
-					SECFUNCechoErrA "invalid llockingPid '$llockingPid' at '$lfileLockPid'"
+					SECFUNCechoErrA "invalid llockingPid='$llockingPid' at lfileLockPid='$lfileLockPid'"
 					llockingPid=-1
 				elif ! ps -p "$llockingPid" >/dev/null 2>&1;then
-					SECFUNCechoWarnA "llockingPid '$llockingPid' died"
+					SECFUNCechoWarnA "llockingPid='$llockingPid' died"
 					llockingPid=-1
 				fi
 			else
@@ -825,8 +968,9 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			SECFUNCfileLock_removeLock
 		fi
 		
-		#rm "$lfileLockValidateQUICKLOCK"
-		SECFUNCfileLock_QuickLock_remove "$lfileLockValidateQUICKLOCK"
+		#rm "$lfileLockQUICKLOCKvalidate"
+		# THIS LINE MUST BE REACHED to remove the lock!
+		SECFUNCfileLock_QuickLock_remove "$lfileLockQUICKLOCKvalidate"
 	}
 	SECFUNCfileLock_validate
 	
@@ -836,7 +980,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			SECFUNCfileLock_removeLock
 			return 0
 		else
-			SECFUNCechoWarnA "cant unlock, llockingPid $llockingPid differs from this pid $$"
+			SECFUNCechoWarnA "cant unlock, llockingPid=$llockingPid differs from this pid='$$'"
 			return 1
 		fi
 	elif $lbCheckIfIsLocked;then
@@ -847,32 +991,33 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		fi
 	else # try to set/acquire the lock
 		if(($$==$llockingPid));then
-			SECFUNCechoWarnA "pid '$$' already has lfileLock '$lfileLock'"
+			SECFUNCechoWarnA "pid='$$' already has lfileLock='$lfileLock'"
 		else
 		
-			if SECFUNCfileLock_QuickLock "$lfileLockTryToAcquireQUICKLOCK";then
+			if SECFUNCfileLock_QuickLock "$lfileLockQUICKLOCKacquire";then
 				while true;do
 					SECFUNCfileLock_validate
 					if ln -s "$lfile" "$lfileLock" 2>/dev/null;then
 						echo "$$" >"$lfileLockPid"
-						#rm "$lfileLockTryToAcquireQUICKLOCK"
+						#rm "$lfileLockQUICKLOCKacquire"
 						break
 					else
 						if $lbNoWait;then
-							#rm "$lfileLockTryToAcquireQUICKLOCK"
+							#rm "$lfileLockQUICKLOCKacquire"
 							#return 1
 							lnNoWaitReturn=1 #set also at quicklock
 							break
 						fi
 						if SECFUNCdelay "${FUNCNAME}_lfileLock" --checkorinit 3;then
-							SECFUNCechoWarnA "still unable to lfileLock '$lfileLock' owned by pid '$llockingPid'"
+							SECFUNCechoWarnA "still unable to lfileLock='$lfileLock' owned by llockingPid='$llockingPid'"
 							#SECFUNCfileLock_validate #here causes less cpu usage
 						fi
 					fi
 				
 					sleep 0.1
 				done
-				SECFUNCfileLock_QuickLock_remove "$lfileLockTryToAcquireQUICKLOCK"
+				# THIS LINE MUST BE REACHED to remove the lock!
+				SECFUNCfileLock_QuickLock_remove "$lfileLockQUICKLOCKacquire"
 			fi
 			
 		fi

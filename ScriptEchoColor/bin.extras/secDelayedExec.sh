@@ -23,6 +23,8 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ################# INIT
+export SEC_WARN=false #without this, generates too much log on stress tests..
+export SECnLockRetryDelay=3000
 eval `secinit`
 strLogFile="$SEC_TmpFolder/SEC.$SECscriptSelfName.log"
 
@@ -65,6 +67,7 @@ fRetryDelay=0.25
 strRunning=""
 while true; do
 	bContinueMainLoop=false
+	echo "pid=$$"
 	sleep 1
 	
 	if $bCheckCpu;then
