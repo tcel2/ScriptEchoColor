@@ -697,7 +697,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	fi
 }
 
-function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
+function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
 	local lbUnlock=false
 	local lbCheckIfIsLocked=false
 	local lbNoWait=false
@@ -730,17 +730,17 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 	local lmd5sum="`echo "$lfile" |md5sum |sed -r "$lsedMd5sumOnly"`"
 	local lfileLock="$SEC_TmpFolder/.SEC.FileLock.$lmd5sum.lock"	
 	local lfileLockPid="${lfileLock}.pid"	
-	local lfileLockValidateQUICKLOCK="${lfileLock}.toValidateCurrentLock"	
-	local lfileLockTryToAcquireQUICKLOCK="${lfileLock}.toTryToAquireTheLock"	
+	local lfileLockValidateQUICKLOCK="${lfileLock}.QUICKLOCK.toValidateCurrentLock"	
+	local lfileLockTryToAcquireQUICKLOCK="${lfileLock}.QUICKLOCK.toTryToAquireTheLock"	
 	local llockingPid=-1 #no pid can be -1 right?
 	local lnPidMax="`cat /proc/sys/kernel/pid_max`"
 	local lnNoWaitReturn=0
 	
-	function SECFUNCfileLock2_LockingPidTrick_set() {
+	function SECFUNCfileLock_LockingPidTrick_set() {
 		SECFUNCechoDbgA "trick by setting pid '$$' at symlink '$1' timestamp"
 		touch --no-dereference --date "@$$" "$1"
 	}
-	function SECFUNCfileLock2_LockingPidTrick_get() {
+	function SECFUNCfileLock_LockingPidTrick_get() {
 		# the pid is trickly stored in the symlink timestamp
 		
 		# if the timestamp is greater than lnPidMax, it is a expected to be real timestamp so there is no pid stored there, if the machine gets it time set too much near Epoch, this will fail...
@@ -759,14 +759,15 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 			echo -n "-1"
 		fi
 	}
-	function SECFUNCfileLock2_QuickLock_remove(){
+	function SECFUNCfileLock_QuickLock_remove(){
 		local lstrQuickLockFileName="$1"
 		rm "$lstrQuickLockFileName" 2>/dev/null
 	}
-	function SECFUNCfileLock2_QuickLock(){ # will wait til get the quick lock (will remove the lock if its locking pid dies)
+	function SECFUNCfileLock_QuickLock(){ # will wait til get the quick lock (will remove the lock if its locking pid dies)
 		local lstrQuickLockFileName="$1"
 		
-		local lnPidQuick="`SECFUNCfileLock2_LockingPidTrick_get "$lstrQuickLockFileName"`"
+		local lnPidQuick
+		lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 		if [[ -n "$lnPidQuick" ]] && (($$==$lnPidQuick));then
 			SECFUNCechoWarnA "pid '$$' already has lstrQuickLockFileName '$lstrQuickLockFileName'"
 		else
@@ -777,39 +778,27 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 				fi
 			
 				if SECFUNCdelay "`SECFUNCfixIdA --justfix "${FUNCNAME}_${lstrQuickLockFileName}"`" --checkorinit 3;then
+					lnPidQuick="`SECFUNCfileLock_LockingPidTrick_get "$lstrQuickLockFileName"`"
 					if ps -p $lnPidQuick >/dev/null 2>&1;then
 						SECFUNCechoWarnA "lstrQuickLockFileName '$lstrQuickLockFileName' still locked with pid $lnPidQuick"
 					else
-						SECFUNCfileLock2_QuickLock_remove "$lstrQuickLockFileName"
+						SECFUNCfileLock_QuickLock_remove "$lstrQuickLockFileName"
 					fi
 				fi
 				sleep 0.1
 			done
-			SECFUNCfileLock2_LockingPidTrick_set "$lstrQuickLockFileName"
+			SECFUNCfileLock_LockingPidTrick_set "$lstrQuickLockFileName"
 		fi
 		return 0
 	}
 	
-	SECFUNCfileLock2_removeLock(){
+	SECFUNCfileLock_removeLock(){
 		rm "$lfileLock" 2>/dev/null
 		rm "$lfileLockPid" 2>/dev/null
 	}
 	
-	SECFUNCfileLock2_validate(){
-		SECFUNCfileLock2_QuickLock "$lfileLockValidateQUICKLOCK"
-#		# creates a check lock file to allow working with the real lock
-#		while ! ln -s "$lfile" "$lfileLockValidateQUICKLOCK";do
-#			if SECFUNCdelay "${FUNCNAME}_lfileLockValidateQUICKLOCK" --checkorinit 3;then
-#				local lnPidQuick=`SECFUNCfileLock2_LockingPidTrick_get "$lfileLockValidateQUICKLOCK"`
-#				if ps -p $lnPidQuick >/dev/null 2>&1;then
-#					SECFUNCechoWarnA "lfileLockValidateQUICKLOCK '$lfileLockValidateQUICKLOCK' still with pid $lnPidQuick"
-#				else
-#					rm "$lfileLockValidateQUICKLOCK"
-#				fi
-#			fi
-#			sleep 0.1
-#		done
-#		SECFUNCfileLock2_LockingPidTrick_set "$lfileLockValidateQUICKLOCK"
+	SECFUNCfileLock_validate(){
+		SECFUNCfileLock_QuickLock "$lfileLockValidateQUICKLOCK"
 	
 		# validate lock
 		if [[ -f "$lfileLockPid" ]];then
@@ -833,18 +822,18 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 		# remove invalid lock
 		if((llockingPid==-1));then
 			#SECFUNCechoDbgA "validating"
-			SECFUNCfileLock2_removeLock
+			SECFUNCfileLock_removeLock
 		fi
 		
 		#rm "$lfileLockValidateQUICKLOCK"
-		SECFUNCfileLock2_QuickLock_remove "$lfileLockValidateQUICKLOCK"
+		SECFUNCfileLock_QuickLock_remove "$lfileLockValidateQUICKLOCK"
 	}
-	SECFUNCfileLock2_validate
+	SECFUNCfileLock_validate
 	
 	if $lbUnlock;then
 		if(($$==$llockingPid));then
 			#SECFUNCechoDbgA "unlocking"
-			SECFUNCfileLock2_removeLock
+			SECFUNCfileLock_removeLock
 			return 0
 		else
 			SECFUNCechoWarnA "cant unlock, llockingPid $llockingPid differs from this pid $$"
@@ -861,9 +850,9 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 			SECFUNCechoWarnA "pid '$$' already has lfileLock '$lfileLock'"
 		else
 		
-			if SECFUNCfileLock2_QuickLock "$lfileLockTryToAcquireQUICKLOCK";then
+			if SECFUNCfileLock_QuickLock "$lfileLockTryToAcquireQUICKLOCK";then
 				while true;do
-					SECFUNCfileLock2_validate
+					SECFUNCfileLock_validate
 					if ln -s "$lfile" "$lfileLock" 2>/dev/null;then
 						echo "$$" >"$lfileLockPid"
 						#rm "$lfileLockTryToAcquireQUICKLOCK"
@@ -877,13 +866,13 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 						fi
 						if SECFUNCdelay "${FUNCNAME}_lfileLock" --checkorinit 3;then
 							SECFUNCechoWarnA "still unable to lfileLock '$lfileLock' owned by pid '$llockingPid'"
-							#SECFUNCfileLock2_validate #here causes less cpu usage
+							#SECFUNCfileLock_validate #here causes less cpu usage
 						fi
 					fi
 				
 					sleep 0.1
 				done
-				SECFUNCfileLock2_QuickLock_remove "$lfileLockTryToAcquireQUICKLOCK"
+				SECFUNCfileLock_QuickLock_remove "$lfileLockTryToAcquireQUICKLOCK"
 			fi
 			
 		fi
@@ -891,224 +880,6 @@ function SECFUNCfileLock2() { #Waits until the specified file is unlocked/lockab
 	
 	if $lbNoWait;then
 		return $lnNoWaitReturn
-	fi
-	
-	return 0
-}
-
-function SECFUNCfileLock() {
-	SECFUNCfileLock2 "$@"
-	return $?
-}
-function _SECFUNCfileLock_ToBeRemoved() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
-			
-	local l_bUnlock=false
-	local l_bCheckIfIsLocked=false
-	local lbNoWait=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
-			#grep "#${FUNCNAME}_help" "$_SECselfFile_funcMisc" |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
-			l_bUnlock=true
-		elif [[ "$1" == "--islocked" ]];then #SECFUNCfileLock_help check if is locked and, if so, outputs the locking pid.
-			l_bCheckIfIsLocked=true
-		elif [[ "$1" == "--nowait" ]];then #SECFUNCfileLock_help will not wait for lock to be freed and will return 1 if cannot get the lock
-			lbNoWait=true
-		else
-			SECFUNCechoErrA "invalid option: $1"
-			return 1
-		fi
-		shift
-	done
-	
-	local l_file="${1-}" #can be with full path
-	if [[ ! -f "$l_file" ]];then
-		SECFUNCechoErrA "file '$l_file' does not exist (if symlink must point to a file)"
-		return 1
-	fi
-	
-	# l_file must be the real file where all symlinks point to; therefore this will break in case the file has hard links being locked too...
-#	while [[ -L "$l_file" ]];do
-#		l_file=`readlink "$l_file"`
-#	done
-#	if [[ "${l_file:0:1}" != "/" ]];then
-#		l_file="`pwd`/$l_file"
-#	fi
-	l_file=`readlink -f "$l_file"`
-	
-	local l_sedMd5sumOnly='s"([[:alnum:]]*) .*"\1"'
-	local l_md5sum=`echo "$l_file" |md5sum |sed -r "$l_sedMd5sumOnly"`
-	local l_fileLock="$SEC_TmpFolder/.SEC.FileLock.$l_md5sum.lock"
-	local lstrFileToTouchLock="$SEC_TmpFolder/.SEC.FileLock.$l_md5sum.ToTouch.lock"
-	#local l_fileLockPid="$SEC_TmpFolder/.SEC.FileLock.$l_md5sum.lock.pid"
-	local l_lockingPid=-1 #no pid can be -1 right?
-	local lnPidMax=`cat /proc/sys/kernel/pid_max`
-	local lnWaitLockByPid=10
-	
-	function SECFUNCfileLock_removeLock() {
-		local l_bRemoved=false
-		
-		if [[ -L "$l_fileLock" ]];then
-			rm "$l_fileLock"
-			l_bRemoved=true
-		fi
-		
-#		if [[ -f "$l_fileLockPid" ]];then
-#			rm "$l_fileLockPid"
-#			l_bRemoved=true
-#		fi
-		
-		if ! $l_bRemoved;then
-			return 1
-		fi
-		
-		return 0
-	}
-	
-	function SECFUNCfileLock_getLockingPid() {
-		#stat -c %Y "$l_fileLock"
-		local lnPidTrick=`stat -c %Y "$l_fileLock"`
-		if((lnPidTrick>0 && lnPidTrick<=lnPidMax));then
-			echo -n "$lnPidTrick"
-		else
-			echo -n "-1"
-		fi
-	}
-	
-	function SECFUNCfileLock_validateLock() {
-		#TODO? use find to validate all lock files for all pid as maintenance each 10minutes (in some way... see `at` command at shell!). but.. tmp and ramdrive variables are erased on boot..
-		
-		if [[ -L "$l_fileLock" ]];then 
-			l_lockingPid=`SECFUNCfileLock_getLockingPid`
-			#if((l_lockingPid<=lnPidMax));then
-			if((l_lockingPid>-1));then
-				if ! ps -p $l_lockingPid >/dev/null 2>&1;then
-					SECFUNCechoDbgA "Pid '$l_lockingPid' died, removing lock '$l_fileLock', for file '$l_file'..."
-					SECFUNCfileLock_removeLock
-					l_lockingPid=-1
-				fi
-			else
-#				SECFUNCechoDbgA "invalid locking pid '$l_lockingPid', removing lock '$l_fileLock', for file '$l_file'..."
-#				SECFUNCfileLock_removeLock
-#				l_lockingPid=-1
-				local lnSleepDelay=`SECFUNCfileSleepDelay "$l_fileLock"`
-				if [[ -n "$lnSleepDelay" ]] && ((lnSleepDelay>lnWaitLockByPid));then
-					#SECFUNCfileLock_removeLock
-					l_lockingPid=-1
-				fi
-			fi
-		fi
-		
-#		if [[ ! -f "$l_fileLockPid" ]];then
-#			if [[ -f "$l_fileLock" ]];then
-#				if((`SECFUNCfileSleepDelay "$l_fileLock"`<lnWaitLockByPid));then
-#					return
-#				fi
-#			fi
-#			
-#			# if locking pid is missing (for any reason), remove lock
-#			if SECFUNCfileLock_removeLock;then
-#				SECFUNCechoDbgA "Locking pid file '$l_fileLockPid' was missing, for file '$l_file', removed lock..."
-#			fi
-#		else
-#			l_lockingPid=`cat "$l_fileLockPid" 2>/dev/null` # the locking pid file can be removed just before this command happens!
-#			#SECFUNCechoDbgA "checking pid '$l_lockingPid'"
-#	
-#			# if pid died, remove locking files
-#			if ! ps -p $l_lockingPid >/dev/null 2>&1;then
-#				SECFUNCechoDbgA "Pid '$l_lockingPid' died, removing lock '$l_fileLock', for file '$l_file'..."
-#				SECFUNCfileLock_removeLock
-#				l_lockingPid=-1
-#			fi
-#		fi
-	}
-	
-	# important to initialize l_lockingPid from the 2nd time on this func is called...
-# if [[ -f "$l_fileLockPid" ]];then
-		SECFUNCfileLock_validateLock
-#	else
-#		if [[ -f "$l_fileLock" ]];then
-#			if((`SECFUNCfileSleepDelay "$l_fileLock"`>lnWaitLockByPid));then
-#				SECFUNCfileLock_validateLock
-#			fi
-#		fi
-#	fi
-	
-	if $l_bCheckIfIsLocked;then
-		if(($l_lockingPid>-1));then
-			echo "$l_lockingPid" #outputs the locking pid
-			return 0
-		else
-			return 1
-		fi
-	elif $l_bUnlock;then
-		if [[ -L "$l_fileLock" ]];then
-			if(($l_lockingPid==$$));then
-				SECFUNCfileLock_removeLock
-				return 0
-			elif(($l_lockingPid==-1));then
-				SECFUNCechoWarnA "File '$l_file' was not locked..."
-				return 0
-			else
-				SECFUNCechoWarnA "Cant unlock. File '$l_file' was locked by pid $l_lockingPid..."
-				return 1
-			fi
-		else
-			if [[ -f "$l_fileLock" ]];then
-				SECFUNCechoErrA "lock file '$l_fileLock' should be a symlink..."
-				return 1
-			else
-				SECFUNCechoWarnA "lock file '$l_fileLock' is missing, already unlocked..."
-				return 0
-			fi
-		fi
-	else # asking to lock
-		if(($l_lockingPid==$$));then
-			SECFUNCechoDbgA "file '$l_file' is already locked with '$l_fileLock' (this pid $$)..." # if it was a warning would not be that useful right? just annoying...
-			return 0
-		fi
-		
-		#wait for lock to be released and lock it up!
-		local l_count=0
-		while true;do
-			while ! ln -s "$l_file" "$l_fileLock" >/dev/null 2>&1;do
-				sleep 0.1
-				((l_count++))
-				if(( (l_count%30)==0 ));then
-					SECFUNCechoWarnA "for file '$l_file', cant get lock '$l_fileLock', for `SECFUNCbcPrettyCalc "$l_count*0.1"` seconds, locking pid is $l_lockingPid"
-				fi
-				if $lbNoWait && ((l_count>1));then #l_count>1 to let the validation below happen once
-					return 1
-				fi
-			
-				#if [[ -f "$l_fileLockPid" ]];then
-					SECFUNCfileLock_validateLock
-				#fi
-			done
-			# This is a trick :(. A normal file is created with %Y from Epoch, wich "now" will always be bigger then pid_max. Unless the machine has its time messed in some way.
-			#if((`SECFUNCfileLock_getLockingPid`>lnPidMax));then
-			if ln -s "$l_fileLock" "$lstrFileToTouchLock";then
-				touch --no-dereference --date "@$$" "$l_fileLock" #this sets the timestamp to be the pid value, so this is a trick :(
-				rm "$lstrFileToTouchLock"
-				break;
-				#TODO make a 60s delay to forcely remove $lstrFileToTouchLock?
-			fi
-#			if((`SECFUNCfileLock_getLockingPid`==-1));then
-#				SECFUNCechoDbgA "locking '$l_fileLock' with pid $$"
-#				touch --no-dereference --date "@$$" "$l_fileLock" #this sets the timestamp to be the pid value, so this is a trick :(
-#				# a concurrent pid may interfere so make it sure!
-#				if((`SECFUNCfileLock_getLockingPid`==$$));then
-#					SECFUNCechoDbgA "locked '$l_fileLock' with pid $$"
-#					break;
-#				fi
-#			fi
-#			if [[ ! -f "$l_fileLockPid" ]];then
-#				echo "$$" >"$l_fileLockPid" # lnWaitLockByPid is from the successful symlink to this point
-#				break;
-#			fi
-		done
 	fi
 	
 	return 0
