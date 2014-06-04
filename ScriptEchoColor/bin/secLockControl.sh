@@ -54,7 +54,8 @@ function SECFUNCremoveRequest() {
 			sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
 		fi
 		
-		if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
+		#if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
+		if SECFUNCallowedPid --cmp $lnToRemove;then
 			rm "$SECstrLockFileAllowedPid"
 		fi
 		
@@ -80,10 +81,11 @@ while true;do
 		done
 	fi
 	
-	if [[ -f "$SECstrLockFileAllowedPid" ]];then
+	#if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		# if this script is restarted, wont break last pid already granted lock rights
-		astrRequests+=(`cat "$SECstrLockFileAllowedPid"`)
-	fi
+		#astrRequests+=(`cat "$SECstrLockFileAllowedPid"`)
+		astrRequests+=(`SECFUNCallowedPid`);
+	#fi
 	
 	# updated requests removing dups and currently allowed one
 	strRequests=""
@@ -97,9 +99,17 @@ while true;do
 	astrRequests+=(`echo "$strRequests" |awk ' !x[$0]++'`)
 	if((`SECFUNCarraySize astrRequests`>0));then
 		for nAllowedPid in ${astrRequests[@]};do
+			if ! SECFUNCallowedPid --check $nAllowedPid 2>/dev/null;then
+				continue
+			fi
+			
+			if [[ -n "`echo "$nAllowedPid" |tr -d "[:digit:]"`" ]];then
+				SECFUNCechoErrA "invalid nAllowedPid='$nAllowedPid'"
+			fi
 			if [[ -n "$nAllowedPid" ]] && [[ -d "/proc/$nAllowedPid" ]];then
 				# set allowed pid
-				echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
+				#echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
+				SECFUNCallowedPid --write "$nAllowedPid"
 				
 				if $bShowLogToggle;then
 					if $bShowLog;then

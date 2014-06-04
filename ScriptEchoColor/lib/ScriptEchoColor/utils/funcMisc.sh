@@ -126,6 +126,8 @@ if ! $SECbLockControlInitialized;then
 	secLockControl.sh&
 fi
 
+: ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
+
 ################ FUNCTIONS
 
 function SECFUNCexportFunctions() {
@@ -316,6 +318,108 @@ function _SECFUNCcriticalForceExit() {
 	while true;do
 		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
 	done
+}
+
+function SECFUNCallowedPid() { # defaults to return the allowed pid stored at SECstrLockFileAllowedPid
+	local lnCmpPid=""
+	local lnWritePid=""
+	local lnCheckPid=""
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+		if [[ "$1" == "--help" ]];then #SECFUNCallowedPid_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--cmp" ]];then #SECFUNCallowedPid_help <pid>
+			shift
+			lnCmpPid="${1-0}"
+		elif [[ "$1" == "--write" ]];then #SECFUNCallowedPid_help <pid>
+			shift
+			lnWritePid="${1-0}"
+		elif [[ "$1" == "--check" ]];then #SECFUNCallowedPid_help <pid>
+			shift
+			lnCheckPid="${1-0}"
+		else
+			SECFUNCechoErrA "invalid option $1"
+			return 1
+		fi
+		shift
+	done
+	
+	function SECFUNCallowedPid_check(){
+		if [[ -n "`echo "$1" |tr -d "[:digit:]"`" ]];then
+			#echo -n "-1"
+			return 1
+		fi
+		if(($1<1));then
+			#echo -n "-1"
+			return 1
+		fi
+		if(($1>SECnPidMax));then
+			#echo -n "-1"
+			return 1
+		fi
+		return 0
+	}
+	
+	if [[ -n "$lnCheckPid" ]];then
+		if ! SECFUNCallowedPid_check $lnCheckPid;then
+			SECFUNCechoErrA "invalid lnCheckPid='$lnCheckPid'"
+			return 1
+		else
+			return 0
+		fi
+	fi
+	
+	if [[ -n "$lnWritePid" ]];then
+		if ! SECFUNCallowedPid_check $lnWritePid;then
+			SECFUNCechoErrA "invalid lnWritePid='$lnWritePid'"
+			return 1
+		fi
+		if [[ -f "$SECstrLockFileAllowedPid" ]];then
+			SECFUNCechoWarnA "file SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid' exists, overwritting"
+		fi
+		if [[ ! -d "/proc/$lnWritePid" ]];then
+			SECFUNCechoErrA "there is no such lnWritePid='$lnWritePid' running..."
+			return 1
+		fi
+		echo -n "$lnWritePid" >"$SECstrLockFileAllowedPid"
+		return 0
+	fi
+
+	local lnAllowedPid="`cat "$SECstrLockFileAllowedPid" 2>/dev/null`"
+	local lbAllowedIsValid=false
+	if [[ -f "$SECstrLockFileAllowedPid" ]];then
+		SECFUNCechoWarnA "file not available SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
+		if SECFUNCallowedPid_check $lnAllowedPid;then
+			lbAllowedIsValid=true
+		fi
+	fi
+		
+	if [[ -n "$lnCmpPid" ]];then
+		if ! $lbAllowedIsValid;then
+			return 1
+		fi
+		
+		if ! SECFUNCallowedPid_check $lnCmpPid;then
+			SECFUNCechoErrA "invalid lnCmpPid='$lnCmpPid'"
+			return 1
+		else
+			if((lnAllowedPid==lnCmpPid));then
+				return 0
+			else
+				return 1
+			fi
+		fi
+	fi
+	
+	if $lbAllowedIsValid;then
+		echo -n "$lnAllowedPid"
+		return 0
+	else
+		echo -n "-1"
+		return 1
+	fi
+	
+	return 1
 }
 
 function SECFUNCparamsToEval() {
@@ -839,7 +943,6 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	local lfileLockQUICKLOCKacquire="${lfileLock}.QUICKLOCK.toTryToAquireTheLock"	
 	local lfileLockQUICKLOCKremoveQuickLock="${lfileLock}.QUICKLOCK.toRemoveQuickLock"	
 	local llockingPid=-1 #no pid can be -1 right?
-	local lnPidMax="`cat /proc/sys/kernel/pid_max`"
 	local lnNoWaitReturn=0
 	local lfSleepDelay="`SECFUNCbcPrettyCalc --scale 3 "$SECnLockRetryDelay/1000.0"`"
 	
@@ -869,12 +972,12 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		# the pid is trickly stored in the symlink timestamp
 		local lstrQuickLockFileName="$1"
 		
-		# CRITICAL CHECK: if the timestamp is greater than lnPidMax, it is a expected to be real timestamp so there is no pid stored there, if the machine gets it time set too much near Epoch, this will fail...
+		# CRITICAL CHECK: if the timestamp is greater than SECnPidMax, it is a expected to be real timestamp so there is no pid stored there, if the machine gets it time set too much near Epoch, this will fail...
 		local lnSysTime="`date +"%s"`" 
-		#local lnSysTime="$lnPidMax" #TO TEST
-		local lstrMinDate="`date --date="@$lnPidMax"`"
-		#SECFUNCechoDbgA "lnSysTime=$lnSysTime;lnPidMax=$lnPidMax"
-		if((lnSysTime<=lnPidMax));then
+		#local lnSysTime="$SECnPidMax" #TO TEST
+		local lstrMinDate="`date --date="@$SECnPidMax"`"
+		#SECFUNCechoDbgA "lnSysTime=$lnSysTime;SECnPidMax=$SECnPidMax"
+		if((lnSysTime<=SECnPidMax));then
 			SECFUNCechoErrA "unable to work with a system date time '`date`' set to before than lstrMinDate='$lstrMinDate'"
 			_SECFUNCcriticalForceExit
 		fi
@@ -888,7 +991,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 				break;
 			fi
 			
-			if ((lnPidTrick>0 && lnPidTrick<=lnPidMax));then
+			if ((lnPidTrick>0 && lnPidTrick<=SECnPidMax));then
 				# valid pid
 				echo -n "$lnPidTrick"
 				break
@@ -975,7 +1078,17 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 		
 		# USE OF LockControl
 		#SECFUNCechoBugtrackA "`ls -l "$SECstrLockFileAllowedPid" |tail -n 1`"
-		if [[ -f "$SECstrLockFileAllowedPid" ]] && (($$==`cat "$SECstrLockFileAllowedPid"`));then
+#		local lbAllow=false;
+#		if [[ -f "$SECstrLockFileAllowedPid" ]];then
+#			local lnAllowedPid="`cat "$SECstrLockFileAllowedPid"`"
+#			if [[ -n "$lnAllowedPid" ]];then
+#				if(($$==lnAllowedPid));then
+#					lbAllow=true
+#				fi
+#			fi
+#		fi
+#		if $lbAllow;then
+		if SECFUNCallowedPid --cmp $$;then
 			# QUICKLOCK remover
 			SECFUNCechoBugtrackA "match SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
 			# check if quick lock is a broken symlink
@@ -1008,6 +1121,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			#if ! $lbRemoveOnly;then
 				# add self to the lock request queue
 				echo "$$" >>"$SECstrLockFileRequests"
+				SECFUNCechoBugtrackA "adding request $$"
 			#fi
 		fi
 		SECFUNCdbgFuncOutA;

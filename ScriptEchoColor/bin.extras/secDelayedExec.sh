@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ################# INIT
-export SEC_BUGTRACK=true
+#export SEC_BUGTRACK=true
 export SECnLockRetryDelay=3000 #helps easy on cpu with loads (50+) of concurrent executions
 eval `secinit`
 strLogFile="$SEC_TmpFolder/SEC.$SECscriptSelfName.log"
@@ -104,6 +104,6 @@ while true; do
 	break
 done
 
-"$@" & nPid=$!
+echo -n "pid=$$; ";"$@" & nPid=$!
 echo "Started: `SECFUNCdtTimePrettyNow`, BASHPID=$BASHPID, PID=$nPid, cmd='$@'" >>"$strLogFile"
 
