@@ -26,10 +26,47 @@ trap 'bShowLogToggle=true;' USR1
 
 eval `secinit`
 
+bDoSomething=false
+bCheckHasOtherPids=false
+nPidSkip="-1"
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--hasotherpids" ]];then #help <skipPid>
+		shift
+		nPidSkip="${1-}"
+		
+		bCheckHasOtherPids=true
+		
+		bDoSomething=true
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
 # THIS FILE IS BASE TO THE FILE LOCK SYSTEM
-strSelfName="`basename "$0"`"
-nPidOldest="`pgrep -fo "/$strSelfName"`"
+varset --show strSelfName="`basename "$0"`"
+varset --show nPidOldest="`pgrep -fo "/$strSelfName"`"
+varset --show nSelfPid="$$"
 if(($$!=$nPidOldest));then
+	if $bDoSomething;then
+		SECFUNCvarSetDB $nPidOldest
+		
+		if $bCheckHasOtherPids;then
+			if((`SECFUNCarraySize astrRequests`>0));then
+				nCount="`echo "${astrRequests[@]}" |tr ' ' '\n' |grep -wv "$nPidSkip" |wc -l`"
+				if((nCount>0));then
+					exit 0
+				fi
+			fi
+			exit 1
+		fi
+		
+	fi
+	
 	exit
 fi
 
@@ -42,7 +79,7 @@ function SECFUNCremoveRequest() {
 	SECFUNCdbgFuncInA;
 	local lnToRemove="$1"
 
-	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests";then
+	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests" 2>/dev/null;then
 		local lnTotal=`SECFUNCarraySize astrRequests`
 		for((i=0;i<lnTotal;i++))do
 			if [[ "${astrRequests[i]}" == "$lnToRemove" ]];then
@@ -60,7 +97,7 @@ function SECFUNCremoveRequest() {
 		fi
 		
 		# last thing. this informs the QuickLock to proceed..
-		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRemoveRequests"
+		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRemoveRequests" 2>/dev/null
 		SECFUNCdbgFuncOutA;return 0
 	else
 		SECFUNCdbgFuncOutA;return 1
@@ -74,7 +111,7 @@ bShowLogToggle=false
 while true;do
 	astrRequests=()
 	
-	astrRemoveRequests=(`cat "$SECstrLockFileRemoveRequests"`)
+	astrRemoveRequests=(`cat "$SECstrLockFileRemoveRequests" 2>/dev/null`)
 	if((`SECFUNCarraySize astrRemoveRequests`>0));then
 		for strRemoveRequest in ${astrRemoveRequests[@]};do
 			SECFUNCremoveRequest $strRemoveRequest
@@ -97,6 +134,7 @@ while true;do
 	fi
 
 	astrRequests+=(`echo "$strRequests" |awk ' !x[$0]++'`)
+	varset astrRequests
 	if((`SECFUNCarraySize astrRequests`>0));then
 		for nAllowedPid in ${astrRequests[@]};do
 			if ! SECFUNCallowedPid --check $nAllowedPid 2>/dev/null;then
@@ -121,7 +159,7 @@ while true;do
 				fi
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
-					echo "Allowed Pid at `date`: $nAllowedPid" |tee -a "$SECstrLockFileLog"
+					echo "$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active

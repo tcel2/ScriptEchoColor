@@ -385,13 +385,15 @@ function SECFUNCallowedPid() { # defaults to return the allowed pid stored at SE
 		return 0
 	fi
 
-	local lnAllowedPid="`cat "$SECstrLockFileAllowedPid" 2>/dev/null`"
+	local lnAllowedPid="-1"
 	local lbAllowedIsValid=false
 	if [[ -f "$SECstrLockFileAllowedPid" ]];then
-		SECFUNCechoWarnA "file not available SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
+		lnAllowedPid="`cat "$SECstrLockFileAllowedPid" 2>/dev/null`"
 		if SECFUNCallowedPid_check $lnAllowedPid;then
 			lbAllowedIsValid=true
 		fi
+	else
+		SECFUNCechoWarnA "file not available SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
 	fi
 		
 	if [[ -n "$lnCmpPid" ]];then
@@ -790,7 +792,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 			l_bQuiet=true
 			shift
 		fi
-		SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$indexId]-}=${_dtSECFUNCdelayArray[$indexId]-}"
+		#SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$indexId]-}=${_dtSECFUNCdelayArray[$indexId]-}"
 		if [[ -z "${_dtSECFUNCdelayArray[$indexId]-}" ]];then
 			# programmer must have coded it somewhere to make that code clear
 			#echo "--init [indexId=$indexId] needed before calling $1" >&2
@@ -1067,7 +1069,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			# add a removal request
 			echo "$$" >>"$SECstrLockFileRemoveRequests"
 			# wait the removal
-			while grep -qx "$$" "$SECstrLockFileRemoveRequests";do
+			while grep -qx "$$" "$SECstrLockFileRemoveRequests" 2>/dev/null;do
 				if SECFUNCdelay "${FUNCNAME}_WaitRequestRemoval" --checkorinit 3;then
 						SECFUNCechoWarnA "waiting the request to be removed from SECstrLockFileRemoveRequests='$SECstrLockFileRemoveRequests'"
 				fi
@@ -1098,6 +1100,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 				rm "$lstrQuickLockFileName" >/dev/null 2>&1 #->2
 				# wait other pid get lstrQuickLockFileName to prevent simultaneous creation of such symlink (@->1) and attempt to this same being removed (@->2) by a failed symlink creation flow that may be running very slowly because of cpu and io (probably).
 				while [[ ! -L "$lstrQuickLockFileName" ]];do
+					#TODO if secLockControl.sh --hasotherpids $$;then
 					if SECFUNCdelay "${FUNCNAME}_WaitOtherGetQuickLock" --checkorinit 3;then
 						SECFUNCechoWarnA "waiting some pid get lstrQuickLockFileName='$lstrQuickLockFileName'"
 						if [[ ! -f "$SECstrLockFileRequests" ]];then
