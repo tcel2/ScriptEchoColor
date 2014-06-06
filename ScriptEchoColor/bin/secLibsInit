@@ -27,7 +27,7 @@ bBase=false
 bMisc=false
 bVars=false
 bFileLockDaemon=true
-while [[ "${1:0:2}" == "--" ]];do
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'

@@ -44,6 +44,8 @@ if [[ -L "$SEC_TmpFolder" ]];then
 	SEC_TmpFolder="`readlink -f "$SEC_TmpFolder"`" #required with `find` that would fail on symlink to a folder..
 fi
 
+export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
+
 export SECstrLockControlId="LockControl"
 export SECstrLockFileRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Requests"
 export SECstrLockFileAceptedRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AceptedRequests"
@@ -276,6 +278,10 @@ function SECFUNCechoErr() { #echo error messages
 
 alias SECFUNCechoDbgA="SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
+	if [[ -f "${SECstrFileMessageToggle}.DEBUG.$$" ]];then
+		rm "${SECstrFileMessageToggle}.DEBUG.$$" 2>/dev/null
+		if $SEC_DEBUG;then SEC_DEBUG=false;	else SEC_DEBUG=true; fi
+	fi
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -325,6 +331,10 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 
 alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
+	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
+		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
+		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
+	fi
 	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -357,6 +367,10 @@ function SECFUNCechoWarn() {
 
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoBugtrack() { 
+	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
+		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
+		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
+	fi
 	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -387,61 +401,103 @@ function SECFUNCechoBugtrack() {
 }
 
 function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stored at SECstrLockFileAllowedPid
-	local lnCmpPid=""
-	local lnWritePid=""
-	local lnCheckPid=""
-	local lnPidSkip=""
-	local lbHasOtherPids=false
+	local lbCheckOnly=false
+	local lbCmpPid=false
+	local lbWritePid=false
+	local lbHasOtherPidsPidSkip=false
+	local lbMustBeActive=false
+	local lbCheckPid=false
+	#!!! local lnPid= #do not set it!!! unbound will work
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNClockFileAllowedPid_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--hasotherpids" ]];then #SECFUNClockFileAllowedPid_help <skipPid> return true if there are other requests other than the skipPid (usually $$ of caller script)
 			shift
-			lnPidSkip="${1-}"
+			lnPid="${1-0}"
 			
-			lbHasOtherPids=true
+			lbHasOtherPidsPidSkip=true
+			lbCheckPid=true
 		elif [[ "$1" == "--cmp" ]];then #SECFUNClockFileAllowedPid_help <pid>
 			shift
-			lnCmpPid="${1-0}"
-		elif [[ "$1" == "--write" ]];then #SECFUNClockFileAllowedPid_help <pid>
+			lnPid="${1-0}"
+			
+			lbCmpPid=true
+			lbCheckPid=true
+		elif [[ "$1" == "--write" || "$1" == "--allow" ]];then #SECFUNClockFileAllowedPid_help <pid>
 			shift
-			lnWritePid="${1-0}"
+			lnPid="${1-0}"
+			
+			lbWritePid=true
+			lbCheckPid=true
+		elif [[ "$1" == "--active" ]];then #SECFUNClockFileAllowedPid_help the pid of other options must be active or it will return false
+			lbMustBeActive=true
 		elif [[ "$1" == "--check" ]];then #SECFUNClockFileAllowedPid_help <pid>
 			shift
-			lnCheckPid="${1-0}"
+			lnPid="${1-0}"
+			
+			lbCheckOnly=true
+			lbCheckPid=true
 		else
 			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
 		shift
 	done
-
+	
+	if $lbHasOtherPidsPidSkip && $lbMustBeActive;then
+		SECFUNCechoWarnA "the option '--hasotherpids' ignores '--active'"
+		lbMustBeActive=false
+	fi
+	
 	function SECFUNClockFileAllowedPid_check(){
-		if [[ -n "`echo "$1" |tr -d "[:digit:]"`" ]];then
-			#echo -n "-1"
+		local lnPid="$1"
+		
+		if [[ -z "$lnPid" ]];then
+			SECFUNCechoErrA "lnPid='$lnPid' empty"
+			return 1
+		fi
+		if [[ -n "`echo "$lnPid" |tr -d "[:digit:]"`" ]];then
+			SECFUNCechoErrA "lnPid='$lnPid' is not a pid"
 			return 1
 		fi
 		if(($1<1));then
-			#echo -n "-1"
+			SECFUNCechoErrA "lnPid='$lnPid' < 1"
 			return 1
 		fi
 		if(($1>SECnPidMax));then
-			#echo -n "-1"
+			SECFUNCechoErrA "lnPid='$lnPid' > $SECnPidMax"
 			return 1
 		fi
 		return 0
 	}
 	
-	if $lbHasOtherPids;then
-		if ! SECFUNClockFileAllowedPid_check $lnPidSkip;then
-			SECFUNCechoErrA "invalid lnPidSkip='$lnPidSkip'"
-			#This error here should not stop execution #return 1
-			lnPidSkip=-1
+	# pid check only
+	if $lbCheckPid;then
+		if ! SECFUNClockFileAllowedPid_check "$lnPid";then
+			if $lbHasOtherPidsPidSkip;then
+				# if pid is invalid all other pids available are valid to return 0
+				lnPid=-1
+			else
+				return 1
+			fi
 		fi
-		
+		if [[ ! -d "/proc/$lnPid" ]];then
+			if $lbMustBeActive;then
+				return 1
+			fi
+			SECFUNCechoWarnA "pid '$lnPid' not found"
+		fi
+		if $lbCheckOnly;then
+			return 0
+		fi
+	fi
+			
+	# other functionalities
+	
+	if $lbHasOtherPidsPidSkip;then
 		# empty arrays create one empty line prevented with "^$"
-		local lnCount="`cat "$SECstrLockFileAceptedRequests" |grep -wv "$lnPidSkip" |grep -v "^$" |wc -l`"
+		local lnCount="`cat "$SECstrLockFileAceptedRequests" |grep -wv "$lnPid" |grep -v "^$" |wc -l`"
 		if((lnCount>0));then
 			return 0
 		else
@@ -449,28 +505,15 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 		fi
 	fi
 	
-	if [[ -n "$lnCheckPid" ]];then
-		if ! SECFUNClockFileAllowedPid_check $lnCheckPid;then
-			SECFUNCechoErrA "invalid lnCheckPid='$lnCheckPid'"
-			return 1
-		else
-			return 0
-		fi
-	fi
-	
-	if [[ -n "$lnWritePid" ]];then
-		if ! SECFUNClockFileAllowedPid_check $lnWritePid;then
-			SECFUNCechoErrA "invalid lnWritePid='$lnWritePid'"
-			return 1
-		fi
+	if $lbWritePid;then
 		if [[ -f "$SECstrLockFileAllowedPid" ]];then
 			SECFUNCechoWarnA "file SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid' exists, overwritting"
 		fi
-		if [[ ! -d "/proc/$lnWritePid" ]];then
-			SECFUNCechoErrA "there is no such lnWritePid='$lnWritePid' running..."
+		if [[ ! -d "/proc/$lnPid" ]];then
+			SECFUNCechoErrA "there is no such lnPid='$lnPid' running..."
 			return 1
 		fi
-		echo -n "$lnWritePid" >"$SECstrLockFileAllowedPid"
+		echo -n "$lnPid" >"$SECstrLockFileAllowedPid"
 		return 0
 	fi
 
@@ -485,20 +528,15 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 		SECFUNCechoWarnA "file not available SECstrLockFileAllowedPid='$SECstrLockFileAllowedPid'"
 	fi
 		
-	if [[ -n "$lnCmpPid" ]];then
+	if $lbCmpPid;then
 		if ! $lbAllowedIsValid;then
 			return 1
 		fi
 		
-		if ! SECFUNClockFileAllowedPid_check $lnCmpPid;then
-			SECFUNCechoErrA "invalid lnCmpPid='$lnCmpPid'"
-			return 1
+		if((lnAllowedPid==lnPid));then
+			return 0
 		else
-			if((lnAllowedPid==lnCmpPid));then
-				return 0
-			else
-				return 1
-			fi
+			return 1
 		fi
 	fi
 	

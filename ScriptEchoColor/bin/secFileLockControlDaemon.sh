@@ -184,7 +184,7 @@ while true;do
 				SECFUNClockFileAllowedPid --write "$nAllowedPid"
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
-					echo "$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
+					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active
