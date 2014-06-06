@@ -22,61 +22,31 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-trap 'bShowLogToggle=true;' USR1
+#############################################
+# THIS FILE IS BASE TO THE FILE LOCK SYSTEM #
+#############################################
 
-eval `secinit`
-
-bDoSomething=false
-bCheckHasOtherPids=false
-nPidSkip="-1"
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp
-		exit
-	elif [[ "$1" == "--hasotherpids" ]];then #help <skipPid>
-		shift
-		nPidSkip="${1-}"
-		
-		bCheckHasOtherPids=true
-		
-		bDoSomething=true
-	else
-		echoc -p "invalid option '$1'"
-		exit 1
+#################### Functions
+function FUNCupdateActiveRequests() {
+	if ! ${astrRequests+false};then
+		echo "${astrRequests[@]}" |tr ' ' '\n' >"$SECstrLockFileAceptedRequests"
 	fi
-	shift
-done
+}
 
-# THIS FILE IS BASE TO THE FILE LOCK SYSTEM
-varset --show strSelfName="`basename "$0"`"
-varset --show nPidOldest="`pgrep -fo "/$strSelfName"`"
-varset --show nSelfPid="$$"
-if(($$!=$nPidOldest));then
-	if $bDoSomething;then
-		SECFUNCvarSetDB $nPidOldest
-		
-		if $bCheckHasOtherPids;then
-			if((`SECFUNCarraySize astrRequests`>0));then
-				nCount="`echo "${astrRequests[@]}" |tr ' ' '\n' |grep -wv "$nPidSkip" |wc -l`"
-				if((nCount>0));then
-					exit 0
-				fi
-			fi
-			exit 1
+function FUNCToggleLogCheck() {
+	if $bShowLogToggle;then
+		if $bShowLog;then
+			bShowLog=false
+			echo "Log disabled." >/dev/stderr
+		else
+			bShowLog=true
+			echo "Log enabled." >/dev/stderr
 		fi
-		
+		bShowLogToggle=false
 	fi
-	
-	exit
-fi
+}
 
-#this now comes from funcMisc.sh: SECstrLockControlId="`echo -n "$strSelfName" |tr '.' '_'`"
-
-#TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid
-#TODO AllowedPid file be named with the md5sum and containing the pid
-
-function SECFUNCremoveRequest() {
-	SECFUNCdbgFuncInA;
+function FUNCremoveRequest() {
 	local lnToRemove="$1"
 
 	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests" 2>/dev/null;then
@@ -86,42 +56,104 @@ function SECFUNCremoveRequest() {
 				astrRequests[i]=""
 			fi
 		done
+		FUNCupdateActiveRequests
 		
 		if grep -qx "$lnToRemove" "$SECstrLockFileRequests" 2>/dev/null;then
 			sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
 		fi
 		
-		#if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
-		if SECFUNCallowedPid --cmp $lnToRemove;then
+		if [[ -f "$SECstrLockFileAllowedPid" ]] && ((lnToRemove==`cat "$SECstrLockFileAllowedPid"`));then
 			rm "$SECstrLockFileAllowedPid"
 		fi
 		
 		# last thing. this informs the QuickLock to proceed..
 		sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRemoveRequests" 2>/dev/null
-		SECFUNCdbgFuncOutA;return 0
+		return 0
 	else
-		SECFUNCdbgFuncOutA;return 1
+		return 1
 	fi
-	SECFUNCdbgFuncOutA;
 }
 
-bShowLog=true
+#################### Init
+trap 'bShowLogToggle=true;' USR1
 bShowLogToggle=false
+bShowLog=true
+
+# can only have access to base functions as the file locks begin from misc up...
+eval `secinit --nofilelockdaemon --base`
+
+strSelfName="`basename "$0"`"
+nPidDaemon="`pgrep -fo "/$strSelfName"`"
+nSelfPid="$$"
+bIsMain=false
+if((nSelfPid==nPidDaemon));then
+	bIsMain=true
+fi
+
+#################### Options
+# "Do" variables are used at 'NonMain code area' and so have access to secinit
+bDoSomething=false
+nPidSkip="-1"
+bCheckHasOtherPids=false
+while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--nolog" ]];then #help do not show the log
+		bShowLog=false
+	elif [[ "$1" == "--togglelog" ]];then #help toggle log monitor at daemon (if it has tty)
+		kill -SIGUSR1 $nPidDaemon
+		exit
+	elif [[ "$1" == "--logmon" ]];then #help log monitor
+		while true;do
+			cat "$SECstrLockFileLog"
+			sleep 1
+		done
+	else
+		SECFUNCechoErrA "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
+#################### NonMain code area, secinit ONLY ALLOWED HERE!!!
+if ! $bIsMain ;then
+	echo "nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >/dev/stderr
+	
+	if $bDoSomething;then
+		eval `secinit` # can communicate with the main process
+		#echo "Libs Initialized." >/dev/stderr
+		if((nSelfPid!=nPidDaemon));then
+			SECFUNCvarSetDB $nPidDaemon
+		fi
+		
+	fi
+
+	exit
+fi
+
+#################### MAIN
+echo "Lock Control Daemon started, pid='$nSelfPid'." >/dev/stderr
+
+#TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid?
+#TODO AllowedPid file be named with the md5sum and containing the pid?
+
 # check requests
 while true;do
+	FUNCToggleLogCheck
 	astrRequests=()
 	
 	astrRemoveRequests=(`cat "$SECstrLockFileRemoveRequests" 2>/dev/null`)
 	if((`SECFUNCarraySize astrRemoveRequests`>0));then
 		for strRemoveRequest in ${astrRemoveRequests[@]};do
-			SECFUNCremoveRequest $strRemoveRequest
+			FUNCremoveRequest $strRemoveRequest
 		done
 	fi
 	
 	#if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		# if this script is restarted, wont break last pid already granted lock rights
 		#astrRequests+=(`cat "$SECstrLockFileAllowedPid"`)
-		astrRequests+=(`SECFUNCallowedPid`);
+		astrRequests+=(`SECFUNClockFileAllowedPid`);
 	#fi
 	
 	# updated requests removing dups and currently allowed one
@@ -134,10 +166,12 @@ while true;do
 	fi
 
 	astrRequests+=(`echo "$strRequests" |awk ' !x[$0]++'`)
-	varset astrRequests
+	FUNCupdateActiveRequests
 	if((`SECFUNCarraySize astrRequests`>0));then
 		for nAllowedPid in ${astrRequests[@]};do
-			if ! SECFUNCallowedPid --check $nAllowedPid 2>/dev/null;then
+			FUNCupdateActiveRequests
+			
+			if ! SECFUNClockFileAllowedPid --check $nAllowedPid 2>/dev/null;then
 				continue
 			fi
 			
@@ -147,41 +181,21 @@ while true;do
 			if [[ -n "$nAllowedPid" ]] && [[ -d "/proc/$nAllowedPid" ]];then
 				# set allowed pid
 				#echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
-				SECFUNCallowedPid --write "$nAllowedPid"
-				
-				if $bShowLogToggle;then
-					if $bShowLog;then
-						bShowLog=false
-					else
-						bShowLog=true
-					fi
-					bShowLogToggle=false
-				fi
+				SECFUNClockFileAllowedPid --write "$nAllowedPid"
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
 					echo "$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active
+				nLastSECONDS=$SECONDS
 				while [[ -d "/proc/$nAllowedPid" ]];do
-					if SECFUNCdelay "nAllowedPid" --checkorinit 1;then
-#						# keep removing current from the requests queue
-#						if grep -qx "$nAllowedPid" "$SECstrLockFileRequests" 2>/dev/null;then
-#							# nAllowedPid has been already consumed from astrRequests
-#							sed -i "/^${nAllowedPid}$/d" "$SECstrLockFileRequests"
-#						fi
-#					
-#						if grep -qx "$nAllowedPid" "$SECstrLockFileRemoveRequests";then
-#							# accept the removal request and inform it will be done
-#							sed -i "/^${nAllowedPid}$/d" "$SECstrLockFileRemoveRequests"
-#							# remove the request
-#							rm "$SECstrLockFileAllowedPid"
-#						fi
-						
-						SECFUNCremoveRequest $nAllowedPid
-#						if SECFUNCremoveRequest $nAllowedPid;then
-#							rm "$SECstrLockFileAllowedPid"
-#						fi
+					FUNCToggleLogCheck
+					
+					if((nLastSECONDS<$SECONDS));then
+						# check once per second
+						FUNCremoveRequest $nAllowedPid
+						nLastSECONDS=$SECONDS;
 					fi
 					
 					# check if allowed pid file was removed (by itself or here)

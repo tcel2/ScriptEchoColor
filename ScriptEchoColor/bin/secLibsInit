@@ -23,64 +23,68 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 SECinstallPath=`secGetInstallPath.sh`
+bBase=false
+bMisc=false
+bVars=false
+bFileLockDaemon=true
 while [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
-		
+		grep "[#]help" "$0"
+		echo
 		#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
 		echo "HELP on Libs functions at: $SECinstallPath/lib/ScriptEchoColor"
 		echo
-		
-		#cd "$SECinstallPath/lib/ScriptEchoColor"
-		#function FUNCechoPipe() {
-		#	read str
-		#	echo -en "$str"
-		#};export -f FUNCechoPipe
-#		function FUNCtoFind() { 
-#			echo "File: ${1:2}"; #remove heading "./"
-#			sedGatherHelpText='s"function \(SECFUNC[[:alnum:]].*()\).*#help: \(.*\)"  \1\t\2"';
-#			sedTranslateNewLine='s"[\]n"\n"g'
-#			sedTranslateTab='s"[\]t"\t"g'
-#			#grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |FUNCechoPipe;
-#			grep "function SECFUNC.*#help:" "$1" |sed "$sedGatherHelpText" |sed "$sedTranslateNewLine" |sed "$sedTranslateTab";
-#		};export -f FUNCtoFind
-#		function FUNCtoFind() { 
-#			echo "File: ${1:2}"; #remove heading "./"
-#			local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
-#			local lastrFunctions=(`grep "function SECFUNC.*" "$1" |sed -r "$lsedFunctionNameOnly"`)
-#			for lstrFuncId in ${lastrFunctions[@]};do
-#				echo "  $lstrFuncId"
-#				if type $lstrFuncId |grep -q "\-\-help";then
-#					$lstrFuncId --help
-#				fi
-#			done
-#		};export -f FUNCtoFind
-		#find ./ -iname "*.sh" -exec bash -c 'FUNCtoFind "{}"' \;
-		#eval `$0`
-		#find ./ -iname "*.sh" -exec bash -c '{} --help' \;
-		
 		echo "See these for more:"
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		
-		#echo "$strInfo"
 		exit
+	elif [[ "$1" == "--base" ]];then #help base libs
+		bBase=true
+	elif [[ "$1" == "--misc" ]];then #help misc libs, loads base
+		bMisc=true
+	elif [[ "$1" == "--vars" ]];then #help vars libs, loads misc (default)
+		bVars=true
+	elif [[ "$1" == "--nofilelockdaemon" ]];then #help do not check and auto load the file lock daemon
+		bFileLockDaemon=false
 	else
-		echoc -p "invalid option: $1"
+		echo "PROBLEM: invalid option: $1"
 		exit 1
 	fi
 	shift
 done
 
+if ! $bBase && ! $bMisc && ! $bVars;then
+	# the one that uses most libs shall be the default
+	bVars=true
+fi
+
 # echo 'export SECinstallPath="`secGetInstallPath.sh`";' #at funcMisc
 # echo 'source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";' #at funcVars
 #if ! ${SECinitialized-false};then #this breaks aliases :(
+if $bBase;then
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh\";"
+elif $bMisc;then
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh\";" #it imports funcBase.sh
+elif $bVars;then
 	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
-	echo 'eval "`SECFUNCexportFunctions`";'
+fi
+echo 'eval "`SECFUNCexportFunctions`";'
 #fi
-echo 'SECFUNCvarInit;'
+if $bVars;then
+	echo 'SECFUNCvarInit;'
+fi
+
+if $bFileLockDaemon;then
+	if ! pgrep -f "secFileLockControlDaemon.sh" 1>/dev/null;then
+		echo "`basename $0`: Initializing Lock Control Daemon." >/dev/stderr
+		secFileLockControlDaemon.sh&
+	fi
+fi
 
 # DO NOT use `SECFUNCcfgRead` here, associative arrays will be messed up if not initialized BEFORE this.
 #echo 'SECFUNCcfgRead;' # the file will only be generated on its first write

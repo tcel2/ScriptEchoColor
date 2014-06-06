@@ -59,12 +59,12 @@ if $bGraphicalDialog;then
 	#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
 	
 	if $bCloseWithWindow;then
-		evince "${strFileLyricsTmp}.pdf"&
+		evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
 		pidGfxReader=$!
 	else
 		function FUNCreader() {
 			while true;do
-				evince "${strFileLyricsTmp}.pdf"
+				evince "${strFileLyricsTmp}.pdf" 2>/dev/null
 				sleep 1
 			done
 		}
