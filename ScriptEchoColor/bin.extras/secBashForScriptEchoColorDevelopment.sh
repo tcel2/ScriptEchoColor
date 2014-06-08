@@ -60,13 +60,20 @@ export SECcmdDevTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
 	
-	# Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
-	strBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
-	export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$strBanner\"; ";
+	local lstrSECpath="$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor"
+	
+	source "$lstrSECpath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
+	function SECFUNCcustomUserText(){
+		# Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
+		local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
+		echo "$lstrBanner"
+		#echo -e \"$lstrBanner\"
+	}
+	#export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$lstrBanner\"; ";
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
 	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
 	
-	export PATH="$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin:$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.extras:$PATH";
+	export PATH="$lstrSECpath/bin:$lstrSECpath/bin.extras:$PATH";
 	echo " PATH='$PATH'" >>/dev/stderr
 	
 	# must be after PATH setup
