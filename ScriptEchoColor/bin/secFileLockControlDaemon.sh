@@ -34,8 +34,6 @@ bShowLog=true
 # secinit must come before functions so its aliases are expanded!
 # can only have access to base functions as the file locks begin from misc up...
 eval `secinit --nofilelockdaemon --base`
-exec 2>> "$SECstrLockFileLog"
-exec 1>&2                   
 
 strSelfName="`basename "$0"`"
 nPidDaemon="`pgrep -fo "/$strSelfName"`"
@@ -152,28 +150,33 @@ if $bToggleLog;then
 	kill -SIGUSR1 $nPidDaemon
 fi
 
-if ! $bIsMain;then
-	if $bKillDaemon;then
-		kill -SIGKILL $nPidDaemon
+if $bKillDaemon;then
+	pgrep -f $strSelfName
+	if $bIsMain;then
+		SEC_WARN=true SECFUNCechoWarnA "killing self..."
 	fi
+	kill -SIGKILL $nPidDaemon
+fi
 	
-	if $bRestartDaemon;then
-		secFileLockControlDaemon.sh >>/dev/stderr &
-	fi
+if $bRestartDaemon;then
+	secFileLockControlDaemon.sh >>/dev/stderr &
 fi
 
 if $bLogMonitor;then
+	echo "Daemon Pid: $nPidDaemon"
 	tail -f "$SECstrLockFileLog"
 fi
 
-# LAST ITEM!
+# MUST BE LAST CHECK BEFORE MAIN CODE!
 if ! $bIsMain ;then
-	echo "nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >>/dev/stderr
+	echo "$strSelfName: nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >>/dev/stderr
 	exit
 fi
 
 #################### MAIN
 echo "Lock Control Daemon started, pid='$nSelfPid'." >>/dev/stderr
+exec 2>> "$SECstrLockFileLog"
+exec 1>&2                   
 
 #TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid?
 #TODO AllowedPid file be named with the md5sum and containing the pid?
