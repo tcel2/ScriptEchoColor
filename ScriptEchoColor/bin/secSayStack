@@ -258,7 +258,7 @@ function FUNCsayStack() {
   
   ####################### other initializations
   
-	local selfFullCmd="`SECFUNCparamsToEval $0 "$@"`"
+	local selfFullCmd="`SECFUNCparamsToEval "$0" "$@"`"
  	FUNCechoDbgSS "<- start at"
  	FUNCechoDbgSS "pids: script $$, instance $selfMainFunctionPid, parent $PPID"
  	

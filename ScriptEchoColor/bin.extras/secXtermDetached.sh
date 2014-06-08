@@ -203,7 +203,7 @@ function FUNCexecParams() {
 	fi
 	
 	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
-	eval ${strSudoPrefix} $strFUNCexecParams; nRet=$?
+	eval "${strSudoPrefix} ${strFUNCexecParams}"; nRet=$?
 	if((nRet!=0));then
 		echoc -p "returned $nRet"
 		echoc -w

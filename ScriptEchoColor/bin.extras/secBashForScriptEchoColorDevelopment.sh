@@ -48,11 +48,14 @@ if $SECbFullDebug;then
 	#set -x
 fi
 
+## custom first command by user like found at SECFUNCparamsToEval
+#export SECcmdDevTmp=""
+#for strParam in "$@";do
+#	SECcmdDevTmp+="'$strParam' "
+#done
+
 # custom first command by user
-export SECcmdDevTmp=""
-for strParam in "$@";do
-	SECcmdDevTmp+="'$strParam' "
-done
+export SECcmdDevTmp="`eval \`secinit --base\` >/dev/stderr; SECFUNCparamsToEval "$@"`"
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -73,7 +76,7 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# must come after secinit
-	echo " Unbound vars allowed.";set +u;
+	echo " Unbound vars allowed at terminal.";set +u;
 	
 	# user custom initial command
 	if [[ -n "${SECcmdDevTmp}" ]];then

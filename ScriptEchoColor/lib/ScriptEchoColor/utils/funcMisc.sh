@@ -222,12 +222,14 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 					if ! SECFUNClockFileAllowedPid --hasotherpids $$;then
 						break
 					fi
+					#echo "SECFUNClockFileAllowedPid ret $?" >/dev/stderr
 					if SECFUNCdelay "${FUNCNAME}_WaitOtherGetQuickLock" --checkorinit 3;then
+						#SECFUNCechoBugtrackA "pid $$, req `cat "$SECstrLockFileRequests" |tr '\n' ','`"
 						SECFUNCechoWarnA "waiting some pid get lstrQuickLockFileName='$lstrQuickLockFileName'"
-						if [[ ! -f "$SECstrLockFileRequests" ]];then
-							#stop if there are no other pids..
-							break
-						fi
+#						if [[ ! -f "$SECstrLockFileRequests" ]];then
+#							#stop if there are no other pids..
+#							break
+#						fi
 					fi
 					sleep "$lfSleepDelay"
 				done

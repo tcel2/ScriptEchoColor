@@ -276,12 +276,46 @@ function SECFUNCechoErr() { #echo error messages
 #	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
 #fi
 
+function _SECFUNCmsgCtrl() {
+	local lstrMsgMode="$1"
+	if [[ -f "${SECstrFileMessageToggle}.$lstrMsgMode.$$" ]];then
+		local lstrForceMessage=cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"
+		
+		rm "${SECstrFileMessageToggle}.$lstrMsgMode.$$" 2>/dev/null
+		
+		if [[ -n "$lstrForceMessage" ]];then
+			if [[ "$lstrForceMessage" == "on" ]];then
+				eval SEC_$lstrMsgMode=true
+			elif [[ "$lstrForceMessage" == "off" ]];then
+				eval SEC_$lstrMsgMode=false
+			fi				
+		else
+			local lstrVarTemp="$SEC_$lstrMsgMode"
+			if ${!lstrVarTemp};then 
+				eval SEC_$lstrMsgMode=false;	
+			else 
+				eval SEC_$lstrMsgMode=true;
+			fi
+		fi
+	fi
+}
+
 alias SECFUNCechoDbgA="SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
-	if [[ -f "${SECstrFileMessageToggle}.DEBUG.$$" ]];then
-		rm "${SECstrFileMessageToggle}.DEBUG.$$" 2>/dev/null
-		if $SEC_DEBUG;then SEC_DEBUG=false;	else SEC_DEBUG=true; fi
-	fi
+#	if [[ -f "${SECstrFileMessageToggle}.DEBUG.$$" ]];then
+#		local lstrForceMessage=cat "${SECstrFileMessageToggle}.DEBUG.$$"
+#		rm "${SECstrFileMessageToggle}.DEBUG.$$" 2>/dev/null
+#		if [[ -n "$lstrForceMessage" ]];then
+#			if [[ "$lstrForceMessage" == "on" ]];then
+#				SEC_DEBUG=true
+#			elif [[ "$lstrForceMessage" == "off" ]];then
+#				SEC_DEBUG=false
+#			fi				
+#		else
+#			if $SEC_DEBUG;then SEC_DEBUG=false;	else SEC_DEBUG=true; fi
+#		fi
+#	fi
+	_SECFUNCmsgCtrl DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -331,10 +365,11 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 
 alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
-	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
-		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
-		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
-	fi
+#	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
+#		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
+#		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
+#	fi
+	_SECFUNCmsgCtrl WARN
 	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -367,10 +402,11 @@ function SECFUNCechoWarn() {
 
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoBugtrack() { 
-	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
-		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
-		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
-	fi
+#	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
+#		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
+#		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
+#	fi
+	_SECFUNCmsgCtrl BUGTRACK
 	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -497,7 +533,8 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	
 	if $lbHasOtherPidsPidSkip;then
 		# empty arrays create one empty line prevented with "^$"
-		local lnCount="`cat "$SECstrLockFileAceptedRequests" |grep -wv "$lnPid" |grep -v "^$" |wc -l`"
+		local lnCount="`cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests" 2>/dev/null |grep -wv "$lnPid" |grep -v "^$" |wc -l`"
+		#echo "lnCount=$lnCount, `cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests"`" >/dev/stderr
 		if((lnCount>0));then
 			return 0
 		else
@@ -581,42 +618,53 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 }
 
 function SECFUNCparamsToEval() {
-	###### options
-	bEscapeQuotes=false
-	bEscapeQuotesTwice=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--escapequotes" ]];then #SECFUNCparamsToEval_help quotes will be escaped like '\"'
-			bEscapeQuotes=true
-#		elif [[ "$1" == "--escapequotestwice" ]];then #SECFUNCparamsToEval_help quotes will be escaped TWICE like '\\\"'
-#			bEscapeQuotesTwice=true
-		else
-			SECFUNCechoErrA "invalid option $1"
-			return 1
-		fi
-		shift
+	local lstrToExec=""
+	for lstrParam in "$@";do
+		lstrToExec+="'$lstrParam' "
 	done
-	
-	strEscapeQuotes=""
-	if $bEscapeQuotes;then
-		strEscapeQuotes='\'
-	fi
-#	if $bEscapeQuotesTwice;then
-#		strEscapeQuotes='\\\'
-#	fi
-	
-	local strExec=""
-	while [[ -n "${1-}" ]];do
-  	if [[ -n "$strExec" ]];then
-	  	strExec="${strExec} ";
-  	fi
-  	strExec="${strExec}${strEscapeQuotes}\"$1${strEscapeQuotes}\"";
-  	shift;
-  done;
-  echo "$strExec"
+  echo "$lstrToExec"
 }
+#function SECFUNCparamsToEval() {
+#	###### options
+##	bEscapeQuotes=false
+##	bEscapeQuotesTwice=false
+#	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+#		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help show this help
+#			SECFUNCshowHelp ${FUNCNAME}
+#			return
+##		elif [[ "$1" == "--escapequotes" ]];then #SECFUNCparamsToEval_help quotes will be escaped like '\"'
+##			bEscapeQuotes=true
+##		elif [[ "$1" == "--escapequotestwice" ]];then #SECFUNCparamsToEval_help quotes will be escaped TWICE like '\\\"'
+##			bEscapeQuotesTwice=true
+#		else
+#			SECFUNCechoErrA "invalid option $1"
+#			return 1
+#		fi
+#		shift
+#	done
+#	
+##	strEscapeQuotes=""
+##	if $bEscapeQuotes;then
+##		strEscapeQuotes='\'
+##	fi
+##	if $bEscapeQuotesTwice;then
+##		strEscapeQuotes='\\\'
+##	fi
+#	
+##	local strExec=""
+##	while [[ -n "${1-}" ]];do
+##  	if [[ -n "$strExec" ]];then
+##	  	strExec="${strExec} ";
+##  	fi
+##  	strExec="${strExec}${strEscapeQuotes}\"$1${strEscapeQuotes}\"";
+##  	shift;
+##  done;
+#	local lstrToExec=""
+#	for lstrParam in "$@";do
+#		lstrToExec+="'$lstrParam' "
+#	done
+#  echo "$lstrToExec"
+#}
 
 alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCexec() {

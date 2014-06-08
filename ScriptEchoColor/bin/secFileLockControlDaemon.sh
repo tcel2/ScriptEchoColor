@@ -26,10 +26,11 @@
 # THIS FILE IS BASE TO THE FILE LOCK SYSTEM #
 #############################################
 
+#set -x
 #################### Functions
-function FUNCupdateActiveRequests() {
-	if ! ${astrRequests+false};then
-		echo "${astrRequests[@]}" |tr ' ' '\n' >"$SECstrLockFileAceptedRequests"
+function FUNCupdateAceptedRequests() {
+	if ! ${astrAceptedRequests+false};then
+		echo "${astrAceptedRequests[@]}" |tr ' ' '\n' >"$SECstrLockFileAceptedRequests"
 	fi
 }
 
@@ -46,19 +47,41 @@ function FUNCToggleLogCheck() {
 	fi
 }
 
-function FUNCremoveRequest() {
-	local lnToRemove="$1"
+function FUNCremoveRequestsByInactivePids() {
+	local lastrRequestsToValidate=()
+	lastrRequestsToValidate+=(${astrAceptedRequests[@]})
+	lastrRequestsToValidate+=(`cat "$SECstrLockFileRequests" 2>/dev/null`)
+	
+	local lstrRequest
+	for lstrRequest in ${lastrRequestsToValidate[@]};do
+		if [[ ! -d "/proc/$lstrRequest" ]];then
+			echo "$lstrRequest" >>"$SECstrLockFileRemoveRequests"
+			FUNCvalidateRequest "$lstrRequest"
+		fi
+	done
+}
 
-	if grep -qx "$lnToRemove" "$SECstrLockFileRemoveRequests" 2>/dev/null;then
-		local lnTotal=`SECFUNCarraySize astrRequests`
+function FUNCvalidateRequest() {
+	local lnToRemove="$1"
+	
+	local lstrBUGFIX=""
+	if [[ "$lnToRemove" == "-1" ]];then
+		#shopt -s expand_aliases
+		SECFUNCechoErrA "lnToRemove='$lnToRemove'"
+		#alias |grep "SECFUNC" >/dev/stderr
+		lstrBUGFIX='\'
+	fi
+	
+	if grep -qx "${lstrBUGFIX}${lnToRemove}" "$SECstrLockFileRemoveRequests" 2>/dev/null;then
+		local lnTotal=`SECFUNCarraySize astrAceptedRequests`
 		for((i=0;i<lnTotal;i++))do
-			if [[ "${astrRequests[i]}" == "$lnToRemove" ]];then
-				astrRequests[i]=""
+			if [[ "${astrAceptedRequests[i]}" == "$lnToRemove" ]];then
+				astrAceptedRequests[i]=""
 			fi
 		done
-		FUNCupdateActiveRequests
+		FUNCupdateAceptedRequests
 		
-		if grep -qx "$lnToRemove" "$SECstrLockFileRequests" 2>/dev/null;then
+		if grep -qx "${lstrBUGFIX}${lnToRemove}" "$SECstrLockFileRequests" 2>/dev/null;then
 			sed -i "/^${lnToRemove}$/d" "$SECstrLockFileRequests"
 		fi
 		
@@ -141,35 +164,36 @@ echo "Lock Control Daemon started, pid='$nSelfPid'." >/dev/stderr
 # check requests
 while true;do
 	FUNCToggleLogCheck
-	astrRequests=()
+	astrAceptedRequests=()
 	
 	astrRemoveRequests=(`cat "$SECstrLockFileRemoveRequests" 2>/dev/null`)
 	if((`SECFUNCarraySize astrRemoveRequests`>0));then
 		for strRemoveRequest in ${astrRemoveRequests[@]};do
-			FUNCremoveRequest $strRemoveRequest
+			FUNCvalidateRequest $strRemoveRequest
 		done
 	fi
 	
 	#if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		# if this script is restarted, wont break last pid already granted lock rights
-		#astrRequests+=(`cat "$SECstrLockFileAllowedPid"`)
-		astrRequests+=(`SECFUNClockFileAllowedPid`);
+		#astrAceptedRequests+=(`cat "$SECstrLockFileAllowedPid"`)
+		astrAceptedRequests+=(`SECFUNClockFileAllowedPid`);
 	#fi
 	
 	# updated requests removing dups and currently allowed one
-	strRequests=""
+	astrRequests=()
 	if [[ -f "$SECstrLockFileRequests" ]];then
-		strRequests="`cat "$SECstrLockFileRequests"`"
-	fi
-	if [[ -n "$strRequests" ]];then
+		astrRequests+=(`cat "$SECstrLockFileRequests" 2>/dev/null |awk ' !x[$0]++'`)
 		rm "$SECstrLockFileRequests"
+		for strRequest in ${astrRequests[@]};do
+			if SECFUNClockFileAllowedPid --check "$strRequest";then
+				astrAceptedRequests+=($strRequest)
+			fi
+		done
 	fi
-
-	astrRequests+=(`echo "$strRequests" |awk ' !x[$0]++'`)
-	FUNCupdateActiveRequests
-	if((`SECFUNCarraySize astrRequests`>0));then
-		for nAllowedPid in ${astrRequests[@]};do
-			FUNCupdateActiveRequests
+	FUNCupdateAceptedRequests
+	if((`SECFUNCarraySize astrAceptedRequests`>0));then
+		for nAllowedPid in ${astrAceptedRequests[@]};do
+			FUNCupdateAceptedRequests
 			
 			if ! SECFUNClockFileAllowedPid --check $nAllowedPid 2>/dev/null;then
 				continue
@@ -184,6 +208,7 @@ while true;do
 				SECFUNClockFileAllowedPid --write "$nAllowedPid"
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
+					# at secinit this is redirected to /dev/stderr
 					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
 				fi
 
@@ -193,8 +218,10 @@ while true;do
 					FUNCToggleLogCheck
 					
 					if((nLastSECONDS<$SECONDS));then
+						# MAINTENANCE VALIDATIONS HERE
+						FUNCremoveRequestsByInactivePids
 						# check once per second
-						FUNCremoveRequest $nAllowedPid
+						FUNCvalidateRequest $nAllowedPid
 						nLastSECONDS=$SECONDS;
 					fi
 					
