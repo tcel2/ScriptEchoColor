@@ -45,7 +45,8 @@ fi
 
 #################### Functions
 function FUNCupdateAceptedRequests() {
-	if ! ${astrAceptedRequests+false};then
+	#if ! ${astrAceptedRequests+false};then
+	if((`SECFUNCarraySize astrAceptedRequests`>0));then
 		echo "${astrAceptedRequests[@]}" |tr ' ' '\n' >"$SECstrLockFileAceptedRequests"
 	fi
 }
@@ -66,16 +67,22 @@ function FUNCToggleLogCheck() {
 function FUNCremoveRequestsByInactivePids() {
 	#set -x;SECFUNCechoBugtrackA "$LINENO: is alias working?";set +x #alias NOT WORKING here :(
 	local lastrRequestsToValidate=()
-	lastrRequestsToValidate+=(${astrAceptedRequests[@]})
+	#if ! ${astrAceptedRequests+false};then
+	if((`SECFUNCarraySize astrAceptedRequests`>0));then
+		lastrRequestsToValidate+=(${astrAceptedRequests[@]})
+	fi
 	lastrRequestsToValidate+=(`cat "$SECstrLockFileRequests" 2>/dev/null`)
 	
 	local lstrRequest
-	for lstrRequest in ${lastrRequestsToValidate[@]};do
-		if [[ ! -d "/proc/$lstrRequest" ]];then
-			echo "$lstrRequest" >>"$SECstrLockFileRemoveRequests"
-			FUNCvalidateRequest "$lstrRequest"
-		fi
-	done
+	#if ! ${lastrRequestsToValidate+false};then
+	if((`SECFUNCarraySize lastrRequestsToValidate`>0));then
+		for lstrRequest in ${lastrRequestsToValidate[@]};do
+			if [[ ! -d "/proc/$lstrRequest" ]];then
+				echo "$lstrRequest" >>"$SECstrLockFileRemoveRequests"
+				FUNCvalidateRequest "$lstrRequest"
+			fi
+		done
+	fi
 }
 
 function FUNCvalidateRequest() {
@@ -153,7 +160,7 @@ fi
 if $bKillDaemon;then
 	pgrep -f $strSelfName
 	if $bIsMain;then
-		SEC_WARN=true SECFUNCechoWarnA "killing self..."
+		SEC_WARN=true SECFUNCechoWarnA "killing self nSelfPid=$nSelfPid, nPidDaemon=$nPidDaemon..."
 	fi
 	kill -SIGKILL $nPidDaemon
 fi
@@ -204,11 +211,14 @@ while true;do
 	if [[ -f "$SECstrLockFileRequests" ]];then
 		astrRequests+=(`cat "$SECstrLockFileRequests" 2>/dev/null |awk ' !x[$0]++'`)
 		rm "$SECstrLockFileRequests"
-		for strRequest in ${astrRequests[@]};do
-			if SECFUNClockFileAllowedPid --check "$strRequest";then
-				astrAceptedRequests+=($strRequest)
-			fi
-		done
+		#if((${#astrRequests[@]}>0));then
+		if((`SECFUNCarraySize astrRequests`>0));then
+			for strRequest in ${astrRequests[@]};do
+				if SECFUNClockFileAllowedPid --check "$strRequest";then
+					astrAceptedRequests+=($strRequest)
+				fi
+			done
+		fi
 	fi
 	FUNCupdateAceptedRequests
 	if((`SECFUNCarraySize astrAceptedRequests`>0));then

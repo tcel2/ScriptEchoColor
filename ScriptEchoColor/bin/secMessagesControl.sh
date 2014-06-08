@@ -28,29 +28,6 @@ eval `secinit --base`
 #export SEC_DEBUG=true
 #export SEC_BUGTRACK=true
 
-alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
-function SECFUNCsingleLetterOptions() { #add this to the top of your options loop: eval "set -- `SECFUNCsingleLetterOptionsA "$@"`"; #it will expand joined single letter options to separated ones like in '-abc' to '-a' '-b' '-c' 
-	local lstrCaller=""
-	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
-		shift
-		lstrCaller="${1-}: "
-		shift
-	fi
-	
-	# $1 will be bound
-	local lstrOptions=""
-	if [[ "${1:0:1}" == "-" && "${1:1:1}" != "-" ]];then
-		for((nOptSingleLetterIndex=1; nOptSingleLetterIndex < ${#1}; nOptSingleLetterIndex++));do
-			lstrOptions+="'-${1:nOptSingleLetterIndex:1}' "
-		done
-	else
-		lstrOptions="'$1' "
-	fi
-	
-	lstrOptions+="`SECFUNCparamsToEval "${@:2}"`"
-	echo "$lstrOptions"
-}
-
 bWarn=false
 bDebug=false
 bBugtrack=false

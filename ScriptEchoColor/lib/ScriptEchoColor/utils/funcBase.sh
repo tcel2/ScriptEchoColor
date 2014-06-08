@@ -231,7 +231,7 @@ function SECFUNCshowHelp() {
 	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
 	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
-	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
+	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
 	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
 	#local lsedAddNewLine='s".*"&\n"'
 	cat "${lastrFile[0]}" \
@@ -665,6 +665,29 @@ function SECFUNCparamsToEval() {
 #	done
 #  echo "$lstrToExec"
 #}
+
+alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+function SECFUNCsingleLetterOptions() { #Add this to the top of your options loop: eval "set -- `SECFUNCsingleLetterOptionsA "$@"`";\n\tIt will expand joined single letter options to separated ones like in '-abc' to '-a' '-b' '-c';\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
+	local lstrCaller=""
+	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
+		shift
+		lstrCaller="${1-}: "
+		shift
+	fi
+	
+	# $1 will be bound
+	local lstrOptions=""
+	if [[ "${1:0:1}" == "-" && "${1:1:1}" != "-" ]];then
+		for((nOptSingleLetterIndex=1; nOptSingleLetterIndex < ${#1}; nOptSingleLetterIndex++));do
+			lstrOptions+="'-${1:nOptSingleLetterIndex:1}' "
+		done
+	else
+		lstrOptions="'$1' "
+	fi
+	
+	lstrOptions+="`SECFUNCparamsToEval "${@:2}"`"
+	echo "$lstrOptions"
+}
 
 alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCexec() {
