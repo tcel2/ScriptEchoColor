@@ -125,16 +125,16 @@ function FUNCclearCache() {
 #	local lockFileReal="${lockFile}.$mainPid"
 #	
 #	if $bUnlock;then
-#		rm -vf "$lockFile" >/dev/stderr
-#		rm -vf "$lockFileReal" >/dev/stderr
+#		rm -vf "$lockFile" >>/dev/stderr
+#		rm -vf "$lockFileReal" >>/dev/stderr
 #		return;
 #	fi
 #	
-#	while ! ln -s "$lockFileReal" "$lockFile" >/dev/stderr; do #create the symlink
+#	while ! ln -s "$lockFileReal" "$lockFile" >>/dev/stderr; do #create the symlink
 #		local realFile=`readlink "$lockFile"`
 #		pidOfRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
-#		if ! ps -p $pidOfRealFile >/dev/stderr;then
-#			rm -vf "$realFile" >/dev/stderr
+#		if ! ps -p $pidOfRealFile >>/dev/stderr;then
+#			rm -vf "$realFile" >>/dev/stderr
 #		fi
 #		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
 #	done

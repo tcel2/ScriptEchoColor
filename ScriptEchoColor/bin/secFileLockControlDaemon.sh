@@ -26,7 +26,25 @@
 # THIS FILE IS BASE TO THE FILE LOCK SYSTEM #
 #############################################
 
-#set -x
+#################### Init
+trap 'bShowLogToggle=true;' USR1
+bShowLogToggle=false
+bShowLog=true
+
+# secinit must come before functions so its aliases are expanded!
+# can only have access to base functions as the file locks begin from misc up...
+eval `secinit --nofilelockdaemon --base`
+exec 2>> "$SECstrLockFileLog"
+exec 1>&2                   
+
+strSelfName="`basename "$0"`"
+nPidDaemon="`pgrep -fo "/$strSelfName"`"
+nSelfPid="$$"
+bIsMain=false
+if((nSelfPid==nPidDaemon));then
+	bIsMain=true
+fi
+
 #################### Functions
 function FUNCupdateAceptedRequests() {
 	if ! ${astrAceptedRequests+false};then
@@ -38,16 +56,17 @@ function FUNCToggleLogCheck() {
 	if $bShowLogToggle;then
 		if $bShowLog;then
 			bShowLog=false
-			echo "Log disabled." >/dev/stderr
+			echo "Log disabled." >>/dev/stderr
 		else
 			bShowLog=true
-			echo "Log enabled." >/dev/stderr
+			echo "Log enabled." >>/dev/stderr
 		fi
 		bShowLogToggle=false
 	fi
 }
 
 function FUNCremoveRequestsByInactivePids() {
+	#set -x;SECFUNCechoBugtrackA "$LINENO: is alias working?";set +x #alias NOT WORKING here :(
 	local lastrRequestsToValidate=()
 	lastrRequestsToValidate+=(${astrAceptedRequests[@]})
 	lastrRequestsToValidate+=(`cat "$SECstrLockFileRequests" 2>/dev/null`)
@@ -66,9 +85,12 @@ function FUNCvalidateRequest() {
 	
 	local lstrBUGFIX=""
 	if [[ "$lnToRemove" == "-1" ]];then
-		#shopt -s expand_aliases
-		SECFUNCechoErrA "lnToRemove='$lnToRemove'"
-		#alias |grep "SECFUNC" >/dev/stderr
+#		set -x
+#		alias SECFUNCechoErrA >>/dev/stderr
+#		shopt -s expand_aliases >>/dev/stderr
+#		shopt -p expand_aliases	>/dev/stderr	
+		SECFUNCechoErrA "BUG: lnToRemove='$lnToRemove'"
+#		set +x
 		lstrBUGFIX='\'
 	fi
 	
@@ -97,27 +119,13 @@ function FUNCvalidateRequest() {
 	fi
 }
 
-#################### Init
-trap 'bShowLogToggle=true;' USR1
-bShowLogToggle=false
-bShowLog=true
-
-# can only have access to base functions as the file locks begin from misc up...
-eval `secinit --nofilelockdaemon --base`
-
-strSelfName="`basename "$0"`"
-nPidDaemon="`pgrep -fo "/$strSelfName"`"
-nSelfPid="$$"
-bIsMain=false
-if((nSelfPid==nPidDaemon));then
-	bIsMain=true
-fi
-
 #################### Options
-# "Do" variables are used at 'NonMain code area' and so have access to secinit
-bDoSomething=false
 nPidSkip="-1"
 bCheckHasOtherPids=false
+bKillDaemon=false
+bRestartDaemon=false
+bLogMonitor=false
+bToggleLog=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -125,13 +133,14 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	elif [[ "$1" == "--nolog" ]];then #help do not show the log
 		bShowLog=false
 	elif [[ "$1" == "--togglelog" ]];then #help toggle log monitor at daemon (if it has tty)
-		kill -SIGUSR1 $nPidDaemon
-		exit
+		bToggleLog=true
+	elif [[ "$1" == "--kill" ]];then #help kill the daemon, avoid using this...
+		bKillDaemon=true
+	elif [[ "$1" == "--restart" ]];then #help restart the daemon, avoid using this...
+		bKillDaemon=true
+		bRestartDaemon=true
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
-		while true;do
-			cat "$SECstrLockFileLog"
-			sleep 1
-		done
+		bLogMonitor=true
 	else
 		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
@@ -139,24 +148,32 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	shift
 done
 
-#################### NonMain code area, secinit ONLY ALLOWED HERE!!!
-if ! $bIsMain ;then
-	echo "nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >/dev/stderr
-	
-	if $bDoSomething;then
-		eval `secinit` # can communicate with the main process
-		#echo "Libs Initialized." >/dev/stderr
-		if((nSelfPid!=nPidDaemon));then
-			SECFUNCvarSetDB $nPidDaemon
-		fi
-		
-	fi
+if $bToggleLog;then
+	kill -SIGUSR1 $nPidDaemon
+fi
 
+if ! $bIsMain;then
+	if $bKillDaemon;then
+		kill -SIGKILL $nPidDaemon
+	fi
+	
+	if $bRestartDaemon;then
+		secFileLockControlDaemon.sh >>/dev/stderr &
+	fi
+fi
+
+if $bLogMonitor;then
+	tail -f "$SECstrLockFileLog"
+fi
+
+# LAST ITEM!
+if ! $bIsMain ;then
+	echo "nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >>/dev/stderr
 	exit
 fi
 
 #################### MAIN
-echo "Lock Control Daemon started, pid='$nSelfPid'." >/dev/stderr
+echo "Lock Control Daemon started, pid='$nSelfPid'." >>/dev/stderr
 
 #TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid?
 #TODO AllowedPid file be named with the md5sum and containing the pid?
@@ -209,7 +226,7 @@ while true;do
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
 					# at secinit this is redirected to /dev/stderr
-					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" |tee -a "$SECstrLockFileLog"
+					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" #|tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active

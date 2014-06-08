@@ -59,8 +59,8 @@ strCfgHeader="# $strSelfName $g_nVersion [internal Version Control line]"
 nStartTime=`date +"%s%N"`
 
 # Must be alias because of LINENO
-stdout=" >/dev/stdout"
-stderr=" >/dev/stderr"
+stdout=" >>/dev/stdout"
+stderr=" >>/dev/stderr"
 eval 'tput sc' $stderr # Save current cursor position in case there is line repositioning. It will be restored in the end.
 strRestorePos=""
 
@@ -128,7 +128,7 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 
 ##if [[ -z "$SEC_LOG_AVOID" ]]; then SEC_LOG_AVOID=false; fi
 ##if [[ "$SEC_LOG_AVOID" != "true" && "$SEC_LOG_AVOID" != "false" ]]; then
-##  _he;echo -e "Invalid SEC_LOG_AVOID value ('"$SEC_LOG_AVOID"'), must be 'true' or 'false'.\a" >/dev/stderr
+##  _he;echo -e "Invalid SEC_LOG_AVOID value ('"$SEC_LOG_AVOID"'), must be 'true' or 'false'.\a" >>/dev/stderr
 ##  exit 1
 ##fi
 
@@ -145,7 +145,7 @@ if [[   -f "$strSpeedupFile" ]]; then
   if [[ `head -n 1 "$strSpeedupFile"` != "$strCfgHeader" ]]; then
     mv -v "$strSpeedupFile" "$strCfgPath/speedup-"`date +%Y%m%d-%H%M%S`".old" 
     if [[ -f "$strSpeedupFile" ]]; then
-      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >/dev/stderr
+      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >>/dev/stderr
       exit 1
     fi
   fi
@@ -235,7 +235,7 @@ source "$strSpeedupFile"
 #  if [[ `head -n 1 "$strSetupCfgFile"` != "$strCfgHeader" ]]; then
 #    mv "$strSetupCfgFile" "$strCfgPath/setup-"`date +%Y%m%d-%H%M%S`".old" 
 #    if [[ -f "$strSetupCfgFile" ]]; then
-#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >/dev/stderr
+#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >>/dev/stderr
 #      exit 1
 #    fi
 #  else
@@ -245,7 +245,7 @@ source "$strSpeedupFile"
 #  if [[ -n "$SECinstallPath" ]] && [[ ! -f "$SECinstallPath/bin/$strSelfName" ]]; then
 #    mv "$strSetupCfgFile" "$strCfgPath/setup-"`date +%Y%m%d-%H%M%S`".old" 
 #    if [[ -f "$strSetupCfgFile" ]]; then
-#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >/dev/stderr
+#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >>/dev/stderr
 #      exit 1
 #    fi
 #  fi
@@ -277,7 +277,7 @@ FUNCdebug(){
 #  source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
 #  local strFileLock=`$SECinstallPath/bin/seclockfile "$strFileDebug"`;local nRet=$?
 #  if(($nRet!=0)); then
-#    _hw;echo -e "unable to lock file '$strFileDebug' to write this message:\n $strDateTime: $1" >/dev/stderr
+#    _hw;echo -e "unable to lock file '$strFileDebug' to write this message:\n $strDateTime: $1" >>/dev/stderr
 #    return 1
 #  fi
   SECFUNCfileLock "$strFileDebug"
@@ -315,9 +315,9 @@ FUNCmsg(){
   fi
   
   if [[ "$strHead" == "INFO" ]]; then
-    echo $optEcho "$strHead: $strMsg" >/dev/stderr
+    echo $optEcho "$strHead: $strMsg" >>/dev/stderr
   else
-    echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >/dev/stderr
+    echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >>/dev/stderr
   fi
   
   FUNCdebug "$strHead $strSelfName $strFunc$nLine: $strMsg"
@@ -747,7 +747,7 @@ if ! $bOptHelp && ! $bOptHelpExtended; then
     strBeep=""
   fi
   if [[ -n "$strOptPROBLEM" ]]; then
-    echo -e "$strSelfName ${FUNCNAME-}() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >/dev/stderr
+    echo -e "$strSelfName ${FUNCNAME-}() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >>/dev/stderr
     exit 1
   fi
 fi
@@ -807,7 +807,7 @@ FUNCppidList(){
 ##      "onlycommand"    ) bOnlyCommand=true;;
 ##      "onlyfullcmd"    ) bOnlyFullCmd=true;;
       "onlyexecname"   ) bOnlyExecName=true;;
-      *)_hw;echo -e "invalid option \"$1\"" >/dev/stderr;;
+      *)_hw;echo -e "invalid option \"$1\"" >>/dev/stderr;;
     esac
     shift
   done
@@ -1099,13 +1099,13 @@ if [[   -f "$strUserCfgFile" ]]; then
     strUserCfgFilePreviousVersion="$strCfgPath/User-"`date +%Y%m%d-%H%M%S`".old" 
     mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
     if [[ -f "$strUserCfgFile" ]]; then
-      _he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >/dev/stderr
+      _he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >>/dev/stderr
       exit 1
     fi
    
     # Ask user to do the import
     _hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-    read -n 1 strResp; echo >/dev/stderr
+    read -n 1 strResp; echo >>/dev/stderr
     if [[ "$strResp" != "y" ]]; then
       _hi "Creating '$strUserCfgFile' with default values."
       strUserCfgFilePreviousVersion=""
@@ -1143,7 +1143,7 @@ if [[ ! -f "$strUserCfgFile" ]]; then
     astrValue[   13]="@{LYnr}"                   
 
     if ! echo "$strCfgHeader" >"$strUserCfgFile"; then
-      _he;echo -e "Cannot create file '$strUserCfgFile', exiting..." >/dev/stderr
+      _he;echo -e "Cannot create file '$strUserCfgFile', exiting..." >>/dev/stderr
       exit 1
     fi
     echo "# Beware! this file is loaded like a include source file at $strSelfName" >>"$strUserCfgFile"
@@ -1189,7 +1189,7 @@ source "$strUserCfgFile"
 
 FUNCgfxTranslateChar(){
   if (( ${#1} != 1 )); then
-  	_hw;echo "parameter size must be 1 \"$1\"" >/dev/stderr
+  	_hw;echo "parameter size must be 1 \"$1\"" >>/dev/stderr
   fi
   if [[ "$1" == ' ' ]]; then 
 	  echo -n " "
@@ -1216,7 +1216,7 @@ FUNCgfxTranslateCharE294(){
 	  echo -en "\xE2\x94\\$1"
 	  return
   else
-	  _hw;echo "invalid Hexa string 0$1" >/dev/stderr
+	  _hw;echo "invalid Hexa string 0$1" >>/dev/stderr
   fi
   echo -n
 }
@@ -1228,7 +1228,7 @@ FUNCtransExtdFmt(){
 		  return
 	  fi
 	done
-	_hw;echo "undefined extended format \"/$1\""'!!!' >/dev/stderr
+	_hw;echo "undefined extended format \"/$1\""'!!!' >>/dev/stderr
 }
 
 FUNCtranslateColor(){
@@ -1262,7 +1262,7 @@ FUNCtranslateColor(){
 #	  "magenta")eval echo -n "\$cmd${fgbg}${lt}Magenta";return;;
 #  	"cyan")   eval echo -n "\$cmd${fgbg}${lt}Cyan"   ;return;;
 #	  "white")  eval echo -n "\$cmd${fgbg}${lt}White"  ;return;;
-#  	*)_hw;echo "invalid color name $strParam1" >/dev/stderr;;
+#  	*)_hw;echo "invalid color name $strParam1" >>/dev/stderr;;
 #  esac
 }
 
@@ -2005,7 +2005,7 @@ fi
 FUNCturnOff(){
     eval "b=\$$1"
     if $b; then
-	_hw;echo "precedence is [$strOptPrecedence] turning off option $1" >/dev/stderr
+	_hw;echo "precedence is [$strOptPrecedence] turning off option $1" >>/dev/stderr
     fi
     eval "$1=false"
 }
@@ -2195,7 +2195,7 @@ FUNCformatColor(){
 	      strCMD=""
 	      bExtendedFormat=false
 	      if [[ -n "$strE294Temp" ]]; then
-		      _hw;echo "strE294Temp has trash = \"$strE294Temp\"" >/dev/stderr
+		      _hw;echo "strE294Temp has trash = \"$strE294Temp\"" >>/dev/stderr
 	      fi
 	      strE294Temp="" #prevent previous trash
 	    else
@@ -2431,7 +2431,7 @@ if $bAddYesNoQuestion || $bExtendedQuestionMode; then
         if ((`expr index "$strEQMList" "$char"` == 0)); then
           strEQMList="$strEQMList$char"
         else
-          _hw;echo "this option key was already defined: $char" >/dev/stderr
+          _hw;echo "this option key was already defined: $char" >>/dev/stderr
         fi
         FUNCEQMArrayAdd "@S"
         bClose=false
@@ -2587,7 +2587,7 @@ FUNCColorCMD(){
   		"--")bRecognized=true;bIgnore=true;; # bIgnore is at main loop: Do all @... color translations
 		  "++")bRecognized=true;bIgnore=false;; 
   		"-"?|"+"?)
-		    _hw;echo "unrecognized '$charPrev$char'" >/dev/stderr
+		    _hw;echo "unrecognized '$charPrev$char'" >>/dev/stderr
 	      nSize=$(( ${#str} -2 ))
 	      str="${str:0:nSize}"
 	      continue;; #; strUnrecognizedChar="$strUnrecognizedChar-$charCC";;
@@ -2817,7 +2817,7 @@ fi
 
 
 if ((nUnrecognizedCharCount!=0));then
-    _hw;echo "total unrecognized characters count = $nUnrecognizedCharCount " >/dev/stderr #\"$strUnrecognizedChar\"
+    _hw;echo "total unrecognized characters count = $nUnrecognizedCharCount " >>/dev/stderr #\"$strUnrecognizedChar\"
 fi
 
 if $bWARNBEEP && [[ $SEC_BEEP != "mute" ]]; then 
@@ -2833,17 +2833,17 @@ if $bWARNBEEP && [[ $SEC_BEEP != "mute" ]]; then
 fi
 
 FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pressed key
-  echo -n "$strClrKeyBufMsg" >/dev/stderr # tells user that its clearing keyboard buffer and waiting 1 second
+  echo -n "$strClrKeyBufMsg" >>/dev/stderr # tells user that its clearing keyboard buffer and waiting 1 second
   local char=""
   local nKeyPressed=1 # false
   declare -a aProgress=("\|" "/" "-" '\\\\')
   local nCount=0
   while read -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
-    echo -ne "${aProgress[$((nCount++ % 4))]}\b" >/dev/stderr
+    echo -ne "${aProgress[$((nCount++ % 4))]}\b" >>/dev/stderr
     nKeyPressed=0 # true
   done 
   local str=`echo -ne "$strClrKeyBufMsg" |tr "[:graph:]" " "`
-  echo -ne "\r$str \r" >/dev/stderr # the space after str is in case clear key progress was shown
+  echo -ne "\r$str \r" >>/dev/stderr # the space after str is in case clear key progress was shown
   echo -n "$char" # this should go to who called this function, and not to normal stdout
   return $nKeyPressed
 }

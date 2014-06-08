@@ -49,10 +49,10 @@ function FUNCvalidateNumber() {
 	local l_id=$1
 	local l_value=${!l_id}
 	if [[ -n "$l_value" ]] && [[ -n `echo "$l_value" |tr -d '[:digit:]'` ]];then
-		echo "invalid number '$l_value' for $l_id" >/dev/stderr
+		echo "invalid number '$l_value' for $l_id" >>/dev/stderr
 		return 1
 	elif [[ -z "$l_value" ]];then
-		echoc -p "empty number at $l_id." >/dev/stderr
+		echoc -p "empty number at $l_id." >>/dev/stderr
 		return 1
 	fi
 	return 0

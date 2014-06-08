@@ -81,10 +81,10 @@ fi
 
 if $bFileLockDaemon;then
 	if ! pgrep -f "secFileLockControlDaemon.sh" 1>/dev/null;then
-		echo "`basename $0`: Initializing Lock Control Daemon." >/dev/stderr
+		echo "`basename $0`: Initializing Lock Control Daemon." >>/dev/stderr
 		# stdout must be redirected or the terminal wont let it exit...
 		# nohup or disown alone did not work...
-		secFileLockControlDaemon.sh >/dev/stderr &
+		secFileLockControlDaemon.sh >>/dev/stderr &
 	fi
 fi
 

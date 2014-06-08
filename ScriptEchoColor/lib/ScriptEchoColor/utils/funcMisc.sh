@@ -222,7 +222,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 					if ! SECFUNClockFileAllowedPid --hasotherpids $$;then
 						break
 					fi
-					#echo "SECFUNClockFileAllowedPid ret $?" >/dev/stderr
+					#echo "SECFUNClockFileAllowedPid ret $?" >>/dev/stderr
 					if SECFUNCdelay "${FUNCNAME}_WaitOtherGetQuickLock" --checkorinit 3;then
 						#SECFUNCechoBugtrackA "pid $$, req `cat "$SECstrLockFileRequests" |tr '\n' ','`"
 						SECFUNCechoWarnA "waiting some pid get lstrQuickLockFileName='$lstrQuickLockFileName'"
@@ -575,7 +575,7 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	else
 	#if [[ -z "$SECcfgFileName" ]];then
 		local lstrCanonicalFileName="`readlink -f "$0"`"
-		#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >/dev/stderr
+		#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >>/dev/stderr
 		#SECcfgFileName="$lpath/`basename "$0"`.cfg"
 		SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
 	fi

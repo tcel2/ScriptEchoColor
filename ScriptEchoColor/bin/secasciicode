@@ -24,7 +24,7 @@
 
 
 if [[ -z "$1" ]]; then
-  echo "$0: type --help for help" >/dev/stderr
+  echo "$0: type --help for help" >>/dev/stderr
   exit 1
 fi
 
@@ -32,7 +32,7 @@ if [[ "$1" == "--help" ]]; then
   ScriptEchoColor "@gOutputs the octal(default)/hexa/decimal value of a character prefixed with '\\'.\n\
 @bUse --hexa to output hexadecimal value with the '\\' prefix.\n\
 Use --decimal to output decimal value without prefix.\n\
-It accepts multiple characters/parameters to be converted." >/dev/stderr
+It accepts multiple characters/parameters to be converted." >>/dev/stderr
   exit
 fi
 

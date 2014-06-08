@@ -23,13 +23,13 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 function echoerr {
-  echo "$@" >/dev/stderr
+  echo "$@" >>/dev/stderr
 }
 
 function FUNCaddSession {
   local l_newestSession=-1
 
-  if qdbus org.kde.yakuake /yakuake/sessions addSession >/dev/stderr; then
+  if qdbus org.kde.yakuake /yakuake/sessions addSession >>/dev/stderr; then
     local l_anSessions=(`qdbus org.kde.yakuake /yakuake/sessions sessionIdList |tr ',' ' '`)
     #echoerr ${l_anSessions[*]}
     
@@ -118,7 +118,7 @@ function FUNCtask {
     fi
     
     if((l_newestSession>=0));then
-      qdbus org.kde.yakuake /yakuake/tabs setTabTitle $l_newestSession "$l_strTitle" >/dev/stderr
+      qdbus org.kde.yakuake /yakuake/tabs setTabTitle $l_newestSession "$l_strTitle" >>/dev/stderr
 
       FUNCevenTermId $l_newestSession;local l_termToSplit=$FUNCevenTermId
       
@@ -131,7 +131,7 @@ function FUNCtask {
       local execCmdAtTerm=`FUNClastTermId $l_newestSession`
       if((execCmdAtTerm>=0));then
         echoerr "new term: cmd=$l_cmd,title=$l_strTitle,session=$l_newestSession,termId=$execCmdAtTerm."
-        qdbus org.kde.yakuake /yakuake/sessions runCommandInTerminal $execCmdAtTerm "$l_cmd" >/dev/stderr
+        qdbus org.kde.yakuake /yakuake/sessions runCommandInTerminal $execCmdAtTerm "$l_cmd" >>/dev/stderr
       else
         echoerr "ERROR: invalid terminal..."
       fi
@@ -150,7 +150,7 @@ elif [[ "$1" == "--checkAndRun" ]]; then
     sleep 1
   done
   sleep 3
-  qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >/dev/stderr
+  qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
   exit 0
 #elif [[ -n "$1" ]]; then
 #  if [[ "${1:0:1}" == "-" ]]; then

@@ -131,7 +131,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		shift
 	done
 	
-	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >/dev/stderr
+	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >>/dev/stderr
 	
 	# a control file to clean once only after a delay
 	lstrClearControlFile="$SEC_TmpFolder/.SEC.ClearTmpFiles.LastDateTimeStamp"
@@ -214,7 +214,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		|tail -n +2 2>/dev/null \
 		|while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
 	
-	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >/dev/stderr
+	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >>/dev/stderr
 	
 	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
 	SECFUNCdbgFuncOutA
@@ -680,9 +680,9 @@ function pSECFUNCvarLoadMissingVars() { #private:
 			l_varsMissing+=($l_varNew)
 		fi
 	done
-#	echo "SECvars=${SECvars[@]-}" >/dev/stderr
-#	echo "MisVars=${l_varsMissing[@]}" >/dev/stderr
-#	cat $SECvarFile |grep varTst |grep -v SECvars >/dev/stderr
+#	echo "SECvars=${SECvars[@]-}" >>/dev/stderr
+#	echo "MisVars=${l_varsMissing[@]}" >>/dev/stderr
+#	cat $SECvarFile |grep varTst |grep -v SECvars >>/dev/stderr
 }
 
 function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
@@ -711,12 +711,12 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 		# if exists (is set, not unset), backup the value before reading DB
 		l_thisPidCounter=${SECmultiThreadEvenPids[$$]}
 	fi
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
 	SECFUNCvarReadDB SECmultiThreadEvenPids #readonly read the full array (that will also bring the pids in the indexes!), just to know what other pids are doing; the stored SECmultiThreadEvenPids on the DB, is just an old value that was set by the last pid that write to the DB, not the real current value in the memory of that pid.
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
 	#restore the backuped value, or set default if none
 	SECmultiThreadEvenPids[$$]=$l_thisPidCounter
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
 	
 	#maintenance, remove dead pids from the list
 	if $l_bForceAllow;then 
@@ -767,9 +767,9 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggining of a loop
 	SECFUNCdbgFuncInA
 	local l_lockPid
-	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >>/dev/stderr #@@@R
 	if l_lockPid=`SECFUNCfileLock --islocked "$SECvarFile"`;then
-		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >/dev/stderr
+		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >>/dev/stderr
 		if [[ "$l_lockPid" == "$$" ]];then
 			#pSECFUNCvarRegister SECmultiThreadEvenPids
 			SECFUNCvarWriteDB --skiplock #the lock was created in the end of this function
@@ -780,16 +780,16 @@ function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggini
 	SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --init
 	while ! pSECFUNCvarMultiThreadEvenPidsAllowThis;do
 		sleep 0.1 #waits so other processes have a change to work with the BD
-		#echo "delay=`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`" >/dev/stderr
+		#echo "delay=`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`" >>/dev/stderr
 		if((`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`>1));then #limit to allow other pids to process
 			pSECFUNCvarMultiThreadEvenPidsAllowThis --force
 			break;
 		fi
 	done
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
 	
 	SECFUNCfileLock "$SECvarFile" # wait until able to get a lock for reading
-	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >>/dev/stderr #@@@R
 	SECFUNCvarSet SECmultiThreadEvenPids #SECFUNCvarWriteDB --skiplock SECmultiThreadEvenPids
 	SECFUNCvarReadDB #will read the changes of other scripts and force them wait for this caller script to end its proccessing
 	

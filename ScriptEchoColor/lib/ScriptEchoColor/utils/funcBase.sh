@@ -256,19 +256,19 @@ function SECFUNCechoErr() { #echo error messages
 			shift
 			caller="${1}: "
 		else
-			echo "SECERROR[`SECFUNCdtNow`]invalid option $1" >/dev/stderr; 
+			echo "SECERROR[`SECFUNCdtNow`]invalid option $1" >>/dev/stderr; 
 			return 1
 		fi
 		shift
 	done
 	
 	###### main code
-	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr; 
+	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr; 
 	local l_output="SECERROR[`SECFUNCdtNow`]: ${caller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[91m${l_output}\E[0m" >/dev/stderr
+		echo -e "\E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
 	else
-		echo "${l_output}" >/dev/stderr
+		echo "${l_output}" >>/dev/stderr
 	fi
 }
 #if [[ "$SEC_DEBUG" == "true" ]];then
@@ -356,9 +356,9 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	if $lbDebug;then
 		local l_output="SECDEBUG[`SECFUNCdtNow`]: ${caller}$@"
 		if $SEC_MsgColored;then
-			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >/dev/stderr
+			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
-			echo "${l_output}" >/dev/stderr
+			echo "${l_output}" >>/dev/stderr
 		fi
 	fi
 }
@@ -391,12 +391,12 @@ function SECFUNCechoWarn() {
 	done
 	
 	###### main code
-	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >/dev/stderr
+	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr
 	local l_output="SECWARN[`SECFUNCdtNow`]: ${caller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[93m${l_output}\E[0m" >/dev/stderr
+		echo -e "\E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
-		echo "${l_output}" >/dev/stderr
+		echo "${l_output}" >>/dev/stderr
 	fi
 }
 
@@ -430,9 +430,9 @@ function SECFUNCechoBugtrack() {
 	###### main code
 	local l_output="SECBUGTRACK[`SECFUNCdtNow`]: ${caller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[36m${l_output}\E[0m" >/dev/stderr
+		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
 	else
-		echo "${l_output}" >/dev/stderr
+		echo "${l_output}" >>/dev/stderr
 	fi
 }
 
@@ -534,7 +534,7 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	if $lbHasOtherPidsPidSkip;then
 		# empty arrays create one empty line prevented with "^$"
 		local lnCount="`cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests" 2>/dev/null |grep -wv "$lnPid" |grep -v "^$" |wc -l`"
-		#echo "lnCount=$lnCount, `cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests"`" >/dev/stderr
+		#echo "lnCount=$lnCount, `cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests"`" >>/dev/stderr
 		if((lnCount>0));then
 			return 0
 		else
@@ -709,11 +709,11 @@ function SECFUNCexec() {
 	SECFUNCechoDbgA "caller=${caller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: $strExec" >/dev/stderr
+		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: $strExec" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: press a key to exec..." >/dev/stderr;read -n 1;
+		echo -n "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
 	local ini=`SECFUNCdtNow`;

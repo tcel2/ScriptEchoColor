@@ -71,14 +71,14 @@ function FUNCwindowList() {
 
 #	for((i=0;i<${#listWindowIds[@]};i++));do
 #		windowId=${listWindowIds[i]}
-#		#echo "windowId=$windowId" >/dev/stderr
+#		#echo "windowId=$windowId" >>/dev/stderr
 #		local windowPid=`xdotool getwindowpid $windowId`
 #		if [[ -z "$windowPid" ]] || ps -o command -p $windowPid |grep -q "#skipCascade";then
 #			listWindowIds[i]=""
 #		fi
 #	done
 #	listWindowIds=(${listWindowIds[@]}) #recreates the array so empty entries will be ignored
-#	#echo "${listWindowIds[@]}" |sort >/dev/stderr
+#	#echo "${listWindowIds[@]}" |sort >>/dev/stderr
 #	
 #	#str=`xdotool search --class xterm;xdotool search --class rxvt`
 #	#echo "$str" |sort

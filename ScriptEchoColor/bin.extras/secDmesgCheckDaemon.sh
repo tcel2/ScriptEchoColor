@@ -29,7 +29,7 @@ SECFUNCuniqueLock --daemonwait
 
 renice -n 19 $$
 
-trap 'echo "(ctrl+c hit)" >/dev/stderr;bAskExit=true' INT
+trap 'echo "(ctrl+c hit)" >>/dev/stderr;bAskExit=true' INT
 
 fileCfg="$HOME/.`basename $0`.cfg"
 bAskExit=false
@@ -45,7 +45,7 @@ function FUNCdmesg() {
 }
 
 function FUNCupdateLastIdLine {
-	#echo "lastId=$lastId" >/dev/stderr
+	#echo "lastId=$lastId" >>/dev/stderr
 	lastIdLine=""
 	if [[ -n "$lastId" ]];then
 	  lastIdLine=`FUNCdmesg |grep "$lastId" -n |cut -d ':' -f1 |head -n 1`

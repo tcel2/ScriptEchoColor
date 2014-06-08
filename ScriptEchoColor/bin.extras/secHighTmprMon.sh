@@ -593,7 +593,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 				FUNClimitCpu $pidToLimit
 			else
 				echoc -p "missing valid pid"
-				$0 --help |grep "\-\-limitcpu" >/dev/stderr
+				$0 --help |grep "\-\-limitcpu" >>/dev/stderr
 				exit 1
 			fi
 			exit

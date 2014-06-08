@@ -24,7 +24,7 @@
 
 
 if [[ -z "$*" ]]; then
-  echo "$0: use option --help for options" >/dev/stderr
+  echo "$0: use option --help for options" >>/dev/stderr
   exit 1
 fi
 
@@ -33,7 +33,7 @@ if [[ "$1" == "--help" ]]; then
 @bUsed to convert returning value \$? from ScriptEchoColor -Q.\n\
 @rBeware that some values may not be normal characters but \n\
 terminal control caracters providing undesired results if output to running terminal.\n\
-@gIt accepts multiple parameters/numbers separated by ' ', ',' or '\\'." >/dev/stderr
+@gIt accepts multiple parameters/numbers separated by ' ', ',' or '\\'." >>/dev/stderr
   exit
 fi  
 

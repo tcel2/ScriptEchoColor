@@ -447,7 +447,7 @@ function FUNCsayStack() {
 				md5sumText=`echo "$strHead" |sed -r "$sedGetMd5sum"`
 				sedGetSayVol="s;.* 'SECsayVol '([[:digit:]]*[.][[:digit:]]*)\).*;\1;"
 				sayVol=`echo "$strHead" |sed -r "$sedGetSayVol"`
-				#echo "strHead=$strHead" >/dev/stderr
+				#echo "strHead=$strHead" >>/dev/stderr
 				if FUNChasCache $md5sumText;then
 					FUNCplay "$md5sumText" $sayVol
 				else

@@ -144,11 +144,11 @@ if $bOptHelp; then
   exit 0
 fi
 if [[ -n "$strOptPROBLEM" ]]; then
-  echo -e "PROBLEM: $strOptPROBLEM\a" >/dev/stderr
+  echo -e "PROBLEM: $strOptPROBLEM\a" >>/dev/stderr
   exit 1
 fi
 if [[ -z "$chOpt" ]]; then
-  echo -e "PROBLEM: missing one of the required options, see --help for details\a" >/dev/stderr
+  echo -e "PROBLEM: missing one of the required options, see --help for details\a" >>/dev/stderr
   exit 1
 fi
 
