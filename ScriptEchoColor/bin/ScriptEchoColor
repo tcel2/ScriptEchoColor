@@ -137,7 +137,7 @@ if [[ ! -d "$strCfgPath" ]]; then
   mkdir "$strCfgPath"
 fi
 
-strFileDebug="$strCfgPath/debug.log"
+#strFileDebug="$strCfgPath/debug.log"
 
 # SPEEDUP
 strSpeedupFile="$strCfgPath/speedup.cfg"
@@ -262,42 +262,26 @@ source "$strSpeedupFile"
 #  source "$strSetupCfgFile"
 #fi
 
-FUNCdebug(){
-  if [[ -z "$SEC_DEBUG" ]]; then
-    return 0
-  fi
-  
-##  local strFileLock="$strFileDebug.lock"
-  local strDateTime=`date +%Y%m%d-%H%M%S`
+#FUNCdebug(){
+#	if ! $SEC_DEBUG;then
+#		return 0
+#	fi
+#  
+#  local strDateTime=`date +%Y%m%d-%H%M%S`
 
-  if [[ ! -a "$strFileDebug" ]]; then
-    echo -n >>"$strFileDebug"
-  fi
-  
-#  source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
-#  local strFileLock=`$SECinstallPath/bin/seclockfile "$strFileDebug"`;local nRet=$?
-#  if(($nRet!=0)); then
-#    _hw;echo -e "unable to lock file '$strFileDebug' to write this message:\n $strDateTime: $1" >>/dev/stderr
-#    return 1
+#  if [[ ! -a "$strFileDebug" ]]; then
+#    echo -n >>"$strFileDebug"
 #  fi
-  SECFUNCfileLock "$strFileDebug"
-  
-  if [[ "$SEC_DEBUG" == "true" ]]; then
-    echo " $strDateTime: $1" >>"$strFileDebug"
-    
-    # limit file size in lines
-    local nLines=`cat "$strFileDebug" |wc -l`
-    if (( nLines > 1500 )); then
-      local str=`tail -n 1000 "$strFileDebug"`
-      echo "$str" >"$strFileDebug"
-    fi
-  elif [[ "$SEC_DEBUG" != "false" ]]; then
-    echo " $strDateTime: invalid SEC_DEBUG exported environment variable value '$SEC_DEBUG'" >>"$strFileDebug"
-  fi
-  
-#  rm -f "$strFileLock"
-  SECFUNCfileLock --unlock "$strFileDebug"
-}
+#  
+#  echo " $strDateTime: $1" >>"$strFileDebug"
+#  
+#  # limit file size in lines
+#  local nLines=`cat "$strFileDebug" |wc -l`
+#  if (( nLines > 1500 )); then
+#    local str=`tail -n 1000 "$strFileDebug"`
+#    echo "$str" >"$strFileDebug"
+#  fi
+#}
 
 FUNCmsg(){
   local strHead="$1"
@@ -320,7 +304,7 @@ FUNCmsg(){
     echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >>/dev/stderr
   fi
   
-  FUNCdebug "$strHead $strSelfName $strFunc$nLine: $strMsg"
+  SECFUNCechoDbgA "$strHead $strSelfName $strFunc$nLine: $strMsg"
 }
 
 FUNCsetLogFile(){
@@ -794,7 +778,7 @@ FUNCscriptName(){
   FUNCexecName "" "$strLine"
 }
 
-FUNCppidList(){
+FUNCppidList(){ #TODO add these functionalities to SECFUNCppidList
   local bShowColumnNames=true
   local bOneLineResult=false
 ##  local bOnlyCommand=false
@@ -1056,7 +1040,7 @@ if [[ -z "$strTermEmulator" ]]; then
   fi
   if [[ -z "$strTermEmulator" ]]; then
     strTermEmulator="[${astr[1]}]"
-    FUNCdebug "Unknown term emulator \"$strTermEmulator\", PPIDlist=("`FUNCppidList onelineresult`")"
+    SECFUNCechoWarnA "Unknown term emulator \"$strTermEmulator\", PPIDlist=("`FUNCppidList onelineresult`")"
   fi
 fi
 if [[ "$SEC_IGNORE_LIMITATIONS" == "false" ]]; then
@@ -1757,9 +1741,9 @@ if $bOptHelpExtended; then
     echo "    Ignore Color Limitations by TERM type and emulator:"
     echo "     export SEC_IGNORE_LIMITATIONS=\"true\""
     echo
-    echo "    Debug mode will fill up (no limits) the file \"$strFileDebug\""
-    echo "     export SEC_DEBUG=\"true\""
-    echo
+#    echo "    Debug mode will fill up (no limits) the file \"$strFileDebug\""
+#    echo "     export SEC_DEBUG=\"true\""
+#    echo
     echo "    Enforce all output of $strSelfName to go to /dev/stderr."
     echo "    (usefull to collect your script normal output, just 'echo', as data, "
     echo "    while all calls to $strSelfName shall output to /dev/stderr)"
