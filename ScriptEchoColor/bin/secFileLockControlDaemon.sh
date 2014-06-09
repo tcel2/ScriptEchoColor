@@ -188,8 +188,11 @@ exec 1>&2
 #TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid?
 #TODO AllowedPid file be named with the md5sum and containing the pid?
 
+strAcceptDelayId="TimeTakenToAcceptRequest"
+
 # check requests
 while true;do
+	SECFUNCdelay "$strAcceptDelayId" --init
 	FUNCToggleLogCheck
 	astrAceptedRequests=()
 	
@@ -235,7 +238,8 @@ while true;do
 			if [[ -n "$nAllowedPid" ]] && [[ -d "/proc/$nAllowedPid" ]];then
 				# set allowed pid
 				#echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
-				SECFUNClockFileAllowedPid --write "$nAllowedPid"
+				SECFUNClockFileAllowedPid --allow "$nAllowedPid"
+				echo "$strAcceptDelayId='`SECFUNCdelay "$strAcceptDelayId" --get`'" >>/dev/stderr
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
 					# at secinit this is redirected to /dev/stderr
@@ -247,10 +251,9 @@ while true;do
 				while [[ -d "/proc/$nAllowedPid" ]];do
 					FUNCToggleLogCheck
 					
-					if((nLastSECONDS<$SECONDS));then
+					if((nLastSECONDS<$SECONDS));then # check once per second
 						# MAINTENANCE VALIDATIONS HERE
 						FUNCremoveRequestsByInactivePids
-						# check once per second
 						FUNCvalidateRequest $nAllowedPid
 						nLastSECONDS=$SECONDS;
 					fi

@@ -1011,17 +1011,17 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	fi
 	
 	function _SECFUNCdelayValidateIndexIdForOption() { # validates if indexId has been set in the environment to use all other options other than --init
-		local l_bQuiet=false
-		if [[ "${1-}" == "--quiet--" ]];then
-			l_bQuiet=true
+		local lbSimpleCheck=false
+		if [[ "${1-}" == "--simplecheck" ]];then
+			lbSimpleCheck=true
 			shift
 		fi
-		#SECFUNCechoDbgA "\${_dtSECFUNCdelayArray[$indexId]-}=${_dtSECFUNCdelayArray[$indexId]-}"
 		if [[ -z "${_dtSECFUNCdelayArray[$indexId]-}" ]];then
 			# programmer must have coded it somewhere to make that code clear
 			#echo "--init [indexId=$indexId] needed before calling $1" >&2
-			if ! $l_bQuiet;then
+			if ! $lbSimpleCheck;then
 				SECFUNCechoErrA "the --init option is required before using option '$1' with [indexId=$indexId]"
+				_SECFUNCcriticalForceExit
 			fi
 			return 1
 		fi
@@ -1081,7 +1081,9 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 			_SECFUNCcriticalForceExit
 		fi
 	else
-		if ! _SECFUNCdelayValidateIndexIdForOption "";then return 1;fi
+		if ! $lbInit;then
+			if ! _SECFUNCdelayValidateIndexIdForOption "";then return 1;fi
+		fi
 	fi
 	
 	function SECFUNCdelay_init(){
@@ -1116,7 +1118,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 			_SECFUNCcriticalForceExit
 		fi
 		
-		if ! _SECFUNCdelayValidateIndexIdForOption --quiet-- "--checkorinit";then
+		if ! _SECFUNCdelayValidateIndexIdForOption --simplecheck "--checkorinit";then
 			SECFUNCdelay_init
 			if $l_b1stIsTrueOnCheckOrInit;then
 				return 0
