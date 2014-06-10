@@ -295,12 +295,12 @@ while true;do
 				while [[ -d "/proc/$nAllowedPid" ]];do
 					FUNCToggleLogCheck
 					
-					if((nLastSECONDS<$SECONDS));then # check once per second
+					#if((nLastSECONDS<$SECONDS));then # check once per second
 						# MAINTENANCE VALIDATIONS HERE
 						FUNCremoveRequestsByInactivePids
 						FUNCvalidateRequest $nAllowedPid
-						nLastSECONDS=$SECONDS;
-					fi
+					#	nLastSECONDS=$SECONDS;
+					#fi
 					
 					# check if allowed pid file was removed (by itself or here)
 					if [[ ! -f "$SECstrLockFileAllowedPid" ]];then

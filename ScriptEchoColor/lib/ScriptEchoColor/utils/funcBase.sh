@@ -257,7 +257,7 @@ function SECFUNCechoErr() { #echo error messages
 			shift
 			caller="${1}: "
 		else
-			echo "SECERROR[`SECFUNCdtNow`]invalid option $1" >>/dev/stderr; 
+			echo "[`SECFUNCdtNow`]SECERROR:invalid option $1" >>/dev/stderr; 
 			return 1
 		fi
 		shift
@@ -265,7 +265,7 @@ function SECFUNCechoErr() { #echo error messages
 	
 	###### main code
 	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr; 
-	local l_output="SECERROR[`SECFUNCdtNow`]: ${caller}$@"
+	local l_output="[`SECFUNCdtNow`]SECERROR: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -355,7 +355,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	fi
 	
 	if $lbDebug;then
-		local l_output="SECDEBUG[`SECFUNCdtNow`]: ${caller}$@"
+		local l_output="[`SECFUNCdtNow`]SECDEBUG: ${caller}$@"
 		if $SEC_MsgColored;then
 			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
@@ -393,7 +393,7 @@ function SECFUNCechoWarn() {
 	
 	###### main code
 	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr
-	local l_output="SECWARN[`SECFUNCdtNow`]: ${caller}$@"
+	local l_output="[`SECFUNCdtNow`]SECWARN: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -429,7 +429,7 @@ function SECFUNCechoBugtrack() {
 	done
 	
 	###### main code
-	local l_output="SECBUGTRACK[`SECFUNCdtNow`]: ${caller}$@"
+	local l_output="[`SECFUNCdtNow`]SECBUGTRACK: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -733,11 +733,11 @@ function SECFUNCexec() {
 	SECFUNCechoDbgA "caller=${caller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: $strExec" >>/dev/stderr
+		echo "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: $strExec" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
+		echo -n "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
 	local ini=`SECFUNCdtNow`;
@@ -747,7 +747,7 @@ function SECFUNCexec() {
   SECFUNCechoDbgA "caller=${caller}: RETURN=${nRet}: $strExec"
   
 	if $bShowElapsed;then
-		echo "SECFUNCexec[`SECFUNCdtNow`]: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
+		echo "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
 	fi
   return $nRet
 }
