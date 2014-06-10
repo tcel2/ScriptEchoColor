@@ -31,21 +31,25 @@ trap 'bShowLogToggle=true;' USR1
 bShowLogToggle=false
 bShowLog=true
 
-# secinit must come before functions so its aliases are expanded!
-# can only have access to base functions as the file locks begin from misc up...
-eval `secinit --nofilelockdaemon --base`
-
 strSelfName="`basename "$0"`"
 nSelfPid="$$"
+strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.DaemonPid"
 #nPidDaemon="`pgrep -fo "/$strSelfName"`"
-nPidDaemon="`cat "$SECstrLockFileDaemonPid" 2>/dev/null`"
+#nPidDaemon="`cat "$SECstrLockFileDaemonPid" 2>/dev/null`"
+nPidDaemon="`cat "$strSymlinkToDaemonPidFile" 2>/dev/null`"
 if [[ -z "$nPidDaemon" ]];then
 	nPidDaemon="-1"
 fi
-#bIsMain=false
-#if((nSelfPid==nPidDaemon));then
-#	bIsMain=true
-#fi
+if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, return true (0) if it is (This is actually a quick option that runs very fast before any other code on this script, so this parameter must come alone)
+	if [[ -d "/proc/$nPidDaemon" ]];then
+		exit 0
+	fi
+	exit 1
+fi
+
+# secinit must come before functions so its aliases are expanded!
+# can only have access to base functions as the file locks begin from misc up...
+eval `secinit --nofilelockdaemon --base`
 
 #################### Functions
 function FUNCcheckDaemonStarted() {
@@ -54,6 +58,7 @@ function FUNCcheckDaemonStarted() {
 	else
 		rm "$SECstrLockFileDaemonPid" 2>/dev/null
 		rm "$SECstrLockFileLog" 2>/dev/null
+		nPidDaemon="-1"
 		return 1
 	fi
 }
@@ -62,7 +67,11 @@ function FUNCkillDaemon() {
 	if FUNCcheckDaemonStarted;then
 		ps -p $nPidDaemon
 		kill -SIGKILL $nPidDaemon
-		ps -p $nPidDaemon
+#		ps -p $nPidDaemon
+		while [[ -d "/proc/$nPidDaemon" ]];do
+			sleep 0.1
+		done
+		FUNCcheckDaemonStarted # to update nPidDaemon
 	fi
 }
 
@@ -155,7 +164,7 @@ bLogMonitor=false
 bToggleLog=false
 bDaemon=false
 bGetDaemonPid=false
-bIsDaemonStarted=false
+#bIsDaemonStarted=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -174,8 +183,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bLogMonitor=true
 	elif [[ "$1" == "--getdaemonpid" ]];then #help get daemon pid
 		bGetDaemonPid=true
-	elif [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, return true (0) if it is
-		bIsDaemonStarted=true
+#	elif [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, return true (0) if it is (This is actually a quick option that runs very fast before any other code on this script)
+#		bIsDaemonStarted=true
+		echo "DUMMY"
 	else
 		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
@@ -188,11 +198,11 @@ FUNCcheckDaemonStarted #to clean files
 if $bGetDaemonPid;then
 	echo "$nPidDaemon"
 	exit
-elif $bIsDaemonStarted;then
-	if FUNCcheckDaemonStarted;then
-		exit 0
-	fi
-	exit 1
+#elif $bIsDaemonStarted;then
+#	if FUNCcheckDaemonStarted;then
+#		exit 0
+#	fi
+#	exit 1
 elif $bToggleLog;then
 	if FUNCcheckDaemonStarted;then
 		kill -SIGUSR1 $nPidDaemon
@@ -223,6 +233,7 @@ fi
 
 #################### MAIN - DAEMON LOOP
 echo -n "$$" >"$SECstrLockFileDaemonPid"
+ln -sf "$SECstrLockFileDaemonPid" "$strSymlinkToDaemonPidFile"
 nPidDaemon="$$"
 echo "Lock Control Daemon started, pid='$nSelfPid'." >>/dev/stderr
 exec 2>> "$SECstrLockFileLog"
