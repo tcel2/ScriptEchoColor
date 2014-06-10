@@ -47,6 +47,7 @@ fi
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
 
 export SECstrLockControlId="LockControl"
+export SECstrLockFileDaemonPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.DaemonPid"
 export SECstrLockFileRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Requests"
 export SECstrLockFileAceptedRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AceptedRequests"
 export SECstrLockFileRemoveRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.RemoveRequests"
@@ -487,7 +488,7 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	fi
 	
 	function SECFUNClockFileAllowedPid_check(){
-		local lnPid="$1"
+		local lnPid="${1-}"
 		
 		if [[ -z "$lnPid" ]];then
 			SECFUNCechoErrA "lnPid='$lnPid' empty"

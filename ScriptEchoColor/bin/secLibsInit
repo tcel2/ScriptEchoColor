@@ -65,7 +65,7 @@ fi
 
 # echo 'export SECinstallPath="`secGetInstallPath.sh`";' #at funcMisc
 # echo 'source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";' #at funcVars
-#if ! ${SECinitialized-false};then #this breaks aliases :(
+# DO NOT SKIP INITIALIZATION, this break aliases :( -> #if ! ${SECinitialized-false};then
 if $bBase;then
 	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh\";"
 elif $bMisc;then
@@ -80,11 +80,12 @@ if $bVars;then
 fi
 
 if $bFileLockDaemon;then
-	if ! pgrep -f "secFileLockControlDaemon.sh" 1>/dev/null;then
-		echo "`basename $0`: Initializing Lock Control Daemon." >>/dev/stderr
-		# stdout must be redirected or the terminal wont let it exit...
+#	#if ! pgrep -f "secFileLockControl.sh" 1>/dev/null;then
+	if ! secFileLockControl.sh --isdaemonstarted >>/dev/stderr;then
+#		echo "`basename $0`: Initializing Lock Control Daemon." >>/dev/stderr
+		# stdout must be redirected or the terminal wont let it be child...
 		# nohup or disown alone did not work...
-		secFileLockControlDaemon.sh >>/dev/stderr &
+		secFileLockControl.sh --daemon >>/dev/stderr &
 	fi
 fi
 

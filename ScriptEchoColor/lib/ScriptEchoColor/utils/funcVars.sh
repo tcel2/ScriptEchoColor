@@ -160,13 +160,14 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		local lsedPidFromFile='s".*[.]([[:digit:]]*)[.]vars[.]tmp$"\1"';
 		local lnPid=`echo "$lfile" |sed -r "$lsedPidFromFile"`;
 		# bad filename
-		if [[ -n `echo "$lnPid" |tr -d "[:digit:]"` ]];then
+		if [[ -z "$lnPid" ]] || [[ -n "`echo "$lnPid" |tr -d "[:digit:]"`" ]];then
 			SECFUNCechoErrA "invalid pid '$lnPid' from filename '$lfile'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		
 		# the pid must NOT be running
-		if ps -p $lnPid >/dev/null 2>&1; then 
+		#if ps -p $lnPid >/dev/null 2>&1; then 
+		if [[ -d "/proc/$lnPid" ]]; then 
 			# skip files that have active pid
 			SECFUNCdbgFuncOutA;return
 		fi
@@ -735,7 +736,8 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 #		for l_pid in ${aPidList[@]};do
 		for l_pid in ${!SECmultiThreadEvenPids[@]};do
 			#if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then
-				if ! ps -p $l_pid >/dev/null 2>&1;then
+				#if ! ps -p $l_pid >/dev/null 2>&1;then
+				if [[ ! -d "/proc/$l_pid" ]];then
 					unset SECmultiThreadEvenPids[l_pid]
 				fi
 			#fi
@@ -1018,9 +1020,10 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	fi
 	
 	local bSymlinkToOther=true
-	if [[ ! -n "$l_pid" ]];then
+	if [[ -z "$l_pid" ]];then
 		bSymlinkToOther=false
-	elif ! ps -p $l_pid >/dev/null 2>&1;then
+	#elif ! ps -p $l_pid >/dev/null 2>&1;then
+	elif [[ ! -d "/proc/$l_pid" ]];then
 		bSymlinkToOther=false
 		SECFUNCechoWarnA "asked pid $l_pid is not running"
 	#elif [[ ! -n `find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"` ]];then #DO NOT TRY TO GUESS THINGS UP, IT IS MESSY...
@@ -1033,7 +1036,8 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	if [[ -n "${SECvarFile-}" ]]; then #SECvarFile is set and not empty
 		if [[ ! -f "$SECvarFile" ]];then #check if file was removed
 			local l_pidParent=`SECFUNCvarGetPidOfFileDB $SECvarFile`
-			if ps -p $l_pidParent >/dev/null 2>&1;then
+			#if ps -p $l_pidParent >/dev/null 2>&1;then
+			if [[ -n "$l_pidParent" ]] && [[ -d "/proc/$l_pidParent" ]];then
 				SECFUNCechoWarnA "SECvarFile '$SECvarFile' should exist..."
 			fi
 			unset SECvarFile # parent pid died and file was already removed; this allows the creation of a new file below. This can be a problem on a situation where a parent spawns several childs that should intercommunicate and the parent dies before the first symlink to its DB file be created... is it a real/practical problem??

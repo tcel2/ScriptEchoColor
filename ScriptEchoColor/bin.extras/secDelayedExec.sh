@@ -104,6 +104,6 @@ while true; do
 	break
 done
 
-echo -n "pid=$$; ";"$@" & nPid=$!
-echo "Started: `SECFUNCdtTimePrettyNow`, BASHPID=$BASHPID, PID=$nPid, cmd='$@'" >>"$strLogFile"
+echo -n "pid=$$; ";"$@" & nCmdPid=$!
+echo "Started: `SECFUNCdtTimePrettyNow`, BASHPID='$BASHPID', nCmdPid='$nCmdPid', cmd='$@'" |tee -a "$strLogFile"
 

@@ -36,14 +36,36 @@ bShowLog=true
 eval `secinit --nofilelockdaemon --base`
 
 strSelfName="`basename "$0"`"
-nPidDaemon="`pgrep -fo "/$strSelfName"`"
 nSelfPid="$$"
-bIsMain=false
-if((nSelfPid==nPidDaemon));then
-	bIsMain=true
+#nPidDaemon="`pgrep -fo "/$strSelfName"`"
+nPidDaemon="`cat "$SECstrLockFileDaemonPid" 2>/dev/null`"
+if [[ -z "$nPidDaemon" ]];then
+	nPidDaemon="-1"
 fi
+#bIsMain=false
+#if((nSelfPid==nPidDaemon));then
+#	bIsMain=true
+#fi
 
 #################### Functions
+function FUNCcheckDaemonStarted() {
+	if [[ -d "/proc/$nPidDaemon" ]];then
+		return 0
+	else
+		rm "$SECstrLockFileDaemonPid" 2>/dev/null
+		rm "$SECstrLockFileLog" 2>/dev/null
+		return 1
+	fi
+}
+
+function FUNCkillDaemon() {
+	if FUNCcheckDaemonStarted;then
+		ps -p $nPidDaemon
+		kill -SIGKILL $nPidDaemon
+		ps -p $nPidDaemon
+	fi
+}
+
 function FUNCupdateAceptedRequests() {
 	#if ! ${astrAceptedRequests+false};then
 	if((`SECFUNCarraySize astrAceptedRequests`>0));then
@@ -131,21 +153,29 @@ bKillDaemon=false
 bRestartDaemon=false
 bLogMonitor=false
 bToggleLog=false
+bDaemon=false
+bGetDaemonPid=false
+bIsDaemonStarted=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
 		exit
-	elif [[ "$1" == "--nolog" ]];then #help do not show the log
+	elif [[ "$1" == "--daemon" ]];then #help start the daemon
+		bDaemon=true
+	elif [[ "$1" == "--nolog" ]];then #help start without logging
 		bShowLog=false
-	elif [[ "$1" == "--togglelog" ]];then #help toggle log monitor at daemon (if it has tty)
+	elif [[ "$1" == "--togglelog" ]];then #help toggle logging
 		bToggleLog=true
 	elif [[ "$1" == "--kill" ]];then #help kill the daemon, avoid using this...
 		bKillDaemon=true
 	elif [[ "$1" == "--restart" ]];then #help restart the daemon, avoid using this...
-		bKillDaemon=true
 		bRestartDaemon=true
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
 		bLogMonitor=true
+	elif [[ "$1" == "--getdaemonpid" ]];then #help get daemon pid
+		bGetDaemonPid=true
+	elif [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, return true (0) if it is
+		bIsDaemonStarted=true
 	else
 		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
@@ -153,34 +183,47 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	shift
 done
 
-if $bToggleLog;then
-	kill -SIGUSR1 $nPidDaemon
-fi
+FUNCcheckDaemonStarted #to clean files
 
-if $bKillDaemon;then
-	pgrep -f $strSelfName
-	if $bIsMain;then
-		SEC_WARN=true SECFUNCechoWarnA "killing self nSelfPid=$nSelfPid, nPidDaemon=$nPidDaemon..."
+if $bGetDaemonPid;then
+	echo "$nPidDaemon"
+	exit
+elif $bIsDaemonStarted;then
+	if FUNCcheckDaemonStarted;then
+		exit 0
 	fi
-	kill -SIGKILL $nPidDaemon
-fi
+	exit 1
+elif $bToggleLog;then
+	if FUNCcheckDaemonStarted;then
+		kill -SIGUSR1 $nPidDaemon
+	else
+		echo "Daemon is not running..." >>/dev/stderr
+	fi
+elif $bKillDaemon;then
+	FUNCkillDaemon
+elif $bRestartDaemon;then
+	FUNCkillDaemon
 	
-if $bRestartDaemon;then
-	secFileLockControlDaemon.sh >>/dev/stderr &
-fi
-
-if $bLogMonitor;then
-	echo "Daemon Pid: $nPidDaemon"
-	tail -f "$SECstrLockFileLog"
+	# stdout must be redirected or the terminal wont let it be child...
+	# nohup or disown alone did not work...
+	$0 --daemon >>/dev/stderr &
+	exit
+elif $bLogMonitor;then
+	#TODO pgrep will find logmon running, find a workaround!
+	echo "Daemon Pid: $nPidDaemon, log file '$SECstrLockFileLog'"
+	tail -F "$SECstrLockFileLog"
 fi
 
 # MUST BE LAST CHECK BEFORE MAIN CODE!
-if ! $bIsMain ;then
-	echo "$strSelfName: nSelfPid='$nSelfPid', Daemon Pid '$nPidDaemon'" >>/dev/stderr
+#if ! $bIsMain ;then
+if ! $bDaemon || FUNCcheckDaemonStarted; then
+	echo "$strSelfName: nSelfPid='$nSelfPid', nPidDaemon='$nPidDaemon'" >>/dev/stderr
 	exit
 fi
 
-#################### MAIN
+#################### MAIN - DAEMON LOOP
+echo -n "$$" >"$SECstrLockFileDaemonPid"
+nPidDaemon="$$"
 echo "Lock Control Daemon started, pid='$nSelfPid'." >>/dev/stderr
 exec 2>> "$SECstrLockFileLog"
 exec 1>&2                   
@@ -240,6 +283,7 @@ while true;do
 				#echo -n "$nAllowedPid" >"$SECstrLockFileAllowedPid"
 				SECFUNClockFileAllowedPid --allow "$nAllowedPid"
 				echo "$strAcceptDelayId='`SECFUNCdelay "$strAcceptDelayId" --get`'" >>/dev/stderr
+				SECFUNCdelay "$strAcceptDelayId" --init # reinit timer just after so the time to the next one be allowed is precisely measured
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
 					# at secinit this is redirected to /dev/stderr
