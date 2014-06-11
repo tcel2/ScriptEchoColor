@@ -329,8 +329,9 @@ function _SECFUNCmsgCtrl() {
 	fi
 }
 
-alias SECFUNCechoDbgA="SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
+	#set +x #stop log
 	_SECFUNCmsgCtrl DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
 		return 0
@@ -376,6 +377,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		if((lnLength>0));then
 			lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
 		fi
+		#echo "SECastrBashDebugFunctionIds=(${SECastrBashDebugFunctionIds[@]})" >>/dev/stderr
 	}
 	SECFUNCechoDbg_updateStackVars
 	strFuncInOut=""
@@ -410,12 +412,11 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		strFuncStack=""
 	fi
 	
-	# This MUST BE THE FIRST THING AFTER OPTIONS ABOVE (to generate less log possible)
 	local lbBashDebug=false
 	if((${#SECastrBashDebugFunctionIds[@]}>0));then
 		local lnIndex
 		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
-			local strBashDebugFunctionId=${SECastrBashDebugFunctionIds[lnIndex]}
+			local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
 			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
 			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
 				lbBashDebug=true
@@ -423,11 +424,11 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 			fi
 		done
 	fi
-	if $lbBashDebug;then
-		if $lbFuncOut;then
-			set +x #stop log
-		fi
-	fi
+#	if $lbBashDebug;then
+#		if $lbFuncOut;then
+#			set +x #stop log
+#		fi
+#	fi
 
 	local lbDebug=true
 	
@@ -452,7 +453,11 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	
 	# LAST CHECK ON THIS FUNCTION!!!
 	if $lbBashDebug;then
-		if $lbFuncIn;then
+		if $lbFuncOut;then
+			if [[ -z "$lstrLastFuncId" ]];then
+				set +x #end log
+			fi
+		else
 			set -x #start log
 		fi
 	fi

@@ -223,6 +223,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	SECFUNCdbgFuncOutA
 }
 function SECFUNCscriptSelfNameSet() {
+	SECFUNCdbgFuncInA;
 	local lbScriptNameChanged=false
 	local lSECscriptSelfName="`basename $0`"
 	SECFUNCechoDbgA "lSECscriptSelfName=$lSECscriptSelfName"
@@ -259,6 +260,7 @@ function SECFUNCscriptSelfNameSet() {
 			fi
 		fi
 	fi
+	SECFUNCdbgFuncOutA;
 }
 function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
