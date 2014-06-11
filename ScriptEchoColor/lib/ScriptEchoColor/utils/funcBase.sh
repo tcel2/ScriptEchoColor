@@ -369,18 +369,26 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	done
 	
 	###### main code
+	local lnLength=0
+	local lstrLastFuncId=""
+	function SECFUNCechoDbg_updateStackVars(){
+		lnLength="${#SECastrFunctionStack[@]}"
+		if((lnLength>0));then
+			lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
+		fi
+	}
+	SECFUNCechoDbg_updateStackVars
 	strFuncInOut=""
-	local lnLength="${#SECastrFunctionStack[@]}"
 	if $lbFuncIn;then
 		strFuncInOut="Func-IN: "
 		SECastrFunctionStack+=($lstrFuncCaller)
+		SECFUNCechoDbg_updateStackVars
 	elif $lbFuncOut;then
 		strFuncInOut="Func-OUT: "
 		if((lnLength>0));then
-			local lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
 			if [[ "$lstrFuncCaller" == "$lstrLastFuncId" ]];then
 				unset SECastrFunctionStack[lnLength-1]
-				lnLength="${#SECastrFunctionStack[@]}"
+				SECFUNCechoDbg_updateStackVars
 			else
 				SECFUNCechoErrA "lstrFuncCaller='$lstrFuncCaller' expected lstrLastFuncId='$lstrLastFuncId'"
 			fi
@@ -389,7 +397,15 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		fi
 	fi
 	if((lnLength>0));then
-		strFuncStack="`echo "${SECastrFunctionStack[@]}" |tr ' ' '.'`"
+		local lnCount="$lnLength"
+		if $lbFuncIn;then
+			((lnCount--))
+		fi
+		if((lnCount>0));then
+			strFuncStack="`echo "${SECastrFunctionStack[@]:0:lnCount}" |tr ' ' '.'`: "
+		else
+			strFuncStack=""
+		fi
 	else
 		strFuncStack=""
 	fi
@@ -400,7 +416,8 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		local lnIndex
 		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
 			local strBashDebugFunctionId=${SECastrBashDebugFunctionIds[lnIndex]}
-			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]];then
+			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
+			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
 				lbBashDebug=true
 				break
 			fi
