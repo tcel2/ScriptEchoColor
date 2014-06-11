@@ -27,6 +27,14 @@
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
+# THIS ATOMIC FUNCTION IS SPECIAL AND CAN COME HERE, IT MUST DEPEND ON NOTHING!!!
+function _SECFUNCcriticalForceExit() {
+	while true;do
+		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
+		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >>/dev/stderr
+	done
+}
+
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
 SECastrFuncFilesShowHelp=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh")
@@ -43,8 +51,25 @@ fi
 if [[ -L "$SEC_TmpFolder" ]];then
 	SEC_TmpFolder="`readlink -f "$SEC_TmpFolder"`" #required with `find` that would fail on symlink to a folder..
 fi
+SEC_TmpFolder="$SEC_TmpFolder/.SEC.$USER"
+if [[ ! -d "$SEC_TmpFolder" ]];then
+	mkdir "$SEC_TmpFolder"
+fi
 
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
+
+if ${SECastrBashDebugFunctionIds+false};then 
+	SECastrBashDebugFunctionIds=(); # if array has items, wont reach here, tho if it has NO items, it will be re-initialized to what it was: an empty array (will remain the same).
+else
+	_SECastrBashDebugFunctionIds_Check="`declare -p SECastrBashDebugFunctionIds 2>/dev/null`";
+	if [[ "${_SECastrBashDebugFunctionIds_Check:0:10}" != 'declare -a' ]];then
+		echo "SECastrBashDebugFunctionIds='$SECastrBashDebugFunctionIds' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+		_SECFUNCcriticalForceExit
+	fi
+fi
+export SECastrBashDebugFunctionIds
+
+export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
 
 export SECstrLockControlId="LockControl"
 export SECstrLockFileDaemonPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.DaemonPid"
@@ -54,10 +79,12 @@ export SECstrLockFileRemoveRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Re
 export SECstrLockFileAllowedPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AllowedPid"
 export SECstrLockFileLog="$SEC_TmpFolder/.SEC.$SECstrLockControlId.log"
 
+export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
+
 export _SECbugFixDate="0" #seems to be working now...
 
-alias SECFUNCdbgFuncInA='SECFUNCechoDbgA "func In"'
-alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA "func Out"'
+alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
+alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
 alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
@@ -130,12 +157,6 @@ fi
 
 ########################## FUNCTIONS
 
-function _SECFUNCcriticalForceExit() {
-	while true;do
-		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-	done
-}
-
 function SECFUNCexportFunctions() {
 	declare -F \
 		|grep "SECFUNC" \
@@ -174,7 +195,7 @@ function SECFUNCdtTimeToFileNameNow() {
 
 function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 	local lstrArrayId="$1"
-	if ! ${!lstrArrayId+false};then #this is false if unbound
+	if ! ${!lstrArrayId+false};then #this becomes false if unbound
 		eval 'echo "${#'$lstrArrayId'[@]}"'
 	else
 		echo "0"
@@ -267,10 +288,11 @@ function SECFUNCechoErr() { #echo error messages
 	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr; 
 	local l_output="[`SECFUNCdtNow`]SECERROR: ${caller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
+		echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
 	else
 		echo "${l_output}" >>/dev/stderr
 	fi
+	echo "${l_output}" >>"$SECstrFileErrorLog"
 }
 #if [[ "$SEC_DEBUG" == "true" ]];then
 #	SECFUNCechoErrA "test error message"
@@ -280,7 +302,13 @@ function SECFUNCechoErr() { #echo error messages
 function _SECFUNCmsgCtrl() {
 	local lstrMsgMode="$1"
 	if [[ -f "${SECstrFileMessageToggle}.$lstrMsgMode.$$" ]];then
-		local lstrForceMessage=cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"
+		local lstrForceMessage="`cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"`"
+		if [[ "$lstrMsgMode" == "DEBUG" ]];then
+			if [[ -f "${SECstrFileMessageToggle}.BASHDEBUG.$$" ]];then
+				SECastrBashDebugFunctionIds=("`cat "${SECstrFileMessageToggle}.BASHDEBUG.$$"`")
+				rm "${SECstrFileMessageToggle}.BASHDEBUG.$$" 2>/dev/null
+			fi
+		fi
 		
 		rm "${SECstrFileMessageToggle}.$lstrMsgMode.$$" 2>/dev/null
 		
@@ -291,7 +319,7 @@ function _SECFUNCmsgCtrl() {
 				eval SEC_$lstrMsgMode=false
 			fi				
 		else
-			local lstrVarTemp="$SEC_$lstrMsgMode"
+			local lstrVarTemp="SEC_${lstrMsgMode}"
 			if ${!lstrVarTemp};then 
 				eval SEC_$lstrMsgMode=false;	
 			else 
@@ -303,27 +331,17 @@ function _SECFUNCmsgCtrl() {
 
 alias SECFUNCechoDbgA="SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
-#	if [[ -f "${SECstrFileMessageToggle}.DEBUG.$$" ]];then
-#		local lstrForceMessage=cat "${SECstrFileMessageToggle}.DEBUG.$$"
-#		rm "${SECstrFileMessageToggle}.DEBUG.$$" 2>/dev/null
-#		if [[ -n "$lstrForceMessage" ]];then
-#			if [[ "$lstrForceMessage" == "on" ]];then
-#				SEC_DEBUG=true
-#			elif [[ "$lstrForceMessage" == "off" ]];then
-#				SEC_DEBUG=false
-#			fi				
-#		else
-#			if $SEC_DEBUG;then SEC_DEBUG=false;	else SEC_DEBUG=true; fi
-#		fi
-#	fi
 	_SECFUNCmsgCtrl DEBUG
-	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose time
+	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
 		return 0
 	fi
 	
 	###### options
 	local caller=""
 	local lstrFuncCaller=""
+	local lbFuncIn=false
+	local lbFuncOut=false
+	local lbStopParams=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -334,14 +352,66 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoDbg_help <FUNCNAME> will show debug only if the caller function matches SEC_DEBUG_FUNC in case it is not empty
 			shift
 			lstrFuncCaller="${1}"
+		elif [[ "$1" == "--funcin" ]];then #SECFUNCechoDbg_help just to tell it was placed on the beginning of a function
+			lbFuncIn=true
+		elif [[ "$1" == "--funcout" ]];then #SECFUNCechoDbg_help just to tell it was placed on the end of a function
+			lbFuncOut=true
+		elif [[ "$1" == "--" ]];then #SECFUNCechoDbg_help remaining params after this are considered as not being options
+			lbStopParams=true;
 		else
 			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
 		shift
+		if $lbStopParams;then
+			break;
+		fi
 	done
 	
 	###### main code
+	strFuncInOut=""
+	local lnLength="${#SECastrFunctionStack[@]}"
+	if $lbFuncIn;then
+		strFuncInOut="Func-IN: "
+		SECastrFunctionStack+=($lstrFuncCaller)
+	elif $lbFuncOut;then
+		strFuncInOut="Func-OUT: "
+		if((lnLength>0));then
+			local lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
+			if [[ "$lstrFuncCaller" == "$lstrLastFuncId" ]];then
+				unset SECastrFunctionStack[lnLength-1]
+				lnLength="${#SECastrFunctionStack[@]}"
+			else
+				SECFUNCechoErrA "lstrFuncCaller='$lstrFuncCaller' expected lstrLastFuncId='$lstrLastFuncId'"
+			fi
+		else
+			SECFUNCechoErrA "lstrFuncCaller='$lstrFuncCaller', SECastrFunctionStack lnLength='$lnLength'"
+		fi
+	fi
+	if((lnLength>0));then
+		strFuncStack="`echo "${SECastrFunctionStack[@]}" |tr ' ' '.'`"
+	else
+		strFuncStack=""
+	fi
+	
+	# This MUST BE THE FIRST THING AFTER OPTIONS ABOVE (to generate less log possible)
+	local lbBashDebug=false
+	if((${#SECastrBashDebugFunctionIds[@]}>0));then
+		local lnIndex
+		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
+			local strBashDebugFunctionId=${SECastrBashDebugFunctionIds[lnIndex]}
+			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]];then
+				lbBashDebug=true
+				break
+			fi
+		done
+	fi
+	if $lbBashDebug;then
+		if $lbFuncOut;then
+			set +x #stop log
+		fi
+	fi
+
 	local lbDebug=true
 	
 	if [[ "$SEC_DEBUG" != "true" ]];then
@@ -355,11 +425,18 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	fi
 	
 	if $lbDebug;then
-		local l_output="[`SECFUNCdtNow`]SECDEBUG: ${caller}$@"
+		local l_output="[`SECFUNCdtNow`]SECDEBUG: ${strFuncStack}${caller}${strFuncInOut}$@"
 		if $SEC_MsgColored;then
-			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
+			echo -e " \E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
 			echo "${l_output}" >>/dev/stderr
+		fi
+	fi
+	
+	# LAST CHECK ON THIS FUNCTION!!!
+	if $lbBashDebug;then
+		if $lbFuncIn;then
+			set -x #start log
 		fi
 	fi
 }
@@ -395,7 +472,7 @@ function SECFUNCechoWarn() {
 	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr
 	local l_output="[`SECFUNCdtNow`]SECWARN: ${caller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
+		echo -e " \E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
 		echo "${l_output}" >>/dev/stderr
 	fi

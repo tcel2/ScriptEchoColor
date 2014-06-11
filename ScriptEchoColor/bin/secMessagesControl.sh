@@ -34,6 +34,8 @@ bBugtrack=false
 bOn=false
 bOff=false
 nPid=""
+bBashDebug=false
+strFunctionNames=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	eval "set -- `SECFUNCsingleLetterOptionsA "$@"`"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -54,16 +56,35 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bDebug=true
 	elif [[ "$1" == "--bugtrack" || "$1" == "-b" ]];then #help
 		bBugtrack=true
-	elif [[ "$1" == "--all" || "$1" == "-a" ]];then #help all messages at once
+	elif [[ "$1" == "--all" || "$1" == "-a" ]];then #help all messages at once (least --bashdebug)
 		bWarn=true
 		bDebug=true
 		bBugtrack=true
+	elif [[ "$1" == "--bashdebug" || "$1" == "-g" ]];then #help <functionNames> will use the bash debug 'set -x' on beggining of a function and 'set +x' at its end;\n\trequires -d option;\n\tmultiple function names can be provided like "FUNC1 FUNC2";\n\tif functionNames is empty "", this debug will be turned off to all functions
+		shift
+		strFunctionNames="${1-}"
+		
+		bBashDebug=true
 	else
 		echoc -p "invalid option '$1'"
 		exit 1 
 	fi
 	shift
 done
+
+if $bBashDebug;then
+	if [[ -n "$strFunctionNames" ]];then
+		if [[ -n "`echo "$strFunctionNames" |tr -d '[:alnum:]_ '`" ]];then
+			echoc -p "invalid strFunctionNames='$strFunctionNames'"
+			exit 1
+		else
+			declare -p SECastrBashDebugFunctionIds
+		fi
+	else
+		echoc -p "strFunctionNames required..."
+		exit 1
+	fi
+fi
 
 if [[ -z "${1-}" ]];then
 	echoc -p "<pid> or <commandsToBeRun> expected..."
@@ -79,6 +100,8 @@ if((nPid>0));then
 	if ! SECFUNClockFileAllowedPid --active --check "$nPid";then
 		echoc -p "invalid nPid='$nPid'"
 		exit 1
+	else
+		ps -o pid,ppid,tty,cmd -p "$nPid"
 	fi
 
 	strForce=""
@@ -88,17 +111,49 @@ if((nPid>0));then
 		strForce="off"
 	fi
 	
+	astrCmdFiles=()
 	if $bWarn;then
-			echo "$strForce" |tee "${SECstrFileMessageToggle}.WARN.$nPid"
+			strFile="${SECstrFileMessageToggle}.WARN.$nPid"
+			astrCmdFiles+=("$strFile")
+			echo "$strForce" |tee "$strFile"
 	fi
 	if $bDebug;then
-			echo "$strForce" |tee "${SECstrFileMessageToggle}.DEBUG.$nPid"
+			strFile="${SECstrFileMessageToggle}.DEBUG.$nPid"
+			astrCmdFiles+=("$strFile")
+			echo "$strForce" |tee "$strFile"
 	fi
 	if $bBugtrack;then
-			echo "$strForce" |tee "${SECstrFileMessageToggle}.BUGTRACK.$nPid"
+			strFile="${SECstrFileMessageToggle}.BUGTRACK.$nPid"
+			astrCmdFiles+=("$strFile")
+			echo "$strForce" |tee "$strFile"
 	fi
+	
+	if $bBashDebug;then
+			strFile="${SECstrFileMessageToggle}.BASHDEBUG.$nPid"
+			astrCmdFiles+=("$strFile")
+			
+			# has an space ' ' because that file will be read as an array
+			echo "${strFunctionNames} " |tee "$strFile"
+	fi
+	
+	for strFile in "${astrCmdFiles[@]}";do
+		echo
+		echo "checking: strFile='$strFile'"
+		SECFUNCdelay CheckCmdAccepted --init
+		while [[ -f "$strFile" ]];do
+			if [[ ! -d "/proc/$nPid" ]];then
+				echoc -p "nPid='$nPid' died"
+				exit 1
+			fi
+			echo -en "waiting command be accepted for strFile='$strFile' `SECFUNCdelay CheckCmdAccepted`s\r"
+			sleep 1
+		done
+		echo
+		echo "accepted: strFile='$strFile'"
+	done
 else
 	strExec=`SECFUNCparamsToEval "$@"`
+	
 	if $bWarn;then
 			export SEC_WARN=true
 	fi
@@ -108,6 +163,15 @@ else
 	if $bBugtrack;then
 			export SEC_BUGTRACK=true
 	fi
-	eval "$strExec"
+	
+	if $bBashDebug;then
+		# eval to make $strFunctionNames have its spaces considered and each word become an entry
+		eval "export SECastrBashDebugFunctionIds=($strFunctionNames)"
+	fi
+	
+	# must not be child to be interactive
+	# unset SECvarFile will force the called script to create its own var db file
+	#eval "unset SECvarFile; $strExec" 
+	bash -c "unset SECvarFile;$strExec" 
 fi
 

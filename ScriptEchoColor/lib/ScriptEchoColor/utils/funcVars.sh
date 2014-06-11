@@ -114,14 +114,14 @@ fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
 function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
-	SECFUNCdbgFuncInA
+	SECFUNCdbgFuncInA;
 	
 	local lnDelayToBeOld=600 #in seconds
 	local lbForce=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
-		if [[ "$1" == "--force" ]]; then #SECFUNCvarSet_help will force clean now
+		if [[ "$1" == "--force" ]]; then #SECFUNCvarClearTmpFiles_help will force clean now
 			lbForce=true
-		elif [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
+		elif [[ "$1" == "--help" ]]; then #SECFUNCvarClearTmpFiles_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		else
@@ -145,6 +145,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	fi
 	
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
+		SECFUNCdbgFuncInA;
 		local lfile="$1";
 		
 		# the file must exist
@@ -189,6 +190,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		if ! SECFUNCexecA rm -f "$lfile";then
 			SECFUNCechoErrA "rm failed for: $lfile"
 		fi
+		SECFUNCdbgFuncOutA;
 	};export -f SECFUNCvarClearTmpFiles_removeFilesForDeadPids;
 	
 	# Remove symlinks for dead pids

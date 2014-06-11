@@ -236,7 +236,7 @@ echo -n "$$" >"$SECstrLockFileDaemonPid"
 ln -sf "$SECstrLockFileDaemonPid" "$strSymlinkToDaemonPidFile"
 nPidDaemon="$$"
 echo "Lock Control Daemon started, pid='$nSelfPid'." >>/dev/stderr
-exec 2>> "$SECstrLockFileLog"
+exec 2>>"$SECstrLockFileLog"
 exec 1>&2                   
 
 #TODO requests with md5sum of the real file to be locked and the pid on each line like: md5sum,pid?
@@ -298,7 +298,7 @@ while true;do
 				
 				if $bShowLog;then #TODO kill sigusr1 to show this log
 					# at secinit this is redirected to /dev/stderr
-					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o cmd --no-headers -p $nAllowedPid`" #|tee -a "$SECstrLockFileLog"
+					echo " ->$nAllowedPid,`SECFUNCdtTimePrettyNow`,`ps -o pid,ppid,cmd --no-headers -p $nAllowedPid`" #|tee -a "$SECstrLockFileLog"
 				fi
 
 				# check if allowed pid is active

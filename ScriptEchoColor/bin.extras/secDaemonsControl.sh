@@ -74,6 +74,7 @@ done
 
 #################### FUNCTIONS
 function FUNClist() {
+	SECFUNCdbgFuncInA;
 	SECFUNCcfgRead
 	#cat "$SECcfgFileName"
 	SECFUNCdrawLine "Daemons List at `SECFUNCdtTimePrettyNow`:"
@@ -95,9 +96,11 @@ function FUNClist() {
 		fi
 	done
 	echo -e "Total=$nCount"
+	SECFUNCdbgFuncOutA;
 }
 
 function FUNCregisterDaemon() {
+	SECFUNCdbgFuncInA;
 	#strPPidId=`ps --no-headers -p $PPID -o comm`
 	nPidDaemon=$SECnPidDaemon
 	if((nPidDaemon==0));then
@@ -113,6 +116,7 @@ function FUNCregisterDaemon() {
 		#declare -p aDaemonsPid
 		SECFUNCcfgWriteVar aDaemonsPid
 	fi
+	SECFUNCdbgFuncOutA;
 }
 
 ############################# MAIN ###############################

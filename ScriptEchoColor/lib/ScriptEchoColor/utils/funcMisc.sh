@@ -728,12 +728,14 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 #	local lstrFile="$SEC_TmpFolder/SEC.DaemonsControl.tmp"
 #}
 function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
+	SECFUNCdbgFuncInA;
 	: ${SECbDaemonRegistered:=false}
 	if ! $SECbDaemonRegistered;then
 		secDaemonsControl.sh --register
 		SECbDaemonRegistered=true
 	fi
 	_SECFUNCdaemonCheckHold_SubShell() {
+		SECFUNCdbgFuncInA;
 		# IMPORTANT: subshell to protect parent envinronment variable SECcfgFileName
 		local bHoldScripts=false
 		SECFUNCcfgFileName secDaemonsControl.sh
@@ -742,8 +744,11 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 		if $bHoldScripts;then
 			secDaemonsControl.sh --checkhold #will cause recursion if this function is called on that command...
 		fi
+		SECFUNCdbgFuncOutA;
 	};export -f _SECFUNCdaemonCheckHold_SubShell
-	bash -c "_SECFUNCdaemonCheckHold_SubShell"
+	# secinit --base; is required so the non exported functions are defined and the aliases are expanded
+	bash -c 'eval `secinit --base`;_SECFUNCdaemonCheckHold_SubShell'
+	SECFUNCdbgFuncOutA;
 }
 
 function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a file is not active (has not been updated or touch)
