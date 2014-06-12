@@ -76,16 +76,10 @@ done
 function FUNClist() {
 	SECFUNCdbgFuncInA;
 	SECFUNCcfgRead
-	#cat "$SECcfgFileName"
 	SECFUNCdrawLine "Daemons List at `SECFUNCdtTimePrettyNow`:"
 	echo -e "Index\tPid\tName"
-#		declare -p aDaemonsPid
-#		SECFUNCcfgRead
-	#declare -p aDaemonsPid
 	nCount=0
-	#echo "${!aDaemonsPid[@]}" |sort
 	for strDaemonId in `echo ${!aDaemonsPid[@]} |tr ' ' '\n' |sort`;do
-		#echo ">>>$strDaemonId"
 		nPid="${aDaemonsPid[$strDaemonId]-}"
 		if ps -p $nPid >/dev/null 2>&1;then
 			echo -e "$nCount\t$nPid\t$strDaemonId";

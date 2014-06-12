@@ -71,20 +71,24 @@ export SECastrBashDebugFunctionIds
 
 export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
 
-#export SECstrLockControlId="LockControl"
-#export SECstrLockFileDaemonPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.DaemonPid"
-#export SECstrLockFileRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Requests"
-#export SECstrLockFileAceptedRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AceptedRequests"
-#export SECstrLockFileRemoveRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.RemoveRequests"
-#export SECstrLockFileAllowedPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AllowedPid"
-#export SECstrLockFileLog="$SEC_TmpFolder/.SEC.$SECstrLockControlId.log"
+export SECstrExportedArrayPrefix="SEC_EXPORTED_ARRAY_"
 
 export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
 export _SECbugFixDate="0" #seems to be working now...
 
+alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+
+alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
+
 alias SECexitA='SECFUNCdbgFuncOutA;exit '
 alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
@@ -169,6 +173,66 @@ function SECFUNCexportFunctions() {
 		|sed 's"declare .* pSECFUNC"export -f pSECFUNC"' \
 		|sed 's".*"&;"' \
 		|grep "export -f pSECFUNC"
+}
+
+function SECFUNCexecOnSubShell(){
+	SECFUNCarraysExport
+	bash -c "$@"
+}
+
+function SECFUNCarraysExport() { #export all arrays
+	SECFUNCdbgFuncInA;
+	local lsedArraysIds='s"^([[:alnum:]_]*)=\(.*"\1";tfound;d;:found' #this avoids using grep as it will show only matching lines labeled 'found' with 't'
+	# this is a list of arrays that are set by the system or bash, not by SEC
+	local lastrArraysToSkip=(`env -i bash -i -c declare 2>/dev/null |sed -r "$lsedArraysIds"`)
+	local lastrArrays=(`declare |sed -r "$lsedArraysIds"`)
+	lastrArraysToSkip+=(
+		BASH_REMATCH 
+		FUNCNAME 
+		lastrArraysToSkip 
+		lastrArrays
+		SECastrFunctionStack 
+	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand
+	export SECcmdExportedAssociativeArrays=""
+	for lstrArrayName in ${lastrArrays[@]};do
+		local lbSkip=false
+		for lstrArrayNameToSkip in ${lastrArraysToSkip[@]};do
+			if [[ "$lstrArrayName" == "$lstrArrayNameToSkip" ]];then
+				lbSkip=true
+				break;
+			fi
+		done
+		if $lbSkip;then
+			continue;
+		fi
+		
+		# associative arrays MUST BE DECLARED like: declare -A arrayVarName; previously to having its values attributted, or it will break the code...
+		if declare -p "$lstrArrayName" |grep -q "^declare -A";then
+			if [[ -z "$SECcmdExportedAssociativeArrays" ]];then
+				SECcmdExportedAssociativeArrays="declare -Ag "
+			fi
+			#export "${SECstrExportedArrayPrefix}_ASSOCIATIVE_${lstrArrayName}=true"
+			SECcmdExportedAssociativeArrays+="${lstrArrayName} "
+		fi
+		
+		# creates the variable to be restored on a child shell
+		eval "export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
+	done
+	SECFUNCdbgFuncOutA;
+}
+function SECFUNCarraysRestore() { #restore all exported arrays
+	SECFUNCdbgFuncInA;
+	
+	# declare associative arrays to make it work properly
+	eval "${SECcmdExportedAssociativeArrays-}"
+	unset SECcmdExportedAssociativeArrays
+	
+	# restore the exported arrays
+	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+	
+	# remove the temporary variables representing exported arrays
+	eval "`declare |sed -r "s%^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)='(.*)'$%unset \1;%;tfound;d;:found"`"
+	SECFUNCdbgFuncOutA;
 }
 
 function SECFUNCdtNow() { 
@@ -266,7 +330,6 @@ function SECFUNCshowHelp() {
 		#|sed -r "$lsedAddNewLine"
 }
 
-alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoErr() { #echo error messages
 	###### options
 	local caller=""
@@ -329,7 +392,6 @@ function _SECFUNCmsgCtrl() {
 	fi
 }
 
-alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	#set +x #stop log
 	_SECFUNCmsgCtrl DEBUG
@@ -463,7 +525,6 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	fi
 }
 
-alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoWarn() { 
 #	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
 #		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
@@ -500,7 +561,6 @@ function SECFUNCechoWarn() {
 	fi
 }
 
-alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCechoBugtrack() { 
 #	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
 #		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
@@ -766,7 +826,6 @@ function SECFUNCparamsToEval() {
 #  echo "$lstrToExec"
 #}
 
-alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
 function SECFUNCsingleLetterOptions() { #Add this to the top of your options loop: eval "set -- `SECFUNCsingleLetterOptionsA "$@"`";\n\tIt will expand joined single letter options to separated ones like in '-abc' to '-a' '-b' '-c';\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
 	local lstrCaller=""
 	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
@@ -789,7 +848,6 @@ function SECFUNCsingleLetterOptions() { #Add this to the top of your options loo
 	echo "$lstrOptions"
 }
 
-alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
 function SECFUNCexec() {
 	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
 	bOmitOutput=false
@@ -1053,7 +1111,6 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	echo -e $loptNewLine "$lstrOutput$loptCarryageReturn"
 }
 
-alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
 function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: for functions and variables name.
 	local caller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -1070,7 +1127,6 @@ function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: f
 	fi
 	return 0
 }
-alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	local caller=""
 	local lbJustFix=false
@@ -1246,4 +1302,6 @@ if [[ `basename "$0"` == "funcBase.sh" ]];then
 		shift
 	done
 fi
+
+SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
 

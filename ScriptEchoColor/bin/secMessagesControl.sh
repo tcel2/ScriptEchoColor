@@ -78,6 +78,7 @@ if $bBashDebug;then
 			echoc -p "invalid strFunctionNames='$strFunctionNames'"
 			exit 1
 		else
+			SECastrBashDebugFunctionIds=($strFunctionNames)
 			declare -p SECastrBashDebugFunctionIds
 		fi
 	else
@@ -172,6 +173,7 @@ else
 	# must not be child to be interactive
 	# unset SECvarFile will force the called script to create its own var db file
 	#eval "unset SECvarFile; $strExec" 
-	bash -c "unset SECvarFile;$strExec" 
+	#SECFUNCarraysExport;bash -c "unset SECvarFile;$strExec" 
+	SECFUNCexecOnSubShell "unset SECvarFile;$strExec" 
 fi
 

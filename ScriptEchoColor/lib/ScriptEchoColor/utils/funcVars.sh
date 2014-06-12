@@ -276,7 +276,7 @@ function SECFUNCvarEnd() { #generic vars finalizer
 function SECFUNCvarIsArray() {
 	#local l_strTmp=`declare |grep "^$1=("`; #declare is a bit slower than export
 	eval "export $1"
-	local l_strTmp=`export |grep "^declare -ax $1='("`;
+	local l_strTmp=`export |grep "^declare -[Aa]x $1='("`;
 	
  	#if(($?==0));then
  	if [[ -n "$l_strTmp" ]]; then
@@ -835,8 +835,13 @@ function SECFUNCvarWriteDB() {
 #  if $SECvarOptWriteDBUseFullEnv;then
   	#declare >"$SECvarFile" #I believe was not too safe
   	
+	local lstrDeclareAssociativeArray=""
 	if [[ -n "$l_filter" ]];then
 		# this way (without cleaning the DB file), it will just append one variable to it; so in the DB file there will have 2 instances of such variable but, of course, only the last one will be valid; is this messy? #TODO update the specific variable with sed -i
+		if declare -p "$l_filter" |grep -q "^declare -A";then
+			lstrDeclareAssociativeArray="declare -Ag $l_filter;"
+		fi
+		
 		l_allVars=($l_filter)
 		#TODO for some reason this sed is breaking the db file data; without it the new var value will be appended and the next db read will ensure the last var value be the right one (what a mess..)
 		#sed -i "/^$l_filter=/d" "$SECvarFile" #remove the line with the var
@@ -858,6 +863,9 @@ function SECFUNCvarWriteDB() {
 	fi
 	
 	local l_sedRemoveArrayPliqs="s;(^.*=)'(\(.*)'$;\1\2;"
+	if [[ -n "$lstrDeclareAssociativeArray" ]];then
+		echo "$lstrDeclareAssociativeArray" >>"$SECvarFile"
+	fi
 	declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' -e "$l_sedRemoveArrayPliqs" >>"$SECvarFile"
 #  else
 #	  echo >"$SECvarFile" #clean

@@ -26,7 +26,7 @@ SECinstallPath=`secGetInstallPath.sh`
 bBase=false
 bMisc=false
 bVars=false
-bFileLockDaemon=true
+bMaintenanceDaemon=true
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then
 		echo "Initialize environment variables sharing between bash scripts."
@@ -49,8 +49,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bMisc=true
 	elif [[ "$1" == "--vars" ]];then #help vars libs, loads misc (default)
 		bVars=true
-	elif [[ "$1" == "--nofilelockdaemon" ]];then #help do not check and auto load the file lock daemon
-		bFileLockDaemon=false
+	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
+		bMaintenanceDaemon=false
 	else
 		echo "PROBLEM: invalid option: $1"
 		exit 1
@@ -79,13 +79,11 @@ if $bVars;then
 	echo 'SECFUNCvarInit;'
 fi
 
-if $bFileLockDaemon;then
-#	#if ! pgrep -f "secFileLockControl.sh" 1>/dev/null;then
-	if ! secFileLockControl.sh --isdaemonstarted >>/dev/stderr;then
-#		echo "`basename $0`: Initializing Lock Control Daemon." >>/dev/stderr
+if $bMaintenanceDaemon;then
+	if ! secMaintenanceDaemon.sh --isdaemonstarted >>/dev/stderr;then
 		# stdout must be redirected or the terminal wont let it be child...
 		# nohup or disown alone did not work...
-		secFileLockControl.sh --daemon >>/dev/stderr &
+		secMaintenanceDaemon.sh >>/dev/stderr &
 	fi
 fi
 

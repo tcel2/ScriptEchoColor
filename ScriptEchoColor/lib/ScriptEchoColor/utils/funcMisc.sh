@@ -328,6 +328,7 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	#echo "$SECcfgFileName"
 }
 function SECFUNCcfgRead() { #read the cfg file and set all its env vars at current env
+	SECFUNCdbgFuncInA;
 	#echo oi;eval `cat tst.db`;return
 	if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
@@ -335,28 +336,19 @@ function SECFUNCcfgRead() { #read the cfg file and set all its env vars at curre
 	
 	if [[ "${1-}" == "--help" ]];then
 		SECFUNCshowHelp ${FUNCNAME}
-		return
+		SECFUNCdbgFuncOutA;return
 	fi
 	
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
-  	
-  	#declare -p aDaemonsPid
-  	#echo "$SECcfgFileName"
-  	#cat "$SECcfgFileName"
-  	#source "$SECcfgFileName"
-  	#local lstrCfgData=`cat "$SECcfgFileName"`
-  	#echo $lstrCfgData
-  	#eval $lstrCfgData
-  	#eval `cat "$SECcfgFileName"`
-  	#echo ">>>tst=${tst-}"
   	eval "`cat "$SECcfgFileName"`"
-  	#declare -p aDaemonsPid
-  	
   	SECFUNCfileLock --unlock "$SECcfgFileName"
   fi
+  SECFUNCdbgFuncOutA;
+  #set -x
 }
 function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
+	#TODO make SECFUNCvarSet use this and migrate all from there to here?
 	local lbRemoveVar=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--remove" ]];then #SECFUNCcfgWriteVar_help remove the variable from config file
@@ -374,11 +366,6 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 	# if var is being set, eval (do) it
 	local lbIsArray=false
 	if echo "$1" |grep -q "^[[:alnum:]_]*=";then # here the var will never be array
-#		local lsedVarId='s"^([[:alnum:]_]*)=.*"\1"'
-#		local lsedValue='s"^[[:alnum:]_]*=(.*)"\1"'
-#		lstrVarId=`echo "$1" |sed -r "$lsedVarId"`
-#		local lstrValue=`echo "$1" |sed -r "$lsedValue"`
-#		eval "$lstrVarId=\"$lstrValue\""
 		eval "`echo "$1" |sed -r 's,^([[:alnum:]_]*)=(.*),\
 			\1="\2";\
 			lstrVarId="\1";\
@@ -386,13 +373,6 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 		,'`"
 	else
 		local lstrVarId="$1"
-#		local lstrArrayToWrite=`declare -p ${lstrVarId}`
-#		if $lstrArrayToWrite |grep -q "^declare -[aA]";then
-#			lbIsArray=true
-#			#local lstrValue=`declare -p ${lstrVarId} |sed -r "s,^declare -[aA] ([[:alnum:]_]*)='(.*)',\2,"`
-#		else
-#			local lstrValue="${!lstrVarId-}"
-#		fi
 	fi
 	
 	if [[ -z "$SECcfgFileName" ]];then
@@ -405,57 +385,38 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 	fi
 	
 	# `declare` must be stripped off or the evaluation of the cfg file will fail!!!
-	if declare -p ${lstrVarId} |grep -q "^declare -[aA]";then
+	if declare -p "${lstrVarId}" |grep -q "^declare -[aA]";then
 		lbIsArray=true
 	fi
 	
 	local lstrPliqForArray=""
 	if $lbIsArray;then
 		lstrPliqForArray="'"
-		#lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^(declare -[[:alpha:]-]* [[:alnum:]_]*)='(.*)'$,${lstrVarId}=\"\";unset ${lstrVarId};\1=\2,"`
-#		lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)='(.*)'$,\1=\2,"`
-#	else
-#		lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=(.*)$,\1=\2,"`
+	fi
+	
+	local lstrDeclareAssociativeArray=""
+	if declare -p "$lstrVarId" |grep -q "^declare -A";then
+		lstrDeclareAssociativeArray="declare -Ag $lstrVarId;"
 	fi
 	
 	local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
-	
-#	local lstrPliqForArray=""
-#	local lstrPrepareArray=""
-#	if $lbIsArray;then
-#		lstrPliqForArray="'"
-#		
-#		local lstrDeclareArray=`declare -p $lstrVarId |sed -r 's"^([^=]*)=.*"\1"'`
-#		lstrPrepareArray="$lstrVarId='';unset $lstrVarId;$lstrDeclareArray;"
-#	fi
-#	lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
-	#echo "lstrToWrite=$lstrToWrite"
-	#eval export ${lstrVarId}
 	
 	if [[ ! -f "$SECcfgFileName" ]];then
 		echo -n >"$SECcfgFileName"
 	fi
 	
 	SECFUNCfileLock "$SECcfgFileName"
-	#set -x	
-	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
-	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName" #will remove the variable line
+#	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
+#	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName" #will remove the variable line
+	sed -i "/declare -A ${lstrVarId}/d" "$SECcfgFileName" #will remove the variable declaration
+	sed -i "/${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable line
 	if ! $lbRemoveVar;then
+		if [[ -n "$lstrDeclareAssociativeArray" ]];then
+			# must come before the array values set
+			echo "$lstrDeclareAssociativeArray" >>"$SECcfgFileName"
+		fi
 		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
 	fi
-	#set +x
-#	if $lbIsArray;then
-#		local lstrMatchLineToRemove=`echo "$lstrArrayToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
-#		sed "/$lstrMatchLineToRemove/d" "$SECcfgFileName"
-#		echo "$lstrArrayToWrite;" >>"$SECcfgFileName"
-#	else
-#		if grep -q "^${lstrVarId}=" "$SECcfgFileName";then
-#			# sed substitute variable and value
-#			sed -i "s'^${lstrVarId}=.*'${lstrVarId}=\"${lstrValue}\";'" "$SECcfgFileName"
-#		else
-#			echo "${lstrVarId}=\"${lstrValue}\";" >>"$SECcfgFileName"
-#		fi
-#	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }
 
@@ -495,8 +456,11 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 		fi
 		SECFUNCdbgFuncOutA;
 	};export -f _SECFUNCdaemonCheckHold_SubShell
+	
 	# secinit --base; is required so the non exported functions are defined and the aliases are expanded
-	bash -c 'eval `secinit --base`;_SECFUNCdaemonCheckHold_SubShell'
+	#SECFUNCarraysExport;bash -c 'eval `secinit --base`;_SECFUNCdaemonCheckHold_SubShell;'
+	SECFUNCexecOnSubShell 'eval `secinit --base`;_SECFUNCdaemonCheckHold_SubShell;'
+	
 	SECFUNCdbgFuncOutA;
 }
 
