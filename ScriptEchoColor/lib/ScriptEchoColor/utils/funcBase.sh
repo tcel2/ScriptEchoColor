@@ -149,6 +149,7 @@ export SECbDaemonWasAlreadyRunning
 ###################### SETUP ENVIRONMENT
 if $SEC_ShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
+	#TODO for all functions, create these aliases automatically
 	alias "$SECfuncPrefix"delay='SECFUNCdelay';
 fi
 
@@ -178,6 +179,20 @@ function SECFUNCexportFunctions() {
 function SECFUNCexecOnSubShell(){
 	SECFUNCarraysExport
 	bash -c "$@"
+}
+
+function SECFUNCrealFile(){
+	local lfile="${1-}"
+	if [[ ! -f "$lfile" ]];then
+		SECFUNCechoErrA "lfile='$lfile' not found."
+		echo "$lfile"
+		return 1
+	fi
+	
+	lfile="`which "$lfile"`"
+	lfile="`readlink -f "$lfile"`"
+	
+	echo "$lfile"
 }
 
 function SECFUNCarraysExport() { #export all arrays
@@ -443,12 +458,22 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	}
 	SECFUNCechoDbg_updateStackVars
 	strFuncInOut=""
+	declare -g -A _dtSECFUNCdebugTimeDelayArray
 	if $lbFuncIn;then
+		_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]="`date +"%s.%N"`"
 		strFuncInOut="Func-IN: "
 		SECastrFunctionStack+=($lstrFuncCaller)
 		SECFUNCechoDbg_updateStackVars
 	elif $lbFuncOut;then
+		local ldtNow="`date +"%s.%N"`"
+		local ldtFuncDelay="-1"
+		if [[ "${_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]-0}" != "0" ]];then
+			ldtFuncDelay=$(bc <<< "scale=9;$ldtNow-${_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]}")
+		fi
 		strFuncInOut="Func-OUT: "
+		if [[ "$ldtFuncDelay" != "-1" ]];then
+			strFuncInOut+="(${ldtFuncDelay}s) "
+		fi
 		if((lnLength>0));then
 			if [[ "$lstrFuncCaller" == "$lstrLastFuncId" ]];then
 				unset SECastrFunctionStack[lnLength-1]

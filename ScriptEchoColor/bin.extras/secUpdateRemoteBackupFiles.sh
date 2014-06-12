@@ -552,6 +552,13 @@ elif $bLookForChanges;then
 #			fi
 			echoc -x "git add -v --all" #add missing files on git
 			echoc -x "git commit -m \"`SECFUNCdtTimePrettyNow`\""
+			
+			nSizeBTR="`du -sb "$pathBackupsToRemote" |tr '[:blank:]' '\n' |head -n 1`"
+			nSizeOnlyGit="`du -sb "$pathBackupsToRemote/.git" |tr '[:blank:]' '\n' |head -n 1`"
+			nSizeOnlyBTR=$((nSizeBTR-nSizeOnlyGit))
+			if(( nSizeOnlyGit > (nSizeOnlyBTR*2) ));then
+				echoc --alert ".git ($nSizeOnlyGit) is getting much bigger than BTR ($nSizeOnlyBTR)"
+			fi
 		fi
 		
 		bGoFastOnce=false #controlled by FUNCinterruptAsk
