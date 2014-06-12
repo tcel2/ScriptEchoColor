@@ -1,4 +1,4 @@
-#!/bin/bash -i
+#!/bin/bash
 # Copyright (C) 2004-2013 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
