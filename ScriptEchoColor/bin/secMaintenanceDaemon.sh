@@ -43,6 +43,7 @@ strDaemonLogFile="$SEC_TmpFolder/.SEC.MaintenanceDaemon.log"
 bKillDaemon=false
 bRestartDaemon=false
 bLogMonitor=false
+bLockMonitor=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -53,6 +54,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bRestartDaemon=true
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
 		bLogMonitor=true
+	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
+		bLockMonitor=true
 	else
 		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
@@ -99,6 +102,14 @@ elif $bLogMonitor;then
 	echo "Maintenance Daemon Pid: $nPidDaemon, log file '$strDaemonLogFile'"
 	tail -F "$strDaemonLogFile"
 	exit
+elif $bLockMonitor;then
+	while true;do
+		strOutput="`ls --color -l "$SEC_TmpFolder/.SEC.FileLock."*".lock"* 2>/dev/null;`"
+		echo "$strOutput"
+		SECFUNCdrawLine " `echo "$strOutput" |wc -l` file locks found ";
+		sleep 3;
+	done
+	exit
 fi
 
 ####################### MAIN CODE
@@ -139,7 +150,7 @@ while true;do
 					if [[ -L "$lstrLockFileIntermediary" ]];then
 						strFileReal="`readlink "$lstrLockFileIntermediary"`"
 						if [[ -n "$strFileReal" ]];then
-							echo " Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
+							echo " `SECFUNCdtTimePrettyNow` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
 							SECFUNCfileLock --pid $nPid --unlock "$strFileReal"
 						fi
 					fi
