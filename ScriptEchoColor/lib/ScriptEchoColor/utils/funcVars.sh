@@ -265,7 +265,6 @@ function SECFUNCscriptSelfNameSet() {
 function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
 	
-	SECFUNCvarClearTmpFiles& #TODO create a maintenance daemon to clean tmp files and comment this? after some tests it seems safe to just keep as child?
 	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
 	SECFUNCscriptSelfNameSet # must come after DB is set
 	

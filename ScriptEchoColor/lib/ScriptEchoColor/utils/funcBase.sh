@@ -71,13 +71,13 @@ export SECastrBashDebugFunctionIds
 
 export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
 
-export SECstrLockControlId="LockControl"
-export SECstrLockFileDaemonPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.DaemonPid"
-export SECstrLockFileRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Requests"
-export SECstrLockFileAceptedRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AceptedRequests"
-export SECstrLockFileRemoveRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.RemoveRequests"
-export SECstrLockFileAllowedPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AllowedPid"
-export SECstrLockFileLog="$SEC_TmpFolder/.SEC.$SECstrLockControlId.log"
+#export SECstrLockControlId="LockControl"
+#export SECstrLockFileDaemonPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.DaemonPid"
+#export SECstrLockFileRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.Requests"
+#export SECstrLockFileAceptedRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AceptedRequests"
+#export SECstrLockFileRemoveRequests="$SEC_TmpFolder/.SEC.$SECstrLockControlId.RemoveRequests"
+#export SECstrLockFileAllowedPid="$SEC_TmpFolder/.SEC.$SECstrLockControlId.AllowedPid"
+#export SECstrLockFileLog="$SEC_TmpFolder/.SEC.$SECstrLockControlId.log"
 
 export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
@@ -256,7 +256,7 @@ function SECFUNCshowHelp() {
 	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
 	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
 	#local lsedAddNewLine='s".*"&\n"'
-	cat "${lastrFile[0]}" \
+	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
 		|grep -w "$lgrepMatchHelpToken" \
 		|sed -r "$lsedOptionsAndHelpText" \
