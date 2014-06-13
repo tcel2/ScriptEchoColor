@@ -83,7 +83,7 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# must come after secinit
-	echo " Unbound vars allowed at terminal.";set +u;
+	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit`)';set +u;
 	
 	# user custom initial command
 	if [[ -n "${SECcmdDevTmp}" ]];then

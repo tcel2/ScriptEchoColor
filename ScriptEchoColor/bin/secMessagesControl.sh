@@ -36,6 +36,7 @@ bOff=false
 nPid=""
 bBashDebug=false
 strFunctionNames=""
+bListPids=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	eval "set -- `SECFUNCsingleLetterOptionsA "$@"`"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -65,12 +66,32 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strFunctionNames="${1-}"
 		
 		bBashDebug=true
+	elif [[ "$1" == "--list" ]];then #help list pids that are detected as using sec functions
+		bListPids=true
 	else
 		echoc -p "invalid option '$1'"
 		exit 1 
 	fi
 	shift
 done
+
+if $bListPids;then
+	anListPids=(`ls -1 "$SEC_TmpFolder/SEC."*"."*".vars.tmp" |sed -r 's".*/SEC[.][[:alnum:]_]*[.]([[:digit:]]*)[.]vars[.]tmp"\1"' |sort -un`)
+	nPidsCount=0
+	strOutput=$(
+		for nListPid in ${anListPids[@]};do
+			if [[ -d "/proc/$nListPid" ]];then
+				if [[ "`cat /proc/$nListPid/comm`" != "echoc" ]];then # just skip it...
+					ps --no-headers -o pid,cmd -p "$nListPid"
+					((nPidsCount++))
+				fi
+			fi
+		done
+		SECFUNCdrawLine " `SECFUNCdtTimePrettyNow`, Total=$nPidsCount "
+	)
+	echo "$strOutput"
+	exit
+fi
 
 if $bBashDebug;then
 	if [[ -n "$strFunctionNames" ]];then
@@ -113,11 +134,6 @@ if((nPid>0));then
 	fi
 	
 	astrCmdFiles=()
-	if $bWarn;then
-			strFile="${SECstrFileMessageToggle}.WARN.$nPid"
-			astrCmdFiles+=("$strFile")
-			echo "$strForce" |tee "$strFile"
-	fi
 	if $bDebug;then
 			strFile="${SECstrFileMessageToggle}.DEBUG.$nPid"
 			astrCmdFiles+=("$strFile")
@@ -125,6 +141,11 @@ if((nPid>0));then
 	fi
 	if $bBugtrack;then
 			strFile="${SECstrFileMessageToggle}.BUGTRACK.$nPid"
+			astrCmdFiles+=("$strFile")
+			echo "$strForce" |tee "$strFile"
+	fi
+	if $bWarn;then
+			strFile="${SECstrFileMessageToggle}.WARN.$nPid"
 			astrCmdFiles+=("$strFile")
 			echo "$strForce" |tee "$strFile"
 	fi
@@ -137,21 +158,45 @@ if((nPid>0));then
 			echo "${strFunctionNames} " |tee "$strFile"
 	fi
 	
-	for strFile in "${astrCmdFiles[@]}";do
-		echo
-		echo "checking: strFile='$strFile'"
-		SECFUNCdelay CheckCmdAccepted --init
-		while [[ -f "$strFile" ]];do
+	echoc --info "Only functions of the same mode can accept these commands."
+	echoc --info "Not being yet accepted just mean such functions have not been run yet."
+	echoc --info "ex. if there was no warning, the warning command wont even be read..."
+	SECFUNCdelay CheckCmdAccepted --init
+	while true;do
+		for nFileIndex in "${!astrCmdFiles[@]}";do
 			if [[ ! -d "/proc/$nPid" ]];then
 				echoc -p "nPid='$nPid' died"
 				exit 1
 			fi
-			echo -en "waiting command be accepted for strFile='$strFile' `SECFUNCdelay CheckCmdAccepted`s\r"
-			sleep 1
+			
+			if [[ -z "${astrCmdFiles[nFileIndex]}" ]];then
+				continue
+			fi
+			
+			if [[ ! -f "${astrCmdFiles[nFileIndex]}" ]];then
+				echo "accepted: '${astrCmdFiles[nFileIndex]}'"
+				astrCmdFiles[nFileIndex]=""
+			fi
 		done
-		echo
-		echo "accepted: strFile='$strFile'"
+		echo -en "waiting commands be accepted for `SECFUNCdelay CheckCmdAccepted`s\r"
+		sleep 1
 	done
+	
+#	for strFile in "${astrCmdFiles[@]}";do
+#		echo
+#		echo "checking: strFile='$strFile'"
+#		SECFUNCdelay CheckCmdAccepted --init
+#		while [[ -f "$strFile" ]];do
+#			if [[ ! -d "/proc/$nPid" ]];then
+#				echoc -p "nPid='$nPid' died"
+#				exit 1
+#			fi
+#			echo -en "waiting command be accepted for strFile='$strFile' `SECFUNCdelay CheckCmdAccepted`s\r"
+#			sleep 1
+#		done
+#		echo
+#		echo "accepted: strFile='$strFile'"
+#	done
 else
 	strExec=`SECFUNCparamsToEval "$@"`
 	

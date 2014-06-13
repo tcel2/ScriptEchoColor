@@ -181,6 +181,72 @@ function SECFUNCexecOnSubShell(){
 	bash -c "$@"
 }
 
+function SECFUNCisNumber(){ #"is float" check by default
+	local bDecimalCheck=false
+	local bNotNegativeCheck=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+		#eval "set -- `SECFUNCsingleLetterOptionsA "$@"`";	
+		if [[ "$1" == "--help" ]];then #SECFUNCisNumber_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--decimal" || "$1" == "-d" ]];then #SECFUNCisNumber_help decimal check
+			bDecimalCheck=true
+		elif [[ "$1" == "--notnegative" || "$1" == "-n" ]];then #SECFUNCisNumber_help if negative, return false (1)
+			bNotNegativeCheck=true
+		elif [[ "$1" == "-dn" || "$1" == "-nd" ]];then #just to keep this function fast...
+			bDecimalCheck=true
+			bNotNegativeCheck=true
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+
+	local lnValue="${1-}"
+	
+	if [[ -z "${lnValue}" ]];then
+		return 1
+	fi
+	
+	if [[ -n "`echo "${lnValue}" |tr -d '[:digit:].+-'`" ]];then
+		return 1
+	fi
+	
+	local lstrTmp="${lnValue//[^.]}"
+	if $bDecimalCheck;then
+		if((${#lstrTmp}>0));then
+			return 1
+		fi
+	else
+		if((${#lstrTmp}>1));then
+			return 1
+		fi
+	fi
+	
+	local lstrTmp="${lnValue//[^+]}"
+	if((${#lstrTmp}>1));then
+		return 1
+	elif((${#lstrTmp}==1)) && [[ "${lnValue:0:1}" != "+" ]];then
+		return 1
+	fi
+	
+	local lstrTmp="${lnValue//[^-]}"
+	if $bNotNegativeCheck;then
+		if((${#lstrTmp}>0));then
+			return 1
+		fi
+	else
+		if((${#lstrTmp}>1));then
+			return 1
+		elif((${#lstrTmp}==1)) && [[ "${lnValue:0:1}" != "-" ]];then
+			return 1
+		fi
+	fi
+
+	return 0
+}
+
 function SECFUNCrealFile(){
 	local lfile="${1-}"
 	if [[ ! -f "$lfile" ]];then
@@ -356,7 +422,7 @@ function SECFUNCechoErr() { #echo error messages
 			shift
 			caller="${1}: "
 		else
-			echo "[`SECFUNCdtNow`]SECERROR:invalid option $1" >>/dev/stderr; 
+			echo "[`SECFUNCdtNow`]SECERROR:invalid option '$1'" >>/dev/stderr; 
 			return 1
 		fi
 		shift
@@ -437,7 +503,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		elif [[ "$1" == "--" ]];then #SECFUNCechoDbg_help remaining params after this are considered as not being options
 			lbStopParams=true;
 		else
-			SECFUNCechoErrA "invalid option $1"
+			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift
@@ -570,7 +636,7 @@ function SECFUNCechoWarn() {
 			shift
 			caller="${1}: "
 		else
-			SECFUNCechoErrA "invalid option $1"
+			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift

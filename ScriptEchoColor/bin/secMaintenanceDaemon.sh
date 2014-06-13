@@ -35,6 +35,7 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 fi
 
 eval `secinit --nomaintenancedaemon`
+export SEC_WARN=true
 
 strDaemonPidFile="$SEC_TmpFolder/.SEC.MaintenanceDaemon.pid"
 strDaemonLogFile="$SEC_TmpFolder/.SEC.MaintenanceDaemon.log"
@@ -44,6 +45,8 @@ bKillDaemon=false
 bRestartDaemon=false
 bLogMonitor=false
 bLockMonitor=false
+bPidsMonitor=false
+fMonitorDelay="3.0"
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -56,12 +59,27 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
 		bLockMonitor=true
+		fMonitorDelay=1
+	elif [[ "$1" == "--pidsmon" ]];then #help pids using SEC, monitor
+		bPidsMonitor=true
+		fMonitorDelay=30
+	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
+		shift
+		fMonitorDelay="${1-}"
 	else
 		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
 	fi
 	shift
 done
+
+fMinDelay="0.1" #0.1 just for safety
+if    ! SECFUNCisNumber --notnegative "$fMonitorDelay" \
+   ||   SECFUNCbcPrettyCalc --cmpquiet "$fMonitorDelay<$fMinDelay";
+then
+	SECFUNCechoErrA "invalid fMonitorDelay='$fMonitorDelay'"
+	fMonitorDelay="$fMinDelay"
+fi
 
 function FUNCcheckDaemonStarted() {
 	if [[ -d "/proc/$nPidDaemon" ]];then
@@ -97,6 +115,7 @@ elif $bRestartDaemon;then
 	# stdout must be redirected or the terminal wont let it be child...
 	# nohup or disown alone did not work...
 	$0 >>/dev/stderr &
+	sleep 3 #wait a bit just to try to avoid messing the terminal output...
 	exit
 elif $bLogMonitor;then
 	echo "Maintenance Daemon Pid: $nPidDaemon, log file '$strDaemonLogFile'"
@@ -106,10 +125,15 @@ elif $bLockMonitor;then
 	while true;do
 		strOutput="`ls --color -l "$SEC_TmpFolder/.SEC.FileLock."*".lock"* 2>/dev/null;`"
 		echo "$strOutput"
-		SECFUNCdrawLine " `echo "$strOutput" |wc -l` file locks found ";
-		sleep 3;
+		SECFUNCdrawLine " Total `echo "$strOutput" |wc -l` ";
+		sleep $fMonitorDelay;
 	done
 	exit
+elif $bPidsMonitor;then
+	while true;do
+		secMessagesControl.sh --list
+		sleep $fMonitorDelay;
+	done
 fi
 
 ####################### MAIN CODE
@@ -120,7 +144,7 @@ function FUNCvalidateDaemon() {
 		return
 	fi
 	if [[ -n "$lnPidDaemon" ]] && [[ -d "/proc/$lnPidDaemon" ]];then
-		SECFUNCechoErrA "(at $1) already running lnPidDaemon='$lnPidDaemon'"
+		SECFUNCechoWarnA "(at $1) already running lnPidDaemon='$lnPidDaemon'"
 		ps -p $lnPidDaemon >>/dev/stderr
 		exit 1
 	fi
@@ -139,7 +163,19 @@ echo "ScriptEchoColor Maintenance Daemon started, nPidDaemon='$nPidDaemon'." >>/
 exec 2>>"$strDaemonLogFile"
 exec 1>&2
 
+nKernelBits=`getconf LONG_BIT`
+nMaxPid=`cat /proc/sys/kernel/pid_max`
+if((nKernelBits==64 && nMaxPid<4194304));then
+	SECFUNCechoWarnA "Just a TIP: nKernelBits='$nKernelBits' nMaxPid='$nMaxPid': consider increasing '/proc/sys/kernel/pid_max' to '4194304' as your system (probably) can handle it and the pid's calculations will work better..."
+fi
+
+nPidMaxNow=0
+nPidWrapPrevious=0
+nPidWrapCount=0
+SECFUNCdelay MainLoop --init
 while true;do
+	FUNCvalidateDaemon "main loop"
+	
 	# release locks of dead pids
 	strCheckId="LockFilesOfDeadPids"
 	if SECFUNCdelay "$strCheckId" --checkorinit 3;then
@@ -163,7 +199,19 @@ while true;do
 		SECFUNCvarClearTmpFiles
 	fi
 	
-	FUNCvalidateDaemon "main loop"
+	# pid wraps count
+	echo -n & nPidMaxNow=$!
+	if((nPidMaxNow<nPidWrapPrevious));then
+		((nPidWrapCount++))
+	fi
+	nPidWrapPrevious=$nPidMaxNow
+	
+	nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
+	
+	echo -en "nPidWrapCount='$nPidWrapCount', nPidMaxNow='$nPidMaxNow', nTotPids='$nTotPids', active for `SECFUNCdelay MainLoop --getpretty`.\r"
+#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
+#		echo
+#	fi
 	
 	sleep 1
 done
