@@ -75,7 +75,7 @@ export SECstrExportedArrayPrefix="SEC_EXPORTED_ARRAY_"
 
 export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
-export _SECbugFixDate="0" #seems to be working now...
+#export _SECbugFixDate="0" #seems to be working now...
 
 alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
@@ -273,7 +273,7 @@ function SECFUNCarraysExport() { #export all arrays
 		lastrArraysToSkip 
 		lastrArrays
 		SECastrFunctionStack 
-	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand
+	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand, at least now only export arrays already marked to be exported what may suffice...
 	export SECcmdExportedAssociativeArrays=""
 	for lstrArrayName in ${lastrArrays[@]};do
 		local lbSkip=false
@@ -285,6 +285,11 @@ function SECFUNCarraysExport() { #export all arrays
 		done
 		if $lbSkip;then
 			continue;
+		fi
+		
+		# only export already exported arrays...
+		if ! declare -p "$lstrArrayName" |grep -q "^declare -.x";then
+			continue
 		fi
 		
 		# associative arrays MUST BE DECLARED like: declare -A arrayVarName; previously to having its values attributted, or it will break the code...
@@ -316,26 +321,101 @@ function SECFUNCarraysRestore() { #restore all exported arrays
 	SECFUNCdbgFuncOutA;
 }
 
+function SECFUNCdtFmt() { #[time in seconds since epoch] otherwise current (now) is used
+	local ldtTime=""
+	local lbPretty=false
+	local lbFilename=false
+	local lbLogMessages=false
+	local lbShowDate=true
+	local lstrFmtCustom=""
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCdtFmt_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help
+			lbPretty=true
+		elif [[ "$1" == "--filename" ]];then #SECFUNCdtFmt_help to be used on filename
+			lbFilename=true
+		elif [[ "$1" == "--logmessages" ]];then #SECFUNCdtFmt_help compact for log messages
+			lbLogMessages=true
+		elif [[ "$1" == "--nodate" ]];then #SECFUNCdtFmt_help show only time, not the date
+			lbShowDate=false
+		elif [[ "$1" == "--fmt" ]];then #SECFUNCdtFmt_help <format> specify a custom format
+			shift
+			lstrFmtCustom="${1-}"
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	
+	if [[ -n "${1-}" ]];then
+		ldtTime="$1"
+	fi
+	
+	local lstrFormat="%s.%N"
+	if [[ -n "$lstrFmtCustom" ]];then
+		lstrFormat="$lstrFmtCustom"
+	else
+		local lstrFmtDate=""
+		if $lbPretty;then
+			if $lbShowDate;then	lstrFmtDate="%d/%m/%Y ";fi
+			lstrFormat="${lstrFmtDate}%H:%M:%S.%N"
+		elif $lbFilename;then
+			if $lbShowDate;then	lstrFmtDate="%Y_%m_%d-";fi
+			lstrFormat="${lstrFmtDate}%H_%M_%S_%N"
+		elif $lbLogMessages;then
+			if $lbShowDate;then	lstrFmtDate="%Y%m%d+";fi
+			lstrFormat="${lstrFmtDate}%H%M%S.%N"
+		fi
+	fi
+	
+	if [[ -n "$ldtTime" ]];then
+		if ! date -d "@$ldtTime" "+$lstrFormat";then
+			SECFUNCechoErrA "invalid ldtTime='$ldtTime'"
+			return 1
+		fi
+	else
+		# Now
+		if ! date "+$lstrFormat";then
+			SECFUNCechoErrA "invalid lstrFormat='$lstrFormat'"
+			return 1
+		fi
+	fi
+}
+
 function SECFUNCdtNow() { 
-	date +"%s.%N"; 
+	#date +"%s.%N"; 
+	SECFUNCdtFmt
+}
+function SECFUNCdtTimeNow() { 
+	SECFUNCdtFmt
 }
 function SECFUNCtimePretty() {
-	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%H:%M:%S.%N"
+	#date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%H:%M:%S.%N"
+	#date -d "@${1}" +"%H:%M:%S.%N"
+	SECFUNCdtFmt --nodate --pretty ${1-}
 }
 function SECFUNCtimePrettyNow() {
-	SECFUNCtimePretty `SECFUNCdtNow`
+	#SECFUNCtimePretty `SECFUNCdtNow`
+	SECFUNCdtFmt --nodate --pretty
 }
 function SECFUNCdtTimePretty() {
-	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%d/%m/%Y %H:%M:%S.%N"
+	#date -d "@${1}" +"%d/%m/%Y %H:%M:%S.%N"
+	SECFUNCdtFmt --pretty ${1-}
 }
 function SECFUNCdtTimePrettyNow() {
-	SECFUNCdtTimePretty `SECFUNCdtNow`
+	#SECFUNCdtTimePretty `SECFUNCdtNow`
+	SECFUNCdtFmt --pretty
 }
 function SECFUNCdtTimeToFileName() {
-	date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%Y_%m_%d-%H_%M_%S_%N"
+	#date -d "@${1}" +"%Y_%m_%d-%H_%M_%S_%N"
+	SECFUNCdtFmt --filename ${1-}
 }
 function SECFUNCdtTimeToFileNameNow() {
-	SECFUNCdtTimeToFileName `SECFUNCdtNow`
+	#SECFUNCdtTimeToFileName `SECFUNCdtNow`
+	SECFUNCdtFmt --filename
 }
 
 function SECFUNCarraySize() { #usefull to prevent unbound variable error message
@@ -422,7 +502,7 @@ function SECFUNCechoErr() { #echo error messages
 			shift
 			caller="${1}: "
 		else
-			echo "[`SECFUNCdtNow`]SECERROR:invalid option '$1'" >>/dev/stderr; 
+			echo "[`SECFUNCdtFmt --logmessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
 			return 1
 		fi
 		shift
@@ -430,7 +510,7 @@ function SECFUNCechoErr() { #echo error messages
 	
 	###### main code
 	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr; 
-	local l_output="[`SECFUNCdtNow`]SECERROR: ${caller}$@"
+	local l_output="[`SECFUNCdtFmt --logmessages`]SECERROR: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -596,7 +676,7 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	fi
 	
 	if $lbDebug;then
-		local l_output="[`SECFUNCdtNow`]SECDEBUG: ${strFuncStack}${caller}${strFuncInOut}$@"
+		local l_output="[`SECFUNCdtFmt --logmessages`]SECDEBUG: ${strFuncStack}${caller}${strFuncInOut}$@"
 		if $SEC_MsgColored;then
 			echo -e " \E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
@@ -644,7 +724,7 @@ function SECFUNCechoWarn() {
 	
 	###### main code
 	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr
-	local l_output="[`SECFUNCdtNow`]SECWARN: ${caller}$@"
+	local l_output="[`SECFUNCdtFmt --logmessages`]SECWARN: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e " \E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -679,7 +759,7 @@ function SECFUNCechoBugtrack() {
 	done
 	
 	###### main code
-	local l_output="[`SECFUNCdtNow`]SECBUGTRACK: ${caller}$@"
+	local l_output="[`SECFUNCdtFmt --logmessages`]SECBUGTRACK: ${caller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -981,11 +1061,11 @@ function SECFUNCexec() {
 	SECFUNCechoDbgA "caller=${caller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: $strExec" >>/dev/stderr
+		echo "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: $strExec" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
+		echo -n "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
 	local ini=`SECFUNCdtNow`;
@@ -995,7 +1075,7 @@ function SECFUNCexec() {
   SECFUNCechoDbgA "caller=${caller}: RETURN=${nRet}: $strExec"
   
 	if $bShowElapsed;then
-		echo "[`SECFUNCdtNow`]SECFUNCexec: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
+		echo "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
 	fi
   return $nRet
 }

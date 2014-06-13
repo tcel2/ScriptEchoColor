@@ -47,6 +47,7 @@ bLogMonitor=false
 bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
+bErrorsMonitor=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -63,6 +64,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	elif [[ "$1" == "--pidsmon" ]];then #help pids using SEC, monitor
 		bPidsMonitor=true
 		fMonitorDelay=30
+	elif [[ "$1" == "--errmon" ]];then #help errors monitor
+		bErrorsMonitor=true
 	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
 		shift
 		fMonitorDelay="${1-}"
@@ -106,6 +109,20 @@ function FUNCkillDaemon() {
 	fi
 }
 
+function FUNClocksList(){
+	local lstrAll=""
+	local lstrIntermediaryOnly=""
+	if [[ "${1-}" == "--all" ]];then
+		lstrAll="*"
+	fi
+	if [[ "${1-}" == "--intermediaryOnly" ]];then
+		lstrIntermediaryOnly="."
+		lstrAll="*"
+	fi
+	#ls --color -l "$SEC_TmpFolder/.SEC.FileLock."*".lock"* 2>/dev/null;
+	eval "ls --color -l \"$SEC_TmpFolder/.SEC.FileLock.\"*\".lock$lstrIntermediaryOnly\"$lstrAll 2>/dev/null";
+}
+
 if $bKillDaemon;then
 	FUNCkillDaemon
 	exit
@@ -123,17 +140,23 @@ elif $bLogMonitor;then
 	exit
 elif $bLockMonitor;then
 	while true;do
-		strOutput="`ls --color -l "$SEC_TmpFolder/.SEC.FileLock."*".lock"* 2>/dev/null;`"
-		echo "$strOutput"
-		SECFUNCdrawLine " Total `echo "$strOutput" |wc -l` ";
+		FUNClocksList --all
+		nLocks="`FUNClocksList |wc -l`"
+		nLocksI="`FUNClocksList --intermediaryOnly |wc -l`"
+		SECFUNCdrawLine " nLocks='$nLocks' nLocksI='$nLocksI' ";
 		sleep $fMonitorDelay;
 	done
 	exit
 elif $bPidsMonitor;then
 	while true;do
 		secMessagesControl.sh --list
-		sleep $fMonitorDelay;
+		#sleep $fMonitorDelay;
+		echoc -w -t $fMonitorDelay
 	done
+	exit
+elif $bErrorsMonitor;then
+	tail -F "${SEC_TmpFolder}/.SEC.Error.log"
+	exit
 fi
 
 ####################### MAIN CODE
@@ -169,16 +192,19 @@ if((nKernelBits==64 && nMaxPid<4194304));then
 	SECFUNCechoWarnA "Just a TIP: nKernelBits='$nKernelBits' nMaxPid='$nMaxPid': consider increasing '/proc/sys/kernel/pid_max' to '4194304' as your system (probably) can handle it and the pid's calculations will work better..."
 fi
 
-nPidMaxNow=0
+nPidLast=0
 nPidWrapPrevious=0
 nPidWrapCount=0
 SECFUNCdelay MainLoop --init
+nTotPids=0
+nTotSecPids=0
+nTotLocks=0
 while true;do
 	FUNCvalidateDaemon "main loop"
 	
 	# release locks of dead pids
 	strCheckId="LockFilesOfDeadPids"
-	if SECFUNCdelay "$strCheckId" --checkorinit 3;then
+	if SECFUNCdelay "$strCheckId" --checkorinit1 3;then
 		SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
 				#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 				nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
@@ -195,20 +221,26 @@ while true;do
 	fi
 	
 	# clear temporary shared environment variable files of dead pids etc
-	if SECFUNCdelay "EnvVarClearTmpFiles" --checkorinit 60;then
+	if SECFUNCdelay "EnvVarClearTmpFiles" --checkorinit1 60;then
 		SECFUNCvarClearTmpFiles
 	fi
 	
-	# pid wraps count
-	echo -n & nPidMaxNow=$!
-	if((nPidMaxNow<nPidWrapPrevious));then
-		((nPidWrapCount++))
+	if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
+		# pid wraps count
+		echo -n & nPidLast=$!
+		if((nPidLast<nPidWrapPrevious));then
+			((nPidWrapCount++))
+		fi
+		nPidWrapPrevious=$nPidLast
 	fi
-	nPidWrapPrevious=$nPidMaxNow
 	
-	nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
+	if SECFUNCdelay "Totals" --checkorinit1 10;then
+		nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
+		nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
+		nTotLocks="`FUNClocksList |wc -l`"
+	fi
 	
-	echo -en "nPidWrapCount='$nPidWrapCount', nPidMaxNow='$nPidMaxNow', nTotPids='$nTotPids', active for `SECFUNCdelay MainLoop --getpretty`.\r"
+	echo -en "Pids(Wrap=$nPidWrapCount,Last=$nPidLast,Tot=$nTotPids,SEC=$nTotSecPids),nTotLocks='$nTotLocks',Active for `SECFUNCdelay MainLoop --getpretty`.\r"
 #	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
 #		echo
 #	fi

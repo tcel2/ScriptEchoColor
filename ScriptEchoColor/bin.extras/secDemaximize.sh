@@ -25,7 +25,16 @@
 
 ########### INIT
 eval `secinit`
-aWindowListToSkip=("^Yakuake$" ".*VMware Player.*" "^Desktop$" "^unity-launcher$" "^Hud$" "^unity-dash$")
+aWindowListToSkip=(
+	"^cairo-dock$"
+	"^Desktop$"
+	"^Hud$"
+	"^unity-dash$"
+	"^unity-launcher$"
+	"^unity-panel$"
+	".*VMware Player.*"
+	"^Yakuake$"
+)
 
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register

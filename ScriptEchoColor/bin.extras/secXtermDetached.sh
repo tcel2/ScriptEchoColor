@@ -232,10 +232,12 @@ echo "Exec: $strExec"
 
 xterm -display "$nDisplay" -e "$strExec"&
 pidXtermTemp=$!
-# wait for the child to open (it has xterm temp as parent!)
 while ! ps --ppid $pidXtermTemp; do
+		if ! ps -p $pidXtermTemp;then
+			break
+		fi
 		ps -o pid,ppid,comm -p $pidXtermTemp
-    sleep 1
+		echoc -w -t 1 "waiting for the child to open (it has xterm temp as parent!).."
 done
 if $bWaitDBsymlink;then
 #	nCountFindDBsLinked=0
