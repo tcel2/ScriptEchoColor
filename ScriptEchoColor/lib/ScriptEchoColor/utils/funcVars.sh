@@ -265,7 +265,16 @@ function SECFUNCscriptSelfNameSet() {
 function SECFUNCvarInit() { #generic vars initializer
 	SECFUNCdbgFuncInA
 	
-	SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
+	local lbVarChildDb=true
+	if [[ "${1-}" == "--nochild" ]];then
+		lbVarChildDb=false
+	fi
+	
+	if $lbVarChildDb;then
+		SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
+	else
+		SECFUNCvarSetDB --forcerealfile
+	fi
 	SECFUNCscriptSelfNameSet # must come after DB is set
 	
 	SECFUNCdbgFuncOutA
@@ -972,7 +981,10 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	
 	local l_bForceRealFile=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-		if [[ "$1" == "--forcerealfile" || "$1" == "-f" ]];then #SECFUNCvarSetDB_help it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
+		if [[ "$1" == "--help" ]]; then #SECFUNCvarSetDB_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "$1" == "--forcerealfile" || "$1" == "-f" ]];then #SECFUNCvarSetDB_help it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
 			l_bForceRealFile=true
 		else
 			SECFUNCechoErrA "invalid option $1"

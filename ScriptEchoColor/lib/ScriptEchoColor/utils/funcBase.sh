@@ -438,6 +438,44 @@ function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 }
 
 function SECFUNCshowHelp() {
+	local lbColorizeEcho=false
+	local lbSort=true
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return
+		elif [[ "${1-}" == "--colorize" ]];then #SECFUNCshowHelp_help helps to colorize specific text
+			shift
+			lstrColorizeEcho="${1-}"
+		
+			lbColorizeEcho=true
+		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options
+			lbSort=false
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	
+	# Colors: light blue=94, light yellow=93, light green=92, light cyan=96, light red=91
+	local le=$(printf '\033') # Escape char to provide colors on sed on terminal
+	local lsedColorizeOptionals='s,[[]([^]]*)[]],'$le'[0m'$le'[96m[\1]'$le'[0m,g' #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeRequireds='s,[<]([^>]*)[>],'$le'[0m'$le'[91m<\1>'$le'[0m,g'
+	local lsedColorizeTheOption='s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),'$le'[0m'$le'[92m\1\2\3'$le'[0m,g'
+	local lsedTranslateEscn='s,\\n,\n,g'
+	local lsedTranslateEsct='s,\\t,\t,g'
+	if $lbColorizeEcho;then
+		echo "$lstrColorizeEcho" \
+			|sed -r "$lsedColorizeOptionals" \
+			|sed -r "$lsedColorizeRequireds" \
+			|sed -r "$lsedColorizeTheOption" \
+			|sed -r "$lsedTranslateEscn" \
+			|sed -r "$lsedTranslateEsct" \
+			|cat #dummy to help coding...
+		return
+	fi
+	
 	local lstrFunctionNameToken="${1-}"
 	
 	local lastrFile=("$0")
@@ -473,13 +511,20 @@ function SECFUNCshowHelp() {
 		echo "Help options for `basename "$0"`:"
 	fi
 	
-	# for script options or function options
+	# SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
+	cmdSort="cat" #dummy to not break code...
+	if $lbSort;then
+		cmdSort="sort"
+	fi
 	local lgrepNoCommentedLines="^[[:blank:]]*#"
 	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
 	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
+#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'$le'[0m'$le'[92m\1'$le'[0m\t,g'
 	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
 	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
+#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'$le'[0m'$le'[91m<\2>'$le'[0m,g'
+#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'$le'[0m'$le'[96m[\2]'$le'[0m,g'
 	#local lsedAddNewLine='s".*"&\n"'
 	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
@@ -487,7 +532,14 @@ function SECFUNCshowHelp() {
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveComparedVariable" \
-		|sed -r "$lsedRemoveHelpToken"
+		|sed -r "$lsedRemoveHelpToken" \
+		|sed -r "$lsedColorizeOptionals" \
+		|sed -r "$lsedColorizeRequireds" \
+		|sed -r "$lsedColorizeTheOption" \
+		|sed -r "$lsedTranslateEsct" \
+		|$cmdSort \
+		|sed -r "$lsedTranslateEscn" \
+		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
 		#|sed -r "$lsedAddNewLine"
 }
 
@@ -1367,12 +1419,12 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 			return
 		elif [[ "$1" == "--1stistrue" ]];then #SECFUNCdelay_help to use with --checkorinit that makes 1st run return true
 			l_b1stIsTrueOnCheckOrInit=true
-		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <delayLimit> will check if delay is above or equal specified at delayLimit; will then return true and re-init the delay variable; otherwise return false
+		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <delayLimit> will check if delay is above or equal specified at delayLimit;\n\t\twill then return true and re-init the delay variable;\n\t\totherwise return false
 			shift
 			local nCheckDelayAt=${1-}
 			
 			lbCheckOrInit=true
-		elif [[ "$1" == "--checkorinit1" ]];then #SECFUNCdelay_help <delayLimit> like --1stistrue --checkorinit
+		elif [[ "$1" == "--checkorinit1" ]];then #SECFUNCdelay_help <delayLimit> like --1stistrue  --checkorinit 
 			shift
 			local nCheckDelayAt=${1-}
 			

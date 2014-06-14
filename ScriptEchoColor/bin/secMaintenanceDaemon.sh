@@ -34,7 +34,7 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 	exit 1
 fi
 
-eval `secinit --nomaintenancedaemon`
+eval `secinit --novarchilddb --nomaintenancedaemon`
 export SEC_WARN=true
 
 strDaemonPidFile="$SEC_TmpFolder/.SEC.MaintenanceDaemon.pid"
@@ -48,6 +48,8 @@ bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
+bSetStatusLine=false
+bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -56,6 +58,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bKillDaemon=true
 	elif [[ "$1" == "--restart" ]];then #help restart the daemon, avoid using this...
 		bRestartDaemon=true
+	elif [[ "$1" == "--showstatus" ]];then #help at --logmon, show the status line
+		bSetStatusLine=true
+		bShowStatusLine=true
+	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
+		bSetStatusLine=true
+		bShowStatusLine=false
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
@@ -123,7 +131,17 @@ function FUNClocksList(){
 	eval "ls --color -l \"$SEC_TmpFolder/.SEC.FileLock.\"*\".lock$lstrIntermediaryOnly\"$lstrAll 2>/dev/null";
 }
 
-if $bKillDaemon;then
+# shall exit if not daemon...
+if $bSetStatusLine;then
+	if((nPidDaemon==-1));then
+		SECFUNCechoErrA "daemon must be started first..."
+		exit 1
+	else
+		SECFUNCvarSetDB $nPidDaemon
+		varset --show bShowStatusLine
+	fi
+	exit
+elif $bKillDaemon;then
 	FUNCkillDaemon
 	exit
 elif $bRestartDaemon;then
@@ -201,6 +219,7 @@ nTotSecPids=0
 nTotLocks=0
 while true;do
 	FUNCvalidateDaemon "main loop"
+	SECFUNCvarReadDB
 	
 	# release locks of dead pids
 	strCheckId="LockFilesOfDeadPids"
@@ -225,25 +244,27 @@ while true;do
 		SECFUNCvarClearTmpFiles
 	fi
 	
-	if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
-		# pid wraps count
-		echo -n & nPidLast=$!
-		if((nPidLast<nPidWrapPrevious));then
-			((nPidWrapCount++))
+	if $bShowStatusLine;then
+		if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
+			# pid wraps count
+			echo -n & nPidLast=$!
+			if((nPidLast<nPidWrapPrevious));then
+				((nPidWrapCount++))
+			fi
+			nPidWrapPrevious=$nPidLast
 		fi
-		nPidWrapPrevious=$nPidLast
-	fi
 	
-	if SECFUNCdelay "Totals" --checkorinit1 10;then
-		nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
-		nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
-		nTotLocks="`FUNClocksList |wc -l`"
-	fi
+		if SECFUNCdelay "Totals" --checkorinit1 10;then
+			nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
+			nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
+			nTotLocks="`FUNClocksList |wc -l`"
+		fi
 	
-	echo -en "Pids(Wrap=$nPidWrapCount,Last=$nPidLast,Tot=$nTotPids,SEC=$nTotSecPids),nTotLocks='$nTotLocks',Active for `SECFUNCdelay MainLoop --getpretty`.\r"
-#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
-#		echo
-#	fi
+		echo -en "Pids(Wrap=$nPidWrapCount,Last=$nPidLast,Tot=$nTotPids,SEC=$nTotSecPids),nTotLocks='$nTotLocks',Active for `SECFUNCdelay MainLoop --getpretty`.\r"
+	#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
+	#		echo
+	#	fi
+	fi
 	
 	sleep 1
 done

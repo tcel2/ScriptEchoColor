@@ -27,28 +27,43 @@ bBase=false
 bMisc=false
 bVars=false
 bMaintenanceDaemon=true
+bVarChildDB=true
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-	if [[ "$1" == "--help" ]];then
+	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
-		grep "[#]help" "$0"
+		eval `secinit --base`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
 		#strInfo="(all functions are prefixed with: \"SECFUNC\", ex.: SECFUNCshowVar())"
-		echo "HELP on Libs functions at: $SECinstallPath/lib/ScriptEchoColor"
-		echo
-		echo "See these for more:"
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
+		#echo "HELP about Libs functions located at: $SECinstallPath/lib/ScriptEchoColor"
+		#echo
+#		echo "See these for more:"
+#		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
+#		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
+#		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		
 		exit
-	elif [[ "$1" == "--base" ]];then #help base libs
+	elif [[ "$1" == "--help-base" ]];then #help help for base lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
+		exit
+	elif [[ "$1" == "--help-misc" ]];then #help help for misc lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
+		exit
+	elif [[ "$1" == "--help-vars" ]];then #help help for vars lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
+		exit
+	elif [[ "$1" == "--base" ]];then #help load base lib
 		bBase=true
-	elif [[ "$1" == "--misc" ]];then #help misc libs, loads base
+	elif [[ "$1" == "--misc" ]];then #help load misc lib, loads base
 		bMisc=true
-	elif [[ "$1" == "--vars" ]];then #help vars libs, loads misc (default)
+	elif [[ "$1" == "--vars" ]];then #help load vars lib, loads misc (default)
 		bVars=true
+	elif [[ "$1" == "--novarchilddb" || "$1" == "--nochild" ]];then #help makes the script calling this to inherit parent pid shared environment variables
+		bVarChildDB=false
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
 		bMaintenanceDaemon=false
 	else
@@ -76,7 +91,11 @@ fi
 echo 'eval "`SECFUNCexportFunctions`";'
 #fi
 if $bVars;then
-	echo 'SECFUNCvarInit;'
+	if $bVarChildDB;then
+		echo 'SECFUNCvarInit;'
+	else
+		echo 'SECFUNCvarInit --nochild;'
+	fi
 fi
 
 if $bMaintenanceDaemon;then

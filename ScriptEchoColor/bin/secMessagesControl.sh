@@ -40,8 +40,8 @@ bListPids=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	eval "set -- `SECFUNCsingleLetterOptionsA "$@"`"
 	if [[ "$1" == "--help" ]];then #help show this help
-		echo "[options] <pid>; in this case such pid will have its messages toggled or forced."
-		echo "[options] <custom params to be run>; in this case, messages can be optionally turned ON only."
+		SECFUNCshowHelp --colorize "[options] <pid>; in this case such pid will have its messages toggled or forced."
+		SECFUNCshowHelp --colorize "[options] <custom params to be run>; in this case, messages can be optionally turned ON only."
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--on" ]];then #help will force enable all requested messages overhidding toggle mode
@@ -61,13 +61,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWarn=true
 		bDebug=true
 		bBugtrack=true
-	elif [[ "$1" == "--bashdebug" || "$1" == "-g" ]];then #help <functionNames> will use the bash debug 'set -x' on beggining of a function and 'set +x' at its end;\n\trequires -d option;\n\tmultiple function names can be provided like "FUNC1 FUNC2";\n\tif functionNames is empty "", this debug will be turned off to all functions
+	elif [[ "$1" == "--bashdebug" || "$1" == "-g" ]];then #help <functionNames> will use the bash debug 'set -x' on beggining of a function and 'set +x' at its end;\n\t\trequires -d option;\n\t\tmultiple function names can be provided like "FUNC1 FUNC2";\n\t\tif functionNames is empty "", this debug will be turned off to all functions
 		shift
 		strFunctionNames="${1-}"
 		
 		bBashDebug=true
 	elif [[ "$1" == "--list" ]];then #help list pids that are detected as using sec functions
 		bListPids=true
+#	elif [[ "$1" == "--test" ]];then #help e --a-b e -b <a> d <b> s [c] f [e] d
+#		exit 1
 	else
 		echoc -p "invalid option '$1'"
 		exit 1 
