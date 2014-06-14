@@ -373,6 +373,7 @@ function SECFUNCvarUnset() { #<var> unregister the variable so it will not be sa
 }
 
 function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
+	SECFUNCdbgFuncInA;
 	#SECFUNCvarReadDB
 	
 	local l_bShow=false
@@ -386,7 +387,7 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 			l_bShow=true
 		elif [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--showdbg" ]]; then #SECFUNCvarSet_help will show only if SEC_DEBUG is set
 			l_bShowDbg=true
 		elif [[ "$1" == "--write" ]]; then #SECFUNCvarSet_help (this is the default now) will also write value promptly to DB
@@ -399,7 +400,7 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 			l_bDefault=true
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -473,6 +474,8 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
   elif $l_bShowDbg; then
 	  SECFUNCvarShowDbg $l_varPlDoUsThVaNaPl
 	fi
+	
+	SECFUNCdbgFuncOutA;
 }
 function SECFUNCvarIsRegistered() { #check if var is registered
 	#echo "${SECvars[*]}" |grep -q $1
@@ -980,12 +983,15 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	SECFUNCdbgFuncInA
 	
 	local l_bForceRealFile=false
+	local lbReadDB=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]]; then #SECFUNCvarSetDB_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--forcerealfile" || "$1" == "-f" ]];then #SECFUNCvarSetDB_help it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
 			l_bForceRealFile=true
+		elif [[ "$1" == "--skipreaddb" ]];then #SECFUNCvarSetDB_help by default it will read the db at the end of this function, so skip doing this.
+			lbReadDB=false
 		else
 			SECFUNCechoErrA "invalid option $1"
 			SECFUNCdbgFuncOutA;return 1
@@ -1107,7 +1113,9 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 		fi
 	fi
 	
-	SECFUNCvarReadDB
+	if $lbReadDB;then
+		SECFUNCvarReadDB
+	fi
 	
 	SECFUNCdbgFuncOutA
 }

@@ -35,6 +35,11 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 fi
 
 eval `secinit --novarchilddb --nomaintenancedaemon`
+if [[ "$nPidDaemon" != "-1" ]];then
+	if [[ -d "/proc/$nPidDaemon" ]];then
+		SECFUNCvarSetDB $nPidDaemon
+	fi
+fi
 export SEC_WARN=true
 
 strDaemonPidFile="$SEC_TmpFolder/.SEC.MaintenanceDaemon.pid"
@@ -49,7 +54,7 @@ bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
 bSetStatusLine=false
-bShowStatusLine=false
+varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -60,10 +65,10 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bRestartDaemon=true
 	elif [[ "$1" == "--showstatus" ]];then #help at --logmon, show the status line
 		bSetStatusLine=true
-		bShowStatusLine=true
+		varset --show bShowStatusLine=true
 	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
 		bSetStatusLine=true
-		bShowStatusLine=false
+		varset --show bShowStatusLine=false
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
@@ -133,13 +138,15 @@ function FUNClocksList(){
 
 # shall exit if not daemon...
 if $bSetStatusLine;then
-	if((nPidDaemon==-1));then
-		SECFUNCechoErrA "daemon must be started first..."
-		exit 1
-	else
-		SECFUNCvarSetDB $nPidDaemon
-		varset --show bShowStatusLine
-	fi
+#	if((nPidDaemon==-1));then
+#		SECFUNCechoErrA "daemon must be started first..."
+#		exit 1
+#	else
+#		SECFUNCvarShow bShowStatusLine
+#		SECFUNCvarSetDB --skipreaddb $nPidDaemon
+#		varset --show bShowStatusLine
+#		SECFUNCvarShow bShowStatusLine
+#	fi
 	exit
 elif $bKillDaemon;then
 	FUNCkillDaemon
@@ -264,6 +271,9 @@ while true;do
 	#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
 	#		echo
 	#	fi
+	else
+		SECFUNCdrawLine --stay "" " "
+		#echo -en "\r"
 	fi
 	
 	sleep 1

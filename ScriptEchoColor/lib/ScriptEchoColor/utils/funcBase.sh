@@ -606,7 +606,7 @@ function _SECFUNCmsgCtrl() {
 }
 
 function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
-	#set +x #stop log
+	# Log is stopped on the alias #set +x
 	_SECFUNCmsgCtrl DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
 		return 0
@@ -697,18 +697,40 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		strFuncStack=""
 	fi
 	
+	function SECFUNCechoDbg_isOnTheList(){
+		local lstrFuncToCheck="$1"
+		if((${#SECastrBashDebugFunctionIds[@]}>0));then
+			local lnIndex
+			for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
+				local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
+				if [[ "$lstrFuncToCheck" == "$strBashDebugFunctionId" ]];then
+					return 0
+				fi
+			done
+		fi
+		return 1
+	}
+	
 	local lbBashDebug=false
-	if((${#SECastrBashDebugFunctionIds[@]}>0));then
-		local lnIndex
-		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
-			local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
-			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
-			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
-				lbBashDebug=true
-				break
-			fi
-		done
+	if SECFUNCechoDbg_isOnTheList	$lstrFuncCaller || 
+	   SECFUNCechoDbg_isOnTheList	$lstrLastFuncId;
+	then
+		lbBashDebug=true
 	fi
+	
+#	local lbBashDebug=false
+#	if((${#SECastrBashDebugFunctionIds[@]}>0));then
+#		local lnIndex
+#		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
+#			local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
+#			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
+#			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
+#				lbBashDebug=true
+#				break
+#			fi
+#		done
+#	fi
+
 #	if $lbBashDebug;then
 #		if $lbFuncOut;then
 #			set +x #stop log
@@ -741,6 +763,10 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 		if $lbFuncOut;then
 			if [[ -z "$lstrLastFuncId" ]];then
 				set +x #end log
+			else
+				#if _SECFUNCechoDbg_isOnTheList	$lstrLastFuncId;then
+					set -x
+				#fi
 			fi
 		else
 			set -x #start log
