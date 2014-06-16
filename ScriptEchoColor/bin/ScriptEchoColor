@@ -25,9 +25,6 @@
 trap '' HUP # this is required to --say work with terminals that close too fast (secSayStack.sh)
 
 # RECOGNIZED EXPORTED ENVIRONMENT VARIABLES (see --help-extended):
-#  SEC_LOG_FILE
-#  SEC_LOG_DEFAULT
-#  SEC_LOG_AVOID
 #  SEC_BEEP
 #  SEC_IGNORE_LIMITATIONS
 #  SEC_DEBUG
@@ -125,12 +122,6 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 #};export -f FUNCps;alias ps='FUNCps'
 
 ##case "$SEC_HEADEREXEC" in pid  | name   | shortname | pidshortname);; *)SEC_HEADEREXEC=""  ;; esac
-
-##if [[ -z "$SEC_LOG_AVOID" ]]; then SEC_LOG_AVOID=false; fi
-##if [[ "$SEC_LOG_AVOID" != "true" && "$SEC_LOG_AVOID" != "false" ]]; then
-##  _he;echo -e "Invalid SEC_LOG_AVOID value ('"$SEC_LOG_AVOID"'), must be 'true' or 'false'.\a" >>/dev/stderr
-##  exit 1
-##fi
 
 strCfgPath="$HOME/.ScriptEchoColor"
 if [[ ! -d "$strCfgPath" ]]; then
@@ -307,44 +298,44 @@ FUNCmsg(){
   SECFUNCechoDbgA "$strHead $strSelfName $strFunc$nLine: $strMsg"
 }
 
-FUNCsetLogFile(){
-    local b=false
-    if [[ "$1" == "--justreturnfilename" ]]; then
-      b=true
-      shift
-    fi
-    
-    local bAuto=true
-    if [[ -z "$strUnformattedFileNameLog" ]] && [[ -n "$1" ]]; then
-      strUnformattedFileNameLog="$1"
-      bAuto=false
-    fi
-    if [[ -z "$strUnformattedFileNameLog" ]] && [[ -n "$SEC_LOG_FILE" ]]; then
-      strUnformattedFileNameLog="$SEC_LOG_FILE"
-      bAuto=false
-    fi
-    if [[ -z "$strUnformattedFileNameLog" ]]; then
-      # automatic log filename creation
-      strUnformattedFileNameLog=`ps -p $PPID -o comm |tail -n 1`".seclog"
-    fi
-    
-    if $b; then
-      echo "$strUnformattedFileNameLog"
-      return 0
-    fi
-    
-    if ! $SEC_LOG_AVOID; then
-      if [[ ! -f "$strUnformattedFileNameLog" ]]; then # inform user the log file is being created
-        local str=`if $bAuto; then echo -n "Automatically c"; else echo -n "C"; fi`
-        _hi "${str}reating log file '$strUnformattedFileNameLog'"
-      fi
-      
-      if ! echo -n >>"$strUnformattedFileNameLog"; then
-        _hw;eval 'echo -e "cannot log to file \"$strUnformattedFileNameLog\". $strCommandWasMsg"' $stderr
-        exit 1
-      fi
-    fi
-}
+#FUNCsetLogFile(){
+#    local b=false
+#    if [[ "$1" == "--justreturnfilename" ]]; then
+#      b=true
+#      shift
+#    fi
+#    
+#    local bAuto=true
+#    if [[ -z "$strUnformattedFileNameLog" ]] && [[ -n "$1" ]]; then
+#      strUnformattedFileNameLog="$1"
+#      bAuto=false
+#    fi
+#    if [[ -z "$strUnformattedFileNameLog" ]] && [[ -n "$SEC_LOG_FILE" ]]; then
+#      strUnformattedFileNameLog="$SEC_LOG_FILE"
+#      bAuto=false
+#    fi
+#    if [[ -z "$strUnformattedFileNameLog" ]]; then
+#      # automatic log filename creation
+#      strUnformattedFileNameLog=`ps -p $PPID -o comm |tail -n 1`".seclog"
+#    fi
+#    
+#    if $b; then
+#      echo "$strUnformattedFileNameLog"
+#      return 0
+#    fi
+#    
+#    if ! $SEC_LOG_AVOID; then
+#      if [[ ! -f "$strUnformattedFileNameLog" ]]; then # inform user the log file is being created
+#        local str=`if $bAuto; then echo -n "Automatically c"; else echo -n "C"; fi`
+#        _hi "${str}reating log file '$strUnformattedFileNameLog'"
+#      fi
+#      
+#      if ! echo -n >>"$strUnformattedFileNameLog"; then
+#        _hw;eval 'echo -e "cannot log to file \"$strUnformattedFileNameLog\". $strCommandWasMsg"' $stderr
+#        exit 1
+#      fi
+#    fi
+#}
 FUNCshortOptReqArgCheck(){
   local strPreviousOption="$1"
   local strOption="$2"
@@ -386,7 +377,7 @@ optInfo="--info"
 optInstallPath="--getinstallpath"
 #optLibSourceInit="--libs-init"
 #optLibSource="--libs"
-optLogFileName="--logfilename"
+#optLogFileName="--logfilename"
 optParentPidList="--parentpidlist"
 optRecreateConfigFile="--recreateconfigfile"
 optSay="--say"
@@ -424,7 +415,7 @@ bOptInfo=false
 bOptInstallPath=false
 #bOptLibSource=false
 #bOptLibSourceInit=false
-bOptLogFileName=false
+#bOptLogFileName=false
 bOptParentPidList=false
 bOptRecreateConfigFile=false
 bOptTest=false
@@ -482,10 +473,10 @@ fi
 if $SEC_FORCESTDERR; then
   output="$stderr"
 fi
-if [[ "${SEC_LOG_DEFAULT-}" == "LOG" ]]; then
-  bLogDef=true
-  FUNCsetLogFile ## "$SEC_LOG_FILE"
-fi
+#if [[ "${SEC_LOG_DEFAULT-}" == "LOG" ]]; then
+#  bLogDef=true
+#  FUNCsetLogFile ## "$SEC_LOG_FILE"
+#fi
 # Command line options
 strOpt="${1-}"
 chOpt=""
@@ -511,9 +502,9 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
       "${optTest:2}")
           bOptTest=true
           ;;
-      "${optLogFileName:2}")
-          bOptLogFileName=true
-          ;;
+#      "${optLogFileName:2}")
+#          bOptLogFileName=true
+#          ;;
       "${optParentPidList:2}")
           bOptParentPidList=true
           ;;
@@ -658,14 +649,14 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
               ;;
         "u")  bUnformatted=true
               ;;
-        "L")  if ! $bLogForce; then
-                if $bLogDef; then # turn off
-                  strUnformattedFileNameLog=""
-                else
-                  FUNCsetLogFile ## "$SEC_LOG_FILE"
-                fi
-              fi
-              ;;
+#        "L")  if ! $bLogForce; then
+#                if $bLogDef; then # turn off
+#                  strUnformattedFileNameLog=""
+#                else
+#                  FUNCsetLogFile ## "$SEC_LOG_FILE"
+#                fi
+#              fi
+#              ;;
         "k")  strResetAtEnd=""
               bKeepPosition=true
               bKeepColorSettings=true
@@ -681,14 +672,14 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
               ;;
 	      "p")  bProblem=true
               ;;
-	      "l")  shift;strOptArg="$1"
-              strOptPROBLEM=`FUNCshortOptReqArgCheck "$chOptReqArg" "$chOpt" "$strOptArg"`;nRet=$?
-              if(($nRet!=0));then break; fi
-              chOptReqArg="$chOpt"
-              
-              bLogForce=true
-              FUNCsetLogFile "$strOptArg"
-              ;;
+#	      "l")  shift;strOptArg="$1"
+#              strOptPROBLEM=`FUNCshortOptReqArgCheck "$chOptReqArg" "$chOpt" "$strOptArg"`;nRet=$?
+#              if(($nRet!=0));then break; fi
+#              chOptReqArg="$chOpt"
+#              
+#              bLogForce=true
+#              FUNCsetLogFile "$strOptArg"
+#              ;;
         "t")  shift;strOptArg="$1"
               strOptPROBLEM=`FUNCshortOptReqArgCheck "$chOptReqArg" "$chOpt" "$strOptArg"`;nRet=$?
               if(($nRet!=0));then break; fi
@@ -1370,12 +1361,6 @@ if $bOptVersionCheck; then
   fi
 fi 
 
-if $bOptLogFileName; then
-  FUNCsetLogFile --justreturnfilename
-##  echo "$strUnformattedFileNameLog"
-  exit 0
-fi
-
 if $bOptParentPidList; then
   FUNCppidList
   exit 0
@@ -1505,8 +1490,8 @@ if $bOptHelp; then
     echo " -k: keep settings after end (color settings and position)"
     echo " -t <value>: time to wait before continuing"
     echo " -u: output Unformatted"
-    echo " -l <logfile>: append unformatted text to logfile file"
-    echo " -L: append unformatted text to logfile file at SEC_LOG_FILE (or default)"
+#    echo " -l <logfile>: append unformatted text to logfile file"
+#    echo " -L: append unformatted text to logfile file at SEC_LOG_FILE (or default)"
     echo " -i: trap SIGINT"
     echo " -I: trap SIGINT and kill ParentPID (BEWARE)"
     echo " --: arguments after this are taken as normal text"
@@ -1530,7 +1515,7 @@ if $bOptHelp; then
     echo " $optVersion: show just \"$strSelfName $g_nVersion\" then exits"
     echo " $optVersionCheck <Version>: return '0' on 'current version' >= required 'Version', otherwise return '1'"
     echo " $optIdea <Index>: executes one of the available usage ideas (1 til ${#astrIdea[*]})"
-    echo " $optLogFileName: show the log file name being used (also automatic one)"
+#    echo " $optLogFileName: show the log file name being used (also automatic one)"
     echo " ${optGfxMostreliable}: (it is the default) use most realiable gfx chars trans. table"
     echo " ${optGfxTputmacs}: use tput smacs/rmacs gfx chars mode"
     echo " ${optGfxE294char}: use full gfx translation table"
@@ -1685,21 +1670,21 @@ if $bOptHelpExtended; then
     echo "    $strSelfName \"\$str\""
     echo "    $strSelfName -u \"\$str\" >application.log"
     echo
-    echo " -l <logfile>: output normal formatted text (unless you also use -u) and append "
-    echo "    unformatted to logfile file (create it if not exist)"
-    echo "    this option has priority over -L"
-    echo
-    echo " -L Log: output normal formatted (unless you also use -u) text and append "
-    echo "    unformatted to logfile SEC_LOG_FILE (create it if not exist)."
-    echo "    If SEC_LOG_FILE is not set, a default is created with parent pid name:"
-    echo "     \`ps -p \$PPID -o comm |tail -n 1\`\".seclog\""
-    echo "     to work properly, the parent pid script must begin with '#!/bin/bash'"
-    echo "    It also works AGAINST default behavior (OFF), let me explain:"
-    echo "     if you want all calls to $strSelfName to be logged to file,"
-    echo "     set the environment variable SEC_LOG_DEFAULT (see next help session),"
-    echo "     this way you won't need to add the option -L to all $strSelfName calls"
-    echo "     and when you do, that call won't be logged."
-    echo
+#    echo " -l <logfile>: output normal formatted text (unless you also use -u) and append "
+#    echo "    unformatted to logfile file (create it if not exist)"
+#    echo "    this option has priority over -L"
+#    echo
+#    echo " -L Log: output normal formatted (unless you also use -u) text and append "
+#    echo "    unformatted to logfile SEC_LOG_FILE (create it if not exist)."
+#    echo "    If SEC_LOG_FILE is not set, a default is created with parent pid name:"
+#    echo "     \`ps -p \$PPID -o comm |tail -n 1\`\".seclog\""
+#    echo "     to work properly, the parent pid script must begin with '#!/bin/bash'"
+#    echo "    It also works AGAINST default behavior (OFF), let me explain:"
+#    echo "     if you want all calls to $strSelfName to be logged to file,"
+#    echo "     set the environment variable SEC_LOG_DEFAULT (see next help session),"
+#    echo "     this way you won't need to add the option -L to all $strSelfName calls"
+#    echo "     and when you do, that call won't be logged."
+#    echo
     echo " -i trap interrupt: kill signal INT (SIGINT), so Ctrl+c will show message,"
     echo "    but wont exit from caller script."
     echo
@@ -1712,18 +1697,18 @@ if $bOptHelpExtended; then
     str="$strSelfName -- -x -b are some of $strSelfName options"
     echo "    $str"; echo "         "`eval "$str"`
     echo
-    $strSelfName "@{ou}Recognized environment variables (use 'export' command):"
-    echo "    Logfile is setup at exported environment variable at your script ex.:"
-    echo "     export SEC_LOG_FILE=\"$HOME/temp/messages.log\""
-    echo
-    echo "    Log default is to NOT log. To turn it on do this:"
-    echo "     export SEC_LOG_DEFAULT=\"LOG\""
-    echo "     to turn off again just set it empty (\"\")"
-    echo
-    echo "    To avoid all logs, set this:"
-    echo "     export SEC_LOG_AVOID=\"true\""
-    echo "     to turn off again just set it empty (\"\")"
-    echo
+    $strSelfName "@{ou}Recognized environment variables (use with 'export'):"
+#    echo "    Logfile is setup at exported environment variable at your script ex.:"
+#    echo "     export SEC_LOG_FILE=\"$HOME/temp/messages.log\""
+#    echo
+#    echo "    Log default is to NOT log. To turn it on do this:"
+#    echo "     export SEC_LOG_DEFAULT=\"LOG\""
+#    echo "     to turn off again just set it empty (\"\")"
+#    echo
+#    echo "    To avoid all logs, set this:"
+#    echo "     export SEC_LOG_AVOID=\"true\""
+#    echo "     to turn off again just set it empty (\"\")"
+#    echo
     echo "    Beep mode:"
     echo "     export SEC_BEEP=\"mute\"  "
     echo "     export SEC_BEEP=\"single\"  (this is the default)"
@@ -3195,3 +3180,4 @@ else
     
   exit $nRet
 fi
+
