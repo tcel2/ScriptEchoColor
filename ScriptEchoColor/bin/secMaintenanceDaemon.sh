@@ -193,7 +193,7 @@ function FUNCvalidateDaemon() {
 	fi
 	if [[ -n "$lnPidDaemon" ]] && [[ -d "/proc/$lnPidDaemon" ]];then
 		SECFUNCechoWarnA "(at $1) already running lnPidDaemon='$lnPidDaemon'"
-		ps -p $lnPidDaemon >>/dev/stderr
+		#ps -p $lnPidDaemon >>/dev/stderr
 		exit 1
 	fi
 }

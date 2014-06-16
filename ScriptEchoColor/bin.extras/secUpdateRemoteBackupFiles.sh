@@ -556,6 +556,7 @@ elif $bLookForChanges;then
 			nSizeBTR="`du -sb "$pathBackupsToRemote" |tr '[:blank:]' '\n' |head -n 1`"
 			nSizeOnlyGit="`du -sb "$pathBackupsToRemote/.git" |tr '[:blank:]' '\n' |head -n 1`"
 			nSizeOnlyBTR=$((nSizeBTR-nSizeOnlyGit))
+			echo "nSizeOnlyBTR='$nSizeOnlyBTR', nSizeOnlyGit='$nSizeOnlyGit'"
 			if(( nSizeOnlyGit > (nSizeOnlyBTR*2) ));then
 				echoc --alert ".git ($nSizeOnlyGit) is getting much bigger than BTR ($nSizeOnlyBTR)"
 			fi

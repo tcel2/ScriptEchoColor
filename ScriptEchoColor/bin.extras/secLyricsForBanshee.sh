@@ -64,7 +64,9 @@ if $bGraphicalDialog;then
 	else
 		function FUNCreader() {
 			while true;do
-				evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+				if pgrep "^banshee$";then
+					evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+				fi
 				sleep 1
 			done
 		}
