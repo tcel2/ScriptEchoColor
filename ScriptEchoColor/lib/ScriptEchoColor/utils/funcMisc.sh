@@ -40,7 +40,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
 			lbUnlock=true
 		elif [[ "$1" == "--delay" ]];then #SECFUNCfileLock_help sleep delay between lock attempts to easy on cpu usage
@@ -62,7 +62,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			lbPidOfLockFile=true
 		else
 			SECFUNCechoErrA "invalid option: $1"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -83,11 +83,20 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	fi
 	
 	local lfile="${1-}" #can be with full path
+	local lbFileExist=true
 	if [[ ! -f "$lfile" ]];then
-		SECFUNCechoErrA "file='$lfile' does not exist (if symlink must point to a file)"
-		return 1
+		local lstrMsgNotExist="file='$lfile' does not exist (if symlink must point to a file)"
+		if $lbCheckIfIsLocked || $lbUnlock;then
+			SECFUNCechoWarnA "$lstrMsgNotExist"
+		else
+			SECFUNCechoErrA "$lstrMsgNotExist"
+			SECFUNCdbgFuncOutA;return 1
+		fi
+		lbFileExist=false
+	else
+		# canonical full pathname and filename
+		lfile=`readlink -f "$lfile"`
 	fi
-	lfile=`readlink -f "$lfile"`
 	
 	local lsedMd5sumOnly='s"([[:alnum:]]*) .*"\1"'
 	local lmd5sum="`echo "$lfile" |md5sum |sed -r "$lsedMd5sumOnly"`"
@@ -95,8 +104,8 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	local lfileLockPid="${lfileLock}.$lnPid"	
 	
 	if $lbCheckIfIsLocked;then
-		if [[ ! -L "$lfileLock" ]];then
-			SECFUNCdbgFuncOutA; return 1;
+		if [[ ! -L "$lfileLock" ]] || ! $lbFileExist;then
+			SECFUNCdbgFuncOutA;return 1;
 		else
 			local lfileLockPidOther="`readlink "$lfileLock"`"
 			local lnLockingPid="`echo "$lfileLockPidOther" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
@@ -108,18 +117,19 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 #				if [[ "$lstrLockFileIntermediary" == "`readlink "$strLockFile"`" ]];then
 #					rm -v "$strLockFile"
 #				fi
+		rm "$lfileLockPid"
 		local lfileLockPointsTo="`readlink "$lfileLock"`"
 		if [[ "$lfileLockPointsTo" == "$lfileLockPid" ]];then
 			rm "$lfileLock"
-		else
+		else # unable to unlock, lock owned by other pid...
 			SECFUNCechoWarnA "lfileLockPointsTo='$lfileLockPointsTo'"
+			SECFUNCdbgFuncOutA;return 1
 		fi
-		rm "$lfileLockPid"
 	else
 		# get the lock
 		if ! ln -s "$lfile" "$lfileLockPid" 2>/dev/null;then
 			SECFUNCechoWarnA "already locked lfile='$lfile' with lfileLockPid='$lfileLockPid'"
-			return
+			SECFUNCdbgFuncOutA;return 0;
 		fi
 		
 		if SECFUNCbcPrettyCalc --cmpquiet "$lfSleepDelay<0.001";then
@@ -245,7 +255,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	fi
 		
 	function SECFUNCuniqueLock_release() {
-		SECFUNCfileLock "$l_runUniqueFile" --unlock
+		SECFUNCfileLock --unlock "$l_runUniqueFile"
 		rm "$l_runUniqueFile";
 		#rm "$l_lockFile";
 	}
