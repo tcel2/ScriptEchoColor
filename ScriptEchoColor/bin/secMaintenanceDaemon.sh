@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 strSelfName="`basename "$0"`"
-strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.DaemonPid"
+strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.$USER.DaemonPid"
 nPidDaemon="`cat "$strSymlinkToDaemonPidFile" 2>/dev/null`"
 if [[ -z "$nPidDaemon" ]];then
 	nPidDaemon="-1"
@@ -57,7 +57,7 @@ bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp
+		SECFUNCshowHelp --nosort
 		exit
 	elif [[ "$1" == "--kill" ]];then #help kill the daemon, avoid using this...
 		bKillDaemon=true
@@ -224,27 +224,35 @@ SECFUNCdelay MainLoop --init
 nTotPids=0
 nTotSecPids=0
 nTotLocks=0
+nMinDelayMainLoop="5"
 while true;do
-	FUNCvalidateDaemon "main loop"
+	#if SECFUNCdelay "ValidateDaemon" --checkorinit1 "$((nMinDelayMainLoop*2))";then
+	if SECFUNCdelay "ValidateDaemon" --checkorinit1 60;then
+		FUNCvalidateDaemon "main loop"
+	fi
 	SECFUNCvarReadDB
-	
+
 	# release locks of dead pids
 	strCheckId="LockFilesOfDeadPids"
-	if SECFUNCdelay "$strCheckId" --checkorinit1 3;then
+	#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
 		SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
 				#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 				nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
 				if [[ ! -d "/proc/$nPid" ]];then
 					if [[ -L "$lstrLockFileIntermediary" ]];then
 						strFileReal="`readlink "$lstrLockFileIntermediary"`"
-						if [[ -n "$strFileReal" ]];then
+						if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
 							echo " `SECFUNCdtTimePrettyNow` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
 							SECFUNCfileLock --pid $nPid --unlock "$strFileReal"
+						fi
+					else
+						if [[ -f "$lstrLockFileIntermediary" ]];then
+							SECFUNCechoWarnA "lstrLockFileIntermediary='$lstrLockFileIntermediary' should be a symlink..."
 						fi
 					fi
 				fi
 			done
-	fi
+	#fi
 	
 	# clear temporary shared environment variable files of dead pids etc
 	if SECFUNCdelay "EnvVarClearTmpFiles" --checkorinit1 60;then
@@ -276,6 +284,6 @@ while true;do
 		#echo -en "\r"
 	fi
 	
-	sleep 1
+	sleep $nMinDelayMainLoop
 done
 
