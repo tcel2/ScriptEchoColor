@@ -1,0 +1,7 @@
+# backup your local copy
+
+git clone git://git.code.sf.net/p/scriptechocolor/git /tmp/scriptechocolor.git
+# remove the '.git' from there
+# copy everything overwriting local copy
+# use `wine WinMerge`, or `meld` (doesnt work well) to compare folders of local overwritten copy with the backup one.
+
