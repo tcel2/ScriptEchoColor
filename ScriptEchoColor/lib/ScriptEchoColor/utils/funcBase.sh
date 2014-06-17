@@ -1404,17 +1404,40 @@ function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 }
 
 function SECFUNCfixCorruptFile() { #usually after a blackout?
-	echo "CORRUPT_DATA_FILE: backuping..." >>/dev/stderr
-	cp -v "$1" "${1}.`SECFUNCdtFmt --filename`" >>/dev/stderr
+	local lstrDataFile="${1-}"
 	
-	if [[ "`read -n 1 -p "CORRUPT_DATA_FILE: remove it (y/...) or manually fix it?" strResp;echo "$strResp"`" == "y" ]];then
+	if [[ ! -f "$lstrDataFile" ]];then
+		SECFUNCechoErrA "invalid file lstrDataFile='$lstrDataFile'"
+		return 1
+	fi
+	
+	# deal only with real files and not symlinks..
+	lstrDataFile="`readlink -f "${lstrDataFile}"`"
+	
+	local lstrMsgCriticalCorruptDataFile="\E[0m\E[93m\E[41m\E[5m Critical: Corrupt data-file! \E[0m"
+	echo -e "$lstrMsgCriticalCorruptDataFile backuping..." >>/dev/stderr
+	cp -v "$lstrDataFile" "${lstrDataFile}.`SECFUNCdtFmt --filename`" >>/dev/stderr
+	echo " >>---[Possible lines with problem]--->" >>/dev/stderr
+	cat "$lstrDataFile" |cat -n |sed "/^[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:alnum:]_]*=.*/d" >>/dev/stderr
+	if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` This can happen after a blackout. It is advised to manually fix the data file. Removing it may cause script malfunction. Remove it anyway (y/...)? (any other key to manually fix it)" strResp;echo "$strResp"`" == "y" ]];then
 		echo >>/dev/stderr
-		rm -v "$1" >>/dev/stderr
-	else
-		echo >>/dev/stderr
-		while [[ "`read -n 1 -p "CORRUPT_DATA_FILE: (waiting manual fix) ready to continue (y/...)?" strResp;echo "$strResp"`" != "y" ]];do
+		rm -v "$lstrDataFile" >>/dev/stderr
+		
+		# recreate the datafile so symlinks dont get broken avoiding creating new files and disconnecting sec pids...
+		echo -n "" >"$lstrDataFile"
+		while true;do
+			if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` As you removed the file, it is adviseable to stop the script now with 'Ctrl+c', or you wish to continue running it at your own risk (y)?" strResp;echo "$strResp"`" == "y" ]];then
+				echo >>/dev/stderr
+				break;
+			fi
 			echo >>/dev/stderr
 		done
+	else
+		echo >>/dev/stderr
+		while [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` (waiting manual fix) ready to continue (y/...)?" strResp;echo "$strResp"`" != "y" ]];do
+			echo >>/dev/stderr
+		done
+		echo >>/dev/stderr
 	fi
 }
 
