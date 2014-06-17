@@ -53,7 +53,7 @@ bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
-bSetStatusLine=false
+#bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -63,12 +63,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bKillDaemon=true
 	elif [[ "$1" == "--restart" ]];then #help restart the daemon, avoid using this...
 		bRestartDaemon=true
-	elif [[ "$1" == "--showstatus" ]];then #help at --logmon, show the status line
-		bSetStatusLine=true
-		varset --show bShowStatusLine=true
-	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
-		bSetStatusLine=true
-		varset --show bShowStatusLine=false
+#	elif [[ "$1" == "--showstatus" ]];then #help at --logmon, show the status line
+#		bSetStatusLine=true
+#		varset --show bShowStatusLine=true
+#	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
+#		bSetStatusLine=true
+#		varset --show bShowStatusLine=false
 	elif [[ "$1" == "--logmon" ]];then #help log monitor
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
@@ -110,7 +110,7 @@ function FUNCcheckDaemonStarted() {
 
 function FUNCkillDaemon() {
 	if FUNCcheckDaemonStarted;then
-		ps -p $nPidDaemon
+		echo -n "Kill currently running Daemon: ";ps --no-headers -o pid,cmd -p $nPidDaemon
 		kill -SIGKILL $nPidDaemon
 		
 		# wait directory be actually removed
@@ -137,7 +137,8 @@ function FUNClocksList(){
 }
 
 # shall exit if not daemon...
-if $bSetStatusLine;then
+
+#if $bSetStatusLine;then
 #	if((nPidDaemon==-1));then
 #		SECFUNCechoErrA "daemon must be started first..."
 #		exit 1
@@ -147,8 +148,9 @@ if $bSetStatusLine;then
 #		varset --show bShowStatusLine
 #		SECFUNCvarShow bShowStatusLine
 #	fi
-	exit
-elif $bKillDaemon;then
+#	exit
+#elif $bKillDaemon;then
+if $bKillDaemon;then
 	FUNCkillDaemon
 	exit
 elif $bRestartDaemon;then
@@ -279,9 +281,17 @@ while true;do
 	#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
 	#		echo
 	#	fi
+		
+		if ! pgrep -U $USER -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+			varset bShowStatusLine=false
+		fi
 	else
 		SECFUNCdrawLine --stay "" " "
 		#echo -en "\r"
+		
+		if pgrep -U $USER -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+			varset bShowStatusLine=true
+		fi
 	fi
 	
 	sleep $nMinDelayMainLoop
