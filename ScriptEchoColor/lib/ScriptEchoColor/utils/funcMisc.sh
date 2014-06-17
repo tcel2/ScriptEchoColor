@@ -99,7 +99,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 			SECFUNCdbgFuncOutA; return 1;
 		else
 			local lfileLockPidOther="`readlink "$lfileLock"`"
-			local lnLockingPid="`echo "$lfileLockPidOther" |sed -r 's"[.]([[:digit:]]*)$"\1"'`"
+			local lnLockingPid="`echo "$lfileLockPidOther" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 			echo "$lnLockingPid"
 		fi
 	elif $lbUnlock;then
