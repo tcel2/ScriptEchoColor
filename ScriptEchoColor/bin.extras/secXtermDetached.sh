@@ -195,7 +195,7 @@ function FUNCexecParams() {
 	
 	if $bDaemon;then
 		while true;do
-			SECFUNCuniqueLock --daemon $strTitle #SECFUNCdaemonUniqueLock $strTitle
+			SECFUNCuniqueLock --setdbtodaemon $strTitle #SECFUNCdaemonUniqueLock $strTitle
 			if ! $SECbDaemonWasAlreadyRunning;then
 				break
 			fi

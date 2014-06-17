@@ -59,7 +59,7 @@ fi
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
 
 if ${SECastrBashDebugFunctionIds+false};then 
-	SECastrBashDebugFunctionIds=(); # if array has items, wont reach here, tho if it has NO items, it will be re-initialized to what it was: an empty array (will remain the same).
+	SECastrBashDebugFunctionIds=(); #help if array has items, wont reach here, tho if it has NO items, it will be re-initialized to what it was: an empty array (will remain the same). If any item of the array is "+all", all functions will match.
 else
 	_SECastrBashDebugFunctionIds_Check="`declare -p SECastrBashDebugFunctionIds 2>/dev/null`";
 	if [[ "${_SECastrBashDebugFunctionIds_Check:0:10}" != 'declare -a' ]];then
@@ -120,13 +120,11 @@ if [[ "$SEC_ShortFuncsAliases" != "false" ]]; then
 	export SEC_ShortFuncsAliases=true
 fi
 
-# function aliases for easy coding
 : ${SECfuncPrefix:=sec} #this prefix can be setup by the user
-export SECfuncPrefix
+export SECfuncPrefix #help function aliases for easy coding
 
-# this variable can be a function name to be debugged, only debug lines on that funcion will be shown
 : ${SEC_DEBUG_FUNC:=}
-export SEC_DEBUG_FUNC
+export SEC_DEBUG_FUNC #help this variable can be a function name to be debugged, only debug lines on that funcion will be shown
 
 # between each lock check, validation or attempt, this is the sleep delay
 : ${SECnLockRetryDelay:=100} #in miliseconds
@@ -698,11 +696,14 @@ function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
 	fi
 	
 	function SECFUNCechoDbg_isOnTheList(){
-		local lstrFuncToCheck="$1"
+		local lstrFuncToCheck="${1-}"
 		if((${#SECastrBashDebugFunctionIds[@]}>0));then
 			local lnIndex
 			for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
 				local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
+				if [[ "$strBashDebugFunctionId" == "+all" ]];then
+					return 0
+				fi
 				if [[ "$lstrFuncToCheck" == "$strBashDebugFunctionId" ]];then
 					return 0
 				fi

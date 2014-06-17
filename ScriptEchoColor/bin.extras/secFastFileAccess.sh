@@ -35,7 +35,7 @@ cfgExt="AtFastMedia"
 
 mkdir -p "$cfgPath"
 
-SECFUNCuniqueLock --daemon #--daemonwait will be set after, here is just to attach the same db of the daemon
+SECFUNCuniqueLock --setdbtodaemon #--daemonwait will be set after, here is just to attach the same db of the daemon
 
 ########### INTERNAL VARIABLES
 

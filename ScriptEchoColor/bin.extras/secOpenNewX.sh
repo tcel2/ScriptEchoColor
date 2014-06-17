@@ -26,11 +26,9 @@
 
 ########################## INIT AND VARS #####################################
 eval `secinit`
-
-ls -l $SECvarFile
-SECFUNCuniqueLock --daemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
-ls -l $SECvarFile
-#SECFUNCvarShow bUseXscreensaver
+SECFUNCechoDbgA "init"
+SECFUNCuniqueLock --setdbtodaemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
+SECFUNCechoDbgA "SECvarFile='$SECvarFile'"
 
 #alias ps='echoc -x ps' #good to debug the bug
 
@@ -42,13 +40,8 @@ fi
 execX1="X :1"
 grepX1="X :1"
 selfName=`basename "$0"`
-SECFUNCvarSet --default pidOpenNewX=$$
 #execX1="startx -- :1"
 #grepX1="/usr/bin/X :1 [-]auth /tmp/serverauth[.].*"
-
-#redirects self output to log file!
-exec > >(tee $SEC_TmpFolder/SEC.$selfName.$$.log)
-exec 2>&1
 
 # when you see "#kill=skip" at the end of commands, will prevent terminals from being killed on killall commands (usually created at other scripts)
 
@@ -152,6 +145,7 @@ function FUNCkeepGamma() { # some games reset the gamma on each restart
 };export -f FUNCkeepGamma
 
 function FUNCcicleGamma() {
+	SECFUNCdbgFuncInA;
 	#set -x
 	local nDirection=$1 #1 or -1
 	
@@ -216,9 +210,11 @@ function FUNCcicleGamma() {
 	echoc --say "gamma $fGamma" #must say before releasing the lock!
 	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
 	#set +x
+	SECFUNCdbgFuncOutA;
 };export -f FUNCcicleGamma
 
 function FUNCnvidiaCicle() {
+	SECFUNCdbgFuncInA;
 	local nDirection=$1 # 1 or -1
 	
 	#eval `secinit` #required if using exported function on child environment
@@ -264,6 +260,7 @@ function FUNCnvidiaCicle() {
 	echoc --waitsay "n-vidia $nvidiaCurrent"
 	SECFUNCvarShow nvidiaCurrent
 	#echoc -w -t 10 "`SECFUNCvarShow nvidiaCurrent`"
+	SECFUNCdbgFuncOutA;
 };export -f FUNCnvidiaCicle
 
 #function FUNCtempAvg() {
@@ -281,6 +278,7 @@ function FUNCnvidiaCicle() {
 #};export -f FUNCtempAvg
 
 function FUNCscript() {
+	SECFUNCdbgFuncInA;
 	# scripts will be executed with all environment properly setup with eval `secinit`
 	local lscriptName="$1"
 	shift
@@ -296,7 +294,7 @@ function FUNCscript() {
   	#cmdEval="sudo -k chvt 7"
   	
   	echoc -x "bash"
-  	return
+  	SECFUNCdbgFuncOutA;return
   elif [[ "$lscriptName" == "showHelp" ]]; then #helpScript show user custom command options and other options
     FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
   elif [[ "$lscriptName" == "isScreenLocked" ]];then
@@ -361,8 +359,9 @@ function FUNCscript() {
 	else
 		echoc -p "invalid script '$lscriptName'"
 		echoc -w
-		return 1
+		SECFUNCdbgFuncOutA;return 1
   fi
+  SECFUNCdbgFuncOutA;
 };export -f FUNCscript
 
 function FUNCkeepJwmAlive() {
@@ -584,6 +583,10 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
  	shift
 done
 
+#echo "going to execute: $@"
+#@@@R runCmd="$1" #this command must be simple, if need complex put on a script file and call it!
+runCmd="$@" #this command must be simple, if need complex put on a script file or exported function and call it!
+
 #################### MAIN CODE ###########################################
 
 # validate options
@@ -606,7 +609,13 @@ while FUNCisX1running;do
 done
 ls -l $SECvarFile
 SECFUNCuniqueLock --daemonwait
+SECFUNCvarSet --default pidOpenNewX=$$
 ls -l $SECvarFile
+
+#redirects self output to log file!
+exec >> >(tee $SEC_TmpFolder/SEC.$selfName.$$.log)
+exec 2>&1
+
 #while true; do
 #	if FUNCisX1running;then
 #		if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then
@@ -719,9 +728,6 @@ if $useKbd; then
   kbdSetup="setxkbmap -layout us"
 fi
 
-#echo "going to execute: $@"
-#@@@R runCmd="$1" #this command must be simple, if need complex put on a script file and call it!
-runCmd="$@" #this command must be simple, if need complex put on a script file or exported function and call it!
 if [[ -z "$runCmd" ]];then
 	runCmd="echo JustOpenNewX"
 fi

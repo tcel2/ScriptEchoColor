@@ -61,7 +61,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWarn=true
 		bDebug=true
 		bBugtrack=true
-	elif [[ "$1" == "--bashdebug" || "$1" == "-g" ]];then #help <functionNames> will use the bash debug 'set -x' on beggining of a function and 'set +x' at its end;\n\t\trequires -d option;\n\t\tmultiple function names can be provided like "FUNC1 FUNC2";\n\t\tif functionNames is empty "", this debug will be turned off to all functions
+	elif [[ "$1" == "--bashdebug" || "$1" == "-g" ]];then #help <functionNames> will use the bash debug 'set -x' on beggining of a function and 'set +x' at its end;\n\t\trequires -d option;\n\t\tmultiple function names can be provided like "FUNC1 FUNC2";\n\t\tif functionNames is empty "", this debug will be turned off to all functions.\n\t\tif a single item is "+all", all functions will match.
 		shift
 		strFunctionNames="${1-}"
 		
@@ -97,7 +97,7 @@ fi
 
 if $bBashDebug;then
 	if [[ -n "$strFunctionNames" ]];then
-		if [[ -n "`echo "$strFunctionNames" |tr -d '[:alnum:]_ '`" ]];then
+		if [[ -n "`echo "$strFunctionNames" |tr -d '[:alnum:]_+ '`" ]];then
 			echoc -p "invalid strFunctionNames='$strFunctionNames'"
 			exit 1
 		else

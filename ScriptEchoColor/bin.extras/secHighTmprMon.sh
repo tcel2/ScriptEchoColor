@@ -32,7 +32,7 @@ eval `secinit`
 #	SECFUNCvarSetDB `SECFUNCuniqueLock` #allows intercommunication between proccesses started from different parents
 #	isDaemonRunning=true
 #fi
-SECFUNCuniqueLock --daemon #--daemonwait will be set after, here is just to attach the same db of the daemon
+SECFUNCuniqueLock --setdbtodaemon #--daemonwait will be set after, here is just to attach the same db of the daemon
 
 selfName=`basename "$0"`
 

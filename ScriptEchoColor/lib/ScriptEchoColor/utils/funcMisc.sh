@@ -149,6 +149,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 }
 
 function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.
+	SECFUNCdbgFuncInA;
 	#set -x
 	local l_bRelease=false
 	local l_pid=$$
@@ -162,7 +163,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--quiet" ]];then #SECFUNCuniqueLock_help prevent all output to /dev/stdout
 			l_bQuiet=true
 		elif [[ "$1" == "--notquiet" ]];then #SECFUNCuniqueLock_help allow output to /dev/stdout
@@ -176,25 +177,28 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 			#if ! ps -p $l_pid >/dev/null 2>&1;then
 			if [[ ! -d "/proc/$l_pid" ]];then
 				SECFUNCechoErrA "invalid pid: '$l_pid'"
-				return 1
+				SECFUNCdbgFuncOutA;return 1
 			fi
 		elif [[ "$1" == "--release" ]];then #SECFUNCuniqueLock_help release the lock
 			l_bRelease=true
-		elif [[ "$1" == "--daemon" ]];then #SECFUNCuniqueLock_help Auto set the DB to the daemon DB if it is already running, or create a new DB; Also sets this variable: SECbDaemonWasAlreadyRunning.
+		elif [[ "$1" == "--daemon" ]];then
+			SECFUNCechoErrA "deprecated option, use '--setdbtodaemon' instead"
+			_SECFUNCcriticalForceExit
+		elif [[ "$1" == "--setdbtodaemon" ]];then #SECFUNCuniqueLock_help Auto set the DB to the daemon DB if it is already running, or create a new DB; Also sets this variable: SECbDaemonWasAlreadyRunning.
 			lbDaemon=true
-		elif [[ "$1" == "--daemonwait" ]];then #SECFUNCuniqueLock_help will wait for the other daemon to exit, and then will become the daemon
+		elif [[ "$1" == "--daemonwait" || "$1" == "--waitbecomedaemon" ]];then #SECFUNCuniqueLock_help will wait for the other daemon to exit, and then will become the daemon
 			lbDaemon=true
 			lbWaitDaemon=true
 		else
 			SECFUNCechoErrA "invalid option: $1"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
 	
 	lstrId="`SECFUNCfixIdA --justfix "$lstrId"`"
 #	if ! SECFUNCvalidateIdA "$lstrId";then
-#		return 1
+#		SECFUNCdbgFuncOutA;return 1
 #	fi
 	
 	if ${lbDaemon:?};then #will call this self function, beware..
@@ -226,7 +230,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 				break; #always break, because DB is always set (child or master)
 			fi
 		done
-		return 0 # to prevent bugs..
+		SECFUNCdbgFuncOutA;return 0 # to prevent bugs..
 	fi
 	
 	#local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$l_pid.$lstrId"
@@ -248,7 +252,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	
 	if ${l_bRelease:?};then
 		SECFUNCuniqueLock_release
-		return 0
+		SECFUNCdbgFuncOutA;return 0
 	fi
 	
 #	#####################################
@@ -257,12 +261,12 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 #		if ps -p $l_lockPid >/dev/null 2>&1; then
 #			if(($l_pid==$l_lockPid));then
 #				SECFUNCechoWarnA "redundant lock '$lstrId' request..."
-#				return 0
+#				SECFUNCdbgFuncOutA;return 0
 #			else
 #				if ! ${l_bQuiet:?};then
 #					echo "$l_lockPid"
 #				fi
-#				return 1
+#				SECFUNCdbgFuncOutA;return 1
 #			fi
 #		else
 #			SECFUNCechoWarnA "releasing lock '$lstrId' of dead process..."
@@ -274,31 +278,32 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 #		# try to create a symlink lock file to the unique file
 #		if ! ln -s "$l_runUniqueFile" "${l_runUniqueFile}.lock";then
 #			# other pid created the symlink first!
-#			return 1
+#			SECFUNCdbgFuncOutA;return 1
 #		fi
 #	
 #		echo $l_pid >"$l_runUniqueFile"
-#		return 0
+#		SECFUNCdbgFuncOutA;return 0
 #	fi
 	
-	local lnLockPid=`SECFUNCfileLock "$l_runUniqueFile" --islocked` #lock will be validated and released here
+	local lnLockPid=`SECFUNCfileLock --islocked "$l_runUniqueFile"` #lock will be validated and released here
 	if [[ -n "$lnLockPid" ]];then
 		if(($l_pid==$lnLockPid));then
 			SECFUNCechoWarnA "redundant lock '$lstrId' request..."
-			return 0
+			SECFUNCdbgFuncOutA;return 0
 		else
 			if ! ${l_bQuiet:?};then
 				echo "$lnLockPid"
 			fi
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 	else
 		if SECFUNCfileLock --nowait "$l_runUniqueFile";then
 			echo $l_pid >"$l_runUniqueFile"
 		else
-			return 1 #concurrent attempts can make it fail so pass failure to caller
+			SECFUNCdbgFuncOutA;return 1 #concurrent attempts can make it fail so pass failure to caller
 		fi
 	fi
+	SECFUNCdbgFuncOutA;
 }
 
 function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
