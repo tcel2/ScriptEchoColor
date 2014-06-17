@@ -346,7 +346,16 @@ function SECFUNCcfgRead() { #read the cfg file and set all its env vars at curre
 	
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
-  	eval "`cat "$SECcfgFileName"`"
+		while true;do
+			eval "`cat "$SECcfgFileName"`"
+			local lnRetFromEval=$?
+			if((lnRetFromEval!=0));then
+				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
+				SECFUNCfixCorruptFile "$SECcfgFileName"
+			else
+				break
+			fi
+		done
   	SECFUNCfileLock --unlock "$SECcfgFileName"
   fi
   SECFUNCdbgFuncOutA;

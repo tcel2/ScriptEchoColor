@@ -1403,6 +1403,20 @@ function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
 }
 
+function SECFUNCfixCorruptFile() { #usually after a blackout?
+	echo "CORRUPT_DATA_FILE: backuping..." >>/dev/stderr
+	cp -v "$1" "${1}.`SECFUNCdtFmt --filename`" >>/dev/stderr
+	
+	if [[ "`read -n 1 -p "CORRUPT_DATA_FILE: remove it (y/...) or manually fix it?" strResp;echo "$strResp"`" == "y" ]];then
+		echo >>/dev/stderr
+		rm -v "$1" >>/dev/stderr
+	else
+		echo >>/dev/stderr
+		while [[ "`read -n 1 -p "CORRUPT_DATA_FILE: (waiting manual fix) ready to continue (y/...)?" strResp;echo "$strResp"`" != "y" ]];do
+			echo >>/dev/stderr
+		done
+	fi
+}
 
 function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray

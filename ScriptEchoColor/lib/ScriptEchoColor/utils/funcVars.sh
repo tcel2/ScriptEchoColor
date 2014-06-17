@@ -940,9 +940,27 @@ function SECFUNCvarReadDB() { #[varName] filter to load only one variable value
 			l_paramInvert="-v"
 		fi
 		# can retrieve more than one line with same variable, what is ok as the last set will override all previous ones
-		eval "`grep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+		while true;do
+			eval "`grep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+			local lnRetFromEval=$?
+			if((lnRetFromEval!=0));then
+				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"
+				SECFUNCfixCorruptFile "$SECvarFile"
+			else
+				break
+			fi
+		done
 	else
-	  eval "`cat "$SECvarFile"`" >/dev/null 2>&1
+		while true;do
+			eval "`cat "$SECvarFile"`" >/dev/null 2>&1
+			local lnRetFromEval=$?
+			if((lnRetFromEval!=0));then
+				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"
+				SECFUNCfixCorruptFile "$SECvarFile"
+			else
+				break
+			fi
+		done
 	fi
 	pSECFUNCvarPrepare_SECvars_ArrayToExport #TODO: (GAMBIARRA) makes SECvars work again, understand why and fix.
 	#pSECFUNCvarPrepareArraysToExport
