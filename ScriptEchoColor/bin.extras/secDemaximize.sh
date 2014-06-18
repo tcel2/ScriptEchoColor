@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Copyright (C) 2013-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
