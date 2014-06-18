@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2014 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -22,44 +22,38 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-function FUNCparent() {
-	xwininfo -tree -id $1 |grep "Parent window id"
-};export -f FUNCparent
+strFileCfg="$HOME/.`basename $0`.cfg"
 
-function FUNCparentest() {
-	echo "windowid is: $1" >&2
-	if [[ -z "$1" ]]; then
-		echoc -p "FUNCparentest missing windowId"
+bDaemon=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help show this help
+		eval `secinit`
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--daemon" ]];then #help run the daemon that keeps waiting for commands to execute
+		bDaemon=true
+	else
+		echo "invalid option '$1'" >>/dev/stderr
 		exit 1
 	fi
-	
-	local check=`printf %d $1`
-	local parent=-1
-	local parentest=-1
-	
-	while ! FUNCparent $check |grep -q "(the root window)"; do
-		echo "Child is: $check" >&2
-	  #echo "a $check" >&2 #DEBUG info
-		xwininfo -id $check |grep "Window id" >&2 #report
-		parent=`FUNCparent $check |egrep -o "0x[^ ]* "`
-		parent=`printf %d $parent`
-		check=$parent
-		#echoc -w -t 1
-		echo "Parent is: $parent" >&2
-	done
-	if((parent!=-1));then
-		parentest=$parent
-	fi
-	echo "Parentest is: $parentest" >&2
-	
-	if((parentest!=-1));then
-		echo $parentest
-		#echo "Parentest is: $check" >&2
-	else
-		echo $1
-		#echo "Child has no parent." >&2
-	fi
-};export -f FUNCparentest
+	shift
+done
 
-FUNCparentest $1
+if $bDaemon;then
+	while true;do
+		strExecCmd="`head -n 1 "$strFileCfg"`"
+		echo "Exec: $strExecCmd"
+		#eval "$strExecCmd" >>/tmp/ 2>&1 &
+		eval "$strExecCmd" &
+		sleep 5
+	done
+	exit
+fi
+
+strExecParams=""
+for strParam in "$@";do
+	strExecParams+="'$strParam' "
+done
+echo "ExecQueue: $strExecParams" >>/dev/stderr
+echo "$strExecParams" >>"$strFileCfg"
 

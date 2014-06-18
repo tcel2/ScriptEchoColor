@@ -736,7 +736,7 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 	
 	#maintenance, remove dead pids from the list
 	if $l_bForceAllow;then 
-		local l_pid=-1
+		local l_pid=-1 #TODO read: info kill, about negative and 0 pid...
 #		local l_maxPidId=`cat /proc/sys/kernel/pid_max`
 #		for((l_pid=0;l_pid<l_maxPidId;l_pid++));do
 #			if [[ -n "${SECmultiThreadEvenPids[l_pid]}" ]];then

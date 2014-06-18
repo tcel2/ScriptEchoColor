@@ -36,6 +36,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		echo "All instances of this script will be executed one per time, not concurrently. Can wait the cpu can breath before running the command."
 		echo "This script can be tested with: "'for((i=0;i<20;i++));do secDelayedExec.sh ls $i & done'
+		echo "This script is actually too heavy on many simultaneous calls, so it is more for tests and as an example of concurrency than actually useful..."
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--showlog" ]];then #help

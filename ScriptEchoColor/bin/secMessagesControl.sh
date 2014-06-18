@@ -121,7 +121,7 @@ if [[ -z "`echo "$1" |tr -d "[:digit:]"`" ]];then
 fi
 
 if((nPid>0));then
-	if ! SECFUNClockFileAllowedPid --active --check "$nPid";then
+	if ! SECFUNCpidChecks --active --check "$nPid";then
 		echoc -p "invalid nPid='$nPid'"
 		exit 1
 	else

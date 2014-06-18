@@ -846,7 +846,7 @@ function SECFUNCechoBugtrack() {
 	fi
 }
 
-function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stored at SECstrLockFileAllowedPid
+function SECFUNCpidChecks() { # pid checks #TODO remove deprecated code
 	local lbCheckOnly=false
 	local lbCmpPid=false
 	local lbWritePid=false
@@ -855,30 +855,30 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	local lbCheckPid=false
 	#!!! local lnPid= #do not set it!!! unbound will work
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNClockFileAllowedPid_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCpidChecks_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-		elif [[ "$1" == "--hasotherpids" ]];then #SECFUNClockFileAllowedPid_help <skipPid> return true if there are other requests other than the skipPid (usually $$ of caller script)
-			shift
-			lnPid="${1-0}"
-			
-			lbHasOtherPidsPidSkip=true
-			lbCheckPid=true
-		elif [[ "$1" == "--cmp" ]];then #SECFUNClockFileAllowedPid_help <pid>
+#		elif [[ "$1" == "--hasotherpids" ]];then #SECFUNCpidChecks_help <skipPid> return true if there are other requests other than the skipPid (usually $$ of caller script)
+#			shift
+#			lnPid="${1-0}"
+#			
+#			lbHasOtherPidsPidSkip=true
+#			lbCheckPid=true
+		elif [[ "$1" == "--cmp" ]];then #SECFUNCpidChecks_help <pid>
 			shift
 			lnPid="${1-0}"
 			
 			lbCmpPid=true
 			lbCheckPid=true
-		elif [[ "$1" == "--write" || "$1" == "--allow" ]];then #SECFUNClockFileAllowedPid_help <pid>
-			shift
-			lnPid="${1-0}"
-			
-			lbWritePid=true
-			lbCheckPid=true
-		elif [[ "$1" == "--active" ]];then #SECFUNClockFileAllowedPid_help the pid of other options must be active or it will return false
+#		elif [[ "$1" == "--write" || "$1" == "--allow" ]];then #SECFUNCpidChecks_help <pid>
+#			shift
+#			lnPid="${1-0}"
+#			
+#			lbWritePid=true
+#			lbCheckPid=true
+		elif [[ "$1" == "--active" ]];then #SECFUNCpidChecks_help the pid of other options must be active or it will return false
 			lbMustBeActive=true
-		elif [[ "$1" == "--check" ]];then #SECFUNClockFileAllowedPid_help <pid>
+		elif [[ "$1" == "--check" ]];then #SECFUNCpidChecks_help <pid>
 			shift
 			lnPid="${1-0}"
 			
@@ -896,7 +896,7 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 		lbMustBeActive=false
 	fi
 	
-	function SECFUNClockFileAllowedPid_check(){
+	function SECFUNCpidChecks_check(){
 		local lnPid="${1-}"
 		
 		if [[ -z "$lnPid" ]];then
@@ -920,7 +920,7 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	
 	# pid check only
 	if $lbCheckPid;then
-		if ! SECFUNClockFileAllowedPid_check "$lnPid";then
+		if ! SECFUNCpidChecks_check "$lnPid";then
 			if $lbHasOtherPidsPidSkip;then
 				# if pid is invalid all other pids available are valid to return 0
 				lnPid=-1
@@ -968,7 +968,7 @@ function SECFUNClockFileAllowedPid() { # defaults to return the allowed pid stor
 	local lbAllowedIsValid=false
 	if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		lnAllowedPid="`cat "$SECstrLockFileAllowedPid" 2>/dev/null`"
-		if SECFUNClockFileAllowedPid_check $lnAllowedPid;then
+		if SECFUNCpidChecks_check $lnAllowedPid;then
 			lbAllowedIsValid=true
 		fi
 	else
