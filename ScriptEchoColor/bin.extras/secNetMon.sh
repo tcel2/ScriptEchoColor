@@ -27,6 +27,7 @@ eval `secinit`
 strSelfName="`basename "$0"`"
 
 bDaemon=false
+bRestart=false
 nDelay=0
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -35,6 +36,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit
 	elif [[ "$1" == "--daemon" ]];then #help start the daemon
 		bDaemon=true
+	elif [[ "$1" == "--restart" ]];then #help restart the daemon
+		bDaemon=true
+		bRestart=true
 	elif [[ "$1" == "--delay" ]];then #help delay between checks (works for daemon and for default monitoring)
 		shift
 		nDelay=${1-}
@@ -70,9 +74,31 @@ SECFUNCechoDbgA "strNethogsVersion='$strNethogsVersion', strNethogsMinVersion='$
 
 strNethogsLogFile="/tmp/.$strSelfName.nethogs.log"
 if $bDaemon;then
+	strCmdNetHogs="`which nethogs` -b -v 2"
+	
+	while true;do
+		if $bRestart;then
+			#echoc -x "pkill -fe '$strCmdNetHogs'" #without -x it will kill itself too...
+			SECFUNCexecA --echo pkill -fe "$strCmdNetHogs"
+		fi
+
+		SECFUNCuniqueLock --setdbtodaemon
+
+		if $SECbDaemonWasAlreadyRunning && ! $bRestart;then
+			SECFUNCechoErrA "daemon already running..."
+			exit 1
+		fi
+		
+		if ! $SECbDaemonWasAlreadyRunning;then
+			break;
+		fi
+		
+		sleep 5
+	done
+
 	# shows sent and received in total of bytes
-	if ! nethogs -b -v 2 -d $nDelay >>"$strNethogsLogFile";then
-		SECFUNCechoErrA '`nethogs` execution failed...'
+	if ! $strCmdNetHogs -d $nDelay >>"$strNethogsLogFile";then
+		SECFUNCechoErrA "\`$strCmdNetHogs\` execution failed or was terminated..."
 		exit 1
 	fi
 else
