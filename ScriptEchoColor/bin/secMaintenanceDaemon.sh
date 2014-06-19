@@ -53,6 +53,7 @@ bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
+bShowErrors=false
 #bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -79,6 +80,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		fMonitorDelay=30
 	elif [[ "$1" == "--errmon" ]];then #help errors monitor
 		bErrorsMonitor=true
+	elif [[ "$1" == "--errors" ]];then #help show all errors (not only last ones)
+		bShowErrors=true
 	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
 		shift
 		fMonitorDelay="${1-}"
@@ -180,6 +183,9 @@ elif $bPidsMonitor;then
 		#sleep $fMonitorDelay;
 		echoc -w -t $fMonitorDelay
 	done
+	exit
+elif $bShowErrors;then
+	echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"
 	exit
 elif $bErrorsMonitor;then
 	tail -F "${SEC_TmpFolder}/.SEC.Error.log"
