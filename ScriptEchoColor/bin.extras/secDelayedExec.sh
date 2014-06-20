@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+#TODO check at `info at` if the `at` command can replace this script?
+
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then
 		echo "<delay> <command> <params>..."
@@ -49,7 +51,7 @@ fi
 
 sleep $nDelay
 
-echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.$USER.log"
+echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserName`.log"
 
 "$@"
 

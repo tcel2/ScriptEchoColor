@@ -24,7 +24,7 @@
 
 function SECFUNCcheckIfSudoIsActive() { 
 	# this would update the timestamp and so the timeout, therefore it is useless...
-	#nPts=`ps --no-headers -p $$ |sed -r 's".*pts/([0-9]*).*"\1"'`; now=`date +"%s"`; echo "remaining $((now-`sudo stat -c '%Y' /var/lib/sudo/$USER/$nPts`))s"
+	#nPts=`ps --no-headers -p $$ |sed -r 's".*pts/([0-9]*).*"\1"'`; now=`date +"%s"`; echo "remaining $((now-`sudo stat -c '%Y' /var/lib/sudo/\`SECFUNCgetUserName\`/$nPts`))s"
 	
 	#if sudo -nv 2>/dev/null 1>/dev/null; then 
 	if sudo -n uptime 2>/dev/null 1>/dev/null; then 
@@ -46,6 +46,7 @@ function SECFUNCbeforePromptCommand(){
 }
 trap 'SECFUNCbeforePromptCommand' DEBUG
 function SECFUNCpromptCommand () { #at .bashrc put this: if [[ -f "/usr/lib/ScriptEchoColor/extras/funcPromptCommand.sh" ]];then source "/usr/lib/ScriptEchoColor/extras/funcPromptCommand.sh";fi
+	#TODO if time() is used with a command, the delay messes up becoming very low...
 	SECfCommandDelay="`bc <<< "\`date +"%s.%N"\`-($SECdtBeforeCommandSec.$SECdtBeforeCommandNano)"`"
 	if [[ "${SECfCommandDelay:0:1}" == "." ]];then
 		SECfCommandDelay="0$SECfCommandDelay"

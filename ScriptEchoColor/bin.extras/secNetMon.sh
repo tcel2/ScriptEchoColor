@@ -103,6 +103,8 @@ if $bDaemon;then
 	fi
 else
 	charTab="`echo -en "\t"`"
+	astrPidTotalsAndLasts=()
+	bSkipRecalc=true #only the first recalc should be skipped in case there is more than the lines limit already
 	while true;do
 		strEvaluateableCmds="`cat "$strNethogsLogFile" \
 			|grep "$charTab" \
@@ -111,7 +113,29 @@ else
 		anPids=(`echo "$strEvaluateableCmds" \
 			|grep -o "nPid='[[:digit:]]*'" \
 			|sed -r "s@nPid='([[:digit:]]*)'@\1@" |sort -un`)
+
+		# remove lines that do not match having a tab \t char
+		#sed -i "/\t/p;d" "$strNethogsLogFile"
+		# remove old lines and prepend a total for each pid
+#		bPrependTotals=false
+		bRecalcTotals=false
+		if SECFUNCdelay CleanNethogsLog --checkorinit 60;then
+			nTotLines="`echo "$strEvaluateableCmds" |wc -l`"
+#			nRemoveLines=0
+			if((nTotLines>1000));then
+				if ! $bSkipRecalc;then
+	#				nRemoveLines=$((nTotLines-500))
+	#				sed -i "1,${nRemoveLines}d" "$strNethogsLogFile"
+					sed -i "1,${nTotLines}d" "$strNethogsLogFile"
+	#				bPrependTotals=true
+					bRecalcTotals=true
+				else
+					bSkipRecalc=false #first recalc skipped, disable it
+				fi
+			fi
+		fi
 		
+#		strPrependLines=""
 		if((`SECFUNCarraySize anPids`>0));then
 			echo -e "User\tPid\tSentTotal\tReceivedTotal\tCommand"
 			for nPid in "${anPids[@]}";do
@@ -123,11 +147,11 @@ else
 					exit 1
 				fi
 				#echo "$strFullDataToPid" |tail -n 1
-		
-				function FUNCcalcTotal(){
+				
+				function FUNCcalcTotalFromRemainingData(){
 					local lstrId="$1"
 			
-					local lnPrevious=0
+					local lnPrevious="$2"
 					local lnTotal=0
 					local lnCurrent=0
 					local lanCurrent=(`echo "$strFullDataToPid" \
@@ -144,16 +168,51 @@ else
 						lnPrevious="$lnCurrent"
 					done
 					SECFUNCechoDbgA "lnTotal='$lnTotal' += lnPrevious='$lnPrevious'"
-					echo $((lnTotal+=lnPrevious))
+					((lnTotal+=lnPrevious))
+					echo "$lnTotal:$lnPrevious"
 		#			echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >>/dev/stderr
 				}
-				nSentTotal="`FUNCcalcTotal nSent`"
-				nReceivedTotal="`FUNCcalcTotal nReceived`"
-				strUser="`getent passwd "$nUser" | cut -d: -f1`"
+				
+				# recalc totals
+				nSentTotal=0
+				nSentLast=0
+				nReceivedTotal=0
+				nReceivedLast=0
+				if $bRecalcTotals;then
+					strTotalsAndLastsForPid="${astrPidTotalsAndLasts[$nPid]}"
+					if [[ -n "$strTotalsAndLastsForPid" ]];then
+						eval "`echo "$strTotalsAndLastsForPid" \
+							|sed -r "s'^([^:]):([^:]):([^:]):([^:]):$'\
+								nSentTotal=\1;\
+								nSentLast=\2;\
+								nReceivedTotal=\3;\
+								nReceivedLast=\4;\
+							'"`"
+					fi
+				fi
+				strSent="`    FUNCcalcTotalFromRemainingData nSent     $nSentLast    `"
+				strReceived="`FUNCcalcTotalFromRemainingData nReceived $nReceivedLast`"
+				nSentTotal+="`echo "$strSent" |cut -d: -f1`"
+				nSentLast="`  echo "$strSent" |cut -d: -f2`"
+				nReceivedTotal+="`echo "$strReceived" |cut -d: -f1`"
+				nReceivedLast="`  echo "$strReceived" |cut -d: -f2`"
+				
+				strUser="`getent passwd "$nUser" |cut -d: -f1`"
 				echo -e "$strUser\t$nPid\t$nSentTotal\t$nReceivedTotal\t$strCmd"
 				#echo "$strFullDataToPid" |grep -o "nReceived='[[:digit:]]*'" |gawk '!seen[$0]++'
+				
+#				if $bPrependTotals;then
+#					strPrependLines+=""
+#				fi
+				
+				astrPidTotalsAndLasts[$nPid]="$nSentTotal:$nSentLast:$nReceivedTotal:$nReceivedLast:"
 			done
 		fi
+		
+#		while [[ -n "$strPrependLines" ]];do
+#			sed -i "1i `echo "$strPrependLines" |head -n 1`" "$strNethogsLogFile"
+#			strPrependLines="`echo "$strPrependLines" |tail -n +2`"
+#		done
 		
 		echoc -w -t $nDelay
 	done

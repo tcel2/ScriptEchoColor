@@ -31,6 +31,7 @@ strPathLyrics="$HOME/.cache/banshee-1/extensions/lyrics/"
 
 bGraphicalDialog=false
 bCloseWithWindow=false
+bDownloadLyrics=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp
@@ -40,6 +41,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strPathLyrics="$1"
 	elif [[ "$1" == "-x" ]];then #help use graphical interface 
 		bGraphicalDialog=true
+	elif [[ "$1" == "--nodownload" ]];then #help do not try to download missing lyrics, btw to the download try to find lyrics online, the music Name and Artist Name must be correctly spelled (not 100% granted anyway...)
+		bDownloadLyrics=false
 	elif [[ "$1" == "--closewithwindow" ]];then #help if graphical interface is closed, script exits
 		bCloseWithWindow=true
 	else
@@ -64,8 +67,10 @@ if $bGraphicalDialog;then
 	else
 		function FUNCreader() {
 			while true;do
-				if pgrep "^banshee$";then
-					evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+				if pgrep "^banshee$" >/dev/null;then
+					if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
+						evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+					fi
 				fi
 				sleep 1
 			done
@@ -74,8 +79,94 @@ if $bGraphicalDialog;then
 	fi
 fi
 
+strTabChar="`echo -e "\t"`"
+aLyricsSiteAndStrings=()
+#aLyricsSiteAndStrings+=("lstrLyricsUrl\
+#${strTabChar}lstrValidationRegex\
+#${strTabChar}lstrEndingRegex\
+#${strTabChar}lstrSpacesReplacedBy\
+#${strTabChar}lstrCharBetweenArtistAndMusicName")
+aLyricsSiteAndStrings+=("http://www.absolutelyrics.com/lyrics/view\
+${strTabChar}[*][*][*][*][*]\
+${strTabChar}[*][*][*][*][*] comments [*][*][*][*][*]\
+${strTabChar}_\
+${strTabChar}/")
+aLyricsSiteAndStrings+=("http://music-tube.eu/lyrics/view\
+${strTabChar}[-]--------------\
+${strTabChar}===============================================================================\
+${strTabChar}-\
+${strTabChar}_")
+
+#alias SECFUNCreturnOnFailA='if(($?!=0));then set +x;return 1;fi;'
+function FUNCdownloadLyrics(){
+	local lnIndex=${1}
+	local lstrLyricsMissingFile="${2}"
+	
+	if ! $bDownloadLyrics;then return;fi
+	
+	#set -x
+	local lstrSpacesReplacedBy="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f4`"
+	local lstrCharBetweenArtistAndMusicName="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f5`"
+	
+	function FUNCfixNames(){
+		echo "$1" |tr "[:upper:]" "[:lower:]" |tr " " "$lstrSpacesReplacedBy"
+	}
+	
+	local lstrLyricsId="`basename "${lstrLyricsMissingFile}"`";lstrLyricsId="${lstrLyricsId%.lyrics}"
+#	local lstrLyricsArtistName="`echo "$lstrLyricsId" |cut -d'_' -f1`"
+#	local lstrLyricsMusicName="`echo "$lstrLyricsId" |cut -d'_' -f2`"
+	local lstrLyricsArtistName="`echo "$lstrLyricsId" |cut -d'_' -f1`";
+	lstrLyricsArtistName="`FUNCfixNames "$lstrLyricsArtistName"`"
+	local lstrLyricsMusicName="`echo "$lstrLyricsId" |cut -d'_' -f2`";
+	lstrLyricsMusicName="`FUNCfixNames "$lstrLyricsMusicName"`"
+#	local lstrLyricsRemoteFileId="`echo "${lstrLyricsArtistName}${lstrCharBetweenArtistAndMusicName}${lstrLyricsMusicName}" |tr "[:upper:]" "[:lower:]" |tr " " "$lstrSpacesReplacedBy"`"
+	local lstrLyricsRemoteFileId="${lstrLyricsArtistName}${lstrCharBetweenArtistAndMusicName}${lstrLyricsMusicName}"
+
+	local lstrLyricsUrl="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f1`"
+	local lstrLyricsFullUrl="$lstrLyricsUrl/$lstrLyricsRemoteFileId"
+	local lstrValidationRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f2`"
+	local lstrEndingRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f3`"
+	
+	function FUNClocalFileIdSlashFix(){
+		if [[ "${lstrCharBetweenArtistAndMusicName}" == "/" ]];then
+			lstrLyricsLocalFileId="`echo "$lstrLyricsLocalFileId" |tr "/" "_"`"
+			mv -v "$lstrLyricsMusicName" "${lstrLyricsLocalFileId}"
+		fi
+	}
+	
+	strFolderTmpLyricsDownload="/tmp/.$SECscriptSelfName.lyricsDownload"
+	mkdir -vp "$strFolderTmpLyricsDownload"
+	cd "$strFolderTmpLyricsDownload";SECFUNCreturnOnFailA
+	local lstrLyricsLocalFileId="$lstrLyricsRemoteFileId"
+	FUNClocalFileIdSlashFix
+	if [[ ! -f "$lstrLyricsLocalFileId" ]];then
+		wget "$lstrLyricsFullUrl"
+		FUNClocalFileIdSlashFix
+	fi
+	if [[ -f "$lstrLyricsLocalFileId" ]];then
+		mv -v "$lstrLyricsLocalFileId" "${lstrLyricsLocalFileId}.html";SECFUNCreturnOnFailA
+	  html2text "${lstrLyricsLocalFileId}.html" >"${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  grep -q "^${lstrValidationRegex}$" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  # remove above lyrics
+	  sed -i "0,/^${lstrValidationRegex}$/d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  # remove after lyrics
+	  sed -i "/^${lstrEndingRegex}$/,$""d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  sed -i "1i ..." "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  sed -i "1i DownloadedWith:$SECscriptSelfName" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  sed -i "1i DownloadedFrom:$lstrLyricsFullUrl" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
+	  cp -v "${lstrLyricsLocalFileId}.txt" "$lstrLyricsMissingFile";SECFUNCreturnOnFailA
+	  #enscript "${lstrLyricsLocalFileId}.txt" -p "${lstrLyricsLocalFileId}.pdf";SECFUNCreturnOnFailA
+	  #set +x
+	  return 0
+	fi
+	
+  #set +x
+	return 1
+};export -f FUNCdownloadLyrics
+
 pidLess=""
 strMusic="";
+bJustDownloadedLyrics=false
 while true; do
 	pidBanshee="`pgrep banshee`"
 	
@@ -86,7 +177,8 @@ while true; do
 					xdotool getwindowname $nWindowId |grep -v "^Banshee";\
 				done);
 				
-		if [[ "$strMusicNew" != "$strMusic" ]];then \
+		if [[ -n "$strMusicNew" ]] && ( [[ "$strMusicNew" != "$strMusic" ]] || $bJustDownloadedLyrics );then
+			bJustDownloadedLyrics=false
 			if [[ -n "$pidLess" ]] && ps -p $pidLess 2>/dev/null;then
 				echoc -x "kill $pidLess"
 			
@@ -110,6 +202,15 @@ while true; do
 				fi
 			else
 				echoc --alert "File not found: '$strLyricsFile'"
+				for nIndex in "${!aLyricsSiteAndStrings[@]}";do
+					if FUNCdownloadLyrics $nIndex "$strLyricsFile";then
+						bJustDownloadedLyrics=true
+						break
+					fi
+				done
+				if ! $bJustDownloadedLyrics;then
+					echo "Lyrics for '`basename "${strLyricsFile%.lyrics}"`' is Missing..." |enscript -f "Times-Roman14" -p "${strFileLyricsTmp}.pdf"
+				fi
 			fi
 			#pidLess="$(sh -c 'cat "$strLyricsFile" |less & echo ${!}')" #less wont work this way
 		fi;

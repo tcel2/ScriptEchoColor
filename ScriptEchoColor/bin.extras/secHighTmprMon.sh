@@ -113,7 +113,7 @@ function FUNChighPercPidList() {
 	local l_strIgnoredPids=`FUNCignoredPids`
 	SECFUNCechoDbgA "l_strIgnoredPids='$l_strIgnoredPids'"
 	local aPercPid=(`\
-		ps -A --no-headers --user $USER --sort=-pcpu -o pcpu,pid 2>/dev/null \
+		ps -A --no-headers --user \`SECFUNCgetUserName\` --sort=-pcpu -o pcpu,pid 2>/dev/null \
 		|egrep -v "($l_strIgnoredPids)$" \
 		|head -n $((topCPUtoCheckAmount)) \
 		|sed 's"^[ ]*""' \
@@ -136,7 +136,7 @@ function FUNChighPercPidList() {
 }
 
 function FUNClistTopPids() {
-	ps -A --user $USER --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm 2>/dev/null \
+	ps -A --user `SECFUNCgetUserName` --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm 2>/dev/null \
 	|head -n $(($1+1))
 }
 
@@ -439,7 +439,7 @@ function FUNCdaemon() {
 				# report processes
 				FUNClistTopPids $topCPUtoCheckAmount
 				#echoc -x "ps -A --sort=-pcpu -o pcpu,pid,ppid,stat,state,nice,user,comm |head -n $((topCPUtoCheckAmount+1))"
-				#pidHighCPUusage=`ps --user $USER --sort=-pcpu -o pid |head -n 2 |tail -n 1`
+				#pidHighCPUusage=`ps --user \`SECFUNCgetUserName\` --sort=-pcpu -o pid |head -n 2 |tail -n 1`
 				#pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
 				#echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
 		

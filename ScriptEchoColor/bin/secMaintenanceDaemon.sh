@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 strSelfName="`basename "$0"`"
-strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.$USER.DaemonPid"
+strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.${USER-`id -un`}.DaemonPid" #id -un required as no secinit available yet..
 nPidDaemon="`cat "$strSymlinkToDaemonPidFile" 2>/dev/null`"
 if [[ -z "$nPidDaemon" ]];then
 	nPidDaemon="-1"
@@ -288,14 +288,14 @@ while true;do
 	#		echo
 	#	fi
 		
-		if ! pgrep -U $USER -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+		if ! pgrep -U `SECFUNCgetUserName` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
 			varset bShowStatusLine=false
 		fi
 	else
 		SECFUNCdrawLine --stay "" " "
 		#echo -en "\r"
 		
-		if pgrep -U $USER -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+		if pgrep -U `SECFUNCgetUserName` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
 			varset bShowStatusLine=true
 		fi
 	fi

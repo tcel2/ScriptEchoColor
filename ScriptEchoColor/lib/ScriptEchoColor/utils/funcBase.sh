@@ -34,6 +34,15 @@ function _SECFUNCcriticalForceExit() {
 		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >>/dev/stderr
 	done
 }
+function SECFUNCgetUserName(){
+	if [[ -n "${USER-}" ]];then
+		echo "$USER"
+	else
+		id -un
+	fi
+}
+
+alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi;'
 
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
@@ -51,7 +60,7 @@ fi
 if [[ -L "$SEC_TmpFolder" ]];then
 	SEC_TmpFolder="`readlink -f "$SEC_TmpFolder"`" #required with `find` that would fail on symlink to a folder..
 fi
-SEC_TmpFolder="$SEC_TmpFolder/.SEC.$USER"
+SEC_TmpFolder="$SEC_TmpFolder/.SEC.`SECFUNCgetUserName`"
 if [[ ! -d "$SEC_TmpFolder" ]];then
 	mkdir "$SEC_TmpFolder"
 fi
