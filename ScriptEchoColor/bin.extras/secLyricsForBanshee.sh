@@ -69,18 +69,18 @@ if ! $bUseMozrepl;then
 		if $bCloseWithWindow;then
 			evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
 			pidGfxReader=$!
-		else
-			function FUNCreader() {
-				while true;do
-					if pgrep "^banshee$" >/dev/null;then
-						if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
-							evince "${strFileLyricsTmp}.pdf" 2>/dev/null
-						fi
-					fi
-					sleep 1
-				done
-			}
-			FUNCreader&
+#		else
+#			function FUNCreader() {
+#				while true;do
+#					if pgrep "^banshee$" >/dev/null;then
+#						if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
+#							evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+#						fi
+#					fi
+#					sleep 1
+#				done
+#			}
+#			FUNCreader&
 		fi
 	fi
 fi
@@ -249,6 +249,10 @@ function FUNConlineLyrics(){
 pidLess=""
 strMusic="";
 bJustDownloadedLyrics=false
+bOpenOnce=true
+if pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
+	bOpenOnce=false
+fi
 while true; do
 	pidBanshee="`pgrep banshee`"
 	
@@ -319,10 +323,41 @@ while true; do
 		fi
 	fi
 	
+	pidGfxReader=""
+	bSlept=false
+	nSleepDelay=3
+	if ! $bUseMozrepl;then
+		if $bGraphicalDialog;then
+			#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
+	
+			if ! $bCloseWithWindow;then
+				if pgrep "^banshee$" >/dev/null;then
+					bOpenNow=false
+					if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
+						if $bOpenOnce;then
+							bOpenNow=true
+							bOpenOnce=false
+						else
+							if echoc -t $nSleepDelay -q "open evince (lyrics pdf viewer) now?";then
+								bOpenNow=true
+								bSlept=true
+							fi
+						fi
+						if $bOpenNow;then
+							evince "${strFileLyricsTmp}.pdf" 2>/dev/null &
+						fi
+					fi
+				fi
+			fi
+		fi
+	fi
+	
 	if SECFUNCdelay daemonHold --checkorinit 5;then
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	
-	sleep 3;
+	if ! $bSlept;then
+		sleep $nSleepDelay;
+	fi
 done
 
