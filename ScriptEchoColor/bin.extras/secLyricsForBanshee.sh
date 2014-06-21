@@ -115,17 +115,9 @@ function FUNCmozreplCoolness(){
 	#TODO some way to know if homepage was found and if not, return false?
 	while true;do
 		#TODO `sleep 3` is based on what? find a better way to know telnet command was accepted...
-		local lstrResp="`(echo "content.location.href = '$lstrUrl'";sleep 3) |telnet localhost 4242 2>&1 1>/dev/null`"
-		SECFUNCechoDbgA "lstrResp='$lstrResp'"
-		#TODO some way to let telnet exit without error?
-		if [[ "$lstrResp" == "Connection closed by foreign host." ]];then
+		if (echo "content.location.href = '$lstrUrl'";sleep 2;echo -e '\035';sleep 2) |telnet localhost 4242 >/dev/null;then
 			break
 		fi
-#		(echo "content.location.href = '$1'";sleep 3) |telnet localhost 4242 >/dev/null;local lnRet=$?;SECFUNCechoDbgA "lnRet='$lnRet'"
-#		if((lnRet==0));then
-#			break;
-#		fi
-		#telnet: Unable to connect to remote host: Connection refused
 		echoc -w -t 10 --alert "is MozRepl started?"
 	done
 	SECFUNCdbgFuncOutA;
