@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ############################# INIT ###############################
-eval `secinit`
+eval `secinit --novarchilddb`
 
 strSelfName="`basename "$0"`"
 declare -A aDaemonsPid
@@ -46,7 +46,7 @@ bReleaseAll=false
 bHoldAll=false
 bCheckHold=false
 bList=false
-bDaemon=false
+bMonitorDaemons=false
 bRegisterOnly=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
@@ -57,8 +57,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bReleaseAll=true
 	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
 		bList=true
-	elif [[ "$1" == "--daemon" ]];then #help loop --list
-		bDaemon=true
+	elif [[ "$1" == "--daemon" ]];then
+		SECFUNCechoErrA "deprecated option '$1', use --mondaemons instead"
+		_SECFUNCcriticalForceExit
+	elif [[ "$1" == "--mondaemons" ]];then #help monitor running daemons
+		bMonitorDaemons=true
 	elif [[ "$1" == "--register" ]];then #help register the daemon (to be listed).
 		bRegisterOnly=true
 	elif [[ "$1" == "--help" ]];then #help show this help
@@ -93,7 +96,7 @@ function FUNClist() {
 	SECFUNCdbgFuncOutA;
 }
 
-function FUNCregisterDaemon() {
+function FUNCregisterOneDaemon() {
 	SECFUNCdbgFuncInA;
 	#strPPidId=`ps --no-headers -p $PPID -o comm`
 	nPidDaemon=$SECnPidDaemon
@@ -114,19 +117,17 @@ function FUNCregisterDaemon() {
 }
 
 ############################# MAIN ###############################
-if $bRegisterOnly;then
-	FUNCregisterDaemon
-	exit
+if ! $bMonitorDaemons;then
+	# other options/commands can communicate with monitor daemon this way, if it is running...
+	SECFUNCuniqueLock --setdbtodaemon
+	if ! $SECbDaemonWasAlreadyRunning;then
+		SECFUNCechoBugtrackA "'$strSelfName' daemons monitor isnt running..."
+	fi
 fi
 
-if $bList;then
-	FUNClist
-	exit
-fi
-
-if $bDaemon;then
+if $bMonitorDaemons;then
 	SECFUNCuniqueLock --daemonwait
-	#FUNCregisterDaemon
+	#FUNCregisterOneDaemon
 	while true;do
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		FUNClist
@@ -138,10 +139,12 @@ if $bDaemon;then
 		esac
 	done
 	exit
-fi
-
-if $bCheckHold;then
-	FUNCregisterDaemon
+elif $bRegisterOnly;then
+	FUNCregisterOneDaemon
+elif $bList;then
+	FUNClist
+elif $bCheckHold;then
+	FUNCregisterOneDaemon
 	if $bHoldScripts;then
 		echoc --info "$strSelfName: script on hold (hit: 'y' to run once; 'r' to release all)..."
 		

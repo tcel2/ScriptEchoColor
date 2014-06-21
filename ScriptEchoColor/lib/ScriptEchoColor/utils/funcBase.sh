@@ -42,7 +42,8 @@ function SECFUNCgetUserName(){
 	fi
 }
 
-alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi;'
+alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
+alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
@@ -1172,7 +1173,7 @@ function SECFUNCexecShowElapsed() {
 	SECFUNCexec --elapsed "$@"
 }
 
-function SECFUNChelpExit() {
+function _SECFUNChelpExit() { #TODO this should help on exiting cleanly on ctrl+c, develop it?
     #echo "usage: options runCommand"
     
     # this sed only cleans lines that have extended options with "--" prefixed

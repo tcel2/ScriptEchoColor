@@ -25,6 +25,10 @@
 source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh";
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh")
 
+################ VARS
+
+# PUT ALL AT funcBase.sh
+
 ################ FUNCTIONS
 
 function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory

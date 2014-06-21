@@ -24,26 +24,28 @@
 
 eval `secinit`
 
-SECFUNCuniqueLock --daemonwait
-
 strFileLyricsTmp="/tmp/$SECscriptSelfName.lyrics.tmp"
 strPathLyrics="$HOME/.cache/banshee-1/extensions/lyrics/"
 
 bGraphicalDialog=false
 bCloseWithWindow=false
 bDownloadLyrics=true
+bUseMozrepl=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp
+		echo "default: strPathLyrics='$strPathLyrics'"
+		SECFUNCshowHelp --nosort
 		exit
-	elif [[ "$1" == "--lyricspath" ]];then #help <path> set lyrics path
+	elif [[ "$1" == "--lyricspath" ]];then #help <strPathLyrics> set lyrics path
 		shift
 		strPathLyrics="$1"
-	elif [[ "$1" == "-x" ]];then #help use graphical interface 
-		bGraphicalDialog=true
-	elif [[ "$1" == "--nodownload" ]];then #help do not try to download missing lyrics, btw to the download try to find lyrics online, the music Name and Artist Name must be correctly spelled (not 100% granted anyway...)
+	elif [[ "$1" == "--nodownload" ]];then #help do not try to download missing lyrics, btw music Name and Artist Name must be correctly spelled for a better chance of being found
 		bDownloadLyrics=false
-	elif [[ "$1" == "--closewithwindow" ]];then #help if graphical interface is closed, script exits
+	elif [[ "$1" == "--mozreplyrics" ]];then #help load lyrics homepages at web browser. Start mozrepl (https://addons.mozilla.org/en-US/firefox/addon/mozrepl/) first. This overrides -x option.
+		bUseMozrepl=true
+	elif [[ "$1" == "-x" ]];then #help use GfxInterface
+		bGraphicalDialog=true
+	elif [[ "$1" == "--closewithwindow" ]];then #help when GfxInterface is closed, script exits
 		bCloseWithWindow=true
 	else
 		echoc -p "invalid option '$1'"
@@ -52,64 +54,114 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
+SECFUNCuniqueLock --daemonwait
+
 if [[ ! -f "${strFileLyricsTmp}.pdf" ]];then
 	# evince will auto-refresh if the file already exists
 	echo |enscript -p "${strFileLyricsTmp}.pdf"
 fi
 
 pidGfxReader=""
-if $bGraphicalDialog;then
-	#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
+if ! $bUseMozrepl;then
+	if $bGraphicalDialog;then
+		#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
 	
-	if $bCloseWithWindow;then
-		evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
-		pidGfxReader=$!
-	else
-		function FUNCreader() {
-			while true;do
-				if pgrep "^banshee$" >/dev/null;then
-					if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
-						evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+		if $bCloseWithWindow;then
+			evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
+			pidGfxReader=$!
+		else
+			function FUNCreader() {
+				while true;do
+					if pgrep "^banshee$" >/dev/null;then
+						if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
+							evince "${strFileLyricsTmp}.pdf" 2>/dev/null
+						fi
 					fi
-				fi
-				sleep 1
-			done
-		}
-		FUNCreader&
+					sleep 1
+				done
+			}
+			FUNCreader&
+		fi
 	fi
 fi
 
 strTabChar="`echo -e "\t"`"
 aLyricsSiteAndStrings=()
-#aLyricsSiteAndStrings+=("lstrLyricsUrl\
-#${strTabChar}lstrValidationRegex\
-#${strTabChar}lstrEndingRegex\
-#${strTabChar}lstrSpacesReplacedBy\
-#${strTabChar}lstrCharBetweenArtistAndMusicName")
+#aLyricsSiteAndStrings+=("lstrLyricsSiteBaseUrl\ #-f1
+#${strTabChar}lstrValidationRegex\               #-f2
+#${strTabChar}lstrEndingRegex\                   #-f3
+#${strTabChar}lstrSpacesReplacedBy\              #-f4
+#${strTabChar}lstrCharBetweenArtistAndMusicName\ #-f5
+#${strTabChar}lstrQuestionSymbolTranslate")      #-f6
 aLyricsSiteAndStrings+=("http://www.absolutelyrics.com/lyrics/view\
 ${strTabChar}[*][*][*][*][*]\
 ${strTabChar}[*][*][*][*][*] comments [*][*][*][*][*]\
 ${strTabChar}_\
-${strTabChar}/")
-aLyricsSiteAndStrings+=("http://music-tube.eu/lyrics/view\
-${strTabChar}[-]--------------\
-${strTabChar}===============================================================================\
-${strTabChar}-\
-${strTabChar}_")
+${strTabChar}/\
+${strTabChar},3f")
+#aLyricsSiteAndStrings+=("http://music-tube.eu/lyrics/view\
+#${strTabChar}[-]--------------\
+#${strTabChar}===============================================================================\
+#${strTabChar}-\
+#${strTabChar}_")
+
+function FUNCmozreplCoolness(){
+	SECFUNCdbgFuncInA;
+	local lstrUrl="$1"
+	lstrUrl="`echo "$lstrUrl" |sed -r "s;';\\\\\';g"`" #result is from ' to \' ...
+	#lstrUrl="`echo "$lstrUrl" |sed -r 's;'"'"';\\\'"'"';'`"
+	#echo ">>>> lstrUrl='$lstrUrl'" >>/dev/stderr
+	SECFUNCechoDbgA "lstrUrl='$lstrUrl'"
+	#TODO some way to know if homepage was found and if not, return false?
+	while true;do
+		#TODO `sleep 3` is based on what? find a better way to know telnet command was accepted...
+		local lstrResp="`(echo "content.location.href = '$lstrUrl'";sleep 3) |telnet localhost 4242 2>&1 1>/dev/null`"
+		SECFUNCechoDbgA "lstrResp='$lstrResp'"
+		#TODO some way to let telnet exit without error?
+		if [[ "$lstrResp" == "Connection closed by foreign host." ]];then
+			break
+		fi
+#		(echo "content.location.href = '$1'";sleep 3) |telnet localhost 4242 >/dev/null;local lnRet=$?;SECFUNCechoDbgA "lnRet='$lnRet'"
+#		if((lnRet==0));then
+#			break;
+#		fi
+		#telnet: Unable to connect to remote host: Connection refused
+		echoc -w -t 10 --alert "is MozRepl started?"
+	done
+	SECFUNCdbgFuncOutA;
+}
 
 #alias SECFUNCreturnOnFailA='if(($?!=0));then set +x;return 1;fi;'
-function FUNCdownloadLyrics(){
+function FUNConlineLyrics(){
+	SECFUNCdbgFuncInA;
+	local lbMozReplOnly=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--mozrepl-only" ]];then
+			lbMozReplOnly=true
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			_SECFUNCcriticalForceExit
+		fi
+		shift
+	done
+	
 	local lnIndex=${1}
 	local lstrLyricsMissingFile="${2}"
 	
-	if ! $bDownloadLyrics;then return;fi
-	
 	#set -x
+	# dismember aLyricsSiteAndStrings array item
+	local lstrLyricsSiteBaseUrl="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f1`"
+	local lstrValidationRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f2`"
+	local lstrEndingRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f3`"
 	local lstrSpacesReplacedBy="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f4`"
 	local lstrCharBetweenArtistAndMusicName="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f5`"
+	local lstrQuestionSymbolTranslate="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f6`"
 	
 	function FUNCfixNames(){
-		echo "$1" |tr "[:upper:]" "[:lower:]" |tr " " "$lstrSpacesReplacedBy"
+		echo "$1" \
+			|tr "[:upper:]" "[:lower:]" \
+			|tr " " "$lstrSpacesReplacedBy" \
+			|sed "s'[?]'$lstrQuestionSymbolTranslate'g"
 	}
 	
 	local lstrLyricsId="`basename "${lstrLyricsMissingFile}"`";lstrLyricsId="${lstrLyricsId%.lyrics}"
@@ -121,48 +173,78 @@ function FUNCdownloadLyrics(){
 	lstrLyricsMusicName="`FUNCfixNames "$lstrLyricsMusicName"`"
 #	local lstrLyricsRemoteFileId="`echo "${lstrLyricsArtistName}${lstrCharBetweenArtistAndMusicName}${lstrLyricsMusicName}" |tr "[:upper:]" "[:lower:]" |tr " " "$lstrSpacesReplacedBy"`"
 	local lstrLyricsRemoteFileId="${lstrLyricsArtistName}${lstrCharBetweenArtistAndMusicName}${lstrLyricsMusicName}"
-
-	local lstrLyricsUrl="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f1`"
-	local lstrLyricsFullUrl="$lstrLyricsUrl/$lstrLyricsRemoteFileId"
-	local lstrValidationRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f2`"
-	local lstrEndingRegex="`echo "${aLyricsSiteAndStrings[lnIndex]}" |cut -d"$strTabChar" -f3`"
 	
-	function FUNClocalFileIdSlashFix(){
+	if [[ -z "$lstrLyricsArtistName" ]];then
+		SECFUNCechoWarnA "missing lstrLyricsArtistName='$lstrLyricsArtistName'"
+		SECFUNCdbgFuncOutA;return 1
+	fi
+	if [[ -z "$lstrLyricsMusicName" ]];then
+		SECFUNCechoWarnA "missing lstrLyricsMusicName='$lstrLyricsMusicName'"
+		SECFUNCdbgFuncOutA;return 1
+	fi
+	
+	local lstrLyricsFullUrl="$lstrLyricsSiteBaseUrl/$lstrLyricsRemoteFileId"
+	#lstrLyricsFullUrl="`echo "$lstrLyricsFullUrl" |sed "s'[?]'$lstrQuestionSymbolTranslate'g"`"
+	SECFUNCechoDbgA "lstrLyricsFullUrl='$lstrLyricsFullUrl'"
+	if $bUseMozrepl;then
+		if ! FUNCmozreplCoolness "$lstrLyricsFullUrl";then
+			SECFUNCdbgFuncOutA;return 1
+		fi
+		if $lbMozReplOnly;then
+			SECFUNCdbgFuncOutA;return
+		fi
+	fi
+	
+	# the actual lyrics downloading...
+	function FUNClocalFileId(){
 		if [[ "${lstrCharBetweenArtistAndMusicName}" == "/" ]];then
-			lstrLyricsLocalFileId="`echo "$lstrLyricsLocalFileId" |tr "/" "_"`"
+			# if slash separates artist from musicname, fix it for local file name
+			lstrLyricsLocalFileId="`echo "$lstrLyricsLocalFileId" \
+				|tr "/" "_" \
+				|sed "s'$lstrQuestionSymbolTranslate'?'g" \
+			`"
 			mv -v "$lstrLyricsMusicName" "${lstrLyricsLocalFileId}"
 		fi
 	}
 	
 	strFolderTmpLyricsDownload="/tmp/.$SECscriptSelfName.lyricsDownload"
 	mkdir -vp "$strFolderTmpLyricsDownload"
-	cd "$strFolderTmpLyricsDownload";SECFUNCreturnOnFailA
+	cd "$strFolderTmpLyricsDownload";SECFUNCreturnOnFailDbgA
+	
 	local lstrLyricsLocalFileId="$lstrLyricsRemoteFileId"
-	FUNClocalFileIdSlashFix
+	FUNClocalFileId
+	
+	# it may have downloaded from a previous attempt
 	if [[ ! -f "$lstrLyricsLocalFileId" ]];then
-		wget "$lstrLyricsFullUrl"
-		FUNClocalFileIdSlashFix
+		if $bDownloadLyrics;then
+			wget "$lstrLyricsFullUrl"
+			FUNClocalFileId
+		fi
 	fi
+
 	if [[ -f "$lstrLyricsLocalFileId" ]];then
-		mv -v "$lstrLyricsLocalFileId" "${lstrLyricsLocalFileId}.html";SECFUNCreturnOnFailA
-	  html2text "${lstrLyricsLocalFileId}.html" >"${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  grep -q "^${lstrValidationRegex}$" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  # remove above lyrics
-	  sed -i "0,/^${lstrValidationRegex}$/d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  # remove after lyrics
-	  sed -i "/^${lstrEndingRegex}$/,$""d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  sed -i "1i ..." "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  sed -i "1i DownloadedWith:$SECscriptSelfName" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  sed -i "1i DownloadedFrom:$lstrLyricsFullUrl" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailA
-	  cp -v "${lstrLyricsLocalFileId}.txt" "$lstrLyricsMissingFile";SECFUNCreturnOnFailA
-	  #enscript "${lstrLyricsLocalFileId}.txt" -p "${lstrLyricsLocalFileId}.pdf";SECFUNCreturnOnFailA
-	  #set +x
-	  return 0
+		mv -v "$lstrLyricsLocalFileId" "${lstrLyricsLocalFileId}.html";SECFUNCreturnOnFailDbgA
+		html2text "${lstrLyricsLocalFileId}.html" >"${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		if ! grep -q "^${lstrValidationRegex}$" "${lstrLyricsLocalFileId}.txt";then
+			SEC_WARN=true SECFUNCechoWarnA "unable to validate lyrics..."
+			SECFUNCdbgFuncOutA;return 1
+		fi
+		# remove above lyrics
+		sed -i "0,/^${lstrValidationRegex}$/d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		# remove after lyrics
+		sed -i "/^${lstrEndingRegex}$/,$""d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		sed -i "1i ..." "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		sed -i "1i DownloadedWith:$SECscriptSelfName" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		sed -i "1i DownloadedFrom:$lstrLyricsFullUrl" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		cp -v "${lstrLyricsLocalFileId}.txt" "$lstrLyricsMissingFile";SECFUNCreturnOnFailDbgA
+		#enscript "${lstrLyricsLocalFileId}.txt" -p "${lstrLyricsLocalFileId}.pdf";SECFUNCreturnOnFailDbgA
+		#set +x
+		SECFUNCdbgFuncOutA;return 0
 	fi
 	
   #set +x
-	return 1
-};export -f FUNCdownloadLyrics
+	SECFUNCdbgFuncOutA;return 1
+};export -f FUNConlineLyrics
 
 pidLess=""
 strMusic="";
@@ -189,21 +271,33 @@ while true; do
 			fi
 			strMusic="$strMusicNew";
 			echoc -t 1 --info "$strMusic";
-			strLyricsFile="`echo "$strMusic" |sed -r "s'(.*) by (.*) - Banshee Media Player$'\2_\1.lyrics'"`"
+			strLyricsFile="`echo "$strMusic" |sed -r "s'^(.*) by (.*) - Banshee Media Player$'\2\t\1.lyrics'"`"
+			strLyricsFile="`echo "$strLyricsFile" |tr "_${strTabChar}-" " _ "`" # replaces "-" "_" by spaces, from names, and converts "\t" to _
 			export strLyricsFile="$strPathLyrics/$strLyricsFile";
 			#echoc -w 60
+			
+			if $bUseMozrepl;then
+				for nIndex in "${!aLyricsSiteAndStrings[@]}";do
+					if FUNConlineLyrics --mozrepl-only $nIndex "$strLyricsFile";then
+						break
+					fi
+				done
+			fi
+			
 			if [[ -f "$strLyricsFile" ]];then
-				if $bGraphicalDialog;then
-					#cat "$strLyricsFile" >"$strFileLyricsTmp"
-					ln -sf "$strLyricsFile" "$strFileLyricsTmp"
-					echoc -x "enscript -f \"Times-Roman14\" \"`readlink -f "$strFileLyricsTmp"`\" -p \"${strFileLyricsTmp}.pdf\""
-				else
-					cat "$strLyricsFile" |less & pidLess="$!"
+				if ! $bUseMozrepl;then
+					if $bGraphicalDialog;then
+						#cat "$strLyricsFile" >"$strFileLyricsTmp"
+						ln -sf "$strLyricsFile" "$strFileLyricsTmp"
+						echoc -x "enscript -f \"Times-Roman14\" \"`readlink -f "$strFileLyricsTmp"`\" -p \"${strFileLyricsTmp}.pdf\""
+					else
+						cat "$strLyricsFile" |less & pidLess="$!"
+					fi
 				fi
 			else
 				echoc --alert "File not found: '$strLyricsFile'"
 				for nIndex in "${!aLyricsSiteAndStrings[@]}";do
-					if FUNCdownloadLyrics $nIndex "$strLyricsFile";then
+					if FUNConlineLyrics $nIndex "$strLyricsFile";then
 						bJustDownloadedLyrics=true
 						break
 					fi
@@ -214,11 +308,13 @@ while true; do
 			fi
 			#pidLess="$(sh -c 'cat "$strLyricsFile" |less & echo ${!}')" #less wont work this way
 		fi;
-	
-		if $bCloseWithWindow;then
-			if ! ps -p $pidGfxReader 2>&1 >/dev/null;then
-				echoc --info "lyrics window closed"
-				break;
+		
+		if $bGraphicalDialog;then
+			if $bCloseWithWindow;then
+				if ! ps -p $pidGfxReader 2>&1 >/dev/null;then
+					echoc --info "lyrics window closed"
+					break;
+				fi
 			fi
 		fi
 	fi

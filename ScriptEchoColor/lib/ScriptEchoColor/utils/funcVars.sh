@@ -256,7 +256,7 @@ function SECFUNCscriptSelfNameSet() {
 	if $lbScriptNameChanged;then
 		if [[ -L "$SECvarFile" ]];then
 			if $SECvarCheckScriptSelfNameParentChange;then
-				SECFUNCechoWarnA "parent script '$SECscriptSelfNameParent' differs from current script '$SECscriptSelfName' but they have the same DB file where '$SECvarFile' is a symlink. To disable this message: export SECvarCheckScriptSelfNameParentChange=false;";
+				SECFUNCechoBugtrackA "parent script '$SECscriptSelfNameParent' differs from current script '$SECscriptSelfName' but they have the same DB file where '$SECvarFile' is a symlink. To disable this message: export SECvarCheckScriptSelfNameParentChange=false;";
 			fi
 		fi
 	fi
