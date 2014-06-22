@@ -38,9 +38,12 @@ eval `secinit`;
 ############### INTERNAL CFG
 sedQuoteLines='s".*"\"&\""'
 sedRemoveHomePath="s;^$HOME;.;"
-sedQuoteLinesForZenitySelection="s;.*;false '&';"
-sedEncloseLineOnPliqs="s;.*;'&';"
-sedTrSeparatorToPliqs="s;[|];' ';g"
+sedQuoteLinesForZenitySelection="s;.*;false \"&\";"
+#sedEncloseLineOnPliqs="s;.*;'&';"
+sedEncloseLineOnQuotes="s;.*;\"&\";"
+#sedTrSeparatorToPliqs="s;[|];' ';g"
+sedTrSeparatorToQuotes="s;[|];\" \";g"
+sedEscapeQuotes='s;([^\])";\1\\";g' #ABSOLUTELY NO FILES should have quotes on its name... but...
 addFileHist="$HOME/.`basename $0`.addFilesHistory.log"
 fileGitIgnoreList="$HOME/.`basename $0`.gitIgnore"
 sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
@@ -62,6 +65,7 @@ echo $SECcfgFileName
 ############### OPTIONS
 
 bAddFilesMode=false
+bRmRBFfilesMode=false
 varset --default --show bAutoSync=false
 bDaemon=false
 export bCmpData=false
@@ -95,6 +99,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bSkipNautilusCheckNow=true
 	elif [[ "$1" == "--addfiles" ]]; then #help <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
+	elif [[ "$1" == "--rmRBFmissingFiles" ]]; then #help opens an interface to select what missing files on real home folder are to be removed from the remote backup folder. implies --lsmisshist
+		bRmRBFfilesMode=true
+		bLsMissHist=true
 	elif [[ "$1" == "--cmpdata" ]]; then #help if size and time are equal, compare data for differences
 		bCmpData=true
 	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop, is automatically set with --daemon option
@@ -196,7 +203,7 @@ if ! $bSkipNautilusCheckNow && set |grep -q "NAUTILUS_SCRIPT"; then #set causes 
 	#ex.: NAUTILUS_SCRIPT_SELECTED_FILE_PATHS=$'/file/one\n/file/two\n'
 	sedEscapeSpaces='s"[ ]"\ "g'
 	#eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed "$sedEscapeSpaces" |sed "$sedQuoteLines"`)
-	eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed "$sedQuoteLines"`)
+	eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed -r "$sedEscapeQuotes" |sed -r "$sedQuoteLines"`)
 	
 	#printf "%q " "${astrFiles[@]}"
 	#echoc -w;exit 0
@@ -317,21 +324,31 @@ function FUNCcopy() {
 	SECFUNCdrawLine --stay --left "$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`" " "
 };export -f FUNCcopy
 
-function FUNCzenitySelectAndAddFiles() {
-	local listSelected=`zenity --list --checklist --column="" --column="file to add" "$@"`
-	#local listSelected="$1"
+
+function FUNCzenitySelectFiles() {
+	local lstrTitle="$1"
+	shift
+	
+	local listSelected=`zenity --list --checklist --column="" --column="$lstrTitle" "$@"`
 	
 	if [[ -n "$listSelected" ]];then
-		echoc --info "Selected files list:"
-		echo "$listSelected"
-		local alistSelected=(`echo "$listSelected" |sed "$sedEncloseLineOnPliqs" |sed "$sedTrSeparatorToPliqs"`)
+		echoc --info "Selected files list:" >>/dev/stderr
+		echo "$listSelected" >>/dev/stderr
+		local alistSelected=(`echo "$listSelected" |sed -r "$sedEscapeQuotes" |sed -r "$sedEncloseLineOnQuotes" |sed -r "$sedTrSeparatorToQuotes"`)
+		echo "${alistSelected[@]}" >>/dev/stderr
 		echo "${alistSelected[@]}"
-		eval $0 --skipnautilus --addfiles "${alistSelected[@]}"
 	fi
+};export -f FUNCzenitySelectFiles
+function FUNCzenitySelectAndAddFiles() {
+	local lstrFilesToAdd=`FUNCzenitySelectFiles "file to add" "$@"`
+	echoc --info "Adding requested files."
+	eval $0 --skipnautilus --addfiles $lstrFilesToAdd
 };export -f FUNCzenitySelectAndAddFiles
 
 function FUNClsNot() { #synchronize like
-	function FUNCfileCheck() { 
+	function FUNCfileCheck() {
+		#eval `secinit --base`
+		SECFUNCdbgFuncInA; 
 		#echo "look for: $1"
 		local relativePath="$1"
 		local fileAtCurPath="$2"
@@ -339,35 +356,25 @@ function FUNClsNot() { #synchronize like
 		if [[ ! -f "$fileCheck" ]];then 
 			echo "$fileAtCurPath";
 		fi; 
+		SECFUNCdbgFuncOutA;
 	};export -f FUNCfileCheck;
 	relativeToHome=`pwd -L |sed -r "$sedRemoveHomePath"`
 	#echo "relativeToHome=$relativeToHome"
 	#pwd -L
 	
-	listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileCheck \"$relativeToHome\" \"{}\"" \; |sort`
+	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileCheck \"$relativeToHome\" \"{}\"" \; |sort`
+	listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
 	if [[ -n "$listOfFiles" ]];then
 		echoc --info "File list that are not at Remote Backup Folder:"
 		echo "$listOfFiles"
-	
+		
+		if echoc -t 3 -q "select what files you want to add?";then
+			bAddFilesMode=true
+		fi
+		
 		if $bAddFilesMode;then
-			#eval "alistOfFiles=(`echo "$listOfFiles" |sed "$sedQuoteLinesForZenitySelection"`)"
-			#eval alistOfFiles=(`echo "$listOfFiles" |sed "$sedRemoveHomePath" |sed "$sedQuoteLinesForZenitySelection"`)
-			eval alistOfFiles=(`echo "$listOfFiles" |sed "$sedQuoteLinesForZenitySelection"`)
-	
-			#listSelected=`zenity --list --checklist --column="" --column="file to add" "${alistOfFiles[@]}"`
-			
-			#FUNCzenitySelectAndAddFiles "$listSelected"
+			eval alistOfFiles=(`echo "$listOfFiles" |sed -r "$sedEscapeQuotes" |sed -r  "$sedQuoteLinesForZenitySelection"`)
 			FUNCzenitySelectAndAddFiles "${alistOfFiles[@]}"
-#			if [[ -n "$listSelected" ]];then
-#				echoc --info "Selected files list:"
-#				echo "$listSelected"
-#				#echo "$listSelected" |sed "$sedQuoteLines" |sed 's"[|]"\" \""g'
-#				#eval "alistSelected=(`echo "$listSelected" |sed "$sedQuoteLines" |sed 's"[|]"\" \""g'`)"
-#				alistSelected=(`echo "$listSelected" |sed "$sedEncloseLineOnPliqs" |sed "$sedTrSeparatorToPliqs"`)
-#				echo "${alistSelected[@]}"
-#				eval $0 --skipnautilus --addfiles "${alistSelected[@]}"
-#			fi
-
 		fi
 	else
 		echoc --info "All files are at Remote Backup Folder! "
@@ -410,62 +417,72 @@ fi
 #echoc -w "test"
 #exit
 
+strSkipGitFilesPrefix="$HOME/.git/"
 if $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
 	mv -vf "$addFileHist" "${addFileHist}.old"
-	find "$pathBackupsToRemote" -type f |sed -r "s'$pathBackupsToRemote'$HOME'" |sort >"$addFileHist"
+#		|grep -v "^$pathBackupsToRemote/.git/" \
+	find "$pathBackupsToRemote" -type f \
+		|sed -r "s'$pathBackupsToRemote'$HOME'" \
+		|grep -v "^$strSkipGitFilesPrefix" \
+		|LC_COLLATE=C sort -f >"$addFileHist"
 	#cat "$addFileHist"
 	if echoc -t 3 -q "see differences on meld?";then
 		#echoc -x "diff \"$addFileHist\" \"${addFileHist}.old\""
-		meld "$addFileHist" "${addFileHist}.old"
+		meld "${addFileHist}.old" "$addFileHist"
 	fi
 elif $bLsMissHist; then
-	bkpIFS="$IFS"; #default is: " \t\n", hexa: 0x20,0x9,0xA, octa: 040,011,012
-	IFS=$'\n';
+	bkpIFS="$IFS"; #internal field separator: default is: " \t\n", hexa: 0x20,0x9,0xA, octa: 040,011,012
+	IFS=$'\n'; #TODO confirm if: this way, spaces on filenames will be ignored when creating the array
 	
 	echoc --info "Add files history: '$addFileHist'"
 	aAllFiles=(`cat "$addFileHist"`);
+	aMissingFilesAtRBFonly=();
+	aFileOnRBFbutNotOnReal=();
 	count=0
-	echo "Missing Files:"
-	for file in ${aAllFiles[@]};do
+	echo
+	echoc --info "Missing Files At\n\t[Real means file is missing at '$HOME']\n\t[RBF means file missing too at '$pathBackupsToRemote']:"
+	echo
+	for fileReal in ${aAllFiles[@]};do
+		if [[ "${fileReal:0:${#strSkipGitFilesPrefix}}" == "$strSkipGitFilesPrefix" ]];then
+			continue
+		fi
 		prefix=""
 		bMissingReal=false
 		bMissingRBF=false
-		if [[ ! -e "$file" ]];then
-			prefix="${prefix}Real:"
+		if [[ ! -e "$fileReal" ]];then
+			prefix="${prefix}M.Real:"
 			bMissingReal=true
 		fi
-		if [[ ! -e "`echo "$file" |sed -r "s'^$HOME'$pathBackupsToRemote'"`" ]];then
-			prefix="${prefix}RBF:"
+		fileAtRBF="`echo "$fileReal" |sed -r "s'^$HOME'$pathBackupsToRemote'"`"
+		if [[ ! -e "$fileAtRBF" ]];then
+			prefix="${prefix}M.RBF:"
 			bMissingRBF=true
 		fi
 		if $bMissingReal || $bMissingRBF;then
-			echo "$prefix $file";
+			echo "$prefix $fileReal";
 			if ! $bMissingReal && $bMissingRBF;then
-				aMissingFiles[$count]="false"
-				#aMissingFiles[$((count+1))]=`echo "$file" |sed "$sedRemoveHomePath"`
-				aMissingFiles[$((count+1))]=`echo "$file"`
-				((count+=2))
+				aMissingFilesAtRBFonly+=("false") #zenity checkbox initial state
+				aMissingFilesAtRBFonly+=(`echo "$fileReal"`)
+			fi
+			if $bMissingReal && ! $bMissingRBF;then
+				aFileOnRBFbutNotOnReal+=("false") #zenity checkbox initial state
+				aFileOnRBFbutNotOnReal+=(`echo "$fileAtRBF"`)
 			fi
 		fi;
 	done;
 	
-	if $bAddFilesMode && ((count>0));then
-		#echoc --info "missing files to zenity"
-		#echo "${aMissingFiles[@]}"
-		#eval aMissingFiles=(`echo "${aMissingFiles[@]}"`)
-		#listSelected=`zenity --list --checklist --column="" --column="file to add" "${aMissingFiles[@]}"`
-		
-		#FUNCzenitySelectAndAddFiles "$listSelected"
-		FUNCzenitySelectAndAddFiles "${aMissingFiles[@]}"
-#		if [[ -n "$listSelected" ]];then
-#			echoc --info "Selected files list:"
-#			echo "$listSelected"
-#			alistSelected=(`echo "$listSelected" |sed "$sedEncloseLineOnPliqs" |sed "$sedTrSeparatorToPliqs"`)
-#			echo "${alistSelected[@]}"
-#			#eval $0 --skipnautilus --addfiles "${alistSelected[@]}"
-#		fi
+	if $bRmRBFfilesMode && ((${#aFileOnRBFbutNotOnReal[@]}>0));then
+		strRBFfilesToTrash=`FUNCzenitySelectFiles "file to remove" "${aFileOnRBFbutNotOnReal[@]}"`
+		echoc --info "Trashing RBF requested files."
+		if eval trash -v $strRBFfilesToTrash;then
+			if echoc -q "recreate history file?";then
+				$0 --recreatehist
+			fi
+		fi
+	elif $bAddFilesMode && ((${#aMissingFilesAtRBFonly[@]}>0));then
+		FUNCzenitySelectAndAddFiles "${aMissingFilesAtRBFonly[@]}"
 	fi
 	
 	IFS="$bkpIFS"
@@ -498,7 +515,7 @@ elif $bAddFilesMode; then
 		# history of added files
 		if ! grep "$strFile" "$addFileHist"; then
 			echo "$strFile" >>"$addFileHist"
-			sort -u "$addFileHist" -o "$addFileHist"
+			LC_COLLATE=C sort -f -u "$addFileHist" -o "$addFileHist"
 		fi
 		
 		shift
@@ -532,17 +549,6 @@ elif $bLookForChanges;then
 			-and \( -not -xtype d \) |sed -r "s'.*'FUNCcopy $bDoIt \"&\";'"`
 		#echo $strCmdFuncCopyList;
 		eval $strCmdFuncCopyList
-#		find ./ \
-#			\( -not -name "." -not -name ".." \) \
-#			-and \
-#			\( -not -path "./.git/*" \) \
-#			-and \
-#			\( -type f -or -type l \) \
-#			-and \
-#			\( -not -type d \) \
-#			-and \
-#			\( -not -xtype d \) \
-#			-exec bash -c "FUNCcopy $bDoIt '{}'" \;
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
 			echoc -x "git init" #no problem as I read

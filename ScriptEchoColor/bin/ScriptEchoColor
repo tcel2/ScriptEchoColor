@@ -52,6 +52,8 @@ strClrKeyBufMsg="[clrkeybuf1s]"
 nClrKeyBufDelay=0.1
 strCfgHeader="# $strSelfName $g_nVersion [internal Version Control line]"
 
+#TODO look at `man -7 ascii` may be useful
+
 #nStartTime=`date -d "\`ps --pid $$ -o lstart |head -n 2 |tail -n 1\`" +"%s"`
 nStartTime=`date +"%s%N"`
 
@@ -2202,7 +2204,7 @@ FUNCformatColor(){
 	    fi
 	    strStringOK="$strStringOK$charEscape$charGfxTrans"
       if $bSetKeepColumn; then
-	      strStringOK="$strStringOK$cmdLastColumnSet" # !!! insertion of cmd here!
+	      strStringOK="$strStringOK${cmdLastColumnSet-}" # !!! insertion of cmd here!
         bSetKeepColumn=false
       fi
 #      strUnformatted="$strUnformatted$charGfxTrans"
