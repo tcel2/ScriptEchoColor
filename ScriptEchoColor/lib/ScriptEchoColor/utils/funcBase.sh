@@ -38,14 +38,14 @@ function _SECFUNClogMsg() { #<logfile> <params become message>
 function _SECFUNCbugTrackExec() {
 	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
-	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
+	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -un`.log"
 	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
 	"$@" 2>>"$lstrBugTrackLogFile"
 }
 function _SECFUNCcriticalForceExit() {
 	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
-	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -u`.log" "$lstrCriticalMsg"
+	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
 	while true;do
 		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
 		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
@@ -67,7 +67,8 @@ function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 #	(echo -n " `date "+%Y%m%d+%H%M%S.%N"`,p$$;strace id -un;" && strace id -un 2>&1) >>"$SECstrBugTrackLogFile"
 #	_SECFUNCbugTrackExec strace id -un
 	
-	id -u
+	# teoretically, this line should never be reached...
+	_SECFUNCbugTrackExec strace id -u
 }
 
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
@@ -92,23 +93,23 @@ if [[ -z "${SECstrTmpFolderBase-}" ]];then
 	fi
 fi
 if [[ -z "${SEC_TmpFolder-}" ]];then
-	#export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
-	export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`id -u`"
+	export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+	#export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`id -un`"
 	if [[ ! -d "$SEC_TmpFolder" ]];then
 		#mkdir "$SEC_TmpFolder" 2>>"$SECstrBugTrackLogFile"
 		_SECFUNCbugTrackExec mkdir "$SEC_TmpFolder"
 	fi
 fi
-export SECstrTmpFolderUserName="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
-if [[ "$SEC_TmpFolder" != "$SECstrTmpFolderUserName" ]];then
-	# using user name
-	#TODO check other "ln.*-.*s" that could be improved with `-T`
-	# -T prevents creation of symlink inside a folder by requiring folder to not exist
-#	if ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName" 2>>"$SECstrBugTrackLogFile";then
-	if _SECFUNCbugTrackExec ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName";then
-		SEC_TmpFolder="$SECstrTmpFolderUserName"
-	fi
-fi
+#TODO ln -sT; -T prevents creation of symlink inside a folder by requiring folder to not exist; check other "ln.*-.*s" that could be improved with `-T`
+
+#export SECstrTmpFolderUserName="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+#if [[ "$SEC_TmpFolder" != "$SECstrTmpFolderUserName" ]];then
+#	# using user name
+##	if ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName" 2>>"$SECstrBugTrackLogFile";then
+#	if _SECFUNCbugTrackExec ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName";then
+#		SEC_TmpFolder="$SECstrTmpFolderUserName"
+#	fi
+#fi
 
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
 

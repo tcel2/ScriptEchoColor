@@ -22,7 +22,15 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 strSelfName="`basename "$0"`"
-strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.${USER-`id -un`}.DaemonPid" #id -un required as no secinit available yet..
+
+strUser=${USER-}
+if [[ -z "$strUser" ]];then
+	strUser="`id -un`"
+	echo "`date "+%Y%m%d+%H%M%S.%N"`,$$,\$USER is empty,`ps`" >>"/tmp/.${strSelfName}.BugTrack.${strUser}.log"
+fi
+
+strSymlinkToDaemonPidFile="/tmp/SEC.$strSelfName.${strUser}.DaemonPid" #id -un required as no secinit available yet..
+
 nPidDaemon="`cat "$strSymlinkToDaemonPidFile" 2>/dev/null`"
 if [[ -z "$nPidDaemon" ]];then
 	nPidDaemon="-1"
