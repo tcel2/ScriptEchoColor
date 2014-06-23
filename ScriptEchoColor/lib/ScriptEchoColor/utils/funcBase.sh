@@ -27,19 +27,47 @@
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
-# THIS ATOMIC FUNCTION IS SPECIAL AND CAN COME HERE, IT MUST DEPEND ON NOTHING!!!
+#export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
+
+# THESE ATOMIC FUNCTIONS are SPECIAL AND CAN COME HERE, they MUST DEPEND only on each other!!!
+function _SECFUNClogMsg() { #<logfile> <params become message>
+	local lstrLogFile="$1"
+	shift
+	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
+}
+function _SECFUNCbugTrackExec() {
+	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
+#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
+	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
+	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
+	"$@" 2>>"$lstrBugTrackLogFile"
+}
 function _SECFUNCcriticalForceExit() {
+	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
+#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
+	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -u`.log" "$lstrCriticalMsg"
 	while true;do
 		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >>/dev/stderr
+		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
+		sleep 1
 	done
 }
-function SECFUNCgetUserName(){
+function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 	if [[ -n "${USER-}" ]];then
 		echo "$USER"
-	else
-		id -un
+		return
 	fi
+	
+	local lstrUser="`_SECFUNCbugTrackExec strace id -un`"
+	if [[ -n "$lstrUser" ]];then
+		echo "$lstrUser"
+		return
+	fi
+	
+#	(echo -n " `date "+%Y%m%d+%H%M%S.%N"`,p$$;strace id -un;" && strace id -un 2>&1) >>"$SECstrBugTrackLogFile"
+#	_SECFUNCbugTrackExec strace id -un
+	
+	id -u
 }
 
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
@@ -50,20 +78,36 @@ export SECinstallPath="`secGetInstallPath.sh`";
 SECastrFuncFilesShowHelp=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh")
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
 
-export SEC_TmpFolder="/dev/shm"
-if [[ ! -d "$SEC_TmpFolder" ]];then
-	SEC_TmpFolder="/run/shm"
-	if [[ ! -d "$SEC_TmpFolder" ]];then
-		SEC_TmpFolder="/tmp"
-		# is not fast as ramdrive (shm) and may cause trouble..
+if [[ -z "${SECstrTmpFolderBase-}" ]];then
+	export SECstrTmpFolderBase="/dev/shm"
+	if [[ ! -d "$SECstrTmpFolderBase" ]];then
+		SECstrTmpFolderBase="/run/shm"
+		if [[ ! -d "$SECstrTmpFolderBase" ]];then
+			SECstrTmpFolderBase="/tmp"
+			# is not fast as ramdrive (shm) and may be troublesome..
+		fi
+	fi
+	if [[ -L "$SECstrTmpFolderBase" ]];then
+		SECstrTmpFolderBase="`readlink -f "$SECstrTmpFolderBase"`" #required with `find` that would fail on symlink to a folder..
 	fi
 fi
-if [[ -L "$SEC_TmpFolder" ]];then
-	SEC_TmpFolder="`readlink -f "$SEC_TmpFolder"`" #required with `find` that would fail on symlink to a folder..
+if [[ -z "${SEC_TmpFolder-}" ]];then
+	#export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+	export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`id -u`"
+	if [[ ! -d "$SEC_TmpFolder" ]];then
+		#mkdir "$SEC_TmpFolder" 2>>"$SECstrBugTrackLogFile"
+		_SECFUNCbugTrackExec mkdir "$SEC_TmpFolder"
+	fi
 fi
-SEC_TmpFolder="$SEC_TmpFolder/.SEC.`SECFUNCgetUserName`"
-if [[ ! -d "$SEC_TmpFolder" ]];then
-	mkdir "$SEC_TmpFolder"
+export SECstrTmpFolderUserName="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+if [[ "$SEC_TmpFolder" != "$SECstrTmpFolderUserName" ]];then
+	# using user name
+	#TODO check other "ln.*-.*s" that could be improved with `-T`
+	# -T prevents creation of symlink inside a folder by requiring folder to not exist
+#	if ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName" 2>>"$SECstrBugTrackLogFile";then
+	if _SECFUNCbugTrackExec ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName";then
+		SEC_TmpFolder="$SECstrTmpFolderUserName"
+	fi
 fi
 
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
@@ -169,6 +213,13 @@ fi
 : ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
 
 ########################## FUNCTIONS
+function SECFUNCgetUserName(){ #this is not an atomic function.
+	local lstrUserName=`SECFUNCgetUserNameOrId`
+	if [[ -z "`echo "$lstrUserName" |tr -d "[:digit:]"`" ]];then
+		SECFUNCechoErrA "lstrUserName='$lstrUserName' must NOT be numeric"
+		_SECFUNCcriticalForceExit
+	fi
+}
 
 function SECFUNCexportFunctions() {
 	declare -F \

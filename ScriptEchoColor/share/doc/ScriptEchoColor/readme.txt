@@ -35,6 +35,7 @@ TODO (fix at top):
   fix: SECFUNCvarSet (and other functions) without parameters gets crazy..
   fix: echoc "\$" not working!!!
   fix: arrow keys detection: left right; to select question options
+	grep "find .* -exec" * -irnI; use `|while` instead of `-exec` works better, no subshell...
   with -t option, append to the end of the line the remaining time each 10s or each 10% of time passes
   create a deb package (use checkinstall !)
   allow -x -q to work toguether like: echoc -x -q ls

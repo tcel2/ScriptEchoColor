@@ -288,14 +288,14 @@ while true;do
 	#		echo
 	#	fi
 		
-		if ! pgrep -U `SECFUNCgetUserName` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+		if ! pgrep -U `SECFUNCgetUserNameOrId` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
 			varset bShowStatusLine=false
 		fi
 	else
 		SECFUNCdrawLine --stay "" " "
 		#echo -en "\r"
 		
-		if pgrep -U `SECFUNCgetUserName` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
+		if pgrep -U `SECFUNCgetUserNameOrId` -f "secMaintenanceDaemon.sh --logmon" >>/dev/null;then
 			varset bShowStatusLine=true
 		fi
 	fi

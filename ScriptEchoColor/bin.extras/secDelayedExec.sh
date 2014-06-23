@@ -51,7 +51,7 @@ fi
 
 sleep $nDelay
 
-echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserName`.log"
+echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
 
 "$@"
 
