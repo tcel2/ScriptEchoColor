@@ -113,7 +113,7 @@ function FUNCcheckDaemonStarted() {
 		return 0
 	else
 		rm "$strDaemonPidFile" 2>/dev/null
-		rm "$strDaemonLogFile" 2>/dev/null
+		#rm "$strDaemonLogFile" 2>/dev/null
 		nPidDaemon="-1"
 		return 1
 	fi
@@ -275,16 +275,16 @@ while true;do
 		SECFUNCvarClearTmpFiles
 	fi
 	
-	if $bShowStatusLine;then
-		if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
-			# pid wraps count
-			echo -n & nPidLast=$!
-			if((nPidLast<nPidWrapPrevious));then
-				((nPidWrapCount++))
-			fi
-			nPidWrapPrevious=$nPidLast
+	if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
+		# pid wraps count
+		echo -n & nPidLast=$!
+		if((nPidLast<nPidWrapPrevious));then
+			((nPidWrapCount++))
 		fi
+		nPidWrapPrevious=$nPidLast
+	fi
 	
+	if $bShowStatusLine;then
 		if SECFUNCdelay "Totals" --checkorinit1 10;then
 			nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
 			nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
