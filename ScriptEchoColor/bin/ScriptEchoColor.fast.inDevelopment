@@ -1,0 +1,165 @@
+#!/bin/bash
+# Copyright (C) 2004-2014 by Henrique Abdalla
+#
+# This file is part of ScriptEchoColor.
+#
+# ScriptEchoColor simplifies Linux terminal text colorizing, formatting 
+# and several steps of script coding.
+#
+# ScriptEchoColor is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# ScriptEchoColor is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with ScriptEchoColor. If not, see <http://www.gnu.org/licenses/>.
+#
+# Homepage: http://scriptechocolor.sourceforge.net/
+# Project Homepage: https://sourceforge.net/projects/scriptechocolor/
+
+bOptEscapedChars=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		eval `secinit --base`
+		echo -e "usage ex.: '@rRedForeground' or '@{Br}BlueBackground RedForeground'"
+		echo -e "\tForeground: rgbcmykw "
+		echo -e "\tBackground: RGBCMYKW"
+		echo
+		SECFUNCshowHelp --nosort
+		exit
+	elif [[ "$1" == "--escapedchars" ]];then #help show escaped chars that can be simply passed to 'echo -e'
+		bOptEscapedChars=true
+	elif [[ "$1" == "--" ]];then #help all params after this are considered as strings to be echoed (not being options)
+		shift
+		break;
+	else
+		eval `secinit --base`
+		SECFUNCechoErrA "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
+FUNCechoColor(){
+	local lstrToOutput=""
+	
+	local lnCmdFg=0
+	local lnCmdBg=0
+	local lnCmdFgMod=0
+	local lnCmdBgMod=0
+	
+	local lbNegOneCmd=false #negate command toggle, single use, becomes false just after being used
+	FUNCcommandColor(){
+		local lstrCmd="$1"
+		
+		if $lbNegOneCmd;then
+			lstrCmd="-${lstrCmd}"
+			lbNegOneCmd=false
+		fi
+		
+		case "$lstrCmd" in
+    	# foreground
+			k) lnCmdFg=30;;
+			r) lnCmdFg=31;;
+			g) lnCmdFg=32;;
+			y) lnCmdFg=33;;
+			b) lnCmdFg=34;;
+			m) lnCmdFg=35;;
+			c) lnCmdFg=36;;
+			w) lnCmdFg=37;;
+			
+			# background
+			K) lnCmdBg=40;;
+			R) lnCmdBg=41;;
+			G) lnCmdBg=42;;
+			Y) lnCmdBg=43;;
+			B) lnCmdBg=44;;
+			M) lnCmdBg=45;;
+			C) lnCmdBg=46;;
+			W) lnCmdBg=47;;
+			
+			l) lnCmdFgMod=60;;
+			-l)lnCmdFgMod=-60;;
+			
+			L) lnCmdBgMod=60;;
+			-L)lnCmdBgMod=-60;;
+			
+		esac
+		
+		if((lnCmdFg>0));then
+			lstrToOutput+="\E[$((lnCmdFg+lnCmdFgMod))m"
+			lnCmdFg=0
+		elif((lnCmdBg>0));then
+			lstrToOutput+="\E[$((lnCmdBg+lnCmdBgMod))m"
+			lnCmdBg=0
+		fi
+	}
+	
+	local lstrToEchoColor="$1"
+	local lnIndex
+	local lbEscapeNext=false
+	local lstrChar=""
+	local lbCommandIn=false
+	local lbCommandInMultiple=false
+	for((lnIndex=0;lnIndex<${#lstrToEchoColor};lnIndex++));do
+		lstrChar="${lstrToEchoColor:lnIndex:1}"
+		
+		if $lbCommandIn;then #
+			if $lbCommandInMultiple;then
+				if [[ "$lstrChar" == '}' ]];then
+					lbCommandIn=false
+					lbCommandInMultiple=false
+					continue
+				elif [[ "$lstrChar" == '-' ]];then
+					lbNegOneCmd=true
+					continue
+				else
+					FUNCcommandColor "$lstrChar"
+					continue
+				fi
+			else
+				if [[ "$lstrChar" == '{' ]];then
+					lbCommandInMultiple=true
+					continue
+				elif [[ "$lstrChar" == '-' ]];then
+					lbNegOneCmd=true
+					continue
+				else
+					FUNCcommandColor "$lstrChar"
+					lbCommandIn=false
+					continue
+				fi
+			fi
+		fi
+		
+		# Normal string composition
+		if $lbEscapeNext;then
+			lstrToOutput+="$lstrChar"
+			lbEscapeNext=false
+		elif [[ "$lstrChar" == '\' ]];then
+			lbEscapeNext=true
+		elif [[ "$lstrChar" == "@" ]];then
+			lbCommandIn=true
+		else
+			lstrToOutput+="$lstrChar"
+		fi
+		
+	done
+	
+	if $bOptEscapedChars;then
+		echo "${lstrToOutput}\E[0m"
+	else
+		echo -e "${lstrToOutput}\E[0m"
+	fi
+}
+
+while ! ${1+false};do
+	FUNCechoColor "$1"
+	shift
+done
+
