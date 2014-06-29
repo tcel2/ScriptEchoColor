@@ -50,26 +50,53 @@ sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
 
 ######################### FUNCTIONS #####################################
 
-function FUNCxlock() {
-	DISPLAY=:1 xlock -mode matrix -delay 30000 -timeelapsed -verbose -nice 19 -timeout 5 -lockdelay 0 -bg darkblue -fg yellow
-}; export -f FUNCxlock
+#function FUNCxlock() {
+#	DISPLAY=:1 xlock -mode matrix -delay 30000 -timeelapsed -verbose -nice 19 -timeout 5 -lockdelay 0 -bg darkblue -fg yellow
+#}; export -f FUNCxlock
 
 function FUNCchildScreenLockNow() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	if $bUseXscreensaver; then
 		DISPLAY=:1 xscreensaver-command -lock
-	else
-		DISPLAY=:1 xautolock -locknow
+		while true;do
+			if ! FUNCisScreenLockRunning;then
+				break
+			fi
+			
+			# xscreensaver spawns a child with the actual screensaver
+			if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
+				DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver?
+				echo "setting a lightweight screensaver (maze)..."
+			fi
+			
+			echoc -w -t 10
+		done
+#	else
+#		DISPLAY=:1 xautolock -locknow
 	fi
-}; export -f FUNCchildScreenLockNow
+	echoc -w -t 10
+};export -f FUNCchildScreenLockNow
 
 function FUNCchildScreenAutoLock() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	#SECFUNCvarShow bUseXscreensaver #@@@r
+	local strCmdXscreensaver1="xscreensaver -display :1"
+	function FUNCgetXscreensaverPid(){
+		while true;do	
+			if nXscreensaver1Pid="`pgrep -fx "$strCmdXscreensaver1"`";then
+				varset nXscreensaver1Pid=$nXscreensaver1Pid
+				break;
+			fi
+			echo "waiting nXscreensaver1Pid..."
+			sleep 1
+		done
+	}
+	FUNCgetXscreensaverPid&
+	
 	if $bUseXscreensaver; then
-		xscreensaver -display :1
-	else
-		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
+		$strCmdXscreensaver1
+#	else
+#		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
 	fi
 }; export -f FUNCchildScreenAutoLock
 
@@ -79,10 +106,10 @@ function FUNCisScreenLockRunning() {
     if DISPLAY=:1 xscreensaver-command -time |grep "screen locked since" >/dev/null 2>&1;then
       return 0
     fi
-	else
-    if ps -A -o comm |grep -w "^xlock$" >/dev/null 2>&1;then
-      return 0
-    fi
+#	else
+#    if ps -A -o comm |grep -w "^xlock$" >/dev/null 2>&1;then
+#      return 0
+#    fi
 	fi
 	return 1
 };export -f FUNCisScreenLockRunning
@@ -333,17 +360,22 @@ function FUNCscript() {
 		SECONDS=0
 		while true;do
 			SECFUNCvarReadDB
-			if openNewX.sh --script isScreenLocked;then
+			#if openNewX.sh --script isScreenLocked;then
+			if FUNCisScreenLockRunning;then
 				if ! $lbStopped;then
 					echoc --say "stopping"
 				fi
 			  #highTmprMon.sh --secvarset bOverrideForceStopNow true
-			  kill -SIGSTOP $lgamePid
+			  if kill -SIGSTOP $lgamePid;then
+			  	echo "stopped..."
+			  fi
 				lbStopped=true
 			  ldelay=1
 			else
 			  #highTmprMon.sh --secvarset bOverrideForceStopNow false
-			  kill -SIGCONT $lgamePid
+			  if kill -SIGCONT $lgamePid;then
+			  	echo "running..."
+			  fi
 				lbStopped=false
 			  ldelay=10
 			fi
@@ -485,7 +517,7 @@ bRecreateRCfileThin=false
 bXTerm=false
 bReturnToX0=false
 bWaitCompiz=true
-SECFUNCvarSet --default bUseXscreensaver=false
+SECFUNCvarSet --default bUseXscreensaver=true
 strGeometry=""
 export strCustomCmdHelp=""
 while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
@@ -499,8 +531,10 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   	bXTerm=true
   elif [[ "$1" == "--ignorecompiz" ]]; then #opt ignore compiz finish starting
   	bWaitCompiz=false
-  elif [[ "$1" == "--xscreensaver" ]]; then #opt use xscreensaver instead of xlock
-  	SECFUNCvarSet bUseXscreensaver=true
+  elif [[ "$1" == "--xscreensaver" ]]; then #opt deprecated
+  	#SECFUNCvarSet bUseXscreensaver=true
+  	SEC_WARN=true SECFUNCechoWarnA "'$1' is useless as xscreensaver is the default now."
+  	#_SECFUNCcriticalForceExit
   elif [[ "$1" == "--recreatercthin" ]]; then #opt recreate $HOME/.jwmrc file, but does not use /etc/jwm one!
   	bRecreateRCfile=true
   	bRecreateRCfileThin=true
@@ -672,6 +706,7 @@ if $useJWM; then
   	
   	#@@@R <Key mask="S4" key="G">exec:'"xterm -e \"$cmdNvidiaNormal\""'</Key>
     #@@@R <Key mask="4" key="G">exec:'"xterm -e \"FUNCnvidiaCicle\""'</Key>
+    #@@@R      <Key mask="4" key="L">exec:bash -c "FUNCchildScreenLockNow"</Key>
     echo -e '
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
@@ -682,7 +717,7 @@ if $useJWM; then
           <Key mask="S4" key="G">exec:'"xterm -e \"$0 --script nvidiaCicleBack\" #kill=skip"'</Key>
           <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
-          <Key mask="4" key="L">exec:bash -c "FUNCchildScreenLockNow"</Key>
+          <Key mask="4" key="L">exec:'"xterm -e \"bash -c FUNCchildScreenLockNow\" #kill=skip"'</Key>
           <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
           <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
           <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
