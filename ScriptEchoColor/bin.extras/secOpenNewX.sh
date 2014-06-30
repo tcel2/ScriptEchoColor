@@ -54,51 +54,98 @@ sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
 #	DISPLAY=:1 xlock -mode matrix -delay 30000 -timeelapsed -verbose -nice 19 -timeout 5 -lockdelay 0 -bg darkblue -fg yellow
 #}; export -f FUNCxlock
 
-function FUNCchildScreenLockNow() {
+#function FUNCCHILDScreenLockLightWeight() {
+#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	while true;do
+#		if $bUseXscreensaver; then
+#			if FUNCisScreenLockRunning;then
+#				# xscreensaver spawns a child with the actual screensaver
+#				if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
+#					DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver
+#					echo "set a lightweight screensaver (maze) `date`"
+#				fi
+#			fi
+#			
+#			sleep 10
+#		fi
+#	done
+#};export -f FUNCCHILDScreenLockLightWeight
+
+function FUNCCHILDScreenLockNow() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	if $bUseXscreensaver; then
 		DISPLAY=:1 xscreensaver-command -lock
-		while true;do
-			if ! FUNCisScreenLockRunning;then
-				break
-			fi
-			
-			# xscreensaver spawns a child with the actual screensaver
-			if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
-				DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver?
-				echo "setting a lightweight screensaver (maze)..."
-			fi
-			
-			echoc -w -t 10
-		done
-#	else
-#		DISPLAY=:1 xautolock -locknow
+#		while true;do
+#			if ! FUNCisScreenLockRunning;then
+#				break
+#			fi
+#			
+#			# xscreensaver spawns a child with the actual screensaver
+#			if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
+#				DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver?
+#				echo "setting a lightweight screensaver (maze)..."
+#			fi
+#			
+#			echoc -w -t 10
+#		done
 	fi
-	echoc -w -t 10
-};export -f FUNCchildScreenLockNow
+	echoc -w -t 10 "just locked screen"
+};export -f FUNCCHILDScreenLockNow
 
-function FUNCchildScreenAutoLock() {
+function FUNCCHILDPreventAutoLock() {
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	while true;do
+		if $bUseXscreensaver; then
+			if ! FUNCisScreenLockRunning;then
+				xscreensaver-command -time
+				xscreensaver-command -deactivate
+			fi
+		fi
+		sleep 60
+	done
+};export -f FUNCCHILDPreventAutoLock
+
+function FUNCCHILDScreenSaver() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	#SECFUNCvarShow bUseXscreensaver #@@@r
 	local strCmdXscreensaver1="xscreensaver -display :1"
+	function FUNClightWeightXscreensaver() {
+		while [[ -d "/proc/$nXscreensaver1Pid" ]];do
+			echo "check for a lightweight screensaver `date`"
+			if FUNCisScreenLockRunning;then
+				# xscreensaver spawns a child with the actual screensaver
+				if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
+					DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver
+					echo "set a lightweight screensaver (maze) `date`"
+				fi
+			fi
+		
+			sleep 10
+		done
+	}
 	function FUNCgetXscreensaverPid(){
 		while true;do	
 			if nXscreensaver1Pid="`pgrep -fx "$strCmdXscreensaver1"`";then
-				varset nXscreensaver1Pid=$nXscreensaver1Pid
+				varset --show nXscreensaver1Pid=$nXscreensaver1Pid
+				FUNClightWeightXscreensaver
 				break;
 			fi
-			echo "waiting nXscreensaver1Pid..."
+			echo "waiting nXscreensaver1Pid be set..."
 			sleep 1
 		done
 	}
-	FUNCgetXscreensaverPid&
 	
-	if $bUseXscreensaver; then
-		$strCmdXscreensaver1
-#	else
-#		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
-	fi
-}; export -f FUNCchildScreenAutoLock
+	while true;do #in case it is killed
+		echo "activating screen saver at `date`: '$strCmdXscreensaver1'"
+		if $bUseXscreensaver; then
+			FUNCgetXscreensaverPid&
+			$strCmdXscreensaver1
+	#	else
+	#		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
+		fi
+		sleep 1
+	done
+}; export -f FUNCCHILDScreenSaver
 
 function FUNCisScreenLockRunning() {
 	if $bUseXscreensaver; then
@@ -162,11 +209,12 @@ function FUNCclearCache() {
 #}
 
 function FUNCkeepGamma() { # some games reset the gamma on each restart
-	eval `secinit`
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	
 	while true; do
 		SECFUNCvarReadDB
 		xgamma -gamma ${fGamma-}
+		echo "keep gamma at ${fGamma-}"
 		sleep 60
 	done
 };export -f FUNCkeepGamma
@@ -307,22 +355,34 @@ function FUNCnvidiaCicle() {
 function FUNCscript() {
 	SECFUNCdbgFuncInA;
 	# scripts will be executed with all environment properly setup with eval `secinit`
-	local lscriptName="$1"
+	local lscriptName="${1-}"
 	shift
 	
-	if [[ -z "$lscriptName" ]]; then
+	FUNCscriptHelp(){
 		echo "Scripts List:"
-		grep "#helpScript" $0 |grep -v grep
-  elif [[ "$lscriptName" == "returnX0" ]]; then #helpScript return to :0
+		#grep "#helpScript" $0 |grep -v grep
+		SECFUNCshowHelp --nosort "FUNCscript"
+	}
+	
+	if [[ -z "$lscriptName" ]]; then
+#		echo "Scripts List:"
+#		#grep "#helpScript" $0 |grep -v grep
+#		SECFUNCshowHelp "$FUNCNAME"
+		FUNCscriptHelp
+  elif [[ "$lscriptName" == "help" ]]; then #FUNCscript_help list these scripts
+		FUNCscriptHelp
+  elif [[ "$lscriptName" == "--help" ]]; then #FUNCscript_help list these scripts
+		FUNCscriptHelp
+  elif [[ "$lscriptName" == "returnX0" ]]; then #FUNCscript_help return to :0
   	#cmdEval="xdotool key super+l"
-  	echoc -x "FUNCchildScreenLockNow"
+  	echoc -x "FUNCCHILDScreenLockNow"
   	
   	echoc -x "xdotool key control+alt+F7"
   	#cmdEval="sudo -k chvt 7"
   	
   	echoc -x "bash"
   	SECFUNCdbgFuncOutA;return
-  elif [[ "$lscriptName" == "showHelp" ]]; then #helpScript show user custom command options and other options
+  elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
     FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
   elif [[ "$lscriptName" == "isScreenLocked" ]];then
     if FUNCisScreenLockRunning;then
@@ -330,11 +390,11 @@ function FUNCscript() {
     else
       exit 1
     fi
-  elif [[ "$lscriptName" == "nvidiaCicle" ]]; then #helpScript cicle through nvidia pre-setups
+  elif [[ "$lscriptName" == "nvidiaCicle" ]]; then #FUNCscript_help cicle through nvidia pre-setups
 	  FUNCnvidiaCicle 1
-  elif [[ "$lscriptName" == "nvidiaCicleBack" ]]; then #helpScript cicle through nvidia pre-setups
+  elif [[ "$lscriptName" == "nvidiaCicleBack" ]]; then #FUNCscript_help cicle through nvidia pre-setups
 	  FUNCnvidiaCicle -1
-  elif [[ "$lscriptName" == "cicleGamma" ]]; then #helpScript cicle gamma value
+  elif [[ "$lscriptName" == "cicleGamma" ]]; then #FUNCscript_help cicle gamma value
 #  	while true;do
 #  		if ! ps -A -o pid,comm,command |grep -v "^[ ]*$$" |grep "^[ ]*[[:digit:]]* openNewX.sh.*cicleGamma$" |grep -v grep; then
 #  			break
@@ -342,17 +402,18 @@ function FUNCscript() {
 #  		echoc -w -t 1 "already running, waiting other exit"
 #  	done
 	  FUNCcicleGamma 1
-  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #helpScript cicle gamma value
+  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
   	FUNCcicleGamma -1
-  elif [[ "$lscriptName" == "sayTemperature" ]]; then #helpScript say temperature
+  elif [[ "$lscriptName" == "sayTemperature" ]]; then #FUNCscript_help say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
 #		tmprCurrent=`sensors |grep "$tmprToMonitor" |sed "$sedTemperature"`
 #		echoc --say "$tmprCurrent celcius"
 #		echoc --say "`FUNCtempAvg` celcius"
 		echoc --say "`highTmprMon.sh --tmpr` celcius"
-  elif [[ "$lscriptName" == "autoStopContOnScreenLock" ]]; then #helpScript auto stop application [gamePid] running at X1 if the screen is locked there; requires `highTmprMon.sh --limitcpu $gamePid` to work.
-  	local lgamePid="$1"
+  elif [[ "$lscriptName" == "autoStopContOnScreenLock" ]]; then #FUNCscript_help <lnGamePid> auto stop application running at X1 if the screen is locked there
+  	#DOES NOT REQUIRES ANYMORE: requires `highTmprMon.sh --limitcpu $lnGamePid` to work.
+  	local lnGamePid="$1"
   	shift
   	
 		local ldelay=10
@@ -366,22 +427,22 @@ function FUNCscript() {
 					echoc --say "stopping"
 				fi
 			  #highTmprMon.sh --secvarset bOverrideForceStopNow true
-			  if kill -SIGSTOP $lgamePid;then
+			  if kill -SIGSTOP $lnGamePid;then
 			  	echo "stopped..."
 			  fi
 				lbStopped=true
 			  ldelay=1
 			else
 			  #highTmprMon.sh --secvarset bOverrideForceStopNow false
-			  if kill -SIGCONT $lgamePid;then
+			  if kill -SIGCONT $lnGamePid;then
 			  	echo "running..."
 			  fi
 				lbStopped=false
 			  ldelay=10
 			fi
 			
-			if ! ps -p $lgamePid >/dev/null 2>&1;then
-				echoc -w -t 3 "pid $lgamePid stopped running, exiting..."
+			if ! ps -p $lnGamePid >/dev/null 2>&1;then
+				echoc -w -t 3 "pid $lnGamePid stopped running, exiting..."
 				break
 			fi
 			
@@ -452,6 +513,7 @@ function FUNCxtermDetached() {
 };export -f FUNCxtermDetached
 
 function FUNCcmdAtNewX() {
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	eval "$cmdOpenNewX";
 	bash;
 }; export -f FUNCcmdAtNewX
@@ -463,7 +525,7 @@ function FUNCdoNotCloseThisTerminal() {
 };export -f FUNCdoNotCloseThisTerminal
 
 function FUNCechocInitBashInteractive() {
-	eval `secinit`
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	bash -i
 };export -f FUNCechocInitBashInteractive
 
@@ -517,52 +579,58 @@ bRecreateRCfileThin=false
 bXTerm=false
 bReturnToX0=false
 bWaitCompiz=true
-SECFUNCvarSet --default bUseXscreensaver=true
+SECFUNCvarSet --default bUseXscreensaver=true #varset exports it what is required if going to be used on child shell
+bScreenSaverOnlyLockByHand=false
+bInitNvidia=false
 strGeometry=""
 export strCustomCmdHelp=""
 while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
-  if [[ "$1" == "--no-wm" ]]; then #opt SKIP WINDOW MANAGER (run pure X alone)
+  if [[ "$1" == "--no-wm" ]]; then #help SKIP WINDOW MANAGER (run pure X alone)
     useJWM=false
-  elif [[ "$1" == "--no-kbd" ]]; then #opt SKIP Keyboard setup
+  elif [[ "$1" == "--no-kbd" ]]; then #help SKIP Keyboard setup
     useKbd=false
-  elif [[ "$1" == "--recreaterc" ]]; then #opt recreate $HOME/.jwmrc file
+  elif [[ "$1" == "--recreaterc" ]]; then #help recreate $HOME/.jwmrc file
   	bRecreateRCfile=true
-  elif [[ "$1" == "--xterm" ]]; then #opt use xterm instead of gnome-terminal
+  elif [[ "$1" == "--xterm" ]]; then #help use xterm instead of gnome-terminal
   	bXTerm=true
-  elif [[ "$1" == "--ignorecompiz" ]]; then #opt ignore compiz finish starting
+  elif [[ "$1" == "--ignorecompiz" ]]; then #help ignore compiz finish starting
   	bWaitCompiz=false
-  elif [[ "$1" == "--xscreensaver" ]]; then #opt deprecated
+  elif [[ "$1" == "--noautolock" ]]; then #help prevent screensaver from auto-locking the screen (may be required with some games where user activity is not detected)
+  	bScreenSaverOnlyLockByHand=true
+  elif [[ "$1" == "--initgfxcfg" ]]; then #help initializes user configured graphics options (currently supported nvidia)
+  	bInitNvidia=true
+  elif [[ "$1" == "--xscreensaver" ]]; then #help deprecated
   	#SECFUNCvarSet bUseXscreensaver=true
   	SEC_WARN=true SECFUNCechoWarnA "'$1' is useless as xscreensaver is the default now."
   	#_SECFUNCcriticalForceExit
-  elif [[ "$1" == "--recreatercthin" ]]; then #opt recreate $HOME/.jwmrc file, but does not use /etc/jwm one!
+  elif [[ "$1" == "--recreatercthin" ]]; then #help recreate $HOME/.jwmrc file, but does not use /etc/jwm one!
   	bRecreateRCfile=true
   	bRecreateRCfileThin=true
-  elif [[ "$1" == "--geometry" ]];then #opt size of the new screen
+  elif [[ "$1" == "--geometry" ]];then #help size of the new screen
   	shift
     strGeometry="$1"
-  elif [[ "$1" == "--returnX0" ]]; then #opt lock display at :1 and return to :0
+  elif [[ "$1" == "--returnX0" ]]; then #help lock display at :1 and return to :0
   	bReturnToX0=true
-  elif [[ "$1" == "--customcmd" ]]; then #opt custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
+  elif [[ "$1" == "--customcmd" ]]; then #help custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
   	shift
   	#customCmd=("${customCmd[@]-}" "$1")
   	customCmd+=("$1")
   	strCustomCmd=`echo " Meta+${#customCmd[*]} EXEC: $1"`
   	echo "$strCustomCmd"
   	strCustomCmdHelp="$strCustomCmdHelp$strCustomCmd\n"
-  elif [[ "$1" == "--isRunning" ]]; then #opt check if new X :1 is already running
+  elif [[ "$1" == "--isRunning" ]]; then #help check if new X :1 is already running
     if FUNCisX1running; then
       exit 0
     else
       exit 1
     fi
-  elif [[ "$1" == "--script" ]]; then #opt run a internal script (without script name will show the list)
+  elif [[ "$1" == "--script" ]]; then #help run a internal script (without script name will show the list)
   	shift
-  	scriptName="$1"
+  	scriptName="${1-}"
   	shift
   	FUNCscript $scriptName "$@"
 		exit 0
-  elif [[ "$1" == "--killX1" ]]; then #opt kill X :1
+  elif [[ "$1" == "--killX1" ]]; then #help kill X :1
   	# kill X
     #pidX1=`ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"`
     
@@ -598,15 +666,16 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
     fi
     
     exit 0
-  elif [[ "$1" == "--help" ]]; then #opt show help info
+  elif [[ "$1" == "--help" ]]; then #help show help info
     echo "can be used at startup applications as: $0 --returnX0"
     echo "usage: options runCommand"
     
     # this sed only cleans lines that have extended options with "--" prefixed
     #sedCleanHelpLine='s"\(.*\"\)\(--.*\)\".*#opt" \2\t"' #helpskip
-		sedCleanHelpLine='s;(.*")(--.*)".*#opt; \2\t;' #helpskip
-    grep "#opt" $0 |grep -v "#helpskip" |sed -r "$sedCleanHelpLine"
     #echo "SCRIPTS:";    grep "#helpScript" $0 |grep -v "#helpskip" |sed "$sedCleanHelpLine"
+		#sedCleanHelpLine='s;(.*")(--.*)".*#opt; \2\t;' #helpskip
+    #grep "#opt" $0 |grep -v "#helpskip" |sed -r "$sedCleanHelpLine"
+    SECFUNCshowHelp
     
     exit 0
   else
@@ -706,7 +775,7 @@ if $useJWM; then
   	
   	#@@@R <Key mask="S4" key="G">exec:'"xterm -e \"$cmdNvidiaNormal\""'</Key>
     #@@@R <Key mask="4" key="G">exec:'"xterm -e \"FUNCnvidiaCicle\""'</Key>
-    #@@@R      <Key mask="4" key="L">exec:bash -c "FUNCchildScreenLockNow"</Key>
+    #@@@R      <Key mask="4" key="L">exec:bash -c "FUNCCHILDScreenLockNow"</Key>
     echo -e '
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
@@ -717,7 +786,7 @@ if $useJWM; then
           <Key mask="S4" key="G">exec:'"xterm -e \"$0 --script nvidiaCicleBack\" #kill=skip"'</Key>
           <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
-          <Key mask="4" key="L">exec:'"xterm -e \"bash -c FUNCchildScreenLockNow\" #kill=skip"'</Key>
+          <Key mask="4" key="L">exec:'"xterm -e \"bash -c FUNCCHILDScreenLockNow\" #kill=skip"'</Key>
           <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
           <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
           <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
@@ -828,11 +897,18 @@ xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma; #kill=skip"&
 xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
 
 #initializes the cicle of configurations!
-xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
+if $bInitNvidia;then
+	xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
+fi
 
-sleep 2 #@@@!!! TODO improve with qdbus waiting for jwm?
+sleep 2 #TODO improve with qdbus waiting for jwm? 
 #SECFUNCvarShow bUseXscreensaver #@@@r
-xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCchildScreenAutoLock; #kill=skip\""&
+#xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCCHILDScreenSaver; #kill=skip\""&
+xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
+if $bScreenSaverOnlyLockByHand;then
+	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
+fi
+#xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 

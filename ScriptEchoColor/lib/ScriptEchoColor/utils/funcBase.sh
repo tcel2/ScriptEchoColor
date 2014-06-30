@@ -581,20 +581,22 @@ function SECFUNCshowHelp() {
 	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
 #	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'$le'[0m'$le'[92m\1'$le'[0m\t,g'
-	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
+	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
+	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'$le'[0m'$le'[92m\1'$le'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
+	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
 	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
 #	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'$le'[0m'$le'[91m<\2>'$le'[0m,g'
 #	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'$le'[0m'$le'[96m[\2]'$le'[0m,g'
 	#local lsedAddNewLine='s".*"&\n"'
 	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
-		|grep -w "$lgrepMatchHelpToken" \
+		|grep  -w "$lgrepMatchHelpToken" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
-		|sed -r "$lsedRemoveComparedVariable" \
 		|sed -r "$lsedRemoveHelpToken" \
 		|sed -r "$lsedColorizeOptionals" \
 		|sed -r "$lsedColorizeRequireds" \
+		|sed -r "$lsedRemoveComparedVariable" \
 		|sed -r "$lsedColorizeTheOption" \
 		|sed -r "$lsedTranslateEsct" \
 		|$cmdSort \
