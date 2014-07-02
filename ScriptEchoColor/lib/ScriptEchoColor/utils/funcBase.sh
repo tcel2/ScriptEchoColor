@@ -227,6 +227,7 @@ function SECFUNCgetUserName(){ #this is not an atomic function.
 		SECFUNCechoErrA "lstrUserName='$lstrUserName' must NOT be numeric"
 		_SECFUNCcriticalForceExit
 	fi
+	echo "$lstrUserName"
 }
 
 function SECFUNCexportFunctions() {
