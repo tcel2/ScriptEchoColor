@@ -38,7 +38,7 @@ bBashDebug=false
 strFunctionNames=""
 bListPids=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	eval "set -- `SECFUNCsingleLetterOptionsA "$@"`"
+	SECFUNCsingleLetterOptionsA; #echo "$@"
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "[options] <pid>; in this case such pid will have its messages toggled or forced."
 		SECFUNCshowHelp --colorize "[options] <custom params to be run>; in this case, messages can be optionally turned ON only."

@@ -72,25 +72,6 @@ function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 	# teoretically, this line should never be reached...
 	_SECFUNCbugTrackExec strace id -u
 }
-#function _SECFUNCforceAliasToWork(){ #this hack allows alias to work inside if...fi command block
-#	# if after being defined the alias is still not recognized/accepted, it will be called as a function that thru `eval` will allow the alias to actually work
-#	if [[ "$1" != "alias" ]];then
-#		echo "$FUNCNAME only to be used before 'alias' command."
-#		_SECFUNCcriticalForceExit
-#	fi
-#	
-#	local lstrAliasId="`echo "$2" |sed -r "s;^([[:alnum:]_]*)=.*$;\1;"`"
-#	if [[ -z "$lstrAliasId" ]] || [[ -n "`echo "$lstrAliasId" |tr -d "[:alnum:]_"`" ]];then
-#		echo "invalid lstrAliasId='$lstrAliasId'" >>/dev/stderr
-#		_SECFUNCcriticalForceExit
-#	fi
-
-#	local lstrCmd="`echo "$2" |sed -r "s;^$lstrAliasId=(.*)$;\1;"`";
-#	
-#	alias "${lstrAliasId}=${lstrCmd}"
-#	
-#	eval "function $lstrAliasId() { $lstrCmd \"\$@\"; }"
-#}
 
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
@@ -157,7 +138,12 @@ alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+#alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+# if echo "$1" |grep -q "[^-]?\-[[:alpha:]][[:alpha:]]";then
+alias SECFUNCsingleLetterOptionsA='
+ if echo "$1" |grep -q "^-[[:alpha:]]*$";then
+   set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" "$1"` "${@:2}";
+ fi'
 
 alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
@@ -266,7 +252,6 @@ function SECFUNCisNumber(){ #"is float" check by default
 	local bDecimalCheck=false
 	local bNotNegativeCheck=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
-		#eval "set -- `SECFUNCsingleLetterOptionsA "$@"`";	
 		if [[ "$1" == "--help" ]];then #SECFUNCisNumber_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
@@ -1114,56 +1099,41 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 	done
 }
 
+#function SECFUNCfixParams() {
+#	local lstrToExec=""
+#	for lstrParam in "$@";do
+#		lstrParam="`echo "${lstrParam}" \
+#			|sed -r 's; ;\\\\ ;g' \
+#			|sed -r 's;";\\\\";g'`"
+#		lstrToExec+="${lstrParam} "
+#	done
+#	
+#  echo "$lstrToExec"
+#}
+
 function SECFUNCparamsToEval() {
-	local lstrToExec=""
-	for lstrParam in "$@";do
-		lstrToExec+="'$lstrParam' "
-	done
-  echo "$lstrToExec"
-}
-#function SECFUNCparamsToEval() {
-#	###### options
-##	bEscapeQuotes=false
-##	bEscapeQuotesTwice=false
-#	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-#		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help show this help
-#			SECFUNCshowHelp ${FUNCNAME}
-#			return
-##		elif [[ "$1" == "--escapequotes" ]];then #SECFUNCparamsToEval_help quotes will be escaped like '\"'
-##			bEscapeQuotes=true
-##		elif [[ "$1" == "--escapequotestwice" ]];then #SECFUNCparamsToEval_help quotes will be escaped TWICE like '\\\"'
-##			bEscapeQuotesTwice=true
+	local lstrQuotes="'"
+#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+#		if [[ "$1" == "--noquotes" ]];then
+#			lstrQuotes=""
+#		elif [[ "$1" == "--dblquotes" ]];then
+#			lstrQuotes='"'
 #		else
-#			SECFUNCechoErrA "invalid option $1"
+#			SECFUNCechoErrA "invalid option '$1'"
 #			return 1
 #		fi
 #		shift
 #	done
-#	
-##	strEscapeQuotes=""
-##	if $bEscapeQuotes;then
-##		strEscapeQuotes='\'
-##	fi
-##	if $bEscapeQuotesTwice;then
-##		strEscapeQuotes='\\\'
-##	fi
-#	
-##	local strExec=""
-##	while [[ -n "${1-}" ]];do
-##  	if [[ -n "$strExec" ]];then
-##	  	strExec="${strExec} ";
-##  	fi
-##  	strExec="${strExec}${strEscapeQuotes}\"$1${strEscapeQuotes}\"";
-##  	shift;
-##  done;
-#	local lstrToExec=""
-#	for lstrParam in "$@";do
-#		lstrToExec+="'$lstrParam' "
-#	done
-#  echo "$lstrToExec"
-#}
+	
+	local lstrToExec=""
+	for lstrParam in "$@";do
+		lstrToExec+="${lstrQuotes}${lstrParam}${lstrQuotes} "
+	done
+	
+  echo "$lstrToExec"
+}
 
-function SECFUNCsingleLetterOptions() { #Add this to the top of your options loop: eval "set -- `SECFUNCsingleLetterOptionsA "$@"`";\n\tIt will expand joined single letter options to separated ones like in '-abc' to '-a' '-b' '-c';\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
+function SECFUNCsingleLetterOptions() { #Add this at beggining of your options loop: SECFUNCsingleLetterOptionsA;\n\tIt will expand joined single letter options to separated ones like in -abc to -a -b -c;\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
 	local lstrCaller=""
 	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
 		shift
@@ -1173,15 +1143,15 @@ function SECFUNCsingleLetterOptions() { #Add this to the top of your options loo
 	
 	# $1 will be bound
 	local lstrOptions=""
-	if [[ "${1:0:1}" == "-" && "${1:1:1}" != "-" ]];then
+#	if [[ "${1:0:1}" == "-" && "${1:1:1}" != "-" ]];then
 		for((nOptSingleLetterIndex=1; nOptSingleLetterIndex < ${#1}; nOptSingleLetterIndex++));do
-			lstrOptions+="'-${1:nOptSingleLetterIndex:1}' "
+			lstrOptions+="-${1:nOptSingleLetterIndex:1} "
 		done
-	else
-		lstrOptions="'$1' "
-	fi
+#	else
+#		lstrOptions="'$1' "
+#	fi
 	
-	lstrOptions+="`SECFUNCparamsToEval "${@:2}"`"
+#	lstrOptions+="`SECFUNCfixParams "${@:2}"`"
 	echo "$lstrOptions"
 }
 
