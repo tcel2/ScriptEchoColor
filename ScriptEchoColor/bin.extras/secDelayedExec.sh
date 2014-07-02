@@ -24,21 +24,97 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
+strSelfName="`basename "$0"`"
+strLogFile="/tmp/.$strSelfName.`id -un`.log"
+
+bSetCheckPoint=false
+bReleaseCheckPoint=false
+bWaitCheckPoint=false
+nDelayAtLoops=1
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--help" ]];then
-		echo "<delay> <command> <params>..."
-		echo "Sleep for delay time before executing the command with its params."
+	if [[ "$1" == "--help" ]];then #help
+		eval `secinit --base` #used here only to prevent spending cpu time
+		SECFUNCshowHelp --colorize "[options] <nDelayToExec> <command> [command params]..."
+		SECFUNCshowHelp --colorize "Sleep for nDelayToExec seconds before executing the command with its params."
+		SECFUNCshowHelp --nosort
 		exit
-	#elif [[ "$1" == "--help" ]];then
+	elif [[ "$1" == "--setcheckpoint" ]];then #help creates a checkpoint tmp file
+		bSetCheckPoint=true
+	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
+		shift
+		nDelayAtLoops="${1-}"
+	elif [[ "$1" == "--releasecheckpoint" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), removes the checkpoint tmp file, use as "true" to promptly remove it.
+		shift
+		strCustomCommand="${1-}"
+		bReleaseCheckPoint=true
+	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nDelayToExec, also waits checkpoint tmp file to be removed
+		bWaitCheckPoint=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
 	shift
 done
 
-nDelay="$1"
-if [[ -z "$nDelay" ]] || [[ -n "`echo "$nDelay" |tr -d "[:digit:]"`" ]];then
-	echo "invalid nDelay='$nDelay'" >>/dev/stderr
+#SECFUNCechoWarnA() { eval SECFUNCechoWarnA "$@"; } #this is a hack; the alias SECFUNCechoWarnA defined inside the command if...fi will not be expanded there (because it is the same command); so the first time it is used is by being a function.
+if [[ -z "`echo "$nDelayAtLoops" |tr -d "[:digit:]"`" ]];then #if only digits
+	if((nDelayAtLoops<1));then
+		eval `secinit --base`; #used here only to prevent spending cpu time
+		SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops', setting to 1";
+		nDelayAtLoops=1
+	fi
+else
+	eval `secinit --base` #used here only to prevent spending cpu time
+	if ! SECFUNCisNumber -n "$nDelayAtLoops";then
+		echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
+		exit 1
+	else
+		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<1.0";then
+			#alias SECFUNCechoWarnA;shopt |grep expand_aliases;type SECFUNCechoWarnA #TODO eval was required... does it make any sense?????
+			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' may be too cpu intensive..."
+		fi
+		
+		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<0.1";then
+			#alias SECFUNCechoWarnA;shopt |grep expand_aliases;type SECFUNCechoWarnA #TODO eval was required... does it make any sense?????
+			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' is too low, setting minimum 0.1"
+			nDelayAtLoops="0.1"
+		fi
+	fi
+fi
+
+strCheckpointTmpFile="/tmp/.SEC.$strSelfName.`id -un`.checkpoint"
+if $bSetCheckPoint;then
+	echo -n >>"$strCheckpointTmpFile"
+	ls -l "$strCheckpointTmpFile"
+	exit
+elif $bReleaseCheckPoint;then
+	echo "see log at: $strLogFile" >>/dev/stderr
+	
+	exec 2>>"$strLogFile"
+	exec 1>&2
+	
+	if [[ -z "$strCustomCommand" ]];then
+		echoc -p "invalid empty strCustomCommand"
+		exit 1
+	fi
+	
+	SECONDS=0
+	echo "Conditional command to remove checkpoint: $strCustomCommand"
+	while true;do
+		echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
+		if eval "$strCustomCommand";then
+			break
+		fi
+		sleep $nDelayAtLoops
+	done
+	
+	rm -v "$strCheckpointTmpFile"
+	
+	exit
+fi
+
+nDelayToExec="${1-}"
+if [[ -z "$nDelayToExec" ]] || [[ -n "`echo "$nDelayToExec" |tr -d "[:digit:]"`" ]];then
+	echo "invalid nDelayToExec='$nDelayToExec'" >>/dev/stderr
 	exit 1
 fi
 
@@ -49,10 +125,19 @@ if [[ -z "$@" ]];then
 	exit 1
 fi
 
-sleep $nDelay
+echo "Going to exec: $@"
+sleep $nDelayToExec
 
-#echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
-echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelay='$nDelay';$@" >>"/tmp/.`basename "$0"`.`id -un`.log"
+if $bWaitCheckPoint;then
+	SECONDS=0
+	while [[ -f "$strCheckpointTmpFile" ]];do
+		echo -ne "$strSelfName: waiting checkpoint tmp file be released (${SECONDS}s)...\r"
+		sleep $nDelayAtLoops
+	done
+	echo
+fi
 
+#echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
+echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"$strLogFile"
 "$@"
 

@@ -957,52 +957,6 @@ FUNCargclr(){
 # minimum delay is 60 seconds (1 minute)
 nCurrentTime=`date +%s`
 
-#if [[ `FUNCargget ScriptEchoColorVersion` != "$g_nVersion" ]]; then
-#  echo -n >"$strLastFmtFile"
-#  #FUNCargset "$g_nVersion" --var="ScriptEchoColorVersion"
-#  FUNCargset "ScriptEchoColorVersion" "$g_nVersion"
-#fi
-
-#strPIDsLastCleanTime=`FUNCargget PIDsLastCleanTime`
-#if [[ -z "$strPIDsLastCleanTime" ]]; then
-#  strPIDsLastCleanTime=$nCurrentTime
-#  #FUNCargset "$strPIDsLastCleanTime" --var="PIDsLastCleanTime"
-#  FUNCargset "PIDsLastCleanTime" "$strPIDsLastCleanTime"
-#fi
-#nPIDsLastCleanTime=$((strPIDsLastCleanTime)) # empty result in 0
-
-#strTimeLastSystemBootArg=`FUNCargget TimeLastSystemBoot`
-#strTimeLastSystemBoot=`who -b |tr -s " "`
-#bCleanAllPids=false
-#if [[ "$strTimeLastSystemBootArg" != "$strTimeLastSystemBoot" ]]; then
-#  strTimeLastSystemBootArg="$strTimeLastSystemBoot"
-#  #FUNCargset "$strTimeLastSystemBootArg" --var="TimeLastSystemBoot"
-#  FUNCargset "TimeLastSystemBoot" "$strTimeLastSystemBootArg"
-#  bCleanAllPids=true
-#fi
-
-#if(( (nCurrentTime-nPIDsLastCleanTime) >= 60 )) || $bCleanAllPids; then
-#  strPIDsList=`grep "${strArgPrefix}" "$strLastFmtFile"`
-#  nLines=`echo "$strPIDsList" |wc -l`
-#  for((n=1;n<=nLines;n++)); do
-#    strLine=`echo "$strPIDsList" |head -n $n |tail -n 1`
-#    nPID=`expr "$strLine" : "${strArgPrefix}\(.*\)("`
-#    #echo "DEBUG: nPID=$nPID" >&2
-#    ps -p $nPID >/dev/null 2>&1
-#    nRet=$?
-#    if((nRet!=0)) || $bCleanAllPids; then # not found
-#      FUNCargclr "${strArgPrefix}$nPID"
-#    #??? else verify if active PID is from known terminal emulator?
-#      FUNCdebug "CleanDeadPid: $strLine"
-#    fi
-#  done
-#  #FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
-#  FUNCargset "PIDsLastCleanTime" "$nCurrentTime"
-#elif(( (nCurrentTime-nPIDsLastCleanTime) < 0 )); then # in case of system date time change
-#  #FUNCargset "$nCurrentTime" --var="PIDsLastCleanTime"
-#  FUNCargset "PIDsLastCleanTime" "$nCurrentTime"
-#fi
-
 str=`FUNCargget`
 strTermEmulator=`expr "$str" : "\(.*\);"` # faster than FUNCguessTermEmulator below..
 strPreviousLastFmt=`expr "$str" : ".*;\(.*\)"`

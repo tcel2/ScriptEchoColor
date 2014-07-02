@@ -24,6 +24,8 @@
 
 # THIS FILE must contain everything that can be used everywhere without any problems (if possible)
 
+if((`id -u`==0));then echo "This is Beta. Forbidden usage as root." >>/dev/stderr;exit 1;fi
+
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
@@ -70,9 +72,15 @@ function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 	# teoretically, this line should never be reached...
 	_SECFUNCbugTrackExec strace id -u
 }
+function _SECFUNCforceAliasToWork(){ #this hack allows alias to work inside if...fi command block
+	# if after being defined the alias is still not recognized/accepted, it will be called as a function that thru `eval` will allow the alias to actually work!
+	local lstrAliasId="`echo "$2" |sed -r 's"^([^=]*)=.*$"\1"'`"
+	eval 'function '$lstrAliasId'() { eval '$lstrAliasId' "$@"; }'
+	alias "$2"
+}
 
-alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
-alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
+_SECFUNCforceAliasToWork alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
+_SECFUNCforceAliasToWork alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
@@ -132,20 +140,20 @@ export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
 #export _SECbugFixDate="0" #seems to be working now...
 
-alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+_SECFUNCforceAliasToWork alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
+_SECFUNCforceAliasToWork alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+_SECFUNCforceAliasToWork alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
+_SECFUNCforceAliasToWork alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
+_SECFUNCforceAliasToWork alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
 
-alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
-alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
-alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
-alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
+_SECFUNCforceAliasToWork alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
+_SECFUNCforceAliasToWork alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
+_SECFUNCforceAliasToWork alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
+_SECFUNCforceAliasToWork alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
+_SECFUNCforceAliasToWork alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 
-alias SECexitA='SECFUNCdbgFuncOutA;exit '
-alias SECreturnA='SECFUNCdbgFuncOutA;return '
+_SECFUNCforceAliasToWork alias SECexitA='SECFUNCdbgFuncOutA;exit '
+_SECFUNCforceAliasToWork alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
@@ -203,7 +211,7 @@ export SECbDaemonWasAlreadyRunning
 if $SEC_ShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
 	#TODO for all functions, create these aliases automatically
-	alias "$SECfuncPrefix"delay='SECFUNCdelay';
+	_SECFUNCforceAliasToWork alias "$SECfuncPrefix"delay='SECFUNCdelay';
 fi
 
 _SECdbgVerboseOpt=""
@@ -256,6 +264,8 @@ function SECFUNCisNumber(){ #"is float" check by default
 		elif [[ "$1" == "-dn" || "$1" == "-nd" ]];then #just to keep this function fast...
 			bDecimalCheck=true
 			bNotNegativeCheck=true
+		elif [[ -z "`echo "$1" |tr -d "[:digit:].-"`" ]];then #this is the actual number that is negative!
+			break
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -1200,7 +1210,7 @@ function SECFUNCexec() {
 	fi
 	
 	###### main code
-  local strExec=`SECFUNCparamsToEval "$@"`
+  local strExec="`SECFUNCparamsToEval "$@"`"
 	SECFUNCechoDbgA "caller=${caller}: $strExec"
 	
 	if $bExecEcho; then
@@ -1276,7 +1286,7 @@ function SECFUNCbcPrettyCalc() {
 	local lnScale=2
 	local lbRound=true
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help --help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--cmp" ]];then #SECFUNCbcPrettyCalc_help output comparison result as "true" or "false"
