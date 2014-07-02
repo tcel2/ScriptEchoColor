@@ -72,15 +72,28 @@ function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 	# teoretically, this line should never be reached...
 	_SECFUNCbugTrackExec strace id -u
 }
-function _SECFUNCforceAliasToWork(){ #this hack allows alias to work inside if...fi command block
-	# if after being defined the alias is still not recognized/accepted, it will be called as a function that thru `eval` will allow the alias to actually work!
-	local lstrAliasId="`echo "$2" |sed -r 's"^([^=]*)=.*$"\1"'`"
-	eval 'function '$lstrAliasId'() { eval '$lstrAliasId' "$@"; }'
-	alias "$2"
-}
+#function _SECFUNCforceAliasToWork(){ #this hack allows alias to work inside if...fi command block
+#	# if after being defined the alias is still not recognized/accepted, it will be called as a function that thru `eval` will allow the alias to actually work
+#	if [[ "$1" != "alias" ]];then
+#		echo "$FUNCNAME only to be used before 'alias' command."
+#		_SECFUNCcriticalForceExit
+#	fi
+#	
+#	local lstrAliasId="`echo "$2" |sed -r "s;^([[:alnum:]_]*)=.*$;\1;"`"
+#	if [[ -z "$lstrAliasId" ]] || [[ -n "`echo "$lstrAliasId" |tr -d "[:alnum:]_"`" ]];then
+#		echo "invalid lstrAliasId='$lstrAliasId'" >>/dev/stderr
+#		_SECFUNCcriticalForceExit
+#	fi
 
-_SECFUNCforceAliasToWork alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
-_SECFUNCforceAliasToWork alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
+#	local lstrCmd="`echo "$2" |sed -r "s;^$lstrAliasId=(.*)$;\1;"`";
+#	
+#	alias "${lstrAliasId}=${lstrCmd}"
+#	
+#	eval "function $lstrAliasId() { $lstrCmd \"\$@\"; }"
+#}
+
+alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
+alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
@@ -140,20 +153,20 @@ export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
 #export _SECbugFixDate="0" #seems to be working now...
 
-_SECFUNCforceAliasToWork alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
-_SECFUNCforceAliasToWork alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-_SECFUNCforceAliasToWork alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
-_SECFUNCforceAliasToWork alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
-_SECFUNCforceAliasToWork alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
 
-_SECFUNCforceAliasToWork alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
-_SECFUNCforceAliasToWork alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
-_SECFUNCforceAliasToWork alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
-_SECFUNCforceAliasToWork alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
-_SECFUNCforceAliasToWork alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
+alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
+alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 
-_SECFUNCforceAliasToWork alias SECexitA='SECFUNCdbgFuncOutA;exit '
-_SECFUNCforceAliasToWork alias SECreturnA='SECFUNCdbgFuncOutA;return '
+alias SECexitA='SECFUNCdbgFuncOutA;exit '
+alias SECreturnA='SECFUNCdbgFuncOutA;return '
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
@@ -211,7 +224,7 @@ export SECbDaemonWasAlreadyRunning
 if $SEC_ShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
 	#TODO for all functions, create these aliases automatically
-	_SECFUNCforceAliasToWork alias "$SECfuncPrefix"delay='SECFUNCdelay';
+	alias "$SECfuncPrefix"delay='SECFUNCdelay';
 fi
 
 _SECdbgVerboseOpt=""

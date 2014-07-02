@@ -24,6 +24,8 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
+eval `secinit --base` #it should be as fast as possible
+
 strSelfName="`basename "$0"`"
 strLogFile="/tmp/.$strSelfName.`id -un`.log"
 
@@ -33,7 +35,6 @@ bWaitCheckPoint=false
 nDelayAtLoops=1
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		eval `secinit --base` #used here only to prevent spending cpu time
 		SECFUNCshowHelp --colorize "[options] <nDelayToExec> <command> [command params]..."
 		SECFUNCshowHelp --colorize "Sleep for nDelayToExec seconds before executing the command with its params."
 		SECFUNCshowHelp --nosort
@@ -55,26 +56,21 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-#SECFUNCechoWarnA() { eval SECFUNCechoWarnA "$@"; } #this is a hack; the alias SECFUNCechoWarnA defined inside the command if...fi will not be expanded there (because it is the same command); so the first time it is used is by being a function.
 if [[ -z "`echo "$nDelayAtLoops" |tr -d "[:digit:]"`" ]];then #if only digits
 	if((nDelayAtLoops<1));then
-		eval `secinit --base`; #used here only to prevent spending cpu time
 		SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops', setting to 1";
 		nDelayAtLoops=1
 	fi
 else
-	eval `secinit --base` #used here only to prevent spending cpu time
 	if ! SECFUNCisNumber -n "$nDelayAtLoops";then
 		echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
 		exit 1
 	else
 		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<1.0";then
-			#alias SECFUNCechoWarnA;shopt |grep expand_aliases;type SECFUNCechoWarnA #TODO eval was required... does it make any sense?????
 			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' may be too cpu intensive..."
 		fi
 		
 		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<0.1";then
-			#alias SECFUNCechoWarnA;shopt |grep expand_aliases;type SECFUNCechoWarnA #TODO eval was required... does it make any sense?????
 			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' is too low, setting minimum 0.1"
 			nDelayAtLoops="0.1"
 		fi
@@ -101,7 +97,7 @@ elif $bReleaseCheckPoint;then
 	echo "Conditional command to remove checkpoint: $strCustomCommand"
 	while true;do
 		echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
-		if eval "$strCustomCommand";then
+		if bash -c "$strCustomCommand";then
 			break
 		fi
 		sleep $nDelayAtLoops
