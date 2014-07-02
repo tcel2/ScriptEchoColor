@@ -213,14 +213,11 @@ else
 	fi
 	
 	if $bBashDebug;then
-		# eval to make $strFunctionNames have its spaces considered and each word become an entry
-		eval "export SECastrBashDebugFunctionIds=($strFunctionNames)"
+		export SECastrBashDebugFunctionIds=($strFunctionNames)
 	fi
 	
 	# must not be child to be interactive
 	# unset SECvarFile will force the called script to create its own var db file
-	#eval "unset SECvarFile; $strExec" 
-	#SECFUNCarraysExport;bash -c "unset SECvarFile;$strExec" 
 	SECFUNCexecOnSubShell "unset SECvarFile;$strExec" 
 fi
 
