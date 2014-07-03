@@ -31,6 +31,7 @@ SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
 KNOWN BUGS and LIMITATIONS:
 
 TODO (fix at top):
+	fix: remove all `source` that are not for libs files; also change the way vars work to not use "source" by splitting varid and value and recreating varid="value"
 	fix: eval is used everywhere.. use eval properly only... `grep eval * -rnc --exclude="*~" |grep -v ":0"`
   fix: SECFUNCvarSet (and other functions) without parameters gets crazy..
   fix: echoc "\$" not working!!!

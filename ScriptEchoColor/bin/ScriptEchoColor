@@ -41,8 +41,6 @@ g_nVersion=1.15
 ##set -u #enforces strong coding
 ##SECinstallPath=`FUNCgetInstallPath`
 #SECinstallPath=`secGetInstallPath.sh`
-#source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh"
-##source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh" #already calls funcMisc
 SECvarCheckScriptSelfNameParentChange=false
 eval `secinit`
 
@@ -125,22 +123,16 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 
 ##case "$SEC_HEADEREXEC" in pid  | name   | shortname | pidshortname);; *)SEC_HEADEREXEC=""  ;; esac
 
-strCfgPath="$HOME/.ScriptEchoColor"
-if [[ ! -d "$strCfgPath" ]]; then
-  mkdir "$strCfgPath"
-fi
-
-#strFileDebug="$strCfgPath/debug.log"
-
 # SPEEDUP
-strSpeedupFile="$strCfgPath/speedup.cfg"
+strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
   if [[ `head -n 1 "$strSpeedupFile"` != "$strCfgHeader" ]]; then
-    mv -v "$strSpeedupFile" "$strCfgPath/speedup-"`date +%Y%m%d-%H%M%S`".old" 
-    if [[ -f "$strSpeedupFile" ]]; then
-      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >>/dev/stderr
-      exit 1
-    fi
+#    mv -v "$strSpeedupFile" "$SEC_TmpFolder/speedup-"`date +%Y%m%d-%H%M%S`".old" 
+#    if [[ -f "$strSpeedupFile" ]]; then
+#      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >>/dev/stderr
+#      exit 1
+#    fi
+		rm "$strSpeedupFile"
   fi
 fi
 if [[ ! -f "$strSpeedupFile" ]]; then
@@ -201,80 +193,10 @@ if [[ ! -f "$strSpeedupFile" ]]; then
     echo "fmtCharTable=("`echo "r g b c m y k w R G B C M Y K W o u d n e l L : a s A S -f -b -l -L -o -u -d -n -e -t -: -a +p"`")" >>"$strSpeedupFile"
     echo "fmtExtdTable=("`echo "red green blue cyan magenta yellow black white RED GREEN BLUE CYAN MAGENTA YELLOW BLACK WHITE bold underline dim blink strike light LIGHT graphic SaveAll SaveTypeColor RestoreAll RestoreTypeColor -foreground -background -light -LIGHT -bold -underline -dim -blink -strike -types -graphic -ResetAllSettings +RestorePosBkp"`")" >>"$strSpeedupFile"
     echo "strGfxCharTable=\""`echo "$strTempCharTable" |tr -d " "`"\"" >>"$strSpeedupFile" #to speed up searches
+    
+    chmod -w "$strSpeedupFile"
 fi
 source "$strSpeedupFile"
-
-#function FUNCgetInstallPath() {
-#	local installPath=`which "$strSelfName"`
-#	if [[ -h "$installPath" ]]; then
-#		installPath=`readlink "$installPath"`
-#	fi
-#	
-#	installPath=`dirname "$installPath"` #remove the file name
-#	
-#	if [[ "`basename "$installPath"`" != "bin" ]];then
-#		echo "$strSelfName should be at a '.../bin/' path!"
-#		exit 1
-#	fi
-#	installPath=`dirname "$installPath"` #remove the bin path
-#	
-#	echo "$installPath"
-#}  
-
-#SECinstallPath="" # variable redefined at setup.cfg
-#strSetupCfgFile="$strCfgPath/setup.cfg"
-#if [[   -f "$strSetupCfgFile" ]]; then
-#  # Check Version
-#  if [[ `head -n 1 "$strSetupCfgFile"` != "$strCfgHeader" ]]; then
-#    mv "$strSetupCfgFile" "$strCfgPath/setup-"`date +%Y%m%d-%H%M%S`".old" 
-#    if [[ -f "$strSetupCfgFile" ]]; then
-#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >>/dev/stderr
-#      exit 1
-#    fi
-#  else
-#    source "$strSetupCfgFile"
-#  fi
-#  # Check SECinstallPath
-#  if [[ -n "$SECinstallPath" ]] && [[ ! -f "$SECinstallPath/bin/$strSelfName" ]]; then
-#    mv "$strSetupCfgFile" "$strCfgPath/setup-"`date +%Y%m%d-%H%M%S`".old" 
-#    if [[ -f "$strSetupCfgFile" ]]; then
-#      _he;echo -e "Could not move file '$strSetupCfgFile', exiting...\a" >>/dev/stderr
-#      exit 1
-#    fi
-#  fi
-#else
-#	# Guess install path
-#  SECinstallPath=`FUNCgetInstallPath`
-
-#  # set install directory
-#  echo "$strCfgHeader" >>"$strSetupCfgFile"
-#  echo "SECinstallPath=\"$SECinstallPath\""       >>"$strSetupCfgFile"
-#  
-#  ln -s "$SECinstallPath/lib/$strSelfName/utils/sec.helperscript.source" "$strCfgPath"
-#  
-#  source "$strSetupCfgFile"
-#fi
-
-#FUNCdebug(){
-#	if ! $SEC_DEBUG;then
-#		return 0
-#	fi
-#  
-#  local strDateTime=`date +%Y%m%d-%H%M%S`
-
-#  if [[ ! -a "$strFileDebug" ]]; then
-#    echo -n >>"$strFileDebug"
-#  fi
-#  
-#  echo " $strDateTime: $1" >>"$strFileDebug"
-#  
-#  # limit file size in lines
-#  local nLines=`cat "$strFileDebug" |wc -l`
-#  if (( nLines > 1500 )); then
-#    local str=`tail -n 1000 "$strFileDebug"`
-#    echo "$str" >"$strFileDebug"
-#  fi
-#}
 
 FUNCmsg(){
   local strHead="$1"
@@ -377,8 +299,6 @@ optHelpListExtdFmt="$optHelp-list-extended-format"
 optIdea="--idea"
 optInfo="--info"
 optInstallPath="--getinstallpath"
-#optLibSourceInit="--libs-init"
-#optLibSource="--libs"
 #optLogFileName="--logfilename"
 optParentPidList="--parentpidlist"
 optRecreateConfigFile="--recreateconfigfile"
@@ -415,8 +335,6 @@ nOptIdea=0
 
 bOptInfo=false
 bOptInstallPath=false
-#bOptLibSource=false
-#bOptLibSourceInit=false
 #bOptLogFileName=false
 bOptParentPidList=false
 bOptRecreateConfigFile=false
@@ -569,13 +487,6 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
       "${optHelp:2}") 
           bOptHelp=true 
           ;;
-#      "${optLibSource:2}")
-#          bOptLibSource=true 
-#          ;;
-#      "${optLibSourceInit:2}")
-#          bOptLibSource=true 
-#          bOptLibSourceInit=true
-#          ;;
 #      "${optThereCanOnlyBeOne:2}")
 ##          shift; nOptThereCanOnlyBeOnePidSkip=$1
 ##          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" >/dev/null 2>&1; then
@@ -903,10 +814,6 @@ FUNCguessTermEmulator(){
 
 # last fmt before this execution
 strLastFmt=""
-#strLastFmtFile="$strCfgPath/lastformat.arg"
-#if [[ ! -a "$strLastFmtFile" ]]; then
-#  echo -n >"$strLastFmtFile"
-#fi
 
 FUNCkillSelf(){
   if(($1!=0)); then
@@ -1020,14 +927,14 @@ FUNCtestIgnore(){
 # "include" files
 
 # USER CONFIG
-strUserCfgFile="$strCfgPath/User.cfg"
+strUserCfgFile="$SECuserConfigPath/User.cfg"
 if $bOptRecreateConfigFile; then
     mv "$strUserCfgFile" "$strUserCfgFile.bkp"
 fi
 strUserCfgFilePreviousVersion=""
 if [[   -f "$strUserCfgFile" ]]; then
   if [[ `head -n 1 "$strUserCfgFile"` != "$strCfgHeader" ]]; then
-    strUserCfgFilePreviousVersion="$strCfgPath/User-"`date +%Y%m%d-%H%M%S`".old" 
+    strUserCfgFilePreviousVersion="$SECuserConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
     mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
     if [[ -f "$strUserCfgFile" ]]; then
       _he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >>/dev/stderr
@@ -1477,8 +1384,6 @@ if $bOptHelp; then
     echo " ${optGfxE294char}: use full gfx translation table"
     echo " ${optRecreateConfigFile}: will remove $strUserCfgFile to be recreated with defaults"
 #    echo " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
-#    echo " ${optLibSource}: env vars and source libs, use like: eval \`echoc ${optLibSource}\`"
-#    echo " ${optLibSourceInit}: like ${optLibSource}, but also initialize everything"
     echo " ${optSay}: use festival to say the text!"
     echo " ${optWaitSay}: like ${optSay} but wait until speech ends before exiting."
     echo " ${optExecuteRetry}: in conjunction with -x or -X, will ask if you want to retry the failed command."
@@ -1531,7 +1436,7 @@ if $bOptHelpExtended; then
     echo "    as this kills the parent process."
     echo
     echo " -v echo and help change environment (color set is same of -x)"
-    echo "    usage (TIP: read sec.helperscript.source) ex.:"
+    echo "    usage ex.:"
     strCmdLine="cd .."    
     echo "      \`$strSelfName -v \"$strCmdLine\"\`"
     echo "    outputs to $stderr the formatted text"

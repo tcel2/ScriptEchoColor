@@ -29,19 +29,44 @@ SECFUNCuniqueLock --daemonwait
 
 renice -n 19 $$
 
-trap 'echo "(ctrl+c hit)" >>/dev/stderr;bAskExit=true' INT
+#trap 'echo "(ctrl+c hit, wait loop timeout...)" >>/dev/stderr;bAskExit=true' INT
 
-fileCfg="$HOME/.`basename $0`.cfg"
 bAskExit=false
 strDmesgTail="(test)"
 clr_eol=`tput el` # terminfo clr_eol, constant to clear the line b4 echo
 
-echo "Add checks to $fileCfg"
+SECFUNCcfgRead
+if [[ ! -f "$SECcfgFileName" ]]; then
+	check001=("usb .*: not running at top speed; connect to a high speed hub" "Reconnect USB device (pendrive?), it is running at low speed..." "Some USB could be faster?")
+	check002=("hub .* unable to enumerate USB device on port" "Reconnect USB device (pendrive?)..." "USB connection failed")
+	check003=("device .* entered promiscuous mode" "Who is doing that?! try: cat /var/log/messages |grep 'promiscuous mode'")
+	check004=("Device offlined - not ready after error recovery" "fsck some of your storage devices" "Some storage has errors?")
+	
+#	SECFUNCcfgWriteVar check001
+#	SECFUNCcfgWriteVar check002
+#	SECFUNCcfgWriteVar check003
+  nCheckId=1
+  while true;do
+  	strCheckId=$(printf "check%03d" $nCheckId)
+  	if ! ${!strCheckId+false};then
+			SECFUNCcfgWriteVar $strCheckId
+	  else
+	  	break
+  	fi
+	  ((nCheckId++))
+  done
+
+fi
+
+echo "Add checks to '$SECcfgFileName'"
 grep "#help" `which $0` |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
+echo "You can test this way: echo 'dmesg message go here' |sudo -k tee /dev/kmsg"
+echoc -x "cat '$SECcfgFileName'"
 
 function FUNCdmesg() {
-	# dmesg doesnt show everything.. #dmesg -l warn,err,crit,alert,emerg "$@"
-	cat /var/log/messages
+	#cat /var/log/messages
+	#cat /var/log/kern.log
+	dmesg -l warn,err,crit,alert,emerg "$@"
 }
 
 function FUNCupdateLastIdLine {
@@ -66,36 +91,38 @@ function FUNCupdateLastId {
 function FUNCproblem {
   local strDiagnostic=$1
   local strTitle=$2
-  if [[ -z "$strTitle" ]]; then strTitle="PROBLEM(ERROR)"; fi
-  zenity --info --title="$strTitle" --no-wrap --text="$strDiagnostic\n"\
-    "\n"\
-    "$strDmesgTail"
+  
+  strTitle="Dmesg check: $strTitle"
+  
+  zenity --info --title="$strTitle" --no-wrap --text="$strDiagnostic\n\ndmesg:\n$strDmesgTail"
 }
 
 function FUNCcheck { #help <regexToMatch> <problemReportMessage> [customTitle]
+	#echo "$FUNCNAME: '${1}' '${2}' '${3-}'"
   if echo "$strDmesgTail" |grep "$1"; then
-    FUNCproblem "$2" "$3"
+    FUNCproblem "$2" "${3-}"
   fi
 }
 
 bFirstLoop=true
-bLog=false
+bLog=true
+echoc --info "begin checkings..."
 FUNCupdateLastId
 while true; do
   totLines=`FUNCdmesg |wc -l`
   
   FUNCupdateLastIdLine #dmesg size may have changed...
-  tailCount=$((totLines-lastIdLine))
+  remainingLinesToCheck=$((totLines-lastIdLine))
   
-  # collects the new log entries to display
+  # collects the new log entries to display skipping "useless?" ones
   export strDmesgTail=`FUNCdmesg \
-    |tail -n $tailCount \
+    |tail -n $remainingLinesToCheck \
     |grep -v "type=1505 audit.*operation=\"profile_replace\".*name=\"/usr/sbin/mysqld\"" \
     |grep -v "Unknown OutputIN=" \
     |grep -v "Inbound IN="`
   
   if $bLog; then
-    echo -n -e "$clr_eol >>--LOG--> lastId=$lastId, lastIdLine=$lastIdLine, totLines=$totLines, tailCount=$tailCount.\r"
+    echo -n -e "${clr_eol}id:$lastId,ln:$lastIdLine/$totLines,chk:$remainingLinesToCheck\r"
     if [[ -n "$strDmesgTail" ]]; then
       echo #newline to /r log above
       echo "$strDmesgTail"
@@ -105,18 +132,31 @@ while true; do
   
   FUNCupdateLastId  # updates as soon as possible, after vars have been used on log above and b4 dialogs...
   
-  if [[ ! -f "$fileCfg" ]]; then
-  	cat >"$fileCfg" <<EOF
-# some useful checks, you can remove them...
-FUNCcheck "usb .*: not running at top speed; connect to a high speed hub" \
-	"Reconnect USB device (pendrive?), it is running at low speed..."
-FUNCcheck "hub .* unable to enumerate USB device on port" \
-  "Reconnect USB device (pendrive?)..."
-FUNCcheck "device .* entered promiscuous mode" \
-  "Who is doing that?! try: cat /var/log/messages |grep 'promiscuous mode'"
-EOF
-  fi
-	source "$fileCfg"
+  SECFUNCcfgRead
+  
+  nCheckId=1
+  while true;do
+  	strCheckId=$(printf "check%03d" $nCheckId)
+  	#echo "strCheckId='$strCheckId'"
+  	#if declare -p "$strCheckId" 2>&1 >/dev/null;then
+  	if ! ${!strCheckId+false};then
+  		strCheckIdAllElements="${strCheckId}[@]"
+	  	#echo "strCheckIdAllElements='$strCheckIdAllElements'"
+	  	FUNCcheck "${!strCheckIdAllElements}"
+	  else
+	  	break
+  	fi
+	  ((nCheckId++))
+  done
+  
+#	cat "$fileCfg" |while read strLine;do
+#		#echo FUNCcheck $strLine
+#		if [[ "${strLine:0:1}" != "#" ]];then
+#			astrParamsToFuncCheck=($strLine)
+#			declare -p astrParamsToFuncCheck
+#			FUNCcheck "${astrParamsToFuncCheck[@]}"
+#		fi
+#	done
 	
 	#if $bFirstLoop; then
 	#	echo "Current checks:"

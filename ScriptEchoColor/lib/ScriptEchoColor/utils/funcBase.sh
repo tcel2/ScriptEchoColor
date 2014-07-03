@@ -78,6 +78,12 @@ alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
+
+export SECuserConfigPath="$HOME/.ScriptEchoColor"
+if [[ ! -d "$SECuserConfigPath" ]]; then
+  mkdir "$SECuserConfigPath"
+fi
+
 SECastrFuncFilesShowHelp=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh")
 export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
 

@@ -326,7 +326,7 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 		return
 	fi
 	
-	local lpath="$HOME/.ScriptEchoColor/SEC.AppVars.DB"
+	local lpath="$SECuserConfigPath/SEC.AppVars.DB"
 	if [[ ! -d "$lpath" ]];then
 		mkdir -p "$lpath"
 	fi

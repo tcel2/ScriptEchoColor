@@ -60,7 +60,8 @@ echoc -X "mount.cifs --help >/dev/null"
 mountName="SambaMounted`basename "$1"`"
 description="$mountName samba mounted"
 smbMounted=false
-if mount |grep "localhost:/$mountName"; then
+mountSmbPath="//localhost/$mountName"
+if mount |grep "$mountSmbPath"; then
 	smbMounted=true
 fi
 if ! $smbMounted; then
@@ -71,8 +72,8 @@ if ! $smbMounted; then
 	echoc -X "chmod 0777 '$whereToMountFullPath'" #allow others to write
 	echoc -X "ls -ld '$whereToMountFullPath'"
 	echoc -x "du -b '$whereToMountFullPath'"
-	#echoc -X "sudo mount -t smbfs 'localhost:/$mountName' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase"
-	while ! echoc -x "sudo -k mount -t cifs 'localhost:/$mountName' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase @B#YOUR SAMBA PASSWORD WILL BE ASKED NEXT!";do
+	#echoc -X "sudo mount -t smbfs '$mountSmbPath' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase"
+	while ! echoc -x "sudo -k mount -t cifs '$mountSmbPath' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase @B#YOUR SAMBA PASSWORD WILL BE ASKED NEXT!";do
 		echoc --info "fix your samba user account"
 		echoc -X "sudo -k smbpasswd -a `SECFUNCgetUserName`"
 	done
