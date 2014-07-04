@@ -1379,7 +1379,9 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 		lstrFill="="
 	fi
 	
-	local lnTerminalWidth="`tput cols 2>/dev/null`"
+	#local lnTerminalWidth="`tput cols 2>/dev/null`" #tput fails if 2 is redirected :P
+	local lnTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`"
+	#local lnTerminalWidth="`stty -a 2>/dev/null |grep "columns [[:digit:]]*" -o |cut -d" " -f2`"
 	if [[ -z "$lnTerminalWidth" ]];then
 #		if [[ "${SECbWarnEnvValNotSetTERM-}" != true ]];then
 #			SECFUNCechoErrA "environment variable 'TERM' is not set causing 'tput' to fail, using default of 80 cols instead" #could be a warning, but with err it will be logged!
