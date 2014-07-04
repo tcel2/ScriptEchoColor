@@ -134,6 +134,9 @@ if $bWaitCheckPoint;then
 fi
 
 #echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
-echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"$strLogFile"
-"$@"
+strExecCmd="`SECFUNCparamsToEval "$@"`"
+#echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"$strLogFile"
+echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
+"$@" #TODO make it fully work this way `env -i bash -c` so the environment has nothing from secinit, may be ex.: "\"ls\" \"1 2\"" would work fine?
+#env -i bash -c "$strExecCmd" #this fails if there is "'" on the command...
 
