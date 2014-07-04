@@ -24,7 +24,7 @@
 
 # THIS FILE must contain everything that can be used everywhere without any problems (if possible)
 
-if((`id -u`==0));then echo "This is Beta. Forbidden usage as root." >>/dev/stderr;exit 1;fi
+if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >>/dev/stderr;exit 1;fi
 
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
@@ -76,7 +76,6 @@ function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
-export SECinitialized=true
 export SECinstallPath="`secGetInstallPath.sh`";
 
 export SECuserConfigPath="$HOME/.ScriptEchoColor"
@@ -251,8 +250,16 @@ function SECFUNCexportFunctions() {
 }
 
 function SECFUNCexecOnSubShell(){
+	SECFUNCdbgFuncInA
+	
 	SECFUNCarraysExport
-	bash -c "$@"
+	
+	local lstrToExec="`SECFUNCparamsToEval "$@"`"
+	SECFUNCechoDbgA "lstrToExec=\"$lstrToExec\""
+	
+	bash -c "$lstrToExec"
+	
+	SECFUNCdbgFuncOutA
 }
 
 function SECFUNCisNumber(){ #"is float" check by default
@@ -1119,22 +1126,9 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 #}
 
 function SECFUNCparamsToEval() {
-	local lstrQuotes="'"
-#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-#		if [[ "$1" == "--noquotes" ]];then
-#			lstrQuotes=""
-#		elif [[ "$1" == "--dblquotes" ]];then
-#			lstrQuotes='"'
-#		else
-#			SECFUNCechoErrA "invalid option '$1'"
-#			return 1
-#		fi
-#		shift
-#	done
-	
 	local lstrToExec=""
 	for lstrParam in "$@";do
-		lstrToExec+="${lstrQuotes}${lstrParam}${lstrQuotes} "
+		lstrToExec+="'${lstrParam}' "
 	done
 	
   echo "$lstrToExec"
@@ -1655,4 +1649,6 @@ if [[ `basename "$0"` == "funcBase.sh" ]];then
 fi
 
 SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
+
+export SECnPidInitLibBase=$$
 

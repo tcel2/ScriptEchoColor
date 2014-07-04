@@ -1178,3 +1178,5 @@ if [[ `basename "$0"` == "funcVars.sh" ]];then
 	done
 fi
 
+export SECnPidInitLibVars=$$
+

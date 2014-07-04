@@ -547,3 +547,5 @@ if [[ `basename "$0"` == "funcMisc.sh" ]];then
 	done
 fi
 
+export SECnPidInitLibMisc=$$
+

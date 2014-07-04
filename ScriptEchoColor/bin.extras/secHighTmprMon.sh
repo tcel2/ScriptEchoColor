@@ -615,7 +615,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			#echo "PARAMS: tmprLimit minPercCPU"
 			echo
 			echo "Options:"
-			grep "#help" $0 |grep -v grep |sed -r 's/.*"(--[[:alnum:]]*)" \]\];then #help[ ]*(.*)/\t\1\t\t\2/'
+			#grep "#help" $0 |grep -v grep |sed -r 's/.*"(--[[:alnum:]]*)" \]\];then #help[ ]*(.*)/\t\1\t\t\2/'
+			SECFUNCshowHelp
 			exit
 		else
 			echoc -p "invalid option: $1"

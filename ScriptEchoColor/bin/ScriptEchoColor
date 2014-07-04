@@ -41,14 +41,17 @@ g_nVersion=1.15
 ##set -u #enforces strong coding
 ##SECinstallPath=`FUNCgetInstallPath`
 #SECinstallPath=`secGetInstallPath.sh`
-SECvarCheckScriptSelfNameParentChange=false
-eval `secinit`
 
 strMyEmail="teike@users.sourceforge.net"
 strSelfName="ScriptEchoColor"
 strClrKeyBufMsg="[clrkeybuf1s]"
 nClrKeyBufDelay=0.1
 strCfgHeader="# $strSelfName $g_nVersion [internal Version Control line]"
+
+: ${SECbAllowUseLastFmt:=false}
+if [[ "$SECbAllowUseLastFmt" != "true" ]]; then #compare to inverse of default value
+	export SECbAllowUseLastFmt=false # of course, np if already "false"
+fi
 
 #TODO look at `man -7 ascii` may be useful
 
@@ -124,6 +127,10 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 ##case "$SEC_HEADEREXEC" in pid  | name   | shortname | pidshortname);; *)SEC_HEADEREXEC=""  ;; esac
 
 # SPEEDUP
+if [[ -z "${SEC_TmpFolder-}" ]];then
+	SECvarCheckScriptSelfNameParentChange=false
+	eval `secinit --base`
+fi
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
   if [[ `head -n 1 "$strSpeedupFile"` != "$strCfgHeader" ]]; then
@@ -219,7 +226,7 @@ FUNCmsg(){
     echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >>/dev/stderr
   fi
   
-  SECFUNCechoDbgA "$strHead $strSelfName $strFunc$nLine: $strMsg"
+  #SECFUNCechoDbgA "$strHead $strSelfName $strFunc$nLine: $strMsg"
 }
 
 #FUNCsetLogFile(){
@@ -751,7 +758,7 @@ FUNCguessTermEmulator(){
   # FAILURE TEST: if((${#astr[*]}==2))
   
   local strNL="\n"
-  if [[ "$1" == "usecomma" ]]; then
+  if [[ "${1-}" == "usecomma" ]]; then
     strNL=", "
   fi
 
@@ -822,6 +829,7 @@ FUNCkillSelf(){
 }
 strArgPrefix="_SEC_ARG_PID_"
 FUNCargget(){
+	eval `secinit --vars`
   local strVar="${1-}"
   if [[ -z "$strVar" ]]; then
     strVar="${strArgPrefix}$PPID"
@@ -831,15 +839,7 @@ FUNCargget(){
   FUNCkillSelf $?
 }
 FUNCargset(){ # [varId] <value> #only one parameter means there is only the value
-#  local strVar="${2-}"
-#  local optVar="--var="
-#  if [[ "${strVar:0:${#optVar}}" == "$optVar" ]]; then
-#    strVar="${strVar:${#optVar}}"
-#  fi
-#  if [[ -z "$strVar" ]]; then
-#    strVar="${strArgPrefix}$PPID"
-#  fi
-#  $SECinstallPath/bin/secargset "$strLastFmtFile" "$strVar" "$1"
+	eval `secinit --vars`
   if [[ -z "${2-}" ]];then
     strVar="${strArgPrefix}$PPID"
   	strValue="$1"
@@ -851,6 +851,7 @@ FUNCargset(){ # [varId] <value> #only one parameter means there is only the valu
   FUNCkillSelf $?
 }
 FUNCargclr(){
+	eval `secinit --vars`
   local strVar="$1"
   if [[ -z "$strVar" ]]; then
     strVar="${strArgPrefix}$PPID"
@@ -864,9 +865,12 @@ FUNCargclr(){
 # minimum delay is 60 seconds (1 minute)
 nCurrentTime=`date +%s`
 
-str=`FUNCargget`
-strTermEmulator=`expr "$str" : "\(.*\);"` # faster than FUNCguessTermEmulator below..
-strPreviousLastFmt=`expr "$str" : ".*;\(.*\)"`
+#strTermEmulator=""
+strPreviousLastFmt=""
+if $SECbAllowUseLastFmt;then
+	#strTermEmulator=`expr "$(FUNCargget)" : "\(.*\);"` # faster than FUNCguessTermEmulator below..
+	strPreviousLastFmt=$(expr "$(FUNCargget)" : ".*;\(.*\)")
+fi
 
 # Limitations to Prevents some problems
 bLimitColor=false # a
@@ -886,23 +890,26 @@ if [[ "$SEC_IGNORE_LIMITATIONS" == "false" ]]; then
 #    "rxvt")  bLimitBlink=true;  bLimitDim=true;   bLimitStrike=true; #@@@ limit graphical chars also...
   esac
 fi
-# Extra limitations based on terminal emulator executable
-if [[ -z "$strTermEmulator" ]]; then
-  eval 'astr='`FUNCguessTermEmulator usecomma`
-  if((${#astr[*]}==1));then
-    strTermEmulator="${astr[0]}"
-  fi
-  if [[ -z "$strTermEmulator" ]]; then
-    strTermEmulator="[${astr[1]}]"
-    SECFUNCechoWarnA "Unknown term emulator \"$strTermEmulator\", PPIDlist=("`FUNCppidList onelineresult`")"
-  fi
-fi
-if [[ "$SEC_IGNORE_LIMITATIONS" == "false" ]]; then
-  case "$strTermEmulator" in
-    "konsole") bLimitDim=true; bLimitStrike=true; bLimitUseAutoFgBlue=true;;
-    "gnome-terminal") bLimitBlink=true;;
-    "rxvt")  bLimitBlink=true;  bLimitDim=true;   bLimitStrike=true;; #@@@ limit graphical chars also...
-  esac
+bCheckForExtraLimitations=false
+if $bCheckForExtraLimitations;then #TODO rework this to speed up
+	# Extra limitations based on terminal emulator executable
+	if [[ -z "$strTermEmulator" ]]; then
+	  eval 'astr='`FUNCguessTermEmulator usecomma`
+	  if((${#astr[*]}==1));then
+		strTermEmulator="${astr[0]}"
+	  fi
+	  if [[ -z "$strTermEmulator" ]]; then
+		strTermEmulator="[${astr[1]}]"
+		SECFUNCechoWarnA "Unknown term emulator \"$strTermEmulator\", PPIDlist=("`FUNCppidList onelineresult`")"
+	  fi
+	fi
+	if [[ "$SEC_IGNORE_LIMITATIONS" == "false" ]]; then
+	  case "$strTermEmulator" in
+		"konsole") bLimitDim=true; bLimitStrike=true; bLimitUseAutoFgBlue=true;;
+		"gnome-terminal") bLimitBlink=true;;
+		"rxvt")  bLimitBlink=true;  bLimitDim=true;   bLimitStrike=true;; #@@@ limit graphical chars also...
+	  esac
+	fi
 fi
 
 strCommandWasMsg=`basename $0`" $@"
@@ -1350,7 +1357,7 @@ if $bOptHelp; then
     echo " -R: send output to /dev/stderr"
     echo " -b: Beep (see also SEC_BEEP)"
     echo " -r: reset previous settings"
-    echo " -k: keep settings after end (color settings and position)"
+    echo " -k: keep settings after end (color settings and position) (requires: export SECbAllowUseLastFmt=true;)"
     echo " -t <value>: time to wait before continuing"
     echo " -u: output Unformatted"
 #    echo " -l <logfile>: append unformatted text to logfile file"
@@ -2707,10 +2714,10 @@ FUNCdoTheEcho(){
   fi
   
   if $bKeepColorSettings && [[ -n "$strLastFmt" ]]; then
-    FUNCargset "$strTermEmulator;$strLastFmt"
-  else
-    FUNCargset "$strTermEmulator;"
-#    FUNCargclr
+#    FUNCargset "$strTermEmulator;$strLastFmt"
+    FUNCargset "$strLastFmt"
+#  else
+#    FUNCargset "$strTermEmulator;"
   fi
   
   if $bOptEscapedChars; then
