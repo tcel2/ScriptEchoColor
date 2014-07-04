@@ -90,14 +90,19 @@ elif $bMisc;then
 elif $bVars;then
 	if [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then exit;fi
 	echo "source \"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
-	
+fi
+
+# export function before running any function!
+echo 'eval "`SECFUNCexportFunctions`";'
+
+# if functions have been exported before this, if his opens any subshell, exported functions will work (despite aliases and arrays wont)... mmm... may be it is pointless...
+if $bVars;then
 	if $bVarChildDB;then
 		echo 'SECFUNCvarInit;'
 	else
 		echo 'SECFUNCvarInit --nochild;'
 	fi
 fi
-echo 'eval "`SECFUNCexportFunctions`";'
 
 if $bMaintenanceDaemon;then
 	if ! secMaintenanceDaemon.sh --isdaemonstarted >>/dev/stderr;then
