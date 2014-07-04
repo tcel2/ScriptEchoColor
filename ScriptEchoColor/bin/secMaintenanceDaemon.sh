@@ -248,7 +248,9 @@ while true;do
 	fi
 	SECFUNCvarReadDB
 
-	# release locks of dead pids
+	##########################################################################
+	################### RELEASE LOCKS OF DEAD PIDS ###########################
+	##########################################################################
 	strCheckId="LockFilesOfDeadPids"
 	#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
 		SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
@@ -270,11 +272,30 @@ while true;do
 			done
 	#fi
 	
-	# clear temporary shared environment variable files of dead pids etc
+	##########################################################################
+	### CLEAR TEMPORARY SHARED ENVIRONMENT VARIABLE FILES OF DEAD PIDS ETC ###
+	##########################################################################
 	if SECFUNCdelay "EnvVarClearTmpFiles" --checkorinit1 60;then
 		SECFUNCvarClearTmpFiles
 	fi
+
+	##########################################################################
+	######################### SHRINK DB FILES ################################
+	##########################################################################
+	# to speed up Var DB writting, variables are only appended to file, so shrink by keeping only one entry per variable
+	if SECFUNCdelay "ShrinkVarDBFiles" --checkorinit1 600;then
+		ls "$SEC_TmpFolder/SEC."*".vars.tmp" -S1 |while read strVarDBFile;do
+			if [[ -L "$strVarDBFile" ]];then continue;fi;
+			nPidVarDbSize=$(stat -c %s "$strVarDBFile")
+			if((nPidVarDbSize<10000));then continue;fi;
+			nPidVarDbToShrink=$(SECFUNCvarGetPidOfFileDB "$strVarDBFile");
+			bash -c 'eval `secinit --vars`;SECFUNCvarSetDB '$nPidVarDbToShrink';SECFUNCvarWriteDB;';
+			nPidVarDbSizeNew=$(stat -c %s "$strVarDBFile")
+			echo "Shrinked '$strVarDBFile' from '$nPidVarDbSize' to '$nPidVarDbSizeNew'."
+		done
+	fi
 	
+	############################ PID WRAP COUNT ##############################
 	if SECFUNCdelay "nPidWrapCount" --checkorinit1 60;then
 		# pid wraps count
 		echo -n & nPidLast=$!
@@ -284,6 +305,7 @@ while true;do
 		nPidWrapPrevious=$nPidLast
 	fi
 	
+	################################# STATUS LINE ############################
 	if $bShowStatusLine;then
 		if SECFUNCdelay "Totals" --checkorinit1 10;then
 			nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"

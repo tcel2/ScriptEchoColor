@@ -143,7 +143,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	else
 		SECFUNCdbgFuncOutA;return
 	fi
-	
+
 	function SECFUNCvarClearTmpFiles_removeFilesForDeadPids() { 
 		SECFUNCdbgFuncInA;
 		local lfile="$1";

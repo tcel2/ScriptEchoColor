@@ -249,15 +249,16 @@ function SECFUNCexportFunctions() {
 		|grep "export -f pSECFUNC"
 }
 
-function SECFUNCexecOnSubShell(){
+function SECFUNCexecOnSubShell(){ #runs one parameter with `bash -c "$1"`
 	SECFUNCdbgFuncInA
 	
 	SECFUNCarraysExport
 	
-	local lstrToExec="`SECFUNCparamsToEval "$@"`"
-	SECFUNCechoDbgA "lstrToExec=\"$lstrToExec\""
+	#local lstrToExec="`SECFUNCparamsToEval "$@"`"
+	#SECFUNCechoDbgA "lstrToExec=\"$lstrToExec\""
 	
-	bash -c "$lstrToExec"
+	#bash -c "$lstrToExec"
+	bash -c "$1"
 	
 	SECFUNCdbgFuncOutA
 }
@@ -519,7 +520,7 @@ function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 #	fi
 }
 
-function SECFUNCshowHelp() {
+function SECFUNCshowHelp() { #[$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
 	local lbColorizeEcho=false
 	local lbSort=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
@@ -585,7 +586,10 @@ function SECFUNCshowHelp() {
 		# for function description
 		local lstrFuncDesc=`grep -h "function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#(.*);\1;"`
 		if [[ -n "$lstrFuncDesc" ]];then
-			echo -e "\t$lstrFuncDesc"
+			echo -e "\t$lstrFuncDesc" \
+				|sed -r "$lsedColorizeOptionals" \
+				|sed -r "$lsedColorizeRequireds" \
+				|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
 		fi
 		
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
@@ -1342,13 +1346,14 @@ function SECFUNCbcPrettyCalc() {
 }
 
 function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
+	SECFUNCdbgFuncInA;
 	local lstrAlign="middle"
 	local lbStay=false
 	local lbTrunc=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdrawLine_help show help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--left" || "$1" == "-0" ]];then #SECFUNCdrawLine_help align words at left
 			lstrAlign="left"
 		elif [[ "$1" == "--middle" || "$1" == "-1" ]];then #SECFUNCdrawLine_help align words at middle
@@ -1361,7 +1366,7 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 			lbTrunc=false
 		else
 			SECFUNCechoErrA "invalid option '$1'"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -1374,7 +1379,15 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 		lstrFill="="
 	fi
 	
-	local lnTerminalWidth=`tput cols`
+	local lnTerminalWidth="`tput cols 2>/dev/null`"
+	if [[ -z "$lnTerminalWidth" ]];then
+#		if [[ "${SECbWarnEnvValNotSetTERM-}" != true ]];then
+#			SECFUNCechoErrA "environment variable 'TERM' is not set causing 'tput' to fail, using default of 80 cols instead" #could be a warning, but with err it will be logged!
+#		fi
+#		SECbWarnEnvValNotSetTERM=true
+		lnTerminalWidth=80 #uses a default generic value...
+	fi
+	
 	local lnTotalFillChars=$((lnTerminalWidth-${#lstrWords}))
 	local lnFillCharsLeft=$((lnTotalFillChars/2))
 	local lnFillCharsRight=$((lnTotalFillChars/2))
@@ -1417,6 +1430,8 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	fi
 	
 	echo -e $loptNewLine "$lstrOutput$loptCarryageReturn"
+	
+	SECFUNCdbgFuncOutA;
 }
 
 function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: for functions and variables name.
