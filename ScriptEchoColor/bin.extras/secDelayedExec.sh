@@ -122,8 +122,6 @@ if [[ -z "$@" ]];then
 fi
 
 echo "Going to exec: $@"
-sleep $nDelayToExec
-
 if $bWaitCheckPoint;then
 	SECONDS=0
 	while [[ -f "$strCheckpointTmpFile" ]];do
@@ -132,6 +130,7 @@ if $bWaitCheckPoint;then
 	done
 	echo
 fi
+sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
 
 #echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
 strExecCmd="`SECFUNCparamsToEval "$@"`"
