@@ -49,13 +49,16 @@ bList=false
 bMonitorDaemons=false
 bRegisterOnly=false
 varset --allowuser bAutoHoldOnScreenLock=false
+bOnHoldByExternalRequest=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
 		bCheckHold=true
 	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
 		bHoldAll=true
+		bOnHoldByExternalRequest=true
 	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
 		bReleaseAll=true
+		bOnHoldByExternalRequest=false
 	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
 		bList=true
 	elif [[ "$1" == "--daemon" ]];then
@@ -132,7 +135,7 @@ if $bMonitorDaemons;then
 	SECFUNCuniqueLock --daemonwait
 	#FUNCregisterOneDaemon
 	while true;do
-		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+		#SECFUNCdaemonCheckHold #with a delay of 60 is not a problem so skip this
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
@@ -144,17 +147,26 @@ if $bMonitorDaemons;then
 					varset --show bAutoHoldOnScreenLock=true;
 				fi
 				;; 
-			h)$strSelfName --holdall;; 
-			r)$strSelfName --releaseall;; 
+			h)
+				$strSelfName --holdall;
+				bOnHoldByExternalRequest=true
+				;; 
+			r)
+				$strSelfName --releaseall;
+				bOnHoldByExternalRequest=false
+				;; 
 		esac
 		
-		if $bAutoHoldOnScreenLock;then
-			if openNewX.sh --script isScreenLocked $DISPLAY ; then
-				$strSelfName --holdall
-			else
-				$strSelfName --releaseall #TODO this wont work this way... must be something at SECFUNCdaemonCheckHold...
+		if ! $bOnHoldByExternalRequest;then
+			if $bAutoHoldOnScreenLock;then
+				if openNewX.sh --script isScreenLocked $DISPLAY ; then
+					$strSelfName --holdall
+				else
+					$strSelfName --releaseall
+				fi
 			fi
 		fi
+		
 	done
 	exit
 elif $bRegisterOnly;then
