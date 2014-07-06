@@ -148,9 +148,15 @@ function FUNCCHILDScreenSaver() {
 }; export -f FUNCCHILDScreenSaver
 
 function FUNCisScreenLockRunning() {
+	local lstrDisplay="${1-}"
+	
+	if [[ -z "$lstrDisplay" ]];then
+		lstrDisplay=":1"
+	fi
+	
 	if $bUseXscreensaver; then
     #if ps -A -o comm |grep -w "^xscreensaver$" >/dev/null 2>&1;then
-    if DISPLAY=:1 xscreensaver-command -time |grep "screen locked since" >/dev/null 2>&1;then
+    if DISPLAY=$lstrDisplay xscreensaver-command -time |grep "screen locked since" >/dev/null 2>&1;then
       return 0
     fi
 #	else
@@ -384,8 +390,8 @@ function FUNCscript() {
   	SECFUNCdbgFuncOutA;return
   elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
     FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
-  elif [[ "$lscriptName" == "isScreenLocked" ]];then
-    if FUNCisScreenLockRunning;then
+  elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
+    if FUNCisScreenLockRunning ${1-};then
       exit 0
     else
       exit 1

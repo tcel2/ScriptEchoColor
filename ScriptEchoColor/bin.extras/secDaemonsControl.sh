@@ -48,6 +48,7 @@ bCheckHold=false
 bList=false
 bMonitorDaemons=false
 bRegisterOnly=false
+varset --allowuser bAutoHoldOnScreenLock=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
 		bCheckHold=true
@@ -62,6 +63,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		_SECFUNCcriticalForceExit
 	elif [[ "$1" == "--mondaemons" ]];then #help monitor running daemons
 		bMonitorDaemons=true
+	elif [[ "$1" == "--holdonlock" ]];then #help auto hold all scripts in case screen is locked
+		varset --show bAutoHoldOnScreenLock=true
 	elif [[ "$1" == "--register" ]];then #help register the daemon (to be listed).
 		bRegisterOnly=true
 	elif [[ "$1" == "--help" ]];then #help show this help
@@ -133,10 +136,25 @@ if $bMonitorDaemons;then
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
-		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all"; case "`secascii $?`" in 
+		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_auto hold on screen lock"; case "`secascii $?`" in 
+			a)
+				if [[ "$bAutoHoldOnScreenLock" == "true" ]];then 
+					varset --show bAutoHoldOnScreenLock=false;
+				else
+					varset --show bAutoHoldOnScreenLock=true;
+				fi
+				;; 
 			h)$strSelfName --holdall;; 
 			r)$strSelfName --releaseall;; 
 		esac
+		
+		if $bAutoHoldOnScreenLock;then
+			if openNewX.sh --script isScreenLocked $DISPLAY ; then
+				$strSelfName --holdall
+			else
+				$strSelfName --releaseall #TODO this wont work this way... must be something at SECFUNCdaemonCheckHold...
+			fi
+		fi
 	done
 	exit
 elif $bRegisterOnly;then
