@@ -1132,7 +1132,9 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 function SECFUNCparamsToEval() {
 	local lstrToExec=""
 	for lstrParam in "$@";do
-		lstrToExec+="'${lstrParam}' "
+		#lstrToExec+="'${lstrParam}' "
+		#lstrToExec+="\"`echo "${lstrParam}" |sed -r 's;";\\\\";g'`\" "
+		lstrToExec+="\"`sed -r 's;";\\\\";g' <<< "${lstrParam}"`\" "
 	done
 	
   echo "$lstrToExec"

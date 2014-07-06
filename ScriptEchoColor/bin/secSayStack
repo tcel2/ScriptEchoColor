@@ -126,7 +126,7 @@ function FUNCsayStack() {
 			# lock file exist?
 			local realLockFile=""
 			if [[ -L "$lockFile" ]];then
-				realLockFile=`readlink "$lockFile"`
+				realLockFile="`readlink "$lockFile"`"
 				if [[ ! -f "$realLockFile" ]];then
 					FUNCechoErrSS "$FUNCNAME: $LINENO: $realLockFile doesnt exist, its pid crashed?"
 					FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
@@ -161,7 +161,7 @@ function FUNCsayStack() {
 				break;
 			fi
 			
-			local realLockFile=`FUNCgetRealLockFile`
+			local realLockFile="`FUNCgetRealLockFile`"
 			
 			# there is no pid trying to say anything...
 			if [[ -z "$realLockFile" ]];then

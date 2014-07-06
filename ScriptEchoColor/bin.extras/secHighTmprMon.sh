@@ -503,9 +503,9 @@ function FUNCcheckIfDaemonRunningOrExit() {
 
 ################## options
 SECFUNCvarSet --default isLoweringTemperature=false
-varset --default bJustStopPid=false
-varset --default bDoLowFpsLimiting=false
-varset --default bOverrideForceStopNow=false
+varset --default --allowuser bJustStopPid=false
+varset --default --allowuser bDoLowFpsLimiting=false
+varset --default --allowuser bOverrideForceStopNow=false
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	b2ndIsParam=false
@@ -539,15 +539,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			SECFUNCvarSet bDebugFakeTmpr=true
 			SECFUNCvarSet tmprCurrentFake $1
 			exit
-		elif [[ "$1" == "--secvarset" ]];then #help <var> <value>, direct access to SEC vars; put 'help' in place of <var> to see what vars can be changed
+		elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; put 'help' in place of <var> to see what vars can be changed
 			FUNCcheckIfDaemonRunningOrExit
 			shift
-			if [[ -z "$1" ]] || [[ "${1:0:1}" == "-" ]];then
-				echoc -p "expecting <var> or 'help'"
-				exit 1
-			fi
-			if [[ "$1" == "help" ]];then
-				echoc --info "Set these secvars to related options:"
+#			if [[ -z "$1" ]] || [[ "${1:0:1}" == "-" ]];then
+#				echoc -p "expecting <var> or 'help'"
+#				exit 1
+#			fi
+			if [[ -z "${1-}" || "${1-}" == "help" ]];then
+				echoc --info "Set these secvars to related options: ${SECvarsUserAllowed[@]}"
 				echo
 				echoc "@c--limitcpu: @wInstead of alternating between running and stopping pid, will just stop it until temperature lowers properly."
 				echoc "@g`SECFUNCvarShow bJustStopPid`"
@@ -560,30 +560,30 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 				echo
 				exit
 			else
-				varId="$1"
+				varId="${1-}"
 				shift
-				varValue="$1"
+				varValue="${1-}"
 				
-				# validate varId
-				bFound=false
-				aValidSecVars=(bJustStopPid bOverrideForceStopNow bDoLowFpsLimiting)
-				for secvarCheck in ${aValidSecVars[@]}; do
-					if [[ "$varId" == "$secvarCheck" ]];then
-						bFound=true
-						break
-					fi
-				done
-				if ! $bFound;then
-					echoc -p "invalid <var> '$varId'"
-					exit 1
-				fi
+#				# validate varId
+#				bFound=false
+#				aValidSecVars=(bJustStopPid bOverrideForceStopNow bDoLowFpsLimiting)
+#				for secvarCheck in ${aValidSecVars[@]}; do
+#					if [[ "$varId" == "$secvarCheck" ]];then
+#						bFound=true
+#						break
+#					fi
+#				done
+#				if ! $bFound;then
+#					echoc -p "invalid <var> '$varId'"
+#					exit 1
+#				fi
+#				
+#				if [[ -z "$varValue" ]] || [[ "${varValue:0:2}" == "--" ]];then
+#					echoc -p "invalid <value> '$varValue'"
+#					exit 1
+#				fi
 				
-				if [[ -z "$varValue" ]] || [[ "${varValue:0:2}" == "--" ]];then
-					echoc -p "invalid <value> '$varValue'"
-					exit 1
-				fi
-				
-				varset --show "$varId" "$varValue"
+				varset --checkuser --show -- "$varId" "$varValue"
 			fi
 		elif [[ "$1" == "--limitcpu" ]];then #help <pid> limit cpu usage for specified pid to lower temperature
 			FUNCcheckIfDaemonRunningOrExit

@@ -75,6 +75,10 @@ fi
 #	export SECvars=()
 #fi
 
+if ${SECvarsUserAllowed:+false};then
+	export SECvarsUserAllowed=()
+fi
+
 #: ${SECmultiThreadEvenPids:=}
 if ${SECmultiThreadEvenPids:+false};then
 	export SECmultiThreadEvenPids=()
@@ -381,28 +385,41 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 	#local l_bWrite=false
 	local l_bWrite=$SECvarOptWriteAlways
 	local l_bDefault=false
-	local l_bArray=false
+	local lbArray=false
+	local lbAllowUserToSet=false
+	local lbCheckIfUserCanSet=false
+	local lbStopParams=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
-		if [[ "$1" == "--show" ]]; then #SECFUNCvarSet_help will show always var and value
-			l_bShow=true
-		elif [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
+		if [[ "$1" == "--help" ]]; then #SECFUNCvarSet_help show this help
+			SECFUNCshowHelp --nosort ${FUNCNAME}
 			SECFUNCdbgFuncOutA;return
+		elif [[ "$1" == "--show" ]]; then #SECFUNCvarSet_help will show always var and value
+			l_bShow=true
 		elif [[ "$1" == "--showdbg" ]]; then #SECFUNCvarSet_help will show only if SEC_DEBUG is set
 			l_bShowDbg=true
 		elif [[ "$1" == "--write" ]]; then #SECFUNCvarSet_help (this is the default now) will also write value promptly to DB
 			l_bWrite=true
 		elif [[ "$1" == "--array" ]]; then #SECFUNCvarSet_help (auto detection) arrays must be set outside here, this param is just to indicate that the array must be registered, but it cannot (yet?) be set thru this function...
-			l_bArray=true
+			lbArray=true
+		elif [[ "$1" == "--allowuser" ]]; then #SECFUNCvarSet_help user is allowed to easily modify the variable with --checkuser
+			lbAllowUserToSet=true
+		elif [[ "$1" == "--checkuser" ]]; then #SECFUNCvarSet_help check if user is allowed to easily modify the variable value
+			lbCheckIfUserCanSet=true
 		elif [[ "$1" == "--nowrite" ]]; then #SECFUNCvarSet_help prevent promptly writing value to DB
 			l_bWrite=false
 		elif [[ "$1" == "--default" ]]; then #SECFUNCvarSet_help will only set if variable is not set yet (like being initialized only ONCE)
 			l_bDefault=true
+		elif [[ "$1" == "--" ]];then #SECFUNCvarSet_help remaining params after this are considered as not being options
+			lbStopParams=true;
 		else
-			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			#echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
+		if $lbStopParams;then
+			break;
+		fi
 	done
 	
 	local l_varPlDoUsThVaNaPl="$1" #PleaseDontUseThisVarNamePlease
@@ -418,16 +435,51 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 		l_value=`echo "$1" |sed "$sedValue"`
 	fi
 	
+	# check if variable id is valid
+	if [[ -n "`tr -d "[:alnum:]_" <<< "$l_varPlDoUsThVaNaPl"`" ]] || # if has chars not being: alphanumeric or _
+	   [[ -z "`tr -d "[:digit:]" <<< "${l_varPlDoUsThVaNaPl:0:1}"`" ]]; # if 1st char is a number
+	then
+		SECFUNCechoErrA "invalid variable id l_varPlDoUsThVaNaPl='$l_varPlDoUsThVaNaPl', may only contain alphanumerics and underscores (1st char must not be number)."
+		SECFUNCdbgFuncOutA;return 1
+	fi
+	
 	if `SECFUNCvarIsArray $l_varPlDoUsThVaNaPl`; then
-		l_bArray=true
+		lbArray=true
 		l_value=""
 	fi
 	
-	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #to read DB is useful to keep current environment updated with changes made by other threads?
+	# check if value is compatible
+	if ! $lbArray;then
+		# boolean check
+		if [[ "${!l_varPlDoUsThVaNaPl-}" == "true" || "${!l_varPlDoUsThVaNaPl-}" == "false" ]];then
+			if ! [[ "${l_value}" == "true" || "${l_value}" == "false" ]];then
+				SECFUNCechoErrA "variable '$l_varPlDoUsThVaNaPl' is considered as being a boolean. l_value='$l_value' but expected value is 'true' or 'false'"
+				return 1
+			fi
+		fi
+	fi
+	
+	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #TODO test: to read DB is useful to keep current environment updated with changes made by other threads?
+	
+	local lbUserAllowed=false
+	if $lbCheckIfUserCanSet;then
+		local lvarCheck
+		for lvarCheck in ${SECvarsUserAllowed[@]};do
+			if [[ "$l_varPlDoUsThVaNaPl" == "$lvarCheck" ]];then
+				lbUserAllowed=true
+				break
+			fi
+		done
+		
+		if ! $lbUserAllowed;then
+			SECFUNCechoErrA "user not allowed to easily set var '$l_varPlDoUsThVaNaPl'"
+			SECFUNCdbgFuncOutA;return 1
+		fi
+	fi
 	
 	pSECFUNCvarRegister $l_varPlDoUsThVaNaPl #must register before writing
 	
-	if ! ${l_bArray:?}; then
+	if ! ${lbArray:?}; then
 		local l_bSetVarValue=false
 		if ${l_bDefault:?}; then
 			########################################################
@@ -452,23 +504,36 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 			l_bSetVarValue=true
 		fi
 		if $l_bSetVarValue; then
-			eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
 			#eval "export $l_varPlDoUsThVaNaPl=\"$l_value\""
+			eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
 		fi
   fi
-
-	if $l_bArray || $l_bSetVarValue; then
+	
+	# add var to user allowed array
+	if $lbAllowUserToSet;then
+		if ! echo "${SECvarsUserAllowed[@]-}" |grep -qw "$l_varPlDoUsThVaNaPl";then
+			SECvarsUserAllowed+=($l_varPlDoUsThVaNaPl)
+		fi
+	fi
+	
+	if $lbArray || $l_bSetVarValue; then
 		pSECFUNCvarPrepareArraysToExport $l_varPlDoUsThVaNaPl
 		if $l_bWrite; then
 			if [[ "`SECFUNCfileLock --islocked "$SECvarFile"`" == "$$" ]];then
-				#the lock may happen outside here so it must be unlocked only outside here...
+				#the lock may happen before this function so it must be unlocked only there...
 				SECFUNCvarWriteDB --skiplock $l_varPlDoUsThVaNaPl
+				if $lbAllowUserToSet;then
+					SECFUNCvarWriteDB --skiplock SECvarsUserAllowed
+				fi
 			else
 				SECFUNCvarWriteDB $l_varPlDoUsThVaNaPl
+				if $lbAllowUserToSet;then
+					SECFUNCvarWriteDB SECvarsUserAllowed
+				fi
 			fi
 		fi
 	fi
-  
+
   if $l_bShow; then # priority over show only in debug mode
 	  SECFUNCvarShow $l_varPlDoUsThVaNaPl
   elif $l_bShowDbg; then

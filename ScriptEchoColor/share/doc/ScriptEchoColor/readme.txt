@@ -36,6 +36,7 @@ TODO (fix at top):
   fix: SECFUNCvarSet (and other functions) without parameters gets crazy..
   fix: echoc "\$" not working!!!
   fix: arrow keys detection: left right; to select question options
+	fix: booleans used as `if $bVarName` should be `if [[ "$bVarName" == "true" ]]`, despite there is a check at varset that prevents vars considered as boolean to receive value other than true or false!
 	grep "find .* -exec" * -irnI; use `|while` instead of `-exec` works better, no subshell...
   with -t option, append to the end of the line the remaining time each 10s or each 10% of time passes
   create a deb package (use checkinstall !)

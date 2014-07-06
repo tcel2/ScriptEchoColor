@@ -78,7 +78,7 @@ bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
 varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
-export bBackgroundWork=false
+varset --default --allowuser --show bBackgroundWork=false
 varset --default --show bAutoGit=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
@@ -91,7 +91,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		#bLookForChanges=true
 	elif [[ "$1" == "--lookforchanges" ]]; then #help look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
-	elif [[ "$1" == "--purgemissingfiles" ]]; then #help will remove files at RBF that are missing on the real folders, only works with --lookforchanges
+	elif [[ "$1" == "--purgemissingfiles" ]]; then #help will remove files at RBF that are missing on the real folders, only works with --lookforchanges 
 		varset --show bUseAsBackup=false #varset because it is used on function called by find, so it will be easly exported this way also
 	elif [[ "$1" == "--wait" ]]; then #help will wait a key press before exiting
 		bWait=true
@@ -99,7 +99,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bSkipNautilusCheckNow=true
 	elif [[ "$1" == "--addfiles" ]]; then #help <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
-	elif [[ "$1" == "--rmRBFmissingFiles" ]]; then #help opens an interface to select what missing files on real home folder are to be removed from the remote backup folder. implies --lsmisshist
+	elif [[ "$1" == "--rmRBFmissingFiles" ]]; then #help opens an interface to select what missing files on real home folder are to be removed from the remote backup folder. implies --lsmisshist 
 		bRmRBFfilesMode=true
 		bLsMissHist=true
 	elif [[ "$1" == "--cmpdata" ]]; then #help if size and time are equal, compare data for differences
@@ -107,7 +107,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop, is automatically set with --daemon option
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #help between each copy will be added a delay
-		bBackgroundWork=true
+		varset bBackgroundWork=true
 	elif [[ "$1" == "--autogit" ]]; then #help all files at Remote Backup Folder will be versioned (with history)
 		varset bAutoGit=true
 	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
@@ -128,6 +128,25 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		shift
 		pathBackupsToRemote="$1"
 		SECFUNCcfgWriteVar pathBackupsToRemote
+	elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; if <var> is "help", list SEC vars allowed to be set by user.
+		shift
+		strSecVarId="${1-}"
+		shift
+		strSecVarValue="${1-}"
+			
+		SECFUNCuniqueLock --setdbtodaemon #if daemon is running change its vars, if not, set to be used on current daemon
+		if [[ "$strSecVarId" == "help" ]];then
+			echoc --info "SEC vars allowed to be set by user:"
+			echo "${SECvarsUserAllowed[@]}"
+			exit
+		else
+#			if $SECbDaemonWasAlreadyRunning;then
+				varset --checkuser --show -- "$strSecVarId" "$strSecVarValue"
+#			else
+#				echoc -p "daemon not running!"
+#				exit 1
+#			fi
+		fi
 	else	
 		echoc -p "invalid option $1"
 		exit 1
