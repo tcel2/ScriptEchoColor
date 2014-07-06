@@ -44,10 +44,14 @@ while true;do
 done
 
 strFile="ScreenShot-`SECFUNCdtFmt --filename`.png"
-echoc -x "scrot \"$strFile\""
+echoc -x "scrot '$strFile'"
 
 ls -l "$strFile"
 
-echoc --say "screenshot taken"
-echoc -x "shotwell \"$strFile\""
+echoc --info --say "screenshot taken"
+echoc -x "shotwell '$strFile'"
+
+if echoc -q "delete it?";then
+	echoc -x "trash '$strFile'"
+fi
 
