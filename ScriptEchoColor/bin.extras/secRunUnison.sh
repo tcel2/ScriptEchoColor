@@ -81,7 +81,8 @@ if [[ -n "$strProfile" ]];then
 		echoc -p "no strProfile='$strProfile'"
 		exit 1
 #	else
-#		strProfile="'${strProfile}'"
+#		#escape spaces
+#		strProfile=$(echo "${strProfile}" |sed -r 's" "\\ "g')
 	fi
 fi
 
@@ -111,9 +112,13 @@ if $bGtk;then
 fi
 
 function FUNCrun() {
-	#SECFUNCparamsToEval $strExecutable $strProfile -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@"
-	#strExec="$strExecutable $strProfile -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st $@" 
-	strExec=$(SECFUNCparamsToEval $strExecutable "$strProfile" -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
+	# strProfile must be without quotes so an empty profile will not be evaluated as a parameter
+	#echo "<$strProfile>"
+	if [[ -z "$strProfile" ]];then
+		strExec=$(SECFUNCparamsToEval $strExecutable               -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
+	else
+		strExec=$(SECFUNCparamsToEval $strExecutable "$strProfile" -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
+	fi
 	lbRun=false
 	
 	if $bAutoRun;then

@@ -24,30 +24,28 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
-eval `secinit --base` #it should be as fast as possible
+eval `secinit --nochild`
 
 strSelfName="`basename "$0"`"
 strLogFile="/tmp/.$strSelfName.`id -un`.log"
 
-bSetCheckPoint=false
-bReleaseCheckPoint=false
+varset bCheckPoint=false
 bWaitCheckPoint=false
 nDelayAtLoops=1
+bDaemon=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <nDelayToExec> <command> [command params]..."
 		SECFUNCshowHelp --colorize "Sleep for nDelayToExec seconds before executing the command with its params."
 		SECFUNCshowHelp --nosort
 		exit
-	elif [[ "$1" == "--setcheckpoint" ]];then #help creates a checkpoint tmp file
-		bSetCheckPoint=true
 	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
 		shift
 		nDelayAtLoops="${1-}"
-	elif [[ "$1" == "--releasecheckpoint" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), removes the checkpoint tmp file, use as "true" to promptly remove it.
+	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), allows waiting instances to run
 		shift
 		strCustomCommand="${1-}"
-		bReleaseCheckPoint=true
+		bDaemon=true
 	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nDelayToExec, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
 	else
@@ -56,33 +54,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-if [[ -z "`echo "$nDelayAtLoops" |tr -d "[:digit:]"`" ]];then #if only digits
-	if((nDelayAtLoops<1));then
-		SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops', setting to 1";
-		nDelayAtLoops=1
-	fi
-else
-	if ! SECFUNCisNumber -n "$nDelayAtLoops";then
-		echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
-		exit 1
-	else
-		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<1.0";then
-			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' may be too cpu intensive..."
-		fi
-		
-		if SECFUNCbcPrettyCalc --cmpquiet "$nDelayAtLoops<0.1";then
-			SEC_WARN=true SECFUNCechoWarnA "nDelayAtLoops='$nDelayAtLoops' is too low, setting minimum 0.1"
-			nDelayAtLoops="0.1"
-		fi
-	fi
+if ! SECFUNCisNumber -dn "$nDelayAtLoops";then
+	echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
+	exit 1
+elif((nDelayAtLoops<1));then
+	nDelayAtLoops=1
 fi
 
-strCheckpointTmpFile="/tmp/.SEC.$strSelfName.`id -un`.checkpoint"
-if $bSetCheckPoint;then
-	echo -n >>"$strCheckpointTmpFile"
-	ls -l "$strCheckpointTmpFile"
-	exit
-elif $bReleaseCheckPoint;then
+if $bDaemon;then
 	echo "see log at: $strLogFile" >>/dev/stderr
 	
 	exec 2>>"$strLogFile"
@@ -93,20 +72,24 @@ elif $bReleaseCheckPoint;then
 		exit 1
 	fi
 	
+	SECFUNCuniqueLock --waitbecomedaemon
+	
 	SECONDS=0
-	echo "Conditional command to remove checkpoint: $strCustomCommand"
+	echo "Conditional command to activate checkpoint: $strCustomCommand"
 	while true;do
-		echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
-		if bash -c "$strCustomCommand";then
-			break
+		if ! $bCheckPoint;then
+			echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
+			if bash -c "$strCustomCommand";then
+				varset bCheckPoint=true
+			fi
 		fi
 		sleep $nDelayAtLoops
 	done
 	
-	rm -v "$strCheckpointTmpFile"
-	
 	exit
 fi
+
+####################### EXEC A COMMAND ##########################
 
 nDelayToExec="${1-}"
 if [[ -z "$nDelayToExec" ]] || [[ -n "`echo "$nDelayToExec" |tr -d "[:digit:]"`" ]];then
@@ -122,20 +105,46 @@ if [[ -z "$@" ]];then
 fi
 
 echo "Going to exec: $@"
+
+#if $bWaitCheckPoint;then
+#	SECONDS=0
+#	while ! SECFUNCuniqueLock --isdaemonrunning;do
+#		echo -ne "$strSelfName: waiting daemon (${SECONDS}s)...\r"
+#		sleep $nDelayAtLoops
+#	done
+#	
+#	SECFUNCuniqueLock --setdbtodaemon
+#	
+#	SECONDS=0
+#	while true;do
+#		SECFUNCvarReadDB
+#		if $bCheckPoint;then
+#			break
+#		fi
+#		echo -ne "$strSelfName: waiting checkpoint be activated at daemon (${SECONDS}s)...\r"
+#		sleep $nDelayAtLoops
+#	done
+#	
+#	echo
+#fi
 if $bWaitCheckPoint;then
-	SECONDS=0
-	while [[ -f "$strCheckpointTmpFile" ]];do
-		echo -ne "$strSelfName: waiting checkpoint tmp file be released (${SECONDS}s)...\r"
+	SECFUNCdelay bWaitCheckPoint --init
+	while true;do
+		if SECFUNCuniqueLock --isdaemonrunning;then
+			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
+			if $bCheckPoint;then
+				break
+			fi
+		fi
+		echo -ne "$strSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
 		sleep $nDelayAtLoops
 	done
 	echo
 fi
+
 sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
 
-#echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"/tmp/.`basename "$0"`.`SECFUNCgetUserNameOrId`.log" #keep SECFUNCgetUserNameOrId to know when the name becomes available!!!
 strExecCmd="`SECFUNCparamsToEval "$@"`"
-#echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$@" >>"$strLogFile"
 echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
-"$@" #TODO make it fully work this way `env -i bash -c` so the environment has nothing from secinit, may be ex.: "\"ls\" \"1 2\"" would work fine?
-#env -i bash -c "$strExecCmd" #this fails if there is "'" on the command...
+"$@" #TODO seems impossible to make it fully work this way `env -i bash -c "$strExecCmd"` so the environment has nothing from secinit?
 

@@ -271,6 +271,11 @@ while true;do
 				fi
 			done
 	#fi
+
+	##########################################################################
+  ############### RELEASE UNIQUE DAEMON FILES OF DEAD PIDS #################
+	##########################################################################
+	SECFUNCuniqueLock --quiet --listclean #must come after locks cleaning to generate less log possible as it warns about missing real file on unlock attempt
 	
 	##########################################################################
 	### CLEAR TEMPORARY SHARED ENVIRONMENT VARIABLE FILES OF DEAD PIDS ETC ###
