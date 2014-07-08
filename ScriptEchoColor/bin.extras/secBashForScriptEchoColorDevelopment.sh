@@ -24,16 +24,16 @@
 
 #DO NOT USE secinit HERE!
 
-export SECbSecInit=true
-export SECbFullDebug=false
+export SECDEVbSecInit=true
+export SECDEVbFullDebug=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help --help show this help
 		echo "TODO"
 		return
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
-		SECbSecInit=false
+		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help 
-		SECbFullDebug=true
+		SECDEVbFullDebug=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 		exit 1
@@ -41,7 +41,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	shift
 done
 
-if $SECbFullDebug;then
+export SECDEVstrProjectPath="$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor"
+
+if $SECDEVbFullDebug;then
 	export SEC_DEBUG=true
 	export SEC_WARN=true
 	export SEC_BUGTRACK=true
@@ -49,18 +51,18 @@ if $SECbFullDebug;then
 fi
 
 ## custom first command by user like found at SECFUNCparamsToEval
-#export SECcmdDevTmp=""
+#export SECDEVstrCmdTmp=""
 #for strParam in "$@";do
-#	SECcmdDevTmp+="'$strParam' "
+#	SECDEVstrCmdTmp+="'$strParam' "
 #done
 
 # custom first command by user
-export SECcmdDevTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
+export SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
 	
-	local lstrSECpath="$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor"
+	local lstrSECpath="$SECDEVstrProjectPath"
 	
 	source "$lstrSECpath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
 	function SECFUNCcustomUserText(){
@@ -77,7 +79,7 @@ function SECFUNCaddToRcFile() {
 	echo " PATH='$PATH'" >>/dev/stderr
 	
 	# must be after PATH setup
-	if $SECbSecInit;then
+	if $SECDEVbSecInit;then
 		echo ' eval `secinit`' >>/dev/stderr
 		eval `secinit`;
 	fi
@@ -86,9 +88,9 @@ function SECFUNCaddToRcFile() {
 	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit`)';set +u;
 	
 	# user custom initial command
-	if [[ -n "${SECcmdDevTmp}" ]];then
-		echo " EXEC: ${SECcmdDevTmp}";
-		eval "${SECcmdDevTmp}";
+	if [[ -n "${SECDEVstrCmdTmp}" ]];then
+		echo " EXEC: ${SECDEVstrCmdTmp}";
+		eval "${SECDEVstrCmdTmp}";
 	fi
 	
 	#history -r
