@@ -158,7 +158,7 @@ if $bMonitorDaemons;then
 			if $bAutoHoldOnScreenLock;then
 				if openNewX.sh --script isScreenLocked $DISPLAY ; then
 					SECFUNCcfgWriteVar bHoldScripts=true
-					echoc --info --say "daemon scripts on hold."
+					echoc --info --say "screensaver is active"
 				else
 					SECFUNCcfgWriteVar bHoldScripts=false
 				fi
@@ -196,11 +196,11 @@ elif $bCheckHold;then
 		echoc --info "$strSelfName: script continues..."
 	fi
 elif $bHoldAll;then
-	echoc --info "scripts will hold execution"
+	echoc --info "daemon scripts will hold execution"
 	SECFUNCcfgWriteVar bHoldScripts=true
 	varset bOnHoldByExternalRequest=true
 elif $bReleaseAll;then
-	echoc --info "scripts will continue execution"
+	echoc --info "daemon scripts will continue execution"
 	SECFUNCcfgWriteVar bHoldScripts=false
 	varset bOnHoldByExternalRequest=false
 fi
