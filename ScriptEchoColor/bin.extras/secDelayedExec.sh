@@ -104,7 +104,9 @@ if [[ -z "$@" ]];then
 	exit 1
 fi
 
-echo "Going to exec: $@"
+strExecCmd="`SECFUNCparamsToEval "$@"`"
+
+echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
 
 #if $bWaitCheckPoint;then
 #	SECONDS=0
@@ -144,7 +146,6 @@ fi
 
 sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
 
-strExecCmd="`SECFUNCparamsToEval "$@"`"
-echo " -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
+echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
 "$@" #TODO seems impossible to make it fully work this way `env -i bash -c "$strExecCmd"` so the environment has nothing from secinit?
 

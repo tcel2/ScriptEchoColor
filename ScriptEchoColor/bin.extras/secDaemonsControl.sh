@@ -49,16 +49,14 @@ bList=false
 bMonitorDaemons=false
 bRegisterOnly=false
 varset --allowuser bAutoHoldOnScreenLock=false
-bOnHoldByExternalRequest=false
+varset bOnHoldByExternalRequest=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
 		bCheckHold=true
 	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
 		bHoldAll=true
-		bOnHoldByExternalRequest=true
 	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
 		bReleaseAll=true
-		bOnHoldByExternalRequest=false
 	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
 		bList=true
 	elif [[ "$1" == "--daemon" ]];then
@@ -149,20 +147,20 @@ if $bMonitorDaemons;then
 				;; 
 			h)
 				$strSelfName --holdall;
-				bOnHoldByExternalRequest=true
 				;; 
 			r)
 				$strSelfName --releaseall;
-				bOnHoldByExternalRequest=false
 				;; 
 		esac
 		
+		SECFUNCvarReadDB
 		if ! $bOnHoldByExternalRequest;then
 			if $bAutoHoldOnScreenLock;then
 				if openNewX.sh --script isScreenLocked $DISPLAY ; then
-					$strSelfName --holdall
+					SECFUNCcfgWriteVar bHoldScripts=true
+					echoc --info --say "daemon scripts on hold."
 				else
-					$strSelfName --releaseall
+					SECFUNCcfgWriteVar bHoldScripts=false
 				fi
 			fi
 		fi
@@ -197,11 +195,13 @@ elif $bCheckHold;then
 		echo
 		echoc --info "$strSelfName: script continues..."
 	fi
-elif $bReleaseAll;then
-	echoc --info "scripts will continue execution"
-	SECFUNCcfgWriteVar bHoldScripts=false
 elif $bHoldAll;then
 	echoc --info "scripts will hold execution"
 	SECFUNCcfgWriteVar bHoldScripts=true
+	varset bOnHoldByExternalRequest=true
+elif $bReleaseAll;then
+	echoc --info "scripts will continue execution"
+	SECFUNCcfgWriteVar bHoldScripts=false
+	varset bOnHoldByExternalRequest=false
 fi
 
