@@ -106,7 +106,13 @@ fi
 
 strExecCmd="`SECFUNCparamsToEval "$@"`"
 
-echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
+strWaitCheckPointIndicator=""
+if $bWaitCheckPoint;then
+	strWaitCheckPointIndicator="w+"
+fi
+strToLog="${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd"
+
+echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
 
 #if $bWaitCheckPoint;then
 #	SECONDS=0
@@ -146,6 +152,7 @@ fi
 
 sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
 
-echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;nDelayToExec='$nDelayToExec';$strExecCmd" >>"$strLogFile"
+#echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd" >>"$strLogFile"
+echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
 "$@" #TODO seems impossible to make it fully work this way `env -i bash -c "$strExecCmd"` so the environment has nothing from secinit?
 
