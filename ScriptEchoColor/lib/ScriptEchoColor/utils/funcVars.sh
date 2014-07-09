@@ -339,32 +339,46 @@ function SECFUNCfixPliq() {
 function SECFUNCvarShowSimple() { #(see SECFUNCvarShow)
   SECFUNCvarShow "$1"
 }
-function SECFUNCvarShow() { #show var, opt --towritedb
+function SECFUNCvarShow() { #show var
 	local l_prefix="" #"export "
-	if [[ "${1-}" == "--towritedb" ]]; then
-		#l_prefix="SECFUNCvarSet --nowrite " # --nowrite because it will be used at read db
-		l_prefix="export "
+	local lbVarWords=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1-}" == "--help" ]]; then #SECFUNCvarShow_help
+			SECFUNCshowHelp "$FUNCNAME"
+			return
+		elif [[ "${1-}" == "--towritedb" ]]; then #SECFUNCvarShow_help
+			#l_prefix="SECFUNCvarSet --nowrite " # --nowrite because it will be used at read db
+			l_prefix="export "
+		elif [[ "${1-}" == "--varwords" ]]; then #SECFUNCvarShow_help
+			lbVarWords=true
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
 		shift
+	done
+	
+	local lstrVarId="${1-}"
+	
+	if [[ -z "$lstrVarId" ]] || ! declare -p "$lstrVarId" >/dev/null 2>&1;then
+		SECFUNCechoErrA "invalid var '$lstrVarId'"
+		return 1
+	fi
+
+	if `SECFUNCvarIsArray "$lstrVarId"`;then
+  	#@@@ todo, support to "'"
+		# IMPORTANT: arrays set inside functions cannot have export or they will be ignored!
+		echo "$lstrVarId=`SECFUNCvarGet $lstrVarId`;";
+	else
+		local l_value="`SECFUNCvarGet $lstrVarId`"
+		l_value=`SECFUNCfixPliq "$l_value"`
+		if $lbVarWords;then
+			echo "`SECFUNCseparateInWords $lstrVarId` = \"$l_value\""
+		else
+			echo "${l_prefix}$lstrVarId=\"$l_value\";";
+		fi
 	fi
 	
-  if `SECFUNCvarIsArray $1`;then
-  	#@@@ todo, support to "'"
-		#echo "${l_prefix}$1=`SECFUNCvarGet $1`;";
-		
-		# IMPORTANT: arrays set inside functions cannot have export or they will be ignored!
-		echo "$1=`SECFUNCvarGet $1`;";
-  else
-  	local l_value="`SECFUNCvarGet $1`"
-  	l_value=`SECFUNCfixPliq "$l_value"`
-		echo "${l_prefix}$1=\"$l_value\";";
-		
-		#echo "${l_prefix}$1='`SECFUNCvarGet $1`';";
-		#echo "${l_prefix}$1=\"`SECFUNCvarGet $1`\";";
-		
-  	#local l_value="`SECFUNCvarGet $1`"
-  	#l_value=`SECFUNCfixPliq "$l_value"`
-		#echo "${l_prefix}$1=\"$l_value\";";
-  fi
 }
 function SECFUNCvarShowDbg() { #only show var and value if SEC_DEBUG is set true
   if $SEC_DEBUG; then

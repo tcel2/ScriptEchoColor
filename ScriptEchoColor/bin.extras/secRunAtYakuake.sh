@@ -188,7 +188,8 @@ else
     #strLine=`cat $cfgFile |head -n $i |tail -n 1`
   #done 
   while read strLine; do 
-    strLine=`echo -n $strLine` #trim spaces
+    #strLine=`echo -n $strLine` #trim spaces
+    strLine="`echo -n "$strLine" |tr -s " "`" #trim spaces
     #echo "($strLine)"
     
     if [[ "${strLine:0:1}" == "#" ]]; then continue; fi

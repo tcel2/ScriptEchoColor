@@ -594,7 +594,7 @@ elif $bLookForChanges;then
 		echoc --info " Changed=$nFilesChangedCount / total=$nFilesCount "
 		
 		if $bConfirmAlways;then
-			echoc -w -t $nWaitDelay "sleeping..."
+			echoc -w -t $nWaitDelay "ended at `SECFUNCdtFmt --pretty`, sleeping..."
 			exit 0
 		else
 			if $bDoItConfirmed; then

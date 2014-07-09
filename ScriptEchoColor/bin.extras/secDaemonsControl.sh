@@ -50,6 +50,7 @@ bMonitorDaemons=false
 bRegisterOnly=false
 varset --allowuser bAutoHoldOnScreenLock=false
 varset bOnHoldByExternalRequest=false
+varset strHoldAskedBy=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
 		bCheckHold=true
@@ -134,6 +135,10 @@ if $bMonitorDaemons;then
 	#FUNCregisterOneDaemon
 	while true;do
 		#SECFUNCdaemonCheckHold #with a delay of 60 is not a problem so skip this
+		SECFUNCvarShow bAutoHoldOnScreenLock
+		if $bHoldScripts;then
+			SECFUNCvarShow strHoldAskedBy
+		fi
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
@@ -199,6 +204,7 @@ elif $bHoldAll;then
 	echoc --info "daemon scripts will hold execution"
 	SECFUNCcfgWriteVar bHoldScripts=true
 	varset bOnHoldByExternalRequest=true
+	varset strHoldAskedBy="`ps --no-headers -o cmd -p $PPID`"
 elif $bReleaseAll;then
 	echoc --info "daemon scripts will continue execution"
 	SECFUNCcfgWriteVar bHoldScripts=false

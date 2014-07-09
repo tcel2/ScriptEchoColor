@@ -1518,6 +1518,30 @@ function SECFUNCfixCorruptFile() { #usually after a blackout?
 	fi
 }
 
+function SECFUNCseparateInWords() { # <string> ex.: 'abcDefHgi_jkl' becomes 'abc def hgi jkl', good to use with variables and options, also to be spoken
+	lbShowType=true
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1-}" == "--help" ]]; then #SECFUNCseparateInWords_help
+			SECFUNCshowHelp "$FUNCNAME"
+			return
+		elif [[ "${1-}" == "--notype" ]]; then #SECFUNCseparateInWords_help remove the beggining word mainly for variables
+			lbShowType=false
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	lsedLowerFirstChar="s'^[A-Z]'\L&'";
+	lsedSeparateInWords="s'([a-z]*)([A-Z])'\1 \2'g";
+	local lstrOutput="`echo "$1" |sed -r -e "$lsedLowerFirstChar" -e "$lsedSeparateInWords" |tr "[:upper:]_" "[:lower:] "`"
+	if $lbShowType;then
+		echo "$lstrOutput"
+	else
+		echo "$lstrOutput" |cut -d" " -f2-
+	fi
+}
+
 function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
