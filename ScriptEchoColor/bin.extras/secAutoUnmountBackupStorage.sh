@@ -60,8 +60,19 @@ while true;do
 #				|sed -r "s'[[:blank:]]+' 'g"
 #			)
 			strStatus[nIndex]=$(iostat -d $strDev |sed "/^$/d" |tail -n 1 |sed -r "s'[[:blank:]]+' 'g" |cut -d" " -f 5,6)
-		
+			
+			bResetTimer=false
 			if [[ "${strStatusPrevious[nIndex]-}" != "${strStatus[nIndex]}" ]];then
+				bResetTimer=true
+			fi
+			if pgrep unison >/dev/null;then
+				echoc --info "$strDev timer reset, 'unison' is running (also keep storage active)"
+				ps --no-headers -p `pgrep unison`
+				strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
+				ls -l "$strDeviceMountedPath" >/dev/null #TODO does this help keep storage active?
+				bResetTimer=true
+			fi
+			if $bResetTimer;then
 				SECFUNCdelay "Device${nIndex}" --init
 			fi
 

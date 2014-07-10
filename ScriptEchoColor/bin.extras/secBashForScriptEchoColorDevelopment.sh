@@ -24,16 +24,26 @@
 
 #DO NOT USE secinit HERE!
 
+strSelfName="`basename "$0"`"
+strFileCfg="$HOME/.${strSelfName}.cfg"
+
 export SECDEVbSecInit=true
 export SECDEVbFullDebug=false
+bCfgPath=false
+export SECDEVstrProjectPath=""
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help --help show this help
-		echo "TODO"
-		return
+		grep '#help' "$0" |grep -v grep
+		exit
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
 		SECDEVbSecInit=false
-	elif [[ "$1" == "--dbg" ]];then #help 
+	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
 		SECDEVbFullDebug=true
+	elif [[ "$1" == "--cfg" ]];then #help configure the project path if not already
+		shift
+		SECDEVstrProjectPath="${1-}"
+		
+		bCfgPath=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 		exit 1
@@ -41,7 +51,22 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	shift
 done
 
-export SECDEVstrProjectPath="$HOME/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor"
+if $bCfgPath;then
+	if [[ "${SECDEVstrProjectPath:0:1}" != "/" ]];then
+		SECDEVstrProjectPath="`pwd`/$SECDEVstrProjectPath"
+	fi
+	if [[ -f "$SECDEVstrProjectPath/bin.extras/$strSelfName" ]];then
+		echo "$SECDEVstrProjectPath" >"$strFileCfg"
+	fi
+fi
+
+if [[ -z "$SECDEVstrProjectPath" ]];then
+	SECDEVstrProjectPath="`cat "$HOME/.${strSelfName}.cfg"`"
+fi
+if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$strSelfName" ]];then
+	echo "invalid project development path '$SECDEVstrProjectPath'" >>/dev/stderr
+	exit 1
+fi
 
 if $SECDEVbFullDebug;then
 	export SEC_DEBUG=true
