@@ -366,8 +366,8 @@ function SECFUNCvarShow() { #show var
 	fi
 
 	if `SECFUNCvarIsArray "$lstrVarId"`;then
-  	#@@@ todo, support to "'"
-		# IMPORTANT: arrays set inside functions cannot have export or they will be ignored!
+  	#TODO support to "'"?
+		#TODO (what about declare -g global option?) IMPORTANT: arrays set inside functions cannot have export or they will be ignored!
 		echo "$lstrVarId=`SECFUNCvarGet $lstrVarId`;";
 	else
 		local l_value="`SECFUNCvarGet $lstrVarId`"
