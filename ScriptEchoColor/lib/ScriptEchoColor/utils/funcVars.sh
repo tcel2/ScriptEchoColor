@@ -386,6 +386,46 @@ function SECFUNCvarShowDbg() { #only show var and value if SEC_DEBUG is set true
   fi
 }
 
+function SECFUNCvarToggle() { #<varId> only works with variable that has "boolean" value
+	local lbShow=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1-}" == "--help" ]]; then #SECFUNCvarToggle_help
+			SECFUNCshowHelp "$FUNCNAME"
+			return
+		elif [[ "${1-}" == "--show" ]]; then #SECFUNCvarToggle_help
+			lbShow=true
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	
+	local lstrOptShow=""
+	if $lbShow;then
+		lstrOptShow="--show"
+	fi
+	
+	local lstrVarId="${1-}"
+	if [[ -z "$lstrVarId" ]];then
+		SECFUNCechoErrA "invalid var '$lstrVarId'"
+		return 1
+	fi
+	
+	local lstrValue="`SECFUNCvarGet "$lstrVarId"`"
+	local lstrNewValue=""
+	if [[ "$lstrValue" == "true" ]];then
+		lstrNewValue="false"
+	elif [[ "$lstrValue" == "false" ]];then
+		lstrNewValue="true"
+	else
+		SECFUNCechoErrA "var '$lstrVarId' has not boolean value '$lstrValue'"
+		return 1
+	fi
+	
+	SECFUNCvarSet $lstrOptShow $lstrVarId="$lstrNewValue"
+}
+
 function SECFUNCvarUnset() { #<var> unregister the variable so it will not be saved to BD next time
 	pSECFUNCvarRegister --unregister $1
 }

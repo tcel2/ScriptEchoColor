@@ -25,6 +25,12 @@
 
 ############################# INIT ###############################
 eval `secinit --novarchilddb`
+# other options/commands can communicate with monitor daemon this way, if it is running...
+if SECFUNCuniqueLock --isdaemonrunning;then
+	SECFUNCuniqueLock --setdbtodaemon
+else
+	SECFUNCechoBugtrackA "daemons monitor isnt running..."
+fi
 
 strSelfName="`basename "$0"`"
 declare -A aDaemonsPid
@@ -41,44 +47,15 @@ if [[ -z "${bHoldScripts-}" ]];then
 	SECFUNCcfgWriteVar bHoldScripts=false
 fi
 
-############################# OPTIONS ###############################
 bReleaseAll=false
 bHoldAll=false
 bCheckHold=false
 bList=false
 bMonitorDaemons=false
 bRegisterOnly=false
-varset --allowuser bAutoHoldOnScreenLock=false
-varset bOnHoldByExternalRequest=false
-varset strHoldAskedBy=""
-while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
-		bCheckHold=true
-	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
-		bHoldAll=true
-	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
-		bReleaseAll=true
-	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
-		bList=true
-	elif [[ "$1" == "--daemon" ]];then
-		SECFUNCechoErrA "deprecated option '$1', use --mondaemons instead"
-		_SECFUNCcriticalForceExit
-	elif [[ "$1" == "--mondaemons" ]];then #help monitor running daemons
-		bMonitorDaemons=true
-	elif [[ "$1" == "--holdonlock" ]];then #help auto hold all scripts in case screen is locked
-		varset --show bAutoHoldOnScreenLock=true
-	elif [[ "$1" == "--register" ]];then #help register the daemon (to be listed).
-		bRegisterOnly=true
-	elif [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp
-		exit
-	else
-		echoc -p "invalid option '$1'"
-		exit 1
-	fi
-	
-	shift
-done
+varset --default --allowuser bAutoHoldOnScreenLock=false
+varset --default bOnHoldByExternalRequest=false
+varset --default strCallerName=""
 
 #################### FUNCTIONS
 function FUNClist() {
@@ -121,15 +98,40 @@ function FUNCregisterOneDaemon() {
 	SECFUNCdbgFuncOutA;
 }
 
-############################# MAIN ###############################
-if ! $bMonitorDaemons;then
-	# other options/commands can communicate with monitor daemon this way, if it is running...
-	SECFUNCuniqueLock --setdbtodaemon
-	if ! $SECbDaemonWasAlreadyRunning;then
-		SECFUNCechoBugtrackA "'$strSelfName' daemons monitor isnt running..."
+############################# OPTIONS ###############################
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--checkhold" || "$1" == "-c" ]];then #help the script executing this will hold/wait, prefer using 'SECFUNCdaemonCheckHold' on your script, is MUCH faster...
+		bCheckHold=true
+	elif [[ "$1" == "--caller" ]];then #help <strCallerName> sets name of who called this script
+		shift
+		varset strCallerName="${1-}"
+	elif [[ "$1" == "--holdall" || "$1" == "-h" ]];then #help will request all scripts to hold execution
+		bHoldAll=true
+	elif [[ "$1" == "--releaseall" || "$1" == "-r" ]];then #help will request all scripts to continue execution
+		bReleaseAll=true
+	elif [[ "$1" == "--list" || "$1" == "-l" ]];then #help list all active daemons
+		bList=true
+	elif [[ "$1" == "--daemon" ]];then
+		SECFUNCechoErrA "deprecated option '$1', use --mondaemons instead"
+		_SECFUNCcriticalForceExit
+	elif [[ "$1" == "--mondaemons" ]];then #help monitor running daemons
+		bMonitorDaemons=true
+	elif [[ "$1" == "--holdonlock" ]];then #help auto hold all scripts in case screen is locked
+		varset --show bAutoHoldOnScreenLock=true
+	elif [[ "$1" == "--register" ]];then #help register the daemon (to be listed).
+		bRegisterOnly=true
+	elif [[ "$1" == "--help" ]];then #help show this help
+		SECFUNCshowHelp
+		exit
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
 	fi
-fi
+	
+	shift
+done
 
+############################# MAIN ###############################
 if $bMonitorDaemons;then
 	SECFUNCuniqueLock --daemonwait
 	#FUNCregisterOneDaemon
@@ -137,31 +139,21 @@ if $bMonitorDaemons;then
 		#SECFUNCdaemonCheckHold #with a delay of 60 is not a problem so skip this
 		SECFUNCvarShow bAutoHoldOnScreenLock
 		if $bHoldScripts;then
-			SECFUNCvarShow strHoldAskedBy
+			SECFUNCvarShow strCallerName
 		fi
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
 		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_auto hold on screen lock"; case "`secascii $?`" in 
-			a)
-				if [[ "$bAutoHoldOnScreenLock" == "true" ]];then 
-					varset --show bAutoHoldOnScreenLock=false;
-				else
-					varset --show bAutoHoldOnScreenLock=true;
-				fi
-				;; 
-			h)
-				$strSelfName --holdall;
-				;; 
-			r)
-				$strSelfName --releaseall;
-				;; 
+			a)	SECFUNCvarToggle --show bAutoHoldOnScreenLock;; 
+			h)	$strSelfName --holdall;; 
+			r)	$strSelfName --releaseall;; 
 		esac
 		
 		SECFUNCvarReadDB
 		if ! $bOnHoldByExternalRequest;then
 			if $bAutoHoldOnScreenLock;then
-				if openNewX.sh --script isScreenLocked $DISPLAY ; then
+				if secOpenNewX.sh --script isScreenLocked $DISPLAY ; then
 					SECFUNCcfgWriteVar bHoldScripts=true
 					echoc --info --say "screensaver is active"
 				else
@@ -204,7 +196,10 @@ elif $bHoldAll;then
 	echoc --info "daemon scripts will hold execution"
 	SECFUNCcfgWriteVar bHoldScripts=true
 	varset bOnHoldByExternalRequest=true
-	varset strHoldAskedBy="`ps --no-headers -o cmd -p $PPID`"
+	if [[ -z "$strCallerName" ]];then
+		#varset strCallerName="`ps --no-headers -o cmd -p $PPID`"
+		varset strCallerName="`ps --no-headers -o comm -p $(SECFUNCppidList) |tr "\n" " "`"
+	fi
 elif $bReleaseAll;then
 	echoc --info "daemon scripts will continue execution"
 	SECFUNCcfgWriteVar bHoldScripts=false
