@@ -1037,7 +1037,7 @@ function SECFUNCvarReadDB() { #[varName] filter to load only one variable value
 			l_bSkip=true
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
-			SECreturnA 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done

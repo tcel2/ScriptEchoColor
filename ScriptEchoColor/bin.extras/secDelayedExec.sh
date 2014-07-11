@@ -154,5 +154,6 @@ sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is 
 
 #echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd" >>"$strLogFile"
 echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
-"$@" #TODO seems impossible to make it fully work this way `env -i bash -c "$strExecCmd"` so the environment has nothing from secinit?
+SECFUNCcleanEnvironment #nothing related to SEC will run after this unless if reinitialized, also `env -i bash -c "$strExecCmd"` did not fully work as vars like TERM have not required value (despite this is expected)
+"$@"
 

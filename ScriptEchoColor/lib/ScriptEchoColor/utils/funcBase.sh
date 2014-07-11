@@ -156,9 +156,6 @@ alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 
-alias SECexitA='SECFUNCdbgFuncOutA;exit '
-alias SECreturnA='SECFUNCdbgFuncOutA;return '
-
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
 ######### EXTERNAL VARIABLES can be set by user #########
@@ -1515,6 +1512,31 @@ function SECFUNCfixCorruptFile() { #usually after a blackout?
 			echo >>/dev/stderr
 		done
 		echo >>/dev/stderr
+	fi
+}
+
+function SECFUNCcleanEnvironment() { #clean environment from everything related to ScriptEchoColor
+	local lbJustList=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "${1-}" == "--help" ]]; then #SECFUNCcleanEnvironment_help
+			SECFUNCshowHelp "$FUNCNAME"
+			return
+		elif [[ "${1-}" == "--list" ]]; then #SECFUNCcleanEnvironment_help just list all commands that will be run without cleaning
+			lbJustList=true
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	
+	local lstrCmdUnset="`set |egrep "^_?SEC" |sed -r 's"^([[:alnum:]_]*)[ =].*"unset \1"'`"
+	local lstrCmdUnalias="unalias `alias |egrep "^alias _?SEC" |sed -r 's"^alias (_?SEC[[:alnum:]_]*)=.*"\1"' |tr "\n" " "`"
+	if $lbJustList;then
+		(echo "$lstrCmdUnset" && echo "$lstrCmdUnalias") |sort
+	else
+		$lstrCmdUnset
+		$lstrCmdUnalias
 	fi
 }
 
