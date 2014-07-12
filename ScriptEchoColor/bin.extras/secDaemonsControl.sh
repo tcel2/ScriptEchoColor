@@ -154,8 +154,10 @@ if $bMonitorDaemons;then
 		if ! $bOnHoldByExternalRequest;then
 			if $bAutoHoldOnScreenLock;then
 				if secOpenNewX.sh --script isScreenLocked $DISPLAY ; then
+					if ! $bHoldScripts;then #says on the 1st time bHoldScripts=true only
+						echoc --info --say "screensaver is active"
+					fi
 					SECFUNCcfgWriteVar bHoldScripts=true
-					echoc --info --say "screensaver is active"
 				else
 					SECFUNCcfgWriteVar bHoldScripts=false
 				fi

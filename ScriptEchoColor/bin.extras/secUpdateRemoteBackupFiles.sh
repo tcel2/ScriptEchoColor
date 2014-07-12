@@ -259,6 +259,7 @@ function FUNCinterruptAsk() {
 };export -f FUNCinterruptAsk
 
 function FUNCcopy() {
+	SECFUNCdbgFuncInA
 	#FUNCtrap
 	#eval `secinit`
 	#SECFUNCvarReadDB
@@ -334,13 +335,16 @@ function FUNCcopy() {
 	FUNCinterruptAsk #can set bGoFastOnce to true
 	if ! $bGoFastOnce;then
 		if $bBackgroundWork;then
-			read -s -n 1 -t 1 -p "" #sleep 1
+			#read -s -n 1 -t 1 -p "" 
+			sleep 1
 		fi
 	fi
 	
 	# Progress report
 	#echo -en "\r$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`\r"
-	SECFUNCdrawLine --stay --left "$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`" " "
+	SECFUNCdrawLine --stay --left "$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`/`SECFUNCdelay ListOfFuncCopy`,`basename "$strFile"`" " "
+	
+	SECFUNCdbgFuncOutA
 };export -f FUNCcopy
 
 
@@ -560,14 +564,23 @@ elif $bLookForChanges;then
 		SECFUNCdelay --init
 		
 		SECFUNCdelay ListOfFuncCopy --init
-		strCmdFuncCopyList=`
+#		strCmdFuncCopyList=`
+#		find ./ \( -not -name "." -not -name ".." \) \
+#			-and \( -not -path "./.git/*" \) \
+#			-and \( -type f -or -type l \) \
+#			-and \( -not -type d \) \
+#			-and \( -not -xtype d \) |sed -r "s'.*'FUNCcopy $bDoIt \"&\";'"`
+#		#echo $strCmdFuncCopyList;
+#		eval $strCmdFuncCopyList
 		find ./ \( -not -name "." -not -name ".." \) \
 			-and \( -not -path "./.git/*" \) \
 			-and \( -type f -or -type l \) \
 			-and \( -not -type d \) \
-			-and \( -not -xtype d \) |sed -r "s'.*'FUNCcopy $bDoIt \"&\";'"`
-		#echo $strCmdFuncCopyList;
-		eval $strCmdFuncCopyList
+			-and \( -not -xtype d \) \
+			|while read strFileBTR;do
+				FUNCcopy $bDoIt "$strFileBTR";
+			done
+		
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
 			echoc -x "git init" #no problem as I read
