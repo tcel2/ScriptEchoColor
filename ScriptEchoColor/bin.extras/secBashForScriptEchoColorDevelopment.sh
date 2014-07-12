@@ -32,14 +32,16 @@ export SECDEVbFullDebug=false
 bCfgPath=false
 export SECDEVstrProjectPath=""
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-	if [[ "$1" == "--help" ]];then #help --help show this help
-		grep '#help' "$0" |grep -v grep
+	if [[ "$1" == "--help" ]];then #help show this help
+		#grep '#help' "$0" |grep -v grep
+		eval `secinit --base`
+		SECFUNCshowHelp --nosort
 		exit
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
 		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
 		SECDEVbFullDebug=true
-	elif [[ "$1" == "--cfg" ]];then #help configure the project path if not already
+	elif [[ "$1" == "--cfg" ]];then #help <path> configure the project path if not already
 		shift
 		SECDEVstrProjectPath="${1-}"
 		
