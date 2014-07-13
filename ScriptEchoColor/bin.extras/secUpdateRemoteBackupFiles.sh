@@ -78,8 +78,9 @@ bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
 varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
-varset --default --allowuser --show bBackgroundWork=false
+varset --default --show --allowuser bBackgroundWork=false
 varset --default --show bAutoGit=false
+varset --default --show bUseUnison=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
@@ -107,12 +108,14 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop, is automatically set with --daemon option
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #help between each copy will be added a delay
-		varset bBackgroundWork=true
+		varset --show bBackgroundWork=true
 	elif [[ "$1" == "--autogit" ]]; then #help all files at Remote Backup Folder will be versioned (with history)
-		varset bAutoGit=true
+		varset --show bAutoGit=true
 	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
 		shift
 		fileToIgnoreOnGitAdd="$1"
+	elif [[ "$1" == "--unison" ]];then #help synchronize with unison #TODO INCOMPLETE, IN DEVELOPMENT
+		varset --show bUseUnison=true
 	elif [[ "$1" == "--autosync" ]]; then #help will automatically copy the changes without asking
 		varset --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #help will list what files, of current folder recursively, are at Remote Backup Folder!
@@ -531,12 +534,20 @@ elif $bAddFilesMode; then
 		fi
 		
 		# copy the file
-		strFileTarget="${pathBackupsToRemote}/${strFile:${#HOME}}"
-		mkdir -vp "`dirname "$strFileTarget"`"
-		cp -vp "$strFile" "$strFileTarget"
+		strRelativeFile="${strFile:${#HOME}}"
+		strAbsFileTarget="${pathBackupsToRemote}/$strRelativeFile"
+		mkdir -vp "`dirname "$strAbsFileTarget"`"
+		cp -vp "$strFile" "$strAbsFileTarget"
+		
+		if $bUseUnison;then
+			# create a symlink #TODO to be used with unison #TODO code its removal
+			strSymlinkToUnison="$SECuserConfigPath/$SECscriptSelfName/Home/$strRelativeFile"
+			mkdir -vp "`dirname "$strSymlinkToUnison"`"
+			ln -vsf "$strFile" "$strSymlinkToUnison"
+		fi
 		
 		# history of added files
-		if ! grep "$strFile" "$addFileHist"; then
+		if ! grep -q "$strFile" "$addFileHist"; then
 			echo "$strFile" >>"$addFileHist"
 			LC_COLLATE=C sort -f -u "$addFileHist" -o "$addFileHist"
 		fi
