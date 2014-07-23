@@ -776,18 +776,28 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 }
 
 function SECFUNCexec() { #help 
-	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
-	bOmitOutput=false
-	bShowElapsed=false
-	bWaitKey=false
-	bExecEcho=false
-	
-	###### options
+	local bOmitOutput=false
+	local bShowElapsed=false
+	local bWaitKey=false
+	local bExecEcho=false
+	local lbLog=false;
+	local lbLogTmp=false;
+	local lbLogCustom=false;
+	export SEClstrLogFileSECFUNCexec #NOT local, so it can be reused by other calls
+	local lstrLogFileNew="" #actually is temporary variable
+	local lbDetach=false;
+	export SEClnLogQuotaSECFUNCexec #NOT local, so it can be reused by other calls
+	local lnLogQuota=0; #0 means no limit
+	local lbDoLog=true
 	local lstrCaller=""
 	local SEClstrFuncCaller=""
+	local lbShowLog=false
+	local lbDetachedList=false
+	local lbStopLog=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
+			SECFUNCshowHelp -c "[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function"
+			SECFUNCshowHelp --nosort ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one
 			shift
@@ -795,16 +805,40 @@ function SECFUNCexec() { #help
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoErr_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
-		elif [[ "$1" == "--quiet" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
+		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
 			bOmitOutput=true
-		elif [[ "$1" == "--quietoutput" ]];then #SECFUNCexec_help --quiet idem
-			bOmitOutput=true
+		elif [[ "$1" == "--quietoutput" ]];then #deprecated
+			SECFUNCechoErrA "deprecated '$1', use --quiet instead"
+			_SECFUNCcriticalForceExit
 		elif [[ "$1" == "--waitkey" ]];then #SECFUNCexec_help wait a key before executing the command
 			bWaitKey=true
 		elif [[ "$1" == "--elapsed" ]];then #SECFUNCexec_help quiet, ommit command output to stdout and
 			bShowElapsed=true;
 		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed
 			bExecEcho=true;
+		elif [[ "$1" == "--log" ]];then #SECFUNCexec_help create a log file (prevent interactivity)
+			lbLog=true;
+		elif [[ "$1" == "--logtmp" ]];then #SECFUNCexec_help create a temporary log file that is erased on reboot (prevent interactivity)
+			lbLog=true;
+			lbLogTmp=true;
+		elif [[ "$1" == "--logset" ]];then #SECFUNCexec_help <logFile> set your logFile, implies --log (prevent interactivity)
+			lbLog=true;
+			shift
+			lstrLogFileNew="${1-}"
+		elif [[ "$1" == "--logshow" ]];then #SECFUNCexec_help show log filename and contents and return
+			lbShowLog=true
+		elif [[ "$1" == "--logstop" ]];then #SECFUNCexec_help next calls to this function will not be logged after this option happens once (current execution can still be logged unless --nolog is used)
+			lbStopLog=true;
+		elif [[ "$1" == "--nolog" ]];then #SECFUNCexec_help after log is set once, it will automatically log with other calls to this function, so this prevent a specific exec being logged at SEClstrLogFileSECFUNCexec
+			lbDoLog=false;
+		elif [[ "$1" == "--logquota" ]];then #SECFUNCexec_help <nMaxLines> limit logfile size by nMaxLines, implies --log
+			shift
+			lnLogQuota=${1-};
+			lbLog=true
+		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help creates a detached child process that will continue running without this parent, implies --log unless another log type is set; also disable --elapsed --nolog and disable the return value (prevent interactivity)
+			lbDetach=true;
+		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help list detached running pids
+			lbDetachedList=true;
 		else
 			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option $1"
 			return 1
@@ -812,32 +846,146 @@ function SECFUNCexec() { #help
 		shift
 	done
 	
-	if ! $bOmitOutput || [[ "$SEC_DEBUG" == "true" ]];then
-		omitOutput=""
+	# fix options
+	if [[ "$SEC_DEBUG" == "true" ]];then
+		bOmitOutput=false
+	fi
+	if $lbDetach;then
+		lbLog=true;
+		bShowElapsed=false;
+		lbDoLog=true
+	fi
+	
+	# main code
+	
+	if $lbLog;then
+		local lbCreateLogFile=false
+		if [[ -n "$lstrLogFileNew" ]];then
+			lbCreateLogFile=true
+		else
+			if [[ ! -f "$SEClstrLogFileSECFUNCexec" ]];then
+				# automatic log filename
+				local lstrLogId="$(SECFUNCfixId --justfix $(basename $0))"
+				lstrLogFileNew="log/SEC.$lstrLogId.$$.log"
+				if $lbLogTmp;then
+					lstrLogFileNew="$SECstrTmpFolderUserName/$lstrLogFileNew" #tmp log
+#				elif $lbLog;then #as lbLog is default, it comes last here
+				else #as lbLog is default, it comes last here
+					lstrLogFileNew="$SECstrUserHomeConfigPath/$lstrLogFileNew" #persistent log
+				fi
+
+				lbCreateLogFile=true
+			fi
+		fi
+
+		if $lbCreateLogFile;then
+			if ! mkdir -p "`dirname "$lstrLogFileNew"`";then
+				SECFUNCechoErrA "unable to create log path for file '$lstrLogFileNew'"
+				return 1
+			fi
+			#if [[ ! -f "$lstrLogFileNew" ]];then 
+				if ! echo -n >>"$lstrLogFileNew";then #create file
+					SECFUNCechoErrA "unable to create log file '$lstrLogFileNew'"
+					return 1
+				fi
+			#fi
+			
+			#now lstrLogFileNew exist!
+			
+			if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+				if [[ "$SEClstrLogFileSECFUNCexec" != "$lstrLogFileNew" ]];then
+					# append old log to new
+					cat "$SEClstrLogFileSECFUNCexec" >>"$lstrLogFileNew"
+					#rm "$SEClstrLogFileSECFUNCexec" #TODO more log is better than less?
+				fi
+			fi
+			
+			SEClstrLogFileSECFUNCexec="$lstrLogFileNew"
+		fi
 	fi
 	
 	###### main code
+	if $lbShowLog;then
+		if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+			echo "SEClnLogQuotaSECFUNCexec=$SEClnLogQuotaSECFUNCexec"
+			echo "SEClstrLogFileSECFUNCexec='$SEClstrLogFileSECFUNCexec'"
+			SECFUNCdrawLine " Contents " " <> "
+			cat "$SEClstrLogFileSECFUNCexec"
+		else
+			echo "no log."
+		fi
+		return
+	fi
+	
   local strExec="`SECFUNCparamsToEval "$@"`"
 	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: $strExec" >>/dev/stderr
+		echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $strExec" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
+		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
-	local ini=`SECFUNCdtFmt`;
-  eval "$strExec" $omitOutput;nRet=$?
-	local end=`SECFUNCdtFmt`;
+	local lnReturnValue=0
+	if $bShowElapsed;then local ini=`SECFUNCdtFmt`;fi
+  #eval "$strExec" $omitOutput;lnReturnValue=$?
+  #"$@" $omitOutput;lnReturnValue=$?
+  if $lbDoLog && [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+  	if $lbDetach;then
+	  	#"$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
+			#(exec 2>>"$SEClstrLogFileSECFUNCexec";exec 1>&2;"$@") & disown
+		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
+		  local lnPidDetached=$!
+		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';$@" >>"$SEClstrLogFileSECFUNCexec"
+		else
+		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;$@" >>"$SEClstrLogFileSECFUNCexec"
+		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnReturnValue=$?
+		  #"$@" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnReturnValue=$? #tee prevent return value
+		fi
+  else
+  	if $bOmitOutput;then
+		  #"$@" 2>/dev/null 1>/dev/null;lnReturnValue=$?
+		  "$@" >/dev/null 2>&1;lnReturnValue=$?
+  	else
+  		"$@"
+  	fi
+  fi
+	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
 	
-  SECFUNCechoDbgA "lstrCaller=${lstrCaller}: RETURN=${nRet}: $strExec"
+	if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+		if((lnLogQuota>0)) || ((${SEClnLogQuotaSECFUNCexec-0}>0));then
+			if((lnLogQuota>0));then
+				SEClnLogQuotaSECFUNCexec="$lnLogQuota"
+			fi
+			local lnLineCount=$(wc -l "$SEClstrLogFileSECFUNCexec" |cut -d" " -f 1)
+			local lnLimitOfLines=$(( SEClnLogQuotaSECFUNCexec+(SEClnLogQuotaSECFUNCexec*5/100) ))
+			if((lnLineCount>lnLimitOfLines));then #5% margin to avoid doing it all the time
+				local lnDiffOfLinesCount=$((lnLineCount-SEClnLogQuotaSECFUNCexec))
+				sed -i "1,${lnDiffOfLinesCount}d" "$SEClstrLogFileSECFUNCexec"
+			fi
+		fi
+	fi
+	
+	if $lbStopLog;then
+		SEClstrLogFileSECFUNCexec=""
+	fi
+	
+	local lstrReturned=""
+	#if((lnReturnValue>=0));then
+	if $lbDetach;then
+		lstrReturned="(DetachedChild): "
+	else
+		lstrReturned="RETURN=$lnReturnValue: "
+	fi
+  SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$strExec"
   
 	if $bShowElapsed;then
 		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
 	fi
-  return $nRet
+	
+  return $lnReturnValue
 }
 
 function SECFUNCexecShowElapsed() { #help 
@@ -1075,7 +1223,10 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 	local lstrCaller=""
 	local lbJustFix=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
+		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
+			SECFUNCshowHelp --nosort
+			return
+		elif [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
 			shift
 			lstrCaller="${1}(): "
 		elif [[ "$1" == "--justfix" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user

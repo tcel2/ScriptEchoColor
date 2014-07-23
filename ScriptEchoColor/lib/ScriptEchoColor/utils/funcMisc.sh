@@ -339,7 +339,7 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[c
 		return
 	fi
 	
-	local lpath="$SECuserConfigPath/SEC.AppVars.DB"
+	local lpath="$SECstrUserHomeConfigPath/SEC.AppVars.DB"
 	if [[ ! -d "$lpath" ]];then
 		mkdir -p "$lpath"
 	fi

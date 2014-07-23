@@ -114,9 +114,9 @@ function SECFUNCgetUserName(){ #help this is not an atomic function.
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
-export SECuserConfigPath="$HOME/.ScriptEchoColor"
-if [[ ! -d "$SECuserConfigPath" ]]; then
-  mkdir "$SECuserConfigPath"
+export SECstrUserHomeConfigPath="$HOME/.ScriptEchoColor"
+if [[ ! -d "$SECstrUserHomeConfigPath" ]]; then
+  mkdir "$SECstrUserHomeConfigPath"
 fi
 
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
@@ -126,7 +126,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-		elif [[ "${1-}" == "--colorize" ]];then #SECFUNCshowHelp_help helps to colorize specific text
+		elif [[ "${1-}" == "--colorize" || "${1-}" == "-c" ]];then #SECFUNCshowHelp_help helps to colorize specific text
 			shift
 			lstrColorizeEcho="${1-}"
 		

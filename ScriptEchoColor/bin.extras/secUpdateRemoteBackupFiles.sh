@@ -541,7 +541,7 @@ elif $bAddFilesMode; then
 		
 		if $bUseUnison;then
 			# create a symlink #TODO to be used with unison #TODO code its removal
-			strSymlinkToUnison="$SECuserConfigPath/$SECscriptSelfName/Home/$strRelativeFile"
+			strSymlinkToUnison="$SECstrUserHomeConfigPath/$SECscriptSelfName/Home/$strRelativeFile"
 			mkdir -vp "`dirname "$strSymlinkToUnison"`"
 			ln -vsf "$strFile" "$strSymlinkToUnison"
 		fi

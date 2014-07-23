@@ -934,14 +934,14 @@ FUNCtestIgnore(){
 # "include" files
 
 # USER CONFIG
-strUserCfgFile="$SECuserConfigPath/User.cfg"
+strUserCfgFile="$SECstrUserHomeConfigPath/User.cfg"
 if $bOptRecreateConfigFile; then
     mv "$strUserCfgFile" "$strUserCfgFile.bkp"
 fi
 strUserCfgFilePreviousVersion=""
 if [[   -f "$strUserCfgFile" ]]; then
   if [[ `head -n 1 "$strUserCfgFile"` != "$strCfgHeader" ]]; then
-    strUserCfgFilePreviousVersion="$SECuserConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
+    strUserCfgFilePreviousVersion="$SECstrUserHomeConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
     mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
     if [[ -f "$strUserCfgFile" ]]; then
       _he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >>/dev/stderr

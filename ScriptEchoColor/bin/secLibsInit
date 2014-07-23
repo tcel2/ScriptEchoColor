@@ -119,7 +119,7 @@ if $bMaintenanceDaemon;then
 	if ! secMaintenanceDaemon.sh --isdaemonstarted >>/dev/stderr;then
 		# stdout must be redirected or the terminal wont let it be child...
 		# nohup or disown alone did not work...
-		secMaintenanceDaemon.sh >>/dev/stderr &
+		secMaintenanceDaemon.sh >>/dev/stderr & disown
 	fi
 fi
 
