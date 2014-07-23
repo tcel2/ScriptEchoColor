@@ -28,7 +28,8 @@ eval `secinit --nochild`
 
 strSelfName="`basename "$0"`"
 strLogFile="/tmp/.$strSelfName.`id -un`.log"
-strFullSelfCmd="`basename $0` $@"
+#strFullSelfCmd="`basename $0` $@"
+strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 #echo "strFullSelfCmd='$strFullSelfCmd'"
 
 varset bCheckPoint=false
@@ -125,6 +126,10 @@ function FUNClog() {
 		lstrLogging+="; # $lstrComment"
 	fi
 	
+	if [[ "$1" == "wrn" ]];then
+		SEC_WARN=true SECFUNCechoWarnA "$lstrLogging"
+	fi
+	
 	echo "$lstrLogging" >>/dev/stderr
 	echo "$lstrLogging" >>"$strLogFile"
 }
@@ -175,9 +180,9 @@ if $bCheckIfAlreadyRunning;then
 	#	if ! ps -A -o pid,cmd |grep -v "^[[:blank:]]*[[:digit:]]*[[:blank:]]*grep" |grep -q "$strFullSelfCmd";then
 	#	if ! pgrep -f "$strFullSelfCmd";then
 		nPidOther=""
-		anPidList=(`pgrep -f "${strFullSelfCmd}$"`)
+		anPidList=(`pgrep -fx "${strFullSelfCmd}$"`)
 		#echo "$$,${anPidList[@]}" >>/dev/stderr
-		if anPidOther=(`echo "${anPidList[@]}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
+		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
 			bFound=false
 			for nPidOther in ${anPidOther[@]-};do
 				if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strLogFile";then
@@ -189,6 +194,9 @@ if $bCheckIfAlreadyRunning;then
 				break;
 			fi
 		else
+			if ! echo "${anPidList[@]-}" |grep -qw "$$";then
+				FUNClog wrn "could not find self! "
+			fi
 			break;
 		fi
 		#echo " wrn -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog; # ALREADY RUNNING..." >>"$strLogFile"
