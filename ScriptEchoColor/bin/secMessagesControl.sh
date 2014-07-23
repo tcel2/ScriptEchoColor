@@ -89,7 +89,7 @@ if $bListPids;then
 				fi
 			fi
 		done
-		SECFUNCdrawLine " `SECFUNCdtTimePrettyNow`, Total=$nPidsCount "
+		SECFUNCdrawLine " `SECFUNCdtFmt --pretty`, Total=$nPidsCount "
 	)
 	echo "$strOutput"
 	exit

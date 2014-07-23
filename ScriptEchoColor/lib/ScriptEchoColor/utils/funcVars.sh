@@ -22,8 +22,14 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+# TOP CODE
+if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
+SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh") #no need for the array to be previously set empty
+source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";
+
+# MAIN CODE
+
 #shopt -s expand_aliases #at funcMisc
-source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh";
 
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
@@ -117,7 +123,7 @@ fi
 #@@@R fi
 ### !!!!!!!!! UPDATE l_allVars at SECFUNCvarWriteDB !!!!!!!!!!!!!
 
-function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
+function SECFUNCvarClearTmpFiles() { #help remove tmp files that have no related pid
 	SECFUNCdbgFuncInA;
 	
 	local lnDelayToBeOld=600 #in seconds
@@ -127,10 +133,10 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 			lbForce=true
 		elif [[ "$1" == "--help" ]]; then #SECFUNCvarClearTmpFiles_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -154,7 +160,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 		
 		# the file must exist
 		if [[ ! -f "$lfile" ]] && [[ ! -L "$lfile" ]];then
-			return
+			SECFUNCdbgFuncOutA;return
 		fi
 		
 		if [[ -L "$lfile" ]] && [[ ! -a "$lfile" ]];then
@@ -226,7 +232,7 @@ function SECFUNCvarClearTmpFiles() { #remove tmp files that have no related pid
 	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCscriptSelfNameSet() {
+function SECFUNCscriptSelfNameSet() { #help 
 	SECFUNCdbgFuncInA;
 	local lbScriptNameChanged=false
 	local lSECscriptSelfName="`basename $0`"
@@ -266,7 +272,7 @@ function SECFUNCscriptSelfNameSet() {
 	fi
 	SECFUNCdbgFuncOutA;
 }
-function SECFUNCvarInit() { #generic vars initializer
+function SECFUNCvarInit() { #help generic vars initializer
 	SECFUNCdbgFuncInA
 	
 	local lbVarChildDb=true
@@ -283,10 +289,10 @@ function SECFUNCvarInit() { #generic vars initializer
 	
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarEnd() { #generic vars finalizer
+function SECFUNCvarEnd() { #help generic vars finalizer
 	SECFUNCvarEraseDB
 }
-function SECFUNCvarIsArray() {
+function SECFUNCvarIsArray() { #help 
 	#local l_strTmp=`declare |grep "^$1=("`; #declare is a bit slower than export
 	eval "export $1"
 	local l_strTmp=`export |grep "^declare -[Aa]x $1='("`;
@@ -303,7 +309,7 @@ function SECFUNCvarIsArray() {
 # 	return 1
 }
 
-function SECFUNCvarGet() { #<varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
+function SECFUNCvarGet() { #help <varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
   if `SECFUNCvarIsArray $1`;then
   	if [[ -n "${2-}" ]]; then
   		eval 'echo "${'$1'['$2']}"'
@@ -331,15 +337,15 @@ function SECFUNCvarGet() { #<varname> [arrayIndex] if var is an array, you can u
 		eval 'echo "${'$1'-}"'
 	fi
 }
-function SECFUNCfixPliq() {
+function SECFUNCfixPliq() { #help 
 		#echo "$1"
   	#echo "$1" |sed -e 's/"/\\"/g' -e 's"\"\\"g'
   	echo "$1" |sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
-function SECFUNCvarShowSimple() { #(see SECFUNCvarShow)
+function SECFUNCvarShowSimple() { #help (see SECFUNCvarShow)
   SECFUNCvarShow "$1"
 }
-function SECFUNCvarShow() { #show var
+function SECFUNCvarShow() { #help show var
 	local l_prefix="" #"export "
 	local lbVarWords=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
@@ -380,13 +386,13 @@ function SECFUNCvarShow() { #show var
 	fi
 	
 }
-function SECFUNCvarShowDbg() { #only show var and value if SEC_DEBUG is set true
+function SECFUNCvarShowDbg() { #help only show var and value if SEC_DEBUG is set true
   if $SEC_DEBUG; then
     SECFUNCvarShow "$@"
   fi
 }
 
-function SECFUNCvarToggle() { #<varId> only works with variable that has "boolean" value
+function SECFUNCvarToggle() { #help <varId> only works with variable that has "boolean" value
 	local lbShow=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]]; then #SECFUNCvarToggle_help
@@ -426,11 +432,11 @@ function SECFUNCvarToggle() { #<varId> only works with variable that has "boolea
 	SECFUNCvarSet $lstrOptShow $lstrVarId="$lstrNewValue"
 }
 
-function SECFUNCvarUnset() { #<var> unregister the variable so it will not be saved to BD next time
+function SECFUNCvarUnset() { #help <var> unregister the variable so it will not be saved to BD next time
 	pSECFUNCvarRegister --unregister $1
 }
 
-function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
+function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>
 	SECFUNCdbgFuncInA;
 	#SECFUNCvarReadDB
 	
@@ -596,7 +602,7 @@ function SECFUNCvarSet() { #[options] <<var> <value>|<var>=<value>>
 	
 	SECFUNCdbgFuncOutA;
 }
-function SECFUNCvarIsRegistered() { #check if var is registered
+function SECFUNCvarIsRegistered() { #help check if var is registered
 	#echo "${SECvars[*]}" |grep -q $1
 	local l_var
 	for l_var in ${SECvars[*]-}; do
@@ -606,7 +612,7 @@ function SECFUNCvarIsRegistered() { #check if var is registered
 	done
 	return 1
 }
-function SECFUNCvarIsSet() { #equal to: SECFUNCvarIsRegistered
+function SECFUNCvarIsSet() { #help equal to: SECFUNCvarIsRegistered
 	SECFUNCvarIsRegistered $1
 	return $?
 }
@@ -619,7 +625,7 @@ function SECFUNCvarIsSet() { #equal to: SECFUNCvarIsRegistered
 #		read -n 1
 #	fi
 #}
-function SECFUNCvarWaitValue() { #[OPTIONS] <var> <value> [delay]: wait until var has specified value. Also get the var.
+function SECFUNCvarWaitValue() { #help [OPTIONS] <var> <value> [delay]: wait until var has specified value. Also get the var.
 	local l_bNot=false
 	local l_bProgress=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
@@ -674,7 +680,7 @@ function SECFUNCvarWaitValue() { #[OPTIONS] <var> <value> [delay]: wait until va
 		fi
 	done
 }
-function SECFUNCvarWaitRegister() { #<var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
+function SECFUNCvarWaitRegister() { #help <var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
 	local l_delay=${2-}
 	if [[ -z "$l_delay" ]]; then
 		l_delay=1
@@ -900,7 +906,7 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggining of a loop
+function SECFUNCvarSyncWriteReadDB() { #help this function should come in the beggining of a loop
 	SECFUNCdbgFuncInA
 	local l_lockPid
 	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >>/dev/stderr #@@@R
@@ -933,7 +939,7 @@ function SECFUNCvarSyncWriteReadDB() { #this function should come in the beggini
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCvarWriteDB() {
+function SECFUNCvarWriteDB() { #help 
 	SECFUNCdbgFuncInA
 	
 	local l_bSkipLock=false
@@ -1028,7 +1034,7 @@ function SECFUNCvarWriteDB() {
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCvarReadDB() { #[varName] filter to load only one variable value
+function SECFUNCvarReadDB() { #help [varName] filter to load only one variable value
 	SECFUNCdbgFuncInA
 	
 	l_bSkip=false
@@ -1087,10 +1093,10 @@ function SECFUNCvarReadDB() { #[varName] filter to load only one variable value
 	
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarEraseDB() {
+function SECFUNCvarEraseDB() { #help 
   rm "$SECvarFile"
 }
-function SECFUNCvarGetMainNameOfFileDB() { #<pid> returns the main executable name at variables filename
+function SECFUNCvarGetMainNameOfFileDB() { #help <pid> returns the main executable name at variables filename
 	local l_pid=$1;
 	local l_fileFound=`find $SEC_TmpFolder -maxdepth 1 -name "SEC.*.$l_pid.vars.tmp"`
 	if [[ -n "$l_fileFound" ]];then 
@@ -1101,7 +1107,7 @@ function SECFUNCvarGetMainNameOfFileDB() { #<pid> returns the main executable na
 	
 	return 0
 }
-function SECFUNCvarGetPidOfFileDB() { #<$SECvarFile> full DB filename
+function SECFUNCvarGetPidOfFileDB() { #help <$SECvarFile> full DB filename
 #	if [[ -z "$1" ]];then
 #		SECFUNCechoErrA "missing SECvarFile filename to extract pid from..."
 #		return 1
@@ -1116,7 +1122,7 @@ function SECFUNCvarGetPidOfFileDB() { #<$SECvarFile> full DB filename
 	echo "$l_output"
 }
 
-function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file.
+function SECFUNCvarSetDB() { #help [pid] the variables file is automatically set, but if pid is specified it allows this process to intercomunicate with that pid process thru its vars DB file.
 	SECFUNCdbgFuncInA
 	
 	local l_bForceRealFile=false
@@ -1124,7 +1130,7 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]]; then #SECFUNCvarSetDB_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--forcerealfile" || "$1" == "-f" ]];then #SECFUNCvarSetDB_help it wont create a symlink to a parent DB file and so will create a real top DB file that other childs may link to.
 			l_bForceRealFile=true
 		elif [[ "$1" == "--skipreaddb" ]];then #SECFUNCvarSetDB_help by default it will read the db at the end of this function, so skip doing this.
@@ -1256,7 +1262,7 @@ function SECFUNCvarSetDB() { #[pid] the variables file is automatically set, but
 	
 	SECFUNCdbgFuncOutA
 }
-function SECFUNCvarUnitTest() {
+function SECFUNCvarUnitTest() { #help 
 	echo "Test to set and get values:"
 	local l_values=(
 		"123"
@@ -1287,6 +1293,7 @@ function SECFUNCvarUnitTest() {
 	SECFUNCvarShow l_values
 }
 
+# LAST THINGS CODE
 if [[ `basename "$0"` == "funcVars.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then

@@ -222,7 +222,7 @@ function FUNCsetFastMedia() {
 	if $bOk && ! ln -svf "$fastMediaRealPath" "$fastMedia";then
 		bOk=false
 	fi
-#	if $bOk && ! SECFUNCdtTimePrettyNow >"$fastMediaRealPath/initialized.cfg";then
+#	if $bOk && ! SECFUNCdtFmt --pretty >"$fastMediaRealPath/initialized.cfg";then
 #		bOk=false
 #	fi
 	if ! $bOk;then

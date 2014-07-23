@@ -28,11 +28,14 @@ eval `secinit --nochild`
 
 strSelfName="`basename "$0"`"
 strLogFile="/tmp/.$strSelfName.`id -un`.log"
+strFullSelfCmd="`basename $0` $@"
+#echo "strFullSelfCmd='$strFullSelfCmd'"
 
 varset bCheckPoint=false
 bWaitCheckPoint=false
 nDelayAtLoops=1
-bDaemon=false
+bCheckPointDaemon=false
+bCheckIfAlreadyRunning=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <nDelayToExec> <command> [command params]..."
@@ -45,9 +48,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), allows waiting instances to run
 		shift
 		strCustomCommand="${1-}"
-		bDaemon=true
+		bCheckPointDaemon=true
 	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nDelayToExec, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
+	elif [[ "$1" == "--noalready" || "$1" == "-n" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
+		bCheckIfAlreadyRunning=false
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
@@ -61,7 +66,7 @@ elif((nDelayAtLoops<1));then
 	nDelayAtLoops=1
 fi
 
-if $bDaemon;then
+if $bCheckPointDaemon;then
 	echo "see log at: $strLogFile" >>/dev/stderr
 	
 	exec 2>>"$strLogFile"
@@ -110,9 +115,22 @@ strWaitCheckPointIndicator=""
 if $bWaitCheckPoint;then
 	strWaitCheckPointIndicator="w+"
 fi
-strToLog="${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd"
+strToLog="${strWaitCheckPointIndicator}${nDelayToExec}s;pid='$$';$strExecCmd"
 
-echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+function FUNClog() {
+	local lstrLogging=" $1 -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"
+	local lstrComment="${2-}"
+	
+	if [[ -n "$lstrComment" ]];then
+		lstrLogging+="; # $lstrComment"
+	fi
+	
+	echo "$lstrLogging" >>/dev/stderr
+	echo "$lstrLogging" >>"$strLogFile"
+}
+
+#echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+FUNClog ini
 
 #if $bWaitCheckPoint;then
 #	SECONDS=0
@@ -152,8 +170,39 @@ fi
 
 sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
 
+if $bCheckIfAlreadyRunning;then
+	while true;do
+	#	if ! ps -A -o pid,cmd |grep -v "^[[:blank:]]*[[:digit:]]*[[:blank:]]*grep" |grep -q "$strFullSelfCmd";then
+	#	if ! pgrep -f "$strFullSelfCmd";then
+		nPidOther=""
+		anPidList=(`pgrep -f "${strFullSelfCmd}$"`)
+		#echo "$$,${anPidList[@]}" >>/dev/stderr
+		if anPidOther=(`echo "${anPidList[@]}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
+			bFound=false
+			for nPidOther in ${anPidOther[@]-};do
+				if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strLogFile";then
+					bFound=true
+					break;
+				fi
+			done
+			if ! $bFound;then
+				break;
+			fi
+		else
+			break;
+		fi
+		#echo " wrn -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog; # ALREADY RUNNING..." >>"$strLogFile"
+		FUNClog wrn "IT IS ALREADY RUNNING AT nPidOther='$nPidOther' !!! "
+		#sleep 60
+		if echoc -q -t 60 "skip check if already running?";then
+			break
+		fi
+	done
+fi
+
 #echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd" >>"$strLogFile"
-echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+#echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+FUNClog RUN
 SECFUNCcleanEnvironment #nothing related to SEC will run after this unless if reinitialized, also `env -i bash -c "$strExecCmd"` did not fully work as vars like TERM have not required value (despite this is expected)
 "$@"
 

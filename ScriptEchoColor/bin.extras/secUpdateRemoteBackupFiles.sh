@@ -600,7 +600,7 @@ elif $bLookForChanges;then
 #				echo -n >"$pathBackupsToRemote/.gitignore"
 #			fi
 			echoc -x "git add -v --all" #add missing files on git
-			echoc -x "git commit -m \"`SECFUNCdtTimePrettyNow`\""
+			echoc -x "git commit -m \"`SECFUNCdtFmt --pretty`\""
 			
 			nSizeBTR="`du -sb "$pathBackupsToRemote" |tr '[:blank:]' '\n' |head -n 1`"
 			nSizeOnlyGit="`du -sb "$pathBackupsToRemote/.git" |tr '[:blank:]' '\n' |head -n 1`"

@@ -22,8 +22,12 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-source "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh";
-SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh")
+# TOP CODE
+if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
+SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh") #no need for the array to be previously set empty
+source "$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh";
+
+# MAIN CODE
 
 ################ VARS
 
@@ -31,7 +35,7 @@ SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.s
 
 ################ FUNCTIONS
 
-function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
+function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lockable.\n\tCreates a lock file for the specified file.\n\t<realFile> cannot be a symlink or a directory
 	SECFUNCdbgFuncInA;
 	local lbUnlock=false
 	local lbCheckIfIsLocked=false
@@ -162,7 +166,7 @@ function SECFUNCfileLock() { #Waits until the specified file is unlocked/lockabl
 	SECFUNCdbgFuncOutA; return 0;
 }
 
-function SECFUNCuniqueLock() { #Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.
+function SECFUNCuniqueLock() { #help Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.
 	SECFUNCdbgFuncInA;
 	#set -x
 	local l_bRelease=false
@@ -269,7 +273,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 				local lstrQuickLock="${lstrUniqueFile}.ToCreateRealFile.lock"
 				if ln -s "$lstrUniqueFile" "$lstrQuickLock";then
 					rm "$lstrUniqueFile"
-					echo "[`SECFUNCdtFmt --logmessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >>/dev/stderr
+					echo "[`SECFUNCdtTimeForLogMessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >>/dev/stderr
 					rm "$lstrQuickLock" #after all is done
 				fi
 			fi
@@ -329,7 +333,7 @@ function SECFUNCuniqueLock() { #Creates a unique lock that help the script to pr
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
+function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
 	if [[ "${1-}" == "--help" ]];then
 		SECFUNCshowHelp ${FUNCNAME}
 		return
@@ -355,7 +359,7 @@ function SECFUNCcfgFileName() { #Application config file for scripts.\n\t[cfgIde
 	#echo "$lpath/${SECcfgFileName}.cfg"
 	#echo "$SECcfgFileName"
 }
-function SECFUNCcfgRead() { #read the cfg file and set all its env vars at current env
+function SECFUNCcfgRead() { #help read the cfg file and set all its env vars at current env
 	SECFUNCdbgFuncInA;
 	#echo oi;eval `cat tst.db`;return
 	if [[ -z "$SECcfgFileName" ]];then
@@ -384,7 +388,7 @@ function SECFUNCcfgRead() { #read the cfg file and set all its env vars at curre
   SECFUNCdbgFuncOutA;
   #set -x
 }
-function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
+function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config file
 	#TODO make SECFUNCvarSet use this and migrate all from there to here?
 	local lbRemoveVar=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -457,7 +461,7 @@ function SECFUNCcfgWriteVar() { #<var>[=<value>] write a variable to config file
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 }
 
-function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
+function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
 	SECFUNCdbgFuncInA;
 	: ${SECbDaemonRegistered:=false}
 	if ! $SECbDaemonRegistered;then
@@ -484,7 +488,7 @@ function SECFUNCdaemonCheckHold() { #used to fastly check and hold daemon execut
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a file is not active (has not been updated or touch)
+function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a file is not active (has not been updated or touch)
 	
 	local lbReal=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -529,6 +533,7 @@ function SECFUNCfileSleepDelay() { #<file> show how long (in seconds) a file is 
 #	exit $nStatus
 #}
 
+# LAST THINGS CODE
 if [[ `basename "$0"` == "funcMisc.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then

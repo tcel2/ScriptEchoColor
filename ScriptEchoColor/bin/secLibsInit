@@ -22,19 +22,24 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#bCore=false
+bCore=false
 bBase=false
 bMisc=false
 bVars=false
 bMaintenanceDaemon=true
 bVarChildDB=true
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+bForceReload=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
 		eval `secinit --base`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
+		exit
+	elif [[ "$1" == "--help-core" ]];then #help help for base lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
 		exit
 	elif [[ "$1" == "--help-base" ]];then #help help for base lib
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
@@ -48,14 +53,16 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		exit
-#	elif [[ "$1" == "--core" ]];then #help load core lib
-#		bCore=true
+	elif [[ "$1" == "--core" ]];then #help load core lib
+		bCore=true
 	elif [[ "$1" == "--base" ]];then #help load base lib
 		bBase=true
 	elif [[ "$1" == "--misc" ]];then #help load misc lib, loads base
 		bMisc=true
 	elif [[ "$1" == "--vars" ]];then #help load vars lib, loads misc (default)
 		bVars=true
+	elif [[ "$1" == "--force" || "$1" == "-f" ]];then #help force reload of libs, probably only useful for this project development
+		bForceReload=true
 	elif [[ "$1" == "--novarchilddb" || "$1" == "--nochild" ]];then #help "is not a child" makes the script calling this option to do NOT inherit its parent pid shared environment variables DB, only works if vars lib is present
 		bVarChildDB=false
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
@@ -67,8 +74,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	shift
 done
 
-#if ! $bCore && ! $bBase && ! $bMisc && ! $bVars;then
-if ! $bBase && ! $bMisc && ! $bVars;then
+#if ! $bBase && ! $bMisc && ! $bVars;then
+if ! $bCore && ! $bBase && ! $bMisc && ! $bVars;then
 	# the one that uses most libs shall be the default
 	bVars=true
 fi
@@ -76,20 +83,24 @@ fi
 # DO NOT SKIP INITIALIZATION LIKE this, it break aliases :( -> #if ! ${SECinitialized-false};then
 # $PPID is the pid where the output of this script may have already been evaluated
 
+if $bForceReload || ${SECinstallPath+false};then 
+	export SECinstallPath="`secGetInstallPath.sh`"; #to be faster
+	echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
+fi;
+
 #echo "${SECnPidInitLibBase-},${SECnPidInitLibMisc-},${SECnPidInitLibVars-},$$,$PPID" >>/dev/stderr
-#if $bCore;then 
-#	if [[ "${SECnPidInitLibCore-}" == "$PPID" ]];then exit;fi
-#	echo "source \"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh\";"
-#elif $bBase;then
-if $bBase;then
-	if [[ "${SECnPidInitLibBase-}" == "$PPID" ]];then exit;fi
-	echo "source \"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh\";"
+if $bCore;then 
+	if ! $bForceReload && [[ "${SECnPidInitLibCore-}" == "$PPID" ]];then exit;fi
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh\";"
+elif $bBase;then
+	if ! $bForceReload && [[ "${SECnPidInitLibBase-}" == "$PPID" ]];then exit;fi
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh\";" #it imports funcCore.sh
 elif $bMisc;then
-	if [[ "${SECnPidInitLibMisc-}" == "$PPID" ]];then exit;fi
-	echo "source \"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh\";" #it imports funcBase.sh
+	if ! $bForceReload && [[ "${SECnPidInitLibMisc-}" == "$PPID" ]];then exit;fi
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh\";" #it imports funcBase.sh
 elif $bVars;then
-	if [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then exit;fi
-	echo "source \"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
+	if ! $bForceReload && [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then exit;fi
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
 fi
 
 # export function before running any function!

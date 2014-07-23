@@ -260,7 +260,7 @@ while true;do
 					if [[ -L "$lstrLockFileIntermediary" ]];then
 						strFileReal="`readlink "$lstrLockFileIntermediary"`"
 						if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
-							echo " `SECFUNCdtTimePrettyNow` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
+							echo " `SECFUNCdtFmt --pretty` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
 							SECFUNCfileLock --pid $nPid --unlock "$strFileReal"
 						fi
 					else

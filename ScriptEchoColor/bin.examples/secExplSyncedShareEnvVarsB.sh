@@ -37,7 +37,7 @@ while true; do
 	else
 		pidThatSet=$varPid
 	fi
-	echo "[`SECFUNCdtTimePrettyNow`] this pid is $$ (exec count ${SECmultiThreadEvenPids[$$]}); $varA was set by pid $pidThatSet; next varA=$((++varA)) set by SELF.";
+	echo "[`SECFUNCdtFmt --pretty`] this pid is $$ (exec count ${SECmultiThreadEvenPids[$$]}); $varA was set by pid $pidThatSet; next varA=$((++varA)) set by SELF.";
 	varPid=$$;
 done
 

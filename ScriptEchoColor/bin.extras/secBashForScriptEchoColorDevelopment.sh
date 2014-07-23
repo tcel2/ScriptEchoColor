@@ -35,6 +35,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep '#help' "$0" |grep -v grep
 		eval `secinit --base`
+		SECFUNCshowHelp --colorize "[user command and params] to be run initially"
 		SECFUNCshowHelp --nosort
 		exit
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
@@ -84,7 +85,11 @@ fi
 #done
 
 # custom first command by user
-export SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
+export SECDEVstrCmdTmp="" #good in case of child shell
+if [[ -n "${1-}" ]];then
+	SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
+	#echo " SECDEVstrCmdTmp='$SECDEVstrCmdTmp'" >>/dev/stderr
+fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -107,12 +112,12 @@ function SECFUNCaddToRcFile() {
 	
 	# must be after PATH setup
 	if $SECDEVbSecInit;then
-		echo ' eval `secinit`' >>/dev/stderr
-		eval `secinit`;
+		echo ' eval `secinit --force`' >>/dev/stderr
+		eval `secinit --force`;
 	fi
 	
 	# must come after secinit
-	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit`)';set +u;
+	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)';set +u;
 	
 	# user custom initial command
 	if [[ -n "${SECDEVstrCmdTmp}" ]];then

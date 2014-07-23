@@ -439,7 +439,7 @@ function FUNCsayStack() {
 			local strHead=`head -n 1 "$_SECSAYfileSayStack"`
 			if [[ -n "$strHead" ]]; then
 				if $bDaemon; then
-					SECFUNCdrawLine " `SECFUNCdtTimePrettyNow` "
+					SECFUNCdrawLine " `SECFUNCdtFmt --pretty` "
 					echo "$strHead"
 				fi
 				

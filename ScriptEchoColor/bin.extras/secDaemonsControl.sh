@@ -61,7 +61,7 @@ varset --default strCallerName=""
 function FUNClist() {
 	SECFUNCdbgFuncInA;
 	SECFUNCcfgRead
-	SECFUNCdrawLine "Daemons List at `SECFUNCdtTimePrettyNow`:"
+	SECFUNCdrawLine "Daemons List at `SECFUNCdtFmt --pretty`:"
 	echo -e "Index\tPid\tName"
 	nCount=0
 	for strDaemonId in `echo ${!aDaemonsPid[@]} |tr ' ' '\n' |sort`;do

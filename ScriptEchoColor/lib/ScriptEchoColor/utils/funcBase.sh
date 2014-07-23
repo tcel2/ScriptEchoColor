@@ -22,70 +22,14 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-# THIS FILE must contain everything that can be used everywhere without any problems (if possible)
+# THIS FILE must contain everything that can be used everywhere without any problems if possible
 
-if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >>/dev/stderr;exit 1;fi
+# TOP CODE
+if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
+SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh") #no need for the array to be previously set empty
+source "$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh";
 
-shopt -s expand_aliases
-set -u #so when unset variables are expanded, gives fatal error
-
-#export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
-
-# THESE ATOMIC FUNCTIONS are SPECIAL AND CAN COME HERE, they MUST DEPEND only on each other!!!
-function _SECFUNClogMsg() { #<logfile> <params become message>
-	local lstrLogFile="$1"
-	shift
-	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
-}
-function _SECFUNCbugTrackExec() {
-	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
-#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
-	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -un`.log"
-	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
-	"$@" 2>>"$lstrBugTrackLogFile"
-}
-function _SECFUNCcriticalForceExit() {
-	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
-#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
-	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
-	while true;do
-		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
-		sleep 1
-	done
-}
-function SECFUNCgetUserNameOrId(){ #outputs username (prefered) or userid
-	if [[ -n "${USER-}" ]];then
-		echo "$USER"
-		return
-	fi
-	
-	local lstrUser="`_SECFUNCbugTrackExec strace id -un`"
-	if [[ -n "$lstrUser" ]];then
-		echo "$lstrUser"
-		return
-	fi
-	
-#	(echo -n " `date "+%Y%m%d+%H%M%S.%N"`,p$$;strace id -un;" && strace id -un 2>&1) >>"$SECstrBugTrackLogFile"
-#	_SECFUNCbugTrackExec strace id -un
-	
-	# teoretically, this line should never be reached...
-	_SECFUNCbugTrackExec strace id -u
-}
-
-alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
-alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
-
-export SECinstallPath="`secGetInstallPath.sh`";
-
-export SECuserConfigPath="$HOME/.ScriptEchoColor"
-if [[ ! -d "$SECuserConfigPath" ]]; then
-  mkdir "$SECuserConfigPath"
-fi
-
-SECastrFuncFilesShowHelp=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh")
-export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
-
+# MAIN CODE
 if [[ -z "${SECstrTmpFolderBase-}" ]];then
 	export SECstrTmpFolderBase="/dev/shm"
 	if [[ ! -d "$SECstrTmpFolderBase" ]];then
@@ -131,6 +75,8 @@ else
 fi
 export SECastrBashDebugFunctionIds
 
+export SECnFixDate="$((3600*3))" #to fix from: "31/12/1969 21:00:00.000000000" when used with `date -d` command
+
 export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
 
 export SECstrExportedArrayPrefix="SEC_EXPORTED_ARRAY_"
@@ -139,10 +85,6 @@ export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 
 #export _SECbugFixDate="0" #seems to be working now...
 
-alias SECFUNCechoErrA="SECFUNCechoErr --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoDbgA="set +x;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoWarnA="SECFUNCechoWarn --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --caller \"$_SECmsgCallerPrefix\" "
 #alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
 # if echo "$1" |grep -q "[^-]?\-[[:alpha:]][[:alpha:]]";then
 alias SECFUNCsingleLetterOptionsA='
@@ -150,7 +92,7 @@ alias SECFUNCsingleLetterOptionsA='
    set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" "$1"` "${@:2}";
  fi'
 
-alias SECFUNCexecA="SECFUNCexec --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
 alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
@@ -162,6 +104,12 @@ alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 : ${SEC_DEBUG:=false}
 if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
 	export SEC_DEBUG=false # of course, np if already "false"
+fi
+
+# this lets -x fully works
+: ${SEC_DEBUGX:=false}
+if [[ "$SEC_DEBUGX" != "true" ]]; then #compare to inverse of default value
+	export SEC_DEBUGX=false # of course, np if already "false"
 fi
 
 : ${SEC_WARN:=false}
@@ -223,30 +171,7 @@ fi
 : ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
 
 ########################## FUNCTIONS
-function SECFUNCgetUserName(){ #this is not an atomic function.
-	local lstrUserName=`SECFUNCgetUserNameOrId`
-	if [[ -z "`echo "$lstrUserName" |tr -d "[:digit:]"`" ]];then
-		SECFUNCechoErrA "lstrUserName='$lstrUserName' must NOT be numeric"
-		_SECFUNCcriticalForceExit
-	fi
-	echo "$lstrUserName"
-}
-
-function SECFUNCexportFunctions() {
-	declare -F \
-		|grep "SECFUNC" \
-		|sed 's"declare .* SECFUNC"export -f SECFUNC"' \
-		|sed 's".*"&;"' \
-		|grep "export -f SECFUNC"
-	
-	declare -F \
-		|grep "pSECFUNC" \
-		|sed 's"declare .* pSECFUNC"export -f pSECFUNC"' \
-		|sed 's".*"&;"' \
-		|grep "export -f pSECFUNC"
-}
-
-function SECFUNCexecOnSubShell(){ #runs one parameter with `bash -c "$1"`
+function SECFUNCexecOnSubShell(){ #help runs one parameter with `bash -c "$1"`
 	SECFUNCdbgFuncInA
 	
 	SECFUNCarraysExport
@@ -260,7 +185,7 @@ function SECFUNCexecOnSubShell(){ #runs one parameter with `bash -c "$1"`
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCisNumber(){ #"is float" check by default
+function SECFUNCisNumber(){ #help "is float" check by default
 	local bDecimalCheck=false
 	local bNotNegativeCheck=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
@@ -327,7 +252,7 @@ function SECFUNCisNumber(){ #"is float" check by default
 	return 0
 }
 
-function SECFUNCrealFile(){
+function SECFUNCrealFile(){ #help 
 	local lfile="${1-}"
 	if [[ ! -f "$lfile" ]];then
 		SECFUNCechoErrA "lfile='$lfile' not found."
@@ -341,7 +266,7 @@ function SECFUNCrealFile(){
 	echo "$lfile"
 }
 
-function SECFUNCarraysExport() { #export all arrays
+function SECFUNCarraysExport() { #help export all arrays
 	SECFUNCdbgFuncInA;
 	local lsedArraysIds='s"^([[:alnum:]_]*)=\(.*"\1";tfound;d;:found' #this avoids using grep as it will show only matching lines labeled 'found' with 't'
 	# this is a list of arrays that are set by the system or bash, not by SEC
@@ -386,7 +311,7 @@ function SECFUNCarraysExport() { #export all arrays
 	done
 	SECFUNCdbgFuncOutA;
 }
-function SECFUNCarraysRestore() { #restore all exported arrays
+function SECFUNCarraysRestore() { #help restore all exported arrays
 	SECFUNCdbgFuncInA;
 	
 	# declare associative arrays to make it work properly
@@ -401,28 +326,44 @@ function SECFUNCarraysRestore() { #restore all exported arrays
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCdtFmt() { #[time in seconds since epoch] otherwise current (now) is used
-	local ldtTime=""
+function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoch; otherwise current (now) is used
+	#local lastrParams=("$@") #backup before consuming with shift
+	local lfTime=""
 	local lbPretty=false
 	local lbFilename=false
 	local lbLogMessages=false
 	local lbShowDate=true
 	local lstrFmtCustom=""
+	local lbDelayMode=false
+	local lbShowZeros=true;
+	local lbAlternative=false;
+	local lbShowNano=true
+	local lbShowFormat=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCdtFmt_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
+			SECFUNCshowHelp --nosort ${FUNCNAME}
 			return
-		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help
+		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help to show as user message
 			lbPretty=true
+		elif [[ "$1" == "--alt" ]];then #SECFUNCdtFmt_help alternative mode
+			lbAlternative=true
 		elif [[ "$1" == "--filename" ]];then #SECFUNCdtFmt_help to be used on filename
 			lbFilename=true
 		elif [[ "$1" == "--logmessages" ]];then #SECFUNCdtFmt_help compact for log messages
 			lbLogMessages=true
 		elif [[ "$1" == "--nodate" ]];then #SECFUNCdtFmt_help show only time, not the date
 			lbShowDate=false
+		elif [[ "$1" == "--delay" ]];then #SECFUNCdtFmt_help show as a delay, so days are counted and time starts at '0 00:00:0.0'; only works if time param is specified
+			lbDelayMode=true
+		elif [[ "$1" == "--nozero" ]];then #SECFUNCdtFmt_help only show date, hour, minute and nano if it is not zero (or has not only zeros to the left, except nano), only works with --delay 
+			lbShowZeros=false
+		elif [[ "$1" == "--nonano" ]];then #SECFUNCdtFmt_help do not show nano for seconds
+			lbShowNano=false
 		elif [[ "$1" == "--fmt" ]];then #SECFUNCdtFmt_help <format> specify a custom format
 			shift
 			lstrFmtCustom="${1-}"
+		elif [[ "$1" == "--showfmt" ]];then #SECFUNCdtFmt_help show the resulting format used with `date`
+			lbShowFormat=true
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -430,75 +371,149 @@ function SECFUNCdtFmt() { #[time in seconds since epoch] otherwise current (now)
 		shift
 	done
 	
-	if [[ -n "${1-}" ]];then
-		ldtTime="$1"
+	local lstrFormatSimplest="%s.%N"
+	
+	lfTime="${1-}"
+	if [[ -z "$lfTime" ]];then
+		lfTime="`date +"$lstrFormatSimplest"`" #now
+		if $lbDelayMode;then
+			SECFUNCechoWarnA "lbDelayMode='$lbDelayMode' requires 'paramTime' to be set, disabling option.."
+			lbDelayMode=false
+		fi
+	else
+		if [[ ! "$lfTime" =~ "." ]];then #dot not found
+			lfTime+=".0" #fix to be float
+		fi
 	fi
 	
-	local lstrFormat="%s.%N"
+	if ! SECFUNCisNumber -n "$lfTime";then
+		SECFUNCechoErrA "invalid lfTime='$lfTime'"
+		return 1
+	fi
+	
+	local lnDays=0
+	if $lbDelayMode;then
+		local lnOneDayInSeconds="$((3600*24))"
+		#((lfTime+=$SECnFixDate))
+		local lnDays="`SECFUNCbcPrettyCalc --trunc --scale 0 "$lfTime/$lnOneDayInSeconds"`"
+		lfTime="`SECFUNCbcPrettyCalc --scale 9 "$lfTime+$SECnFixDate"`"
+		
+		#local lstrDays="(`SECFUNCbcPrettyCalc --scale 9 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"` days) "
+#		local lnDays="`SECFUNCbcPrettyCalc --scale 0 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"`"
+	fi
+	local lnTimeSeconds="${lfTime%.*}" #removed nanos
+	local lnTimeNano="${lfTime#*.}" #only nanos
+	
+	local lstrFormat
 	if [[ -n "$lstrFmtCustom" ]];then
 		lstrFormat="$lstrFmtCustom"
 	else
-		local lstrFmtDate=""
+		function SECFUNCdtFmt_set_lstrFormat() {
+			local lstrDaysText="$1"
+			local lstrDateFmt="$2"
+			local lstrTimeSeparator="$3"
+			local lstrNanoSeparator="$4"
+			
+			if $lbShowDate;then	
+				if $lbDelayMode;then 
+					if $lbShowZeros || ((lnDays>0));then
+						lstrFormat+="$lstrDaysText";
+					fi
+				else 
+					lstrFormat+="$lstrDateFmt";
+				fi;
+			fi
+			
+			#SECFUNCechoDbgA --callerfunc "SECFUNCdtFmt" --vars lnTimeSeconds lnTimeNano lfTime
+			#SECFUNCechoDbgA --vars lnTimeSeconds lnTimeNano lfTime
+			
+			# below must be separate to hour and minutes
+			if $lbShowZeros || ((lnDays>0)) || (( lnTimeSeconds>=(3600+$SECnFixDate) ));then #3600 = 1h
+				lstrFormat+="%H"
+				if $lbAlternative;then lstrFormat+="h";fi
+				lstrFormat+="${lstrTimeSeparator}"
+			fi
+			
+			if $lbShowZeros || ((lnDays>0)) || (( lnTimeSeconds>=(60+$SECnFixDate) ));then
+				lstrFormat+="%M"
+				if $lbAlternative;then lstrFormat+="m";fi
+				lstrFormat+="${lstrTimeSeparator}"
+			fi
+			
+			lstrFormat+="%S" #always show seconds
+			if $lbShowNano;then
+				if $lbShowZeros || ((10#$lnTimeNano>0));then
+					lstrFormat+="${lstrNanoSeparator}%N"
+				fi
+			fi
+			if $lbAlternative;then lstrFormat+="s";fi
+		}
 		if $lbPretty;then
-			if $lbShowDate;then	lstrFmtDate="%d/%m/%Y ";fi
-			lstrFormat="${lstrFmtDate}%H:%M:%S.%N"
+			SECFUNCdtFmt_set_lstrFormat "${lnDays} days, " "%d/%m/%Y " ":" "."
 		elif $lbFilename;then
-			if $lbShowDate;then	lstrFmtDate="%Y_%m_%d-";fi
-			lstrFormat="${lstrFmtDate}%H_%M_%S_%N"
+			SECFUNCdtFmt_set_lstrFormat "${lnDays}-" "%Y_%m_%d-" "_" "_"
 		elif $lbLogMessages;then
-			if $lbShowDate;then	lstrFmtDate="%Y%m%d+";fi
-			lstrFormat="${lstrFmtDate}%H%M%S.%N"
+			SECFUNCdtFmt_set_lstrFormat "${lnDays}+" "%Y%m%d+" "" "."
+		elif $lbAlternative;then
+			SECFUNCdtFmt_set_lstrFormat "${lnDays}d" "%Yy%mm%dd+" "" "."
+		else
+			#SECFUNCdtFmt_set_lstrFormat "" "" "" "."
+			lstrFormat="$lstrFormatSimplest"
+			if $lbDelayMode;then
+				lfTime="`SECFUNCbcPrettyCalc --scale 9 "$lfTime-$SECnFixDate"`" #undo the fix to show properly
+			fi
 		fi
 	fi
 	
-	if [[ -n "$ldtTime" ]];then
-		if ! date -d "@$ldtTime" "+$lstrFormat";then
-			SECFUNCechoErrA "invalid ldtTime='$ldtTime'"
-			return 1
-		fi
-	else
-		# Now
-		if ! date "+$lstrFormat";then
-			SECFUNCechoErrA "invalid lstrFormat='$lstrFormat'"
-			return 1
-		fi
+	if $lbShowFormat;then
+		echo "$FUNCNAME:lstrFormat='$lstrFormat'" #user can easily capture this
+	fi
+	if ! date -d "@$lfTime" "+${lstrFormat}";then
+		SECFUNCechoErrA "invalid lstrFormat='$lstrFormat'" #lfTime already checked
+		return 1
 	fi
 }
 
-function SECFUNCdtNow() { 
+#deprecated these functions...
+function SECFUNCdtNow() { #
 	#date +"%s.%N"; 
-	SECFUNCdtFmt
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCdtTimeNow() { 
-	SECFUNCdtFmt
+function SECFUNCdtTimeNow() { #
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCtimePretty() {
+function SECFUNCtimePretty() { #
 	#date -d "@`bc <<< "${_SECbugFixDate}+${1}"`" +"%H:%M:%S.%N"
 	#date -d "@${1}" +"%H:%M:%S.%N"
-	SECFUNCdtFmt --nodate --pretty ${1-}
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --nodate --pretty ${1-}"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCtimePrettyNow() {
-	#SECFUNCtimePretty `SECFUNCdtNow`
-	SECFUNCdtFmt --nodate --pretty
+function SECFUNCtimePrettyNow() { #
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --nodate --pretty"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCdtTimePretty() {
+function SECFUNCdtTimePretty() { #
 	#date -d "@${1}" +"%d/%m/%Y %H:%M:%S.%N"
-	SECFUNCdtFmt --pretty ${1-}
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --pretty ${1-}"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCdtTimePrettyNow() {
-	#SECFUNCdtTimePretty `SECFUNCdtNow`
-	SECFUNCdtFmt --pretty
+function SECFUNCdtTimePrettyNow() { #
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --pretty"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCdtTimeToFileName() {
+function SECFUNCdtTimeToFileName() { #
 	#date -d "@${1}" +"%Y_%m_%d-%H_%M_%S_%N"
-	SECFUNCdtFmt --filename ${1-}
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --filename ${1-}"
+	_SECFUNCcriticalForceExit 
 }
-function SECFUNCdtTimeToFileNameNow() {
-	#SECFUNCdtTimeToFileName `SECFUNCdtNow`
-	SECFUNCdtFmt --filename
+function SECFUNCdtTimeToFileNameNow() { #
+	SECFUNCechoErrA "use instead: SECFUNCdtFmt --filename"
+	_SECFUNCcriticalForceExit 
 }
 
-function SECFUNCarraySize() { #usefull to prevent unbound variable error message
+function SECFUNCarraySize() { #help usefull to prevent unbound variable error message
 	local lstrArrayId="$1"
 	if ! ${!lstrArrayId+false};then #this becomes false if unbound
 		eval 'echo "${#'$lstrArrayId'[@]}"'
@@ -517,423 +532,53 @@ function SECFUNCarraySize() { #usefull to prevent unbound variable error message
 #	fi
 }
 
-function SECFUNCshowHelp() { #[$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
-	local lbColorizeEcho=false
-	local lbSort=true
-	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
+alias SECFUNCprcA="SECFUNCprc --calledWithAlias --caller \"\${FUNCNAME-}\" --callerOfCallerFunc \"\${SEClstrFuncCaller-}\""
+function SECFUNCprc() { #help use as `SECFUNCprcA <otherFunction> [params]`, "prevent recursive call" (prc) over 'otherFunction'; requires a variable 'SEClstrFuncCaller' to be set as being the caller of the function that is calling this one\nWARNING this will fail if called from a subfunction of a function...
+	local lstrCaller=""
+	local lstrFuncCallerOfCaller=""
+	local lbCalledWithAlias=false
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+		if [[ "$1" == "--help" ]];then #SECFUNCprc_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-		elif [[ "${1-}" == "--colorize" ]];then #SECFUNCshowHelp_help helps to colorize specific text
+		elif [[ "$1" == "--caller" ]];then #SECFUNCprc_help is the name of the function calling this one
 			shift
-			lstrColorizeEcho="${1-}"
-		
-			lbColorizeEcho=true
-		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options
-			lbSort=false
+			lstrCaller="${1-}"
+		elif [[ "$1" == "--callerOfCallerFunc" ]];then #SECFUNCprc_help <FUNCNAME> is the name of the function that called the function that called this one
+			shift
+			lstrFuncCallerOfCaller="${1-}" #will be enforced to be filled below
+		elif [[ "$1" == "--calledWithAlias" ]];then #DO NOT DOCUMENT THIS ONE! :P
+			lbCalledWithAlias=true
 		else
-			SECFUNCechoErrA "invalid option '$1'"
-			return 1
+			echo "$FUNCNAME:ERROR:invalid option '$1'" >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			_SECFUNCcriticalForceExit
 		fi
 		shift
 	done
 	
-	# Colors: light blue=94, light yellow=93, light green=92, light cyan=96, light red=91
-	local le=$(printf '\033') # Escape char to provide colors on sed on terminal
-	local lsedColorizeOptionals='s,[[]([^]]*)[]],'$le'[0m'$le'[96m[\1]'$le'[0m,g' #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
-	local lsedColorizeRequireds='s,[<]([^>]*)[>],'$le'[0m'$le'[91m<\1>'$le'[0m,g'
-	local lsedColorizeTheOption='s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),'$le'[0m'$le'[92m\1\2\3'$le'[0m,g'
-	local lsedTranslateEscn='s,\\n,\n,g'
-	local lsedTranslateEsct='s,\\t,\t,g'
-	if $lbColorizeEcho;then
-		echo "$lstrColorizeEcho" \
-			|sed -r "$lsedColorizeOptionals" \
-			|sed -r "$lsedColorizeRequireds" \
-			|sed -r "$lsedColorizeTheOption" \
-			|sed -r "$lsedTranslateEscn" \
-			|sed -r "$lsedTranslateEsct" \
-			|cat #dummy to help coding...
-		return
+	if [[ -z "$lstrCaller" ]];then
+			echo "SECERROR:$lstrCaller.$FUNCNAME: Must be called from other functions lstrCaller='$lstrCaller'." >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			_SECFUNCcriticalForceExit
+	fi
+	#if [[ -z "$lstrFuncCallerOfCaller" ]];then
+	if ! $lbCalledWithAlias;then
+			echo "SECERROR:$lstrCaller.$FUNCNAME: Use the alias 'SECFUNCprcA', and set this variable at caller function (current value is): SEClstrFuncCaller='${SEClstrFuncCaller-}'" >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			_SECFUNCcriticalForceExit
 	fi
 	
-	local lstrFunctionNameToken="${1-}"
-	
-	local lastrFile=("$0")
-	if [[ ! -f "${lastrFile[0]}" ]];then
-		if [[ "${lstrFunctionNameToken:0:10}" == "SECFUNCvar" ]];then
-			#TODO !!! IMPORTANT !!! this MUST be the only place on funcMisc.sh that funcVars.sh or anything from it is known about!!! BEWARE!!!!!!!!!!!!!!!!!! Create a validator on a package builder?
-			lastrFile=("$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh")
-		elif [[ "${lstrFunctionNameToken:0:7}" == "SECFUNC" ]];then
-			lastrFile=("${SECastrFuncFilesShowHelp[@]}")
-		else
-			# as help text are comments and `type` wont show them, the real script files is required...
-			SECFUNCechoErrA "unable to access script file '${lastrFile[0]}'"
-			return 1
-		fi
+	# no log or message on fail, as it is an execution preventer
+	if [[ "$lstrFuncCallerOfCaller" != "$1" ]];then
+#		echo "DIFF: lstrFuncCallerOfCaller='$lstrFuncCallerOfCaller' lstrCaller='$lstrCaller' FUNCNAME='$FUNCNAME' SEClstrFuncCaller='$SEClstrFuncCaller'" >>/dev/stderr
+		"$@"
 	fi
-	
-	if [[ -n "$lstrFunctionNameToken" ]];then
-		if [[ -n `echo "$lstrFunctionNameToken" |tr -d '[:alnum:]_'` ]];then
-			SECFUNCechoErrA "invalid prefix '$lstrFunctionNameToken'"
-			return 1
-		fi
-		
-		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m"
-		
-		# for function description
-		local lstrFuncDesc=`grep -h "function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#(.*);\1;"`
-		if [[ -n "$lstrFuncDesc" ]];then
-			echo -e "\t$lstrFuncDesc" \
-				|sed -r "$lsedColorizeOptionals" \
-				|sed -r "$lsedColorizeRequireds" \
-				|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
-		fi
-		
-		lstrFunctionNameToken="${lstrFunctionNameToken}_"
-	else
-		echo "Help options for `basename "$0"`:"
-	fi
-	
-	# SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
-	cmdSort="cat" #dummy to not break code...
-	if $lbSort;then
-		cmdSort="sort"
-	fi
-	local lgrepNoCommentedLines="^[[:blank:]]*#"
-	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
-	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
-	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
-#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'$le'[0m'$le'[92m\1'$le'[0m\t,g'
-	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'$le'[0m'$le'[92m\1'$le'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
-	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
-	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
-#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'$le'[0m'$le'[91m<\2>'$le'[0m,g'
-#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'$le'[0m'$le'[96m[\2]'$le'[0m,g'
-	#local lsedAddNewLine='s".*"&\n"'
-	cat "${lastrFile[@]}" \
-		|egrep -v "$lgrepNoCommentedLines" \
-		|grep  -w "$lgrepMatchHelpToken" \
-		|sed -r "$lsedOptionsAndHelpText" \
-		|sed -r "$lsedRemoveTokenOR" \
-		|sed -r "$lsedRemoveHelpToken" \
-		|sed -r "$lsedColorizeOptionals" \
-		|sed -r "$lsedColorizeRequireds" \
-		|sed -r "$lsedRemoveComparedVariable" \
-		|sed -r "$lsedColorizeTheOption" \
-		|sed -r "$lsedTranslateEsct" \
-		|$cmdSort \
-		|sed -r "$lsedTranslateEscn" \
-		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
-		#|sed -r "$lsedAddNewLine"
 }
 
-function SECFUNCechoErr() { #echo error messages
-	###### options
-	local caller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCechoErr_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--caller" ]];then #SECFUNCechoErr_help is the name of the function calling this one
-			shift
-			caller="${1}: "
-		else
-			echo "[`SECFUNCdtFmt --logmessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
-			return 1
-		fi
-		shift
-	done
-	
-	###### main code
-	#echo "SECERROR[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr; 
-	local l_output="[`SECFUNCdtFmt --logmessages`]SECERROR: ${caller}$@"
-	if $SEC_MsgColored;then
-		echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
-	else
-		echo "${l_output}" >>/dev/stderr
-	fi
-	echo "${l_output}" >>"$SECstrFileErrorLog"
-}
 #if [[ "$SEC_DEBUG" == "true" ]];then
 #	SECFUNCechoErrA "test error message"
-#	SECFUNCechoErr --caller "caller=funcMisc.sh" "test error message"
+#	SECFUNCechoErr --caller "lstrCaller=funcMisc.sh" "test error message"
 #fi
 
-function _SECFUNCmsgCtrl() {
-	local lstrMsgMode="$1"
-	if [[ -f "${SECstrFileMessageToggle}.$lstrMsgMode.$$" ]];then
-		local lstrForceMessage="`cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"`"
-		if [[ "$lstrMsgMode" == "DEBUG" ]];then
-			if [[ -f "${SECstrFileMessageToggle}.BASHDEBUG.$$" ]];then
-				SECastrBashDebugFunctionIds=("`cat "${SECstrFileMessageToggle}.BASHDEBUG.$$"`")
-				rm "${SECstrFileMessageToggle}.BASHDEBUG.$$" 2>/dev/null
-			fi
-		fi
-		
-		rm "${SECstrFileMessageToggle}.$lstrMsgMode.$$" 2>/dev/null
-		
-		if [[ -n "$lstrForceMessage" ]];then
-			if [[ "$lstrForceMessage" == "on" ]];then
-				eval SEC_$lstrMsgMode=true
-			elif [[ "$lstrForceMessage" == "off" ]];then
-				eval SEC_$lstrMsgMode=false
-			fi				
-		else
-			local lstrVarTemp="SEC_${lstrMsgMode}"
-			if ${!lstrVarTemp};then 
-				eval SEC_$lstrMsgMode=false;	
-			else 
-				eval SEC_$lstrMsgMode=true;
-			fi
-		fi
-	fi
-}
-
-function SECFUNCechoDbg() { #will echo only if debug is enabled with SEC_DEBUG
-	# Log is stopped on the alias #set +x
-	_SECFUNCmsgCtrl DEBUG
-	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
-		return 0
-	fi
-	
-	###### options
-	local caller=""
-	local lstrFuncCaller=""
-	local lbFuncIn=false
-	local lbFuncOut=false
-	local lbStopParams=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--caller" ]];then #SECFUNCechoDbg_help is the name of the function calling this one
-			shift
-			caller="${1}: "
-		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoDbg_help <FUNCNAME> will show debug only if the caller function matches SEC_DEBUG_FUNC in case it is not empty
-			shift
-			lstrFuncCaller="${1}"
-		elif [[ "$1" == "--funcin" ]];then #SECFUNCechoDbg_help just to tell it was placed on the beginning of a function
-			lbFuncIn=true
-		elif [[ "$1" == "--funcout" ]];then #SECFUNCechoDbg_help just to tell it was placed on the end of a function
-			lbFuncOut=true
-		elif [[ "$1" == "--" ]];then #SECFUNCechoDbg_help remaining params after this are considered as not being options
-			lbStopParams=true;
-		else
-			SECFUNCechoErrA "invalid option '$1'"
-			return 1
-		fi
-		shift
-		if $lbStopParams;then
-			break;
-		fi
-	done
-	
-	###### main code
-	local lnLength=0
-	local lstrLastFuncId=""
-	function SECFUNCechoDbg_updateStackVars(){
-		lnLength="${#SECastrFunctionStack[@]}"
-		if((lnLength>0));then
-			lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
-		fi
-		#echo "SECastrBashDebugFunctionIds=(${SECastrBashDebugFunctionIds[@]})" >>/dev/stderr
-	}
-	SECFUNCechoDbg_updateStackVars
-	strFuncInOut=""
-	declare -g -A _dtSECFUNCdebugTimeDelayArray
-	if $lbFuncIn;then
-		_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]="`date +"%s.%N"`"
-		strFuncInOut="Func-IN: "
-		SECastrFunctionStack+=($lstrFuncCaller)
-		SECFUNCechoDbg_updateStackVars
-	elif $lbFuncOut;then
-		local ldtNow="`date +"%s.%N"`"
-		local ldtFuncDelay="-1"
-		if [[ "${_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]-0}" != "0" ]];then
-			ldtFuncDelay=$(bc <<< "scale=9;$ldtNow-${_dtSECFUNCdebugTimeDelayArray[$lstrFuncCaller]}")
-		fi
-		strFuncInOut="Func-OUT: "
-		if [[ "$ldtFuncDelay" != "-1" ]];then
-			strFuncInOut+="(${ldtFuncDelay}s) "
-		fi
-		if((lnLength>0));then
-			if [[ "$lstrFuncCaller" == "$lstrLastFuncId" ]];then
-				unset SECastrFunctionStack[lnLength-1]
-				SECFUNCechoDbg_updateStackVars
-			else
-				SECFUNCechoErrA "lstrFuncCaller='$lstrFuncCaller' expected lstrLastFuncId='$lstrLastFuncId'"
-			fi
-		else
-			SECFUNCechoErrA "lstrFuncCaller='$lstrFuncCaller', SECastrFunctionStack lnLength='$lnLength'"
-		fi
-	fi
-	if((lnLength>0));then
-		local lnCount="$lnLength"
-		if $lbFuncIn;then
-			((lnCount--))
-		fi
-		if((lnCount>0));then
-			strFuncStack="`echo "${SECastrFunctionStack[@]:0:lnCount}" |tr ' ' '.'`: "
-		else
-			strFuncStack=""
-		fi
-	else
-		strFuncStack=""
-	fi
-	
-	function SECFUNCechoDbg_isOnTheList(){
-		local lstrFuncToCheck="${1-}"
-		if((${#SECastrBashDebugFunctionIds[@]}>0));then
-			local lnIndex
-			for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
-				local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
-				if [[ "$strBashDebugFunctionId" == "+all" ]];then
-					return 0
-				fi
-				if [[ "$lstrFuncToCheck" == "$strBashDebugFunctionId" ]];then
-					return 0
-				fi
-			done
-		fi
-		return 1
-	}
-	
-	local lbBashDebug=false
-	if SECFUNCechoDbg_isOnTheList	$lstrFuncCaller || 
-	   SECFUNCechoDbg_isOnTheList	$lstrLastFuncId;
-	then
-		lbBashDebug=true
-	fi
-	
-#	local lbBashDebug=false
-#	if((${#SECastrBashDebugFunctionIds[@]}>0));then
-#		local lnIndex
-#		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
-#			local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
-#			if [[ "$lstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
-#			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
-#				lbBashDebug=true
-#				break
-#			fi
-#		done
-#	fi
-
-#	if $lbBashDebug;then
-#		if $lbFuncOut;then
-#			set +x #stop log
-#		fi
-#	fi
-
-	local lbDebug=true
-	
-	if [[ "$SEC_DEBUG" != "true" ]];then
-		lbDebug=false
-	fi
-	
-	if [[ -n "$SEC_DEBUG_FUNC" ]];then
-		if [[ "$lstrFuncCaller" != "$SEC_DEBUG_FUNC" ]];then
-			lbDebug=false
-		fi
-	fi
-	
-	if $lbDebug;then
-		local l_output="[`SECFUNCdtFmt --logmessages`]SECDEBUG: ${strFuncStack}${caller}${strFuncInOut}$@"
-		if $SEC_MsgColored;then
-			echo -e " \E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
-		else
-			echo "${l_output}" >>/dev/stderr
-		fi
-	fi
-	
-	# LAST CHECK ON THIS FUNCTION!!!
-	if $lbBashDebug;then
-		if $lbFuncOut;then
-			if [[ -z "$lstrLastFuncId" ]];then
-				set +x #end log
-			else
-				#if _SECFUNCechoDbg_isOnTheList	$lstrLastFuncId;then
-					set -x
-				#fi
-			fi
-		else
-			set -x #start log
-		fi
-	fi
-}
-
-function SECFUNCechoWarn() { 
-#	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
-#		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
-#		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
-#	fi
-	_SECFUNCmsgCtrl WARN
-	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
-		return 0
-	fi
-	
-	###### options
-	local caller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCechoWarn_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--caller" ]];then #SECFUNCechoWarn_help is the name of the function calling this one
-			shift
-			caller="${1}: "
-		else
-			SECFUNCechoErrA "invalid option '$1'"
-			return 1
-		fi
-		shift
-	done
-	
-	###### main code
-	#echo "SECWARN[`SECFUNCdtNow`]: ${caller}$@" >>/dev/stderr
-	local l_output="[`SECFUNCdtFmt --logmessages`]SECWARN: ${caller}$@"
-	if $SEC_MsgColored;then
-		echo -e " \E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
-	else
-		echo "${l_output}" >>/dev/stderr
-	fi
-}
-
-function SECFUNCechoBugtrack() { 
-#	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
-#		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
-#		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
-#	fi
-	_SECFUNCmsgCtrl BUGTRACK
-	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
-		return 0
-	fi
-	
-	###### options
-	local caller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #SECFUNCechoBugtrack_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
-			return
-		elif [[ "$1" == "--caller" ]];then #SECFUNCechoBugtrack_help is the name of the function calling this one
-			shift
-			caller="${1}: "
-		else
-			SECFUNCechoErrA "invalid option $1"
-			return 1
-		fi
-		shift
-	done
-	
-	###### main code
-	local l_output="[`SECFUNCdtFmt --logmessages`]SECBUGTRACK: ${caller}$@"
-	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
-	else
-		echo "${l_output}" >>/dev/stderr
-	fi
-}
-
-function SECFUNCpidChecks() { # pid checks #TODO remove deprecated code
+function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 	local lbCheckOnly=false
 	local lbCmpPid=false
 	local lbWritePid=false
@@ -945,7 +590,7 @@ function SECFUNCpidChecks() { # pid checks #TODO remove deprecated code
 		if [[ "$1" == "--help" ]];then #SECFUNCpidChecks_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-#		elif [[ "$1" == "--hasotherpids" ]];then #SECFUNCpidChecks_help <skipPid> return true if there are other requests other than the skipPid (usually $$ of caller script)
+#		elif [[ "$1" == "--hasotherpids" ]];then #SECFUNCpidChecks_help <skipPid> return true if there are other requests other than the skipPid (usually $$ of lstrCaller script)
 #			shift
 #			lnPid="${1-0}"
 #			
@@ -983,7 +628,7 @@ function SECFUNCpidChecks() { # pid checks #TODO remove deprecated code
 		lbMustBeActive=false
 	fi
 	
-	function SECFUNCpidChecks_check(){
+	function SECFUNCpidChecks_check(){ 
 		local lnPid="${1-}"
 		
 		if [[ -z "$lnPid" ]];then
@@ -1085,35 +730,6 @@ function SECFUNCpidChecks() { # pid checks #TODO remove deprecated code
 	return 1
 }
 
-function SECFUNCshowFunctionsHelp() { #show functions specific help
-	#set -x
-	if [[ "${1-}" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
-		#this option also prevents infinite loop for this script help
-		SECFUNCshowHelp ${FUNCNAME}
-		return
-	fi
-	
-	echo "`basename "$0"` Functions:"
-	local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
-	local lastrFunctions=(`grep "function SECFUNC.*" "$0" |grep -v grep |sed -r "$lsedFunctionNameOnly"`)
-	lastrFunctions=(`echo "${lastrFunctions[@]}" |tr " " "\n" |sort`)
-	for lstrFuncId in ${lastrFunctions[@]};do
-		echo
-		if type $lstrFuncId 2>/dev/null |grep -q "\-\-help";then
-			local lstrHelp=`$lstrFuncId --help`
-			if [[ -n "$lstrHelp" ]];then
-				echo "$lstrHelp"
-			else
-				#echo "  $lstrFuncId()"
-				SECFUNCshowHelp $lstrFuncId #this only happens for SECFUNCechoDbg ...
-			fi
-		else
-			#echo "  $lstrFuncId()"
-			SECFUNCshowHelp $lstrFuncId
-		fi
-	done
-}
-
 #function SECFUNCfixParams() {
 #	local lstrToExec=""
 #	for lstrParam in "$@";do
@@ -1126,7 +742,7 @@ function SECFUNCshowFunctionsHelp() { #show functions specific help
 #  echo "$lstrToExec"
 #}
 
-function SECFUNCparamsToEval() {
+function SECFUNCparamsToEval() { #help 
 	local lstrToExec=""
 	for lstrParam in "$@";do
 		#lstrToExec+="'${lstrParam}' "
@@ -1137,7 +753,7 @@ function SECFUNCparamsToEval() {
   echo "$lstrToExec"
 }
 
-function SECFUNCsingleLetterOptions() { #Add this at beggining of your options loop: SECFUNCsingleLetterOptionsA;\n\tIt will expand joined single letter options to separated ones like in -abc to -a -b -c;\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
+function SECFUNCsingleLetterOptions() { #help Add this at beggining of your options loop: SECFUNCsingleLetterOptionsA;\n\tIt will expand joined single letter options to separated ones like in -abc to -a -b -c;\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
 	local lstrCaller=""
 	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
 		shift
@@ -1159,7 +775,7 @@ function SECFUNCsingleLetterOptions() { #Add this at beggining of your options l
 	echo "$lstrOptions"
 }
 
-function SECFUNCexec() {
+function SECFUNCexec() { #help 
 	omitOutput="2>/dev/null 1>/dev/null" #">/dev/null 2>&1" is the same..
 	bOmitOutput=false
 	bShowElapsed=false
@@ -1167,14 +783,18 @@ function SECFUNCexec() {
 	bExecEcho=false
 	
 	###### options
-	local caller=""
+	local lstrCaller=""
+	local SEClstrFuncCaller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one
 			shift
-			caller="${1}: "
+			lstrCaller="${1}: "
+		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoErr_help <FUNCNAME>
+			shift
+			SEClstrFuncCaller="${1}"
 		elif [[ "$1" == "--quiet" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
 			bOmitOutput=true
 		elif [[ "$1" == "--quietoutput" ]];then #SECFUNCexec_help --quiet idem
@@ -1186,7 +806,7 @@ function SECFUNCexec() {
 		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed
 			bExecEcho=true;
 		else
-			SECFUNCechoErrA "caller=${caller}: invalid option $1"
+			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option $1"
 			return 1
 		fi
 		shift
@@ -1198,33 +818,33 @@ function SECFUNCexec() {
 	
 	###### main code
   local strExec="`SECFUNCparamsToEval "$@"`"
-	SECFUNCechoDbgA "caller=${caller}: $strExec"
+	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: $strExec" >>/dev/stderr
+		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: $strExec" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
-		echo -n "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: press a key to exec..." >>/dev/stderr;read -n 1;
+		echo -n "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
-	local ini=`SECFUNCdtNow`;
+	local ini=`SECFUNCdtFmt`;
   eval "$strExec" $omitOutput;nRet=$?
-	local end=`SECFUNCdtNow`;
+	local end=`SECFUNCdtFmt`;
 	
-  SECFUNCechoDbgA "caller=${caller}: RETURN=${nRet}: $strExec"
+  SECFUNCechoDbgA "lstrCaller=${lstrCaller}: RETURN=${nRet}: $strExec"
   
 	if $bShowElapsed;then
-		echo "[`SECFUNCdtFmt --logmessages`]SECFUNCexec: caller=${caller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
+		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
 	fi
   return $nRet
 }
 
-function SECFUNCexecShowElapsed() {
+function SECFUNCexecShowElapsed() { #help 
 	SECFUNCexec --elapsed "$@"
 }
 
-function _SECFUNChelpExit() { #TODO this should help on exiting cleanly on ctrl+c, develop it?
+function _SECFUNChelpExit() { #help #TODO this should help on exiting cleanly on ctrl+c, develop it?
     #echo "usage: options runCommand"
     
     # this sed only cleans lines that have extended options with "--" prefixed
@@ -1234,7 +854,7 @@ function _SECFUNChelpExit() { #TODO this should help on exiting cleanly on ctrl+
     exit 0 #whatchout this will exit the script not only this function!!!
 }
 
-function SECFUNCppidList() {
+function SECFUNCppidList() { #help 
   local separator="${1-}"
   shift
   
@@ -1256,7 +876,7 @@ function SECFUNCppidList() {
   
   echo "$output"
 }
-function SECFUNCppidListToGrep() {
+function SECFUNCppidListToGrep() { #help 
   # output ex.: "^[ |]*30973\|^[ |]*3861\|^[ |]*1 "
 
   #echo `SECFUNCppidList "|"` |sed 's"|"\\|"g'
@@ -1267,7 +887,7 @@ function SECFUNCppidListToGrep() {
   echo "$grepMatch$ppidList "
 }
 
-function SECFUNCbcPrettyCalc() {
+function SECFUNCbcPrettyCalc() { #help 
 	local bCmpMode=false
 	local bCmpQuiet=false
 	local lnScale=2
@@ -1344,7 +964,7 @@ function SECFUNCbcPrettyCalc() {
 	
 }
 
-function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
+function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	SECFUNCdbgFuncInA;
 	local lstrAlign="middle"
 	local lbStay=false
@@ -1435,29 +1055,29 @@ function SECFUNCdrawLine() { #[wordsAlignedDefaultMiddle] [lineFillChars]
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCvalidateId() { #Id can only be alphanumeric or underscore ex.: for functions and variables name.
-	local caller=""
+function SECFUNCvalidateId() { #help Id can only be alphanumeric or underscore ex.: for functions and variables name.
+	local lstrCaller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
 			shift
-			caller="${1}(): "
+			lstrCaller="${1}(): "
 		fi
 		shift
 	done
 	
 	if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
-		SECFUNCechoErrA "${caller}invalid id '$1', only allowed alphanumeric and underscores."
+		SECFUNCechoErrA "${lstrCaller}invalid id '$1', only allowed alphanumeric and underscores."
 		return 1
 	fi
 	return 0
 }
-function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
-	local caller=""
+function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheId"`"
+	local lstrCaller=""
 	local lbJustFix=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
 			shift
-			caller="${1}(): "
+			lstrCaller="${1}(): "
 		elif [[ "$1" == "--justfix" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user
 			lbJustFix=true
 		else
@@ -1469,7 +1089,7 @@ function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	
 	if ! $lbJustFix;then
 		# just to inform invalid id to user be able to set it properly if wanted
-		SECFUNCvalidateId --caller "$caller" "$1"
+		SECFUNCvalidateId --caller "$lstrCaller" "$1"
 	fi
 	
 	# replaces all non-alphanumeric and non underscore with underscore
@@ -1477,7 +1097,7 @@ function SECFUNCfixId() { #fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
 }
 
-function SECFUNCfixCorruptFile() { #usually after a blackout?
+function SECFUNCfixCorruptFile() { #help usually after a blackout?
 	local lstrDataFile="${1-}"
 	
 	if [[ ! -f "$lstrDataFile" ]];then
@@ -1515,7 +1135,7 @@ function SECFUNCfixCorruptFile() { #usually after a blackout?
 	fi
 }
 
-function SECFUNCcleanEnvironment() { #clean environment from everything related to ScriptEchoColor
+function SECFUNCcleanEnvironment() { #help clean environment from everything related to ScriptEchoColor
 	local lbJustList=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]]; then #SECFUNCcleanEnvironment_help
@@ -1540,7 +1160,7 @@ function SECFUNCcleanEnvironment() { #clean environment from everything related 
 	fi
 }
 
-function SECFUNCseparateInWords() { # <string> ex.: 'abcDefHgi_jkl' becomes 'abc def hgi jkl', good to use with variables and options, also to be spoken
+function SECFUNCseparateInWords() { #help <string> ex.: 'abcDefHgi_jkl' becomes 'abc def hgi jkl', good to use with variables and options, also to be spoken
 	lbShowType=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]]; then #SECFUNCseparateInWords_help
@@ -1564,7 +1184,7 @@ function SECFUNCseparateInWords() { # <string> ex.: 'abcDefHgi_jkl' becomes 'abc
 	fi
 }
 
-function SECFUNCdelay() { #The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
+function SECFUNCdelay() { #help The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
 	local bIndexSetByUser=false
@@ -1576,7 +1196,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 		shift
 	fi
 	
-	function _SECFUNCdelayValidateIndexIdForOption() { # validates if indexId has been set in the environment to use all other options other than --init
+	function SECFUNCdelay_ValidateIndexIdForOption() { # validates if indexId has been set in the environment to use all other options other than --init
 		local lbSimpleCheck=false
 		if [[ "${1-}" == "--simplecheck" ]];then
 			lbSimpleCheck=true
@@ -1597,7 +1217,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	local lbGet=false
 	local lbGetSec=false
 	local	lbGetPretty=false
-	local lbNow=false
+#	local lbNow=false
 	local lbCheckOrInit=false
 	local l_b1stIsTrueOnCheckOrInit=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
@@ -1620,18 +1240,24 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 		elif [[ "$1" == "--init" ]];then #SECFUNCdelay_help set temp date storage to now
 			lbInit=true
 		elif [[ "$1" == "--get" ]];then #SECFUNCdelay_help get delay from init (is the default if no option parameters are set)
-			if ! _SECFUNCdelayValidateIndexIdForOption "$1";then return 1;fi
+			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
 			lbGet=true
 		elif [[ "$1" == "--getsec" ]];then #SECFUNCdelay_help get (only seconds without nanoseconds) from init
-			if ! _SECFUNCdelayValidateIndexIdForOption "$1";then return 1;fi
+			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
 			lbGet=true
 			lbGetSec=true
-		elif [[ "$1" == "--getpretty" ]];then #SECFUNCdelay_help get full delay pretty time
-			if ! _SECFUNCdelayValidateIndexIdForOption "$1";then return 1;fi
+		elif [[ "$1" == "--getpretty" ]];then #SECFUNCdelay_help pretty format
+			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
 			lbGet=true
 			lbGetPretty=true
-		elif [[ "$1" == "--now" ]];then #SECFUNCdelay_help get time now since epoch in seconds
-			lbNow=true
+		elif [[ "$1" == "--getprettyfull" ]];then #SECFUNCdelay_help pretty format but does not skip left zeroes
+			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
+			lbGet=true
+			lbGetPrettyFull=true
+		elif [[ "$1" == "--now" ]];then #deprecated
+#			lbNow=true
+			SECFUNCechoErrA "'$1' has deprecated, use 'SECFUNCdtFmt' instead"
+			_SECFUNCcriticalForceExit
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -1641,33 +1267,39 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	
 	#if $lbCheckOrInit && ( $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow );then
 	if $lbCheckOrInit;then
-		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow;then
+#		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow;then
+		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbGetPrettyFull;then
 			SECFUNCechoErrA "--checkorinit must be used without other options"
 			SECFUNCdelay --help |grep "\-\-checkorinit"
 			_SECFUNCcriticalForceExit
 		fi
 	else
 		if ! $lbInit;then
-			if ! _SECFUNCdelayValidateIndexIdForOption "";then return 1;fi
+			if ! SECFUNCdelay_ValidateIndexIdForOption "";then return 1;fi
 		fi
 	fi
 	
 	function SECFUNCdelay_init(){
-		_dtSECFUNCdelayArray[$indexId]=`SECFUNCdtNow`
+		_dtSECFUNCdelayArray[$indexId]="`SECFUNCdtFmt`"
 	}
 	
 	function SECFUNCdelay_get(){
-		local now=`SECFUNCdtNow`
-		local lstrOutput="`SECFUNCbcPrettyCalc "${now} - ${_dtSECFUNCdelayArray[$indexId]}"`"
+		local lfNow="`SECFUNCdtFmt`"
+		local lfDelayToOutput="`SECFUNCbcPrettyCalc --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
 		if $lbGetSec;then
-			echo "$lstrOutput" |sed -r 's"^([[:digit:]]*)[.][[:digit:]]*$"\1"'
+			echo "$lfDelayToOutput" |sed -r 's"^([[:digit:]]*)[.][[:digit:]]*$"\1"' #seconds only
 		elif $lbGetPretty;then
-			local delay=`SECFUNCdelay $indexId --get`
-			#SECFUNCtimePretty "$delay"
-			local lnFixDate="(3600*3)" #to fix from: "31/12/1969 21:00:00.000000000" ...
-			SECFUNCtimePretty "`SECFUNCbcPrettyCalc "$delay+$lnFixDate"`"
+			#local lfDelay="`SECFUNCdelay $indexId --get`"
+			#SECFUNCtimePretty "$lfDelay"
+			#SECFUNCtimePretty "`SECFUNCbcPrettyCalc "$lfDelay+$SECnFixDate"`"
+			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelay"
+			#echo "lfDelayToOutput='$lfDelayToOutput'" >>/dev/stderr
+			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelayToOutput"
+			SECFUNCdtFmt --delay --nozero --pretty "$lfDelayToOutput"
+		elif $lbGetPrettyFull;then
+			SECFUNCdtFmt --delay --pretty "$lfDelayToOutput"
 		else
-			echo "$lstrOutput"
+			echo "$lfDelayToOutput"
 		fi
 	}
 	
@@ -1675,8 +1307,8 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 		SECFUNCdelay_init
 	elif $lbGet;then
 		SECFUNCdelay_get
-	elif $lbNow;then
-		SECFUNCdtNow
+#	elif $lbNow;then
+#		SECFUNCdtFmt
   elif $lbCheckOrInit;then
 		if [[ -z "$nCheckDelayAt" ]] || [[ -n `echo "$nCheckDelayAt" |tr -d '[:digit:].'` ]];then
 			SECFUNCechoErrA "required valid <delayLimit>, can be float"
@@ -1684,7 +1316,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 			_SECFUNCcriticalForceExit
 		fi
 		
-		if ! _SECFUNCdelayValidateIndexIdForOption --simplecheck "--checkorinit";then
+		if ! SECFUNCdelay_ValidateIndexIdForOption --simplecheck "--checkorinit";then
 			SECFUNCdelay_init
 			if $l_b1stIsTrueOnCheckOrInit;then
 				return 0
@@ -1703,6 +1335,7 @@ function SECFUNCdelay() { #The first parameter can optionally be a string identi
 	fi
 }
 
+# LAST THINGS CODE
 if [[ `basename "$0"` == "funcBase.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then

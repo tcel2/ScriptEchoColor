@@ -26,11 +26,25 @@ eval `secinit`
 
 SECFUNCshowHelp --colorize "<device> ex.: sde (that must be at '/dev/')"
 
-strDevBase="/dev/$1";
-if [[ ! -a "$strDevBase" ]];then
-	echoc -p "invalid device '$1'"
+strDevBase="${1-}";
+if [[ -z "${strDevBase}" ]];then
+	echoc -p "missing device param"
 	exit 1
 fi
+if [[ "${strDevBase:0:1}" != "/" ]];then
+	strDevBase="/dev/$strDevBase"
+fi
+if [[ ! -a "${strDevBase}" ]];then
+	echoc -p "missing device '$strDevBase'"
+	exit 1
+fi
+strDevBaseTest=$(ls -l "$strDevBase");
+if [[ "${strDevBaseTest:0:1}" != "b" ]];then
+	echoc -p "invalid device '$strDevBaseTest', must be a block device"
+	exit 1
+fi
+
+echoc --info "working with: $strDevBase"
 
 SECFUNCuniqueLock --daemonwait
 

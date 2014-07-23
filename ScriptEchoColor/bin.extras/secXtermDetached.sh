@@ -59,15 +59,15 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		echo -e "\tSECbTermLog=<<true>|<false>> so log file will be automatically created."
 		echo
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
-		SECFUNCshowHelp
+		SECFUNCshowHelp --nosort
 		exit
-	elif [[ "$1" == "--nice" ]];then #help <nice>
+	elif [[ "$1" == "--nice" ]];then #help <nice> negative value will require sudo
 		shift
 		nNice=$1
 	elif [[ "$1" == "--display" ]];then #help <display>
 		shift
 		nDisplay=$1
-	elif [[ "$1" == "--daemon" ]];then #help <display>
+	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same command)
 		bDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
@@ -105,13 +105,17 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 done
 
 #echo "Remaining Params: $@"
+if [[ -z "${1-}" ]];then
+	echoc -p "missing command to exec"
+	exit 1
+fi
 
 if [[ -n "$strTitleForce" ]];then
 	varset strTitle="$strTitleForce"
-else
+else # strTitle is set to the command that is the first parameter
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
 	varset strTitle="`SECFUNCfixId --justfix "$1"`"
-	#shift # do NOT use shift here!!!
+	#shift # !!!ALERT!!! do NOT use shift here!!!
 fi
 
 export strSudoPrefix=""
@@ -181,6 +185,7 @@ eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strDoNotCl
 #params="$@"
 if $bDaemon;then
 	if [[ "$strTitle" == "$strTitleDefault" ]];then
+		# actually this will never be reached because of the automatic strTitle being the command...
 		echoc -p "Daemons requires non default title to create the unique lock..."
 		echoc -w 
 		exit 1
@@ -266,7 +271,9 @@ fi
 #echoc -w -t 60 "waiting 60s so child shells have a chance to hook on the SEC DB..."
 #echoc -x "kill -SIGINT $pidXtermTemp"
 #if ! $bLog;then
-kill -SIGINT $pidXtermTemp
+if [[ -d "/proc/$pidXtermTemp" ]];then #it may have run so fast that doesnt exist anymore
+	kill -SIGINT $pidXtermTemp
+fi
 #fi
 #echoc -w -t 5
 

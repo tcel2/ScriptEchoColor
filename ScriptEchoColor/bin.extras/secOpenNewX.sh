@@ -211,7 +211,7 @@ function FUNCclearCache() {
 #		fi
 #		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
 #	done
-#	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileReal"
+#	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileReal"
 #}
 
 function FUNCkeepGamma() { # some games reset the gamma on each restart
@@ -245,7 +245,7 @@ function FUNCcicleGamma() {
 #		fi
 #		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
 #	done
-#	echo "`SECFUNCdtTimePrettyNow`.$$" >>"$lockFileGammaReal"
+#	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileGammaReal"
 	local lockGammaId="openNewX.gamma"
 #	FUNClockFile "$lockGammaId" $pidOpenNewX
 #	SECFUNCuniqueLock --pid $pidOpenNewX --id "$lockGammaId"
