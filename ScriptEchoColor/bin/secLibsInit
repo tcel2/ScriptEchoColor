@@ -34,7 +34,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
-		eval `secinit --base`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
+		eval `secinit --core`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
 		exit
 	elif [[ "$1" == "--help-core" ]];then #help help for base lib
@@ -52,6 +52,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--help-vars" ]];then #help help for vars lib
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
+		exit
+	elif [[ "$1" == "--help-sof" ]];then #help summary of functions on all libs
+		eval `secinit --core`
+		#sedOnlyFunctions="s'^.*/func(.*)[.]sh:function (SECFUNC[[:alnum:]_]*).*'\1:\2'"
+		#"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func"*".sh" \
+		sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*'\1'"
+		astrLibs=(Core Base Misc Vars)
+		for strLib in "${astrLibs[@]}";do
+			SECFUNCdrawLine " $strLib "
+			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions"
+		done
 		exit
 	elif [[ "$1" == "--core" ]];then #help load core lib
 		bCore=true

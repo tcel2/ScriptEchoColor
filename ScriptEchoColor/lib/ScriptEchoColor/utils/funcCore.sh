@@ -177,6 +177,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		SECstrIFSbkp="$IFS";IFS=$'\n';lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`);IFS="$SECstrIFSbkp"
 	fi
 	
+	local lgrepNoFunctions="^[[:blank:]]*function .*"
 	if [[ -n "$lstrFunctionNameToken" ]];then
 		if [[ -n `echo "$lstrFunctionNameToken" |tr -d '[:alnum:]_'` ]];then
 			SECFUNCechoErrA "invalid prefix '$lstrFunctionNameToken'"
@@ -195,6 +196,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
+		lgrepNoFunctions="^$" #will actually "help?" by removing empty lines
 	else
 		echo "Help options for `basename "$0"`:"
 	fi
@@ -218,6 +220,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	#local lsedAddNewLine='s".*"&\n"'
 	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
+		|egrep -v "$lgrepNoFunctions" \
 		|grep  -w "$lgrepMatchHelpToken" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \

@@ -22,22 +22,30 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#DO NOT USE secinit HERE!
+#DO NOT USE secinit HERE! BUT.. if it is already installed on the system it will work!
 
 strSelfName="`basename "$0"`"
 strFileCfg="$HOME/.${strSelfName}.cfg"
 
+export SECDEVbInitialized=false
 export SECDEVbSecInit=true
 export SECDEVbFullDebug=false
 bCfgPath=false
 export SECDEVstrProjectPath=""
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+export SECDEVbCdDevPath=false
+export SECDEVbExitAfterUserCmd=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+	#SECFUNCsingleLetterOptionsA; #this wont work as there is no secinit yet ...
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep '#help' "$0" |grep -v grep
-		eval `secinit --base`
+		eval `secinit --core`
 		SECFUNCshowHelp --colorize "[user command and params] to be run initially"
 		SECFUNCshowHelp --nosort
 		exit
+	elif [[ "$1" == "--cddevpath" || "$1" == "-c" ]];then #help initially cd to development path
+		SECDEVbCdDevPath=true
+	elif [[ "$1" == "--exit" || "$1" == "-e" ]];then #help exit after running user command
+		SECDEVbExitAfterUserCmd=true
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
 		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
@@ -119,10 +127,21 @@ function SECFUNCaddToRcFile() {
 	# must come after secinit
 	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)';set +u;
 	
+	if $SECDEVbCdDevPath;then
+		echo " cd '$SECinstallPath'"
+		cd "$SECinstallPath"
+	fi
+	
 	# user custom initial command
 	if [[ -n "${SECDEVstrCmdTmp}" ]];then
 		echo " EXEC: ${SECDEVstrCmdTmp}";
 		eval "${SECDEVstrCmdTmp}";
+	fi
+	
+	if $SECDEVbExitAfterUserCmd;then
+		echo " Exiting..."
+		sleep 1
+		exit
 	fi
 	
 	#history -r

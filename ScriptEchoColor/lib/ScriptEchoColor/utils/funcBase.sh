@@ -89,7 +89,7 @@ export SECastrFunctionStack=() #TODO arrays do not export, any workaround?
 # if echo "$1" |grep -q "[^-]?\-[[:alpha:]][[:alpha:]]";then
 alias SECFUNCsingleLetterOptionsA='
  if echo "$1" |grep -q "^-[[:alpha:]]*$";then
-   set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" "$1"` "${@:2}";
+   set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" -- "$1"` "${@:2}";
  fi'
 
 alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
@@ -755,23 +755,30 @@ function SECFUNCparamsToEval() { #help
 
 function SECFUNCsingleLetterOptions() { #help Add this at beggining of your options loop: SECFUNCsingleLetterOptionsA;\n\tIt will expand joined single letter options to separated ones like in -abc to -a -b -c;\n\tOf course will only work with options that does not require parameters, unless the parameter is for the last option...\n\tThis way code maintenance is made easier by not having to update more than one place with the single letter option.
 	local lstrCaller=""
-	if [[ "${1-}" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do # "--" this is a specific case where only "--" options are allowed, because this function thakes care of splitting "-" options, to not bugout...
+		if [[ "$1" == "--help" ]];then #SECFUNCsingleLetterOptions_help
+			SECFUNCshowHelp --nosort $FUNCNAME
+			return
+		elif [[ "$1" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
+			shift
+			lstrCaller="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCsingleLetterOptions_help params after this are ignored as being options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1' lstrCaller='$lstrCaller'"
+			return 1
+		fi
 		shift
-		lstrCaller="${1-}: "
-		shift
-	fi
+	done
 	
 	# $1 will be bound
 	local lstrOptions=""
-#	if [[ "${1:0:1}" == "-" && "${1:1:1}" != "-" ]];then
-		for((nOptSingleLetterIndex=1; nOptSingleLetterIndex < ${#1}; nOptSingleLetterIndex++));do
-			lstrOptions+="-${1:nOptSingleLetterIndex:1} "
-		done
-#	else
-#		lstrOptions="'$1' "
-#	fi
+	local lnOptSingleLetterIndex
+	for((lnOptSingleLetterIndex=1; lnOptSingleLetterIndex < ${#1}; lnOptSingleLetterIndex++));do
+		lstrOptions+="-${1:lnOptSingleLetterIndex:1} "
+	done
 	
-#	lstrOptions+="`SECFUNCfixParams "${@:2}"`"
 	echo "$lstrOptions"
 }
 
@@ -794,7 +801,8 @@ function SECFUNCexec() { #help
 	local lbShowLog=false
 	local lbDetachedList=false
 	local lbStopLog=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+	local lbColorize=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
 			SECFUNCshowHelp -c "[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function"
 			SECFUNCshowHelp --nosort ${FUNCNAME}
@@ -805,6 +813,8 @@ function SECFUNCexec() { #help
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoErr_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
+		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCechoErr_help output colored
+			lbColorize=true
 		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
 			bOmitOutput=true
 		elif [[ "$1" == "--quietoutput" ]];then #deprecated
@@ -921,7 +931,13 @@ function SECFUNCexec() { #help
 	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $strExec"
 	
 	if $bExecEcho; then
-		echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $strExec" >>/dev/stderr
+		local lstrColorPrefix=""
+		local lstrColorSuffix=""
+		if $lbColorize;then
+			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
+			lstrColorSuffix="\E[0m"
+		fi
+		echo -e "${lstrColorPrefix}[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $strExec${lstrColorSuffix}" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
@@ -932,7 +948,7 @@ function SECFUNCexec() { #help
 	if $bShowElapsed;then local ini=`SECFUNCdtFmt`;fi
   #eval "$strExec" $omitOutput;lnReturnValue=$?
   #"$@" $omitOutput;lnReturnValue=$?
-  if $lbDoLog && [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+  if $lbDoLog && [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
   	if $lbDetach;then
 	  	#"$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
 			#(exec 2>>"$SEClstrLogFileSECFUNCexec";exec 1>&2;"$@") & disown
@@ -954,7 +970,7 @@ function SECFUNCexec() { #help
   fi
 	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
 	
-	if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+	if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
 		if((lnLogQuota>0)) || ((${SEClnLogQuotaSECFUNCexec-0}>0));then
 			if((lnLogQuota>0));then
 				SEClnLogQuotaSECFUNCexec="$lnLogQuota"
