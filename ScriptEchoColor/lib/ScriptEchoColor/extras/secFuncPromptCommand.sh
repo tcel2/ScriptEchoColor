@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-function SECFUNCcheckIfSudoIsActive() { 
+function SECFUNCcheckIfSudoIsActive() { #help 
 	# this would update the timestamp and so the timeout, therefore it is useless...
 	#nPts=`ps --no-headers -p $$ |sed -r 's".*pts/([0-9]*).*"\1"'`; now=`date +"%s"`; echo "remaining $((now-`sudo stat -c '%Y' /var/lib/sudo/\`SECFUNCgetUserName\`/$nPts`))s"
 	
@@ -34,18 +34,18 @@ function SECFUNCcheckIfSudoIsActive() {
 	fi; 
 }
 
-function SECFUNCcustomUserText(){ #redefine this function, see example at secBashForScriptEchoColorDevelopment.sh
+function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh
 	local lstrDummyVariable;
 }
 
-function SECFUNCbeforePromptCommand(){
+function SECFUNCbeforePromptCommand(){ #help 
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
 		SECdtBeforeCommandSec="`date +"%s"`"
 		SECdtBeforeCommandNano="`date +"%N"`"
 	fi
 }
 trap 'SECFUNCbeforePromptCommand' DEBUG
-function SECFUNCpromptCommand () { #at .bashrc put this: if [[ -f "/usr/lib/ScriptEchoColor/extras/funcPromptCommand.sh" ]];then source "/usr/lib/ScriptEchoColor/extras/funcPromptCommand.sh";fi
+function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh" ]];then source "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh";fi
 	#TODO if time() is used with a command, the delay messes up becoming very low...
 	SECfCommandDelay="`bc <<< "\`date +"%s.%N"\`-($SECdtBeforeCommandSec.$SECdtBeforeCommandNano)"`"
 	if [[ "${SECfCommandDelay:0:1}" == "." ]];then
@@ -57,7 +57,7 @@ function SECFUNCpromptCommand () { #at .bashrc put this: if [[ -f "/usr/lib/Scri
 	local lnHalf=$((lnWidth/2))
 	local lstrBegin="`date --date="@$SECdtBeforeCommandSec" +"%H:%M:%S"`"
 	local lstrEnd="`date +"%H:%M:%S"`"
-	local lstrText="`SECFUNCcheckIfSudoIsActive`[${lstrBegin}->${lstrEnd}](${SECfCommandDelay}s)`SECFUNCcustomUserText`";
+	local lstrText="`SECFUNCcheckIfSudoIsActive`[${lstrBegin}->${lstrEnd}](${SECfCommandDelay}s)`SECFUNCpromptCommand_CustomUserText`";
 	local lstrTextToCalcSize="`echo "$lstrText" |sed -r 's"[\]E[[][[:digit:]]*m""g'`" #remove any formatting characters
 	local lnSizeTextHalf=$((${#lstrTextToCalcSize}/2))
 	echo #this prevents weirdness when the previous command didnt output newline at the end...

@@ -22,7 +22,12 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#DO NOT USE secinit HERE! BUT.. if it is already installed on the system it will work!
+if ! type -P secinit >/dev/null;then
+	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >>/dev/stderr
+	exit 1
+fi
+
+eval `secinit` #if it is already installed on the system it will help!
 
 strSelfName="`basename "$0"`"
 strFileCfg="$HOME/.${strSelfName}.cfg"
@@ -35,10 +40,8 @@ export SECDEVstrProjectPath=""
 export SECDEVbCdDevPath=false
 export SECDEVbExitAfterUserCmd=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
-	#SECFUNCsingleLetterOptionsA; #this wont work as there is no secinit yet ...
+	SECFUNCsingleLetterOptionsA; #this wont work if there is no secinit yet ...
 	if [[ "$1" == "--help" ]];then #help show this help
-		#grep '#help' "$0" |grep -v grep
-		eval `secinit --core`
 		SECFUNCshowHelp --colorize "[user command and params] to be run initially"
 		SECFUNCshowHelp --nosort
 		exit
@@ -56,7 +59,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		
 		bCfgPath=true
 	else
-		echo "invalid option '$1'" >>/dev/stderr
+		SECFUNCechoErrA "invalid option '$1'"
 		exit 1
 	fi
 	shift
@@ -102,10 +105,8 @@ fi
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
 	
-	local lstrSECpath="$SECDEVstrProjectPath"
-	
-	source "$lstrSECpath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
-	function SECFUNCcustomUserText(){
+	source "$SECDEVstrProjectPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
+	function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
 		# Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
 		local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
 		echo "$lstrBanner"
@@ -115,7 +116,20 @@ function SECFUNCaddToRcFile() {
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
 	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
 	
-	export PATH="$lstrSECpath/bin:$lstrSECpath/bin.extras:$PATH";
+#	export PATH="$SECDEVstrProjectPath/bin:$SECDEVstrProjectPath/bin.extras:$PATH";
+#	echo " PATH='$PATH'" >>/dev/stderr
+#	local lastrAddToPath=(
+#		"$SECDEVstrProjectPath/bin"
+#		"$SECDEVstrProjectPath/bin.extras"
+#	)
+#	local lstrAddToPath
+#	for lstrAddToPath in ${lastrAddToPath[@]};do
+#		if ! echo "$PATH" |grep -q "${lstrAddToPath}:";then #as will be added at beginning, must end with ':'
+#			export PATH="$lstrAddToPath:$PATH";
+#		fi
+#	done
+	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
+	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
 	echo " PATH='$PATH'" >>/dev/stderr
 	
 	# must be after PATH setup
@@ -125,21 +139,21 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# must come after secinit
-	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)';set +u;
+	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >>/dev/stderr;set +u;
 	
 	if $SECDEVbCdDevPath;then
-		echo " cd '$SECinstallPath'"
+		echo " cd '$SECinstallPath'" >>/dev/stderr
 		cd "$SECinstallPath"
 	fi
 	
 	# user custom initial command
 	if [[ -n "${SECDEVstrCmdTmp}" ]];then
-		echo " EXEC: ${SECDEVstrCmdTmp}";
+		echo " EXEC: ${SECDEVstrCmdTmp}" >>/dev/stderr
 		eval "${SECDEVstrCmdTmp}";
 	fi
 	
 	if $SECDEVbExitAfterUserCmd;then
-		echo " Exiting..."
+		echo " Exiting..." >>/dev/stderr
 		sleep 1
 		exit
 	fi

@@ -122,6 +122,7 @@ fi
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
 	local lbColorizeEcho=false
 	local lbSort=true
+	local lstrScriptFile="$0"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -133,6 +134,9 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lbColorizeEcho=true
 		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options
 			lbSort=false
+		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help set the script file to gather help data
+			shift
+			lstrScriptFile="${1-}"
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -160,7 +164,12 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	
 	local lstrFunctionNameToken="${1-}"
 	
-	local lastrFile=("$0")
+#	if [[ ! -f "$lstrScriptFile" ]];then
+#		SECFUNCechoErrA "invalid lstrScriptFile='$lstrScriptFile'"
+#		return 1
+#	fi
+	
+	local lastrFile=("$lstrScriptFile")
 	if [[ ! -f "${lastrFile[0]}" ]];then
 #		if [[ "${lstrFunctionNameToken:0:10}" == "SECFUNCvar" ]];then
 #			#TODO !!! IMPORTANT !!! this MUST be the only place on funcMisc.sh that funcVars.sh or anything from it is known about!!! BEWARE!!!!!!!!!!!!!!!!!! Create a validator on a package builder?
@@ -198,7 +207,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
 		lgrepNoFunctions="^$" #will actually "help?" by removing empty lines
 	else
-		echo "Help options for `basename "$0"`:"
+		echo "Help options for `basename "$lstrScriptFile"`:"
 	fi
 	
 	# SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
@@ -235,17 +244,42 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
 		#|sed -r "$lsedAddNewLine"
 }
-function SECFUNCshowFunctionsHelp() { #help show functions specific help
+function SECFUNCshowFunctionsHelp() { #help [script filename] show functions specific help for self script or supplied filename
 	#set -x
-	if [[ "${1-}" == "--help" ]];then #SECFUNCshowFunctionsHelp show this help
-		#this option also prevents infinite loop for this script help
-		SECFUNCshowHelp ${FUNCNAME}
-		return
+	local lstrScriptFile="$0"
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCshowFunctionsHelp_help
+			SECFUNCshowHelp --nosort $FUNCNAME
+			return
+		elif [[ "$1" == "--file" ]];then #SECFUNCshowFunctionsHelp_help <file> use to gather help data from
+			shift
+			lstrScriptFile="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCshowFunctionsHelp_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+#		else #USE THIS ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift
+	done
+
+	if [[ ! -f "$lstrScriptFile" ]];then
+		SECFUNCechoErrA "invalid lstrScriptFile='$lstrScriptFile'"
+		return 1
 	fi
 	
-	echo "`basename "$0"` Functions:"
+	if [[ ! -f "$lstrScriptFile" ]];then
+		SECFUNCechoErrA "invalid script file '$lstrScriptFile'"
+		return 1
+	fi
+	
+	echo "`basename "$lstrScriptFile"` Functions:"
 	local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
-	local lastrFunctions=(`grep "^[[:blank:]]*function SECFUNC" "$0" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
+	local lastrFunctions=(`grep "^[[:blank:]]*function SECFUNC" "$lstrScriptFile" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
 	lastrFunctions=(`echo "${lastrFunctions[@]-}" |tr " " "\n" |sort`)
 	for lstrFuncId in ${lastrFunctions[@]-};do
 		echo
@@ -255,11 +289,11 @@ function SECFUNCshowFunctionsHelp() { #help show functions specific help
 				echo "$lstrHelp"
 			else
 				#echo "  $lstrFuncId()"
-				SECFUNCshowHelp $lstrFuncId #this only happens for SECFUNCechoDbg ...
+				SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId #this only happens for SECFUNCechoDbg ...
 			fi
 		else
 			#echo "  $lstrFuncId()"
-			SECFUNCshowHelp $lstrFuncId
+			SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId
 		fi
 	done
 }
@@ -603,6 +637,57 @@ function SECFUNCechoBugtrack() { #help
 		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
 	else
 		echo "${l_output}" >>/dev/stderr
+	fi
+}
+
+function SECFUNCaddToString() { #help <lstrVariableId> <lstrSeparator> <lstrWhatToAdd>\n\tappend "+string" or prefix "-string" to lstrVariableId, only if such string is missing at lstrVariableId value\n\tlstrSeparator is expected to already exist on the lstrVariableId data to work properly
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCaddToString_help
+			SECFUNCshowHelp --nosort $FUNCNAME
+			return
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCaddToString_help MISSING DESCRIPTION
+#			echo "#TODO"
+		elif [[ "$1" == "--" ]];then #SECFUNCaddToString_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+#		else #USE THIS ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift
+	done
+	
+	local lstrVariableId="${1-}"
+	local lstrSeparator="${2-}"
+	local lstrWhatToAdd="${3-}"
+	
+	if ${!lstrVariableId+false};then
+		SECFUNCechoErrA "lstrVariableId='$lstrVariableId' was not declared yet"
+		return 1
+	fi
+	if [[ -z "${lstrWhatToAdd}" ]];then
+		SECFUNCechoErrA "missing lstrWhatToAdd"
+		return 1
+	fi
+	
+	local lstrCtrlChar="${lstrWhatToAdd:0:1}"
+	lstrWhatToAdd="${lstrWhatToAdd:1}" #remove control char
+	local lstrToGrep="$lstrWhatToAdd"
+	case "$lstrCtrlChar" in
+		"-") lstrToGrep="${lstrToGrep}${lstrSeparator}";; #separator goes after
+		"+") lstrToGrep="${lstrSeparator}${lstrToGrep}";; #separator goes before
+		*) SECFUNCechoErrA "invalid control char '$lstrCtrlChar'";return 1;;
+	esac
+	if ! echo "${!lstrVariableId}" |fgrep -q "${lstrToGrep}";then
+		case "$lstrCtrlChar" in
+			#`declare -g` instead of `export` keeps unexported ones that way
+			"-") declare -g ${lstrVariableId}="${lstrWhatToAdd}${lstrSeparator}${!lstrVariableId}";; #before
+			"+") declare -g ${lstrVariableId}="${!lstrVariableId}${lstrSeparator}${lstrWhatToAdd}";; #after
+			*) SECFUNCechoErrA "invalid control char '$lstrCtrlChar'";return 1;;
+		esac
 	fi
 }
 

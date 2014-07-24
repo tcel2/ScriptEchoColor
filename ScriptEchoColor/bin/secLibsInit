@@ -53,15 +53,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		exit
-	elif [[ "$1" == "--help-sof" ]];then #help summary of functions on all libs
+	elif [[ "$1" == "--help-summary" ]];then #help summary of functions on all libs
 		eval `secinit --core`
 		#sedOnlyFunctions="s'^.*/func(.*)[.]sh:function (SECFUNC[[:alnum:]_]*).*'\1:\2'"
 		#"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func"*".sh" \
+		#sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*#help (.*)'\1\t\2'"
 		sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*'\1'"
 		astrLibs=(Core Base Misc Vars)
 		for strLib in "${astrLibs[@]}";do
-			SECFUNCdrawLine " $strLib "
-			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions"
+			SECFUNCdrawLine --left " $strLib " "~"
+			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions" |sort |column -c `tput cols` |column -t
 		done
 		exit
 	elif [[ "$1" == "--core" ]];then #help load core lib
