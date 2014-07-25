@@ -129,7 +129,7 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 # SPEEDUP
 if [[ -z "${SEC_TmpFolder-}" ]];then
 	SECvarCheckScriptSelfNameParentChange=false
-	eval `secinit --base`
+	eval `secinit --core`
 fi
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
@@ -919,7 +919,8 @@ strCommandWasMsg=`basename $0`" $@"
 #	read "$@";return $?
 #}
 #alias FUNCreadA=read
-alias FUNCreadA='if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
+#alias FUNCreadA='if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
+alias FUNCreadA='if ! SECFUNCisShellInteractive;then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
 
 FUNCtestIgnore(){
   local strTestIgnore=""

@@ -155,6 +155,14 @@ alias SECFUNCsingleLetterOptionsA='
    set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" -- "$1"` "${@:2}";
  fi'
 
+: ${SECvarCheckScriptSelfNameParentChange:=true}
+if [[ "$SECvarCheckScriptSelfNameParentChange" != "false" ]]; then
+	export SECvarCheckScriptSelfNameParentChange=true
+fi
+
+: ${SECstrScriptSelfName=}
+: ${SECstrScriptSelfNameParent=}
+
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
 ######### EXTERNAL VARIABLES can be set by user #########
@@ -552,6 +560,37 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 	done
 }
 
+function SECFUNCscriptSelfNameCheckAndSet() { #help check if equal, return 0, if changed return 1
+	SECFUNCdbgFuncInA;
+	local lbScriptNameChanged=false
+	local lSECstrScriptSelfName="`basename $0`"
+	SECFUNCechoDbgA "lSECstrScriptSelfName=$lSECstrScriptSelfName"
+#	if [[ "$SECstrScriptSelfName" != "$lSECstrScriptSelfName" ]];then
+#		export SECstrScriptSelfNameParent="$SECstrScriptSelfName"
+#	fi
+#	export SECstrScriptSelfName="$lSECstrScriptSelfName"
+	if [[ -n "$SECstrScriptSelfName" ]];then
+		if [[ "$lSECstrScriptSelfName" != "$SECstrScriptSelfName" ]];then
+			lbScriptNameChanged=true
+		fi
+	fi
+	SECFUNCechoDbgA "lbScriptNameChanged=$lbScriptNameChanged"
+	
+	SECFUNCechoDbgA "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
+	SECFUNCechoDbgA "SECstrScriptSelfName=$SECstrScriptSelfName"
+	export SECstrScriptSelfNameParent="$SECstrScriptSelfName"
+	export SECstrScriptSelfName="$lSECstrScriptSelfName"
+	SECFUNCechoDbgA "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
+	SECFUNCechoDbgA "SECstrScriptSelfName=$SECstrScriptSelfName"
+	
+	if [[ -n "$SECstrScriptSelfNameParent" ]];then
+		if [[ "$SECstrScriptSelfNameParent" != "$SECstrScriptSelfName" ]];then
+			lbScriptNameChanged=true
+		fi
+	fi
+	
+	SECFUNCdbgFuncOutA;if $lbScriptNameChanged;then return 1;fi
+}
 
 function SECFUNCdtTimeForLogMessages() { #help useful to core functions only
 	date +"%Y%m%d+%H%M%S.%N"
@@ -951,6 +990,22 @@ function SECFUNCaddToString() { #help <lstrVariableId> <lstrSeparator> <lstrWhat
 		esac
 	fi
 }
+
+function SECFUNCisShellInteractive() {
+	if [[ "`tty`" == "not a tty" ]];then
+		return 1
+	fi
+}
+
+export SECbScriptSelfNameChanged=false
+if SECFUNCscriptSelfNameCheckAndSet;then
+	SECbScriptSelfNameChanged=true
+fi
+export SECstrTmpFolderForSure="/tmp/.SEC.`SECFUNCgetUserName`"
+#mkdir -p "$SECstrTmpFolderForSure"
+export SECstrTmpFolderLogForSure="$SECstrTmpFolderForSure/log"
+mkdir -p "$SECstrTmpFolderLogForSure"
+export SECstrRunLogFile="$SECstrTmpFolderLogForSure/$SECstrScriptSelfName.$$.log"
 
 # LAST THINGS CODE
 if [[ `basename "$0"` == "funcCore.sh" ]];then

@@ -27,13 +27,13 @@ function FUNCtrap() {
 	#TODO `find` exits if ctrl+c is pressed, why? #trap 'echo "ctrl+c pressed...";varset bInterruptAsk=true;' INT
 };export -f FUNCtrap
 FUNCtrap
-#echo "SECscriptSelfNameParent=$SECscriptSelfNameParent"
-#echo "SECscriptSelfName=$SECscriptSelfName"
+#echo "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
+#echo "SECstrScriptSelfName=$SECstrScriptSelfName"
 eval `secinit`;
 #if [[ -L "$SECvarFile" ]];then	echoc --alert "warning $SECvarFile is for child pid";fi;
 #ps -p $PPID
-#echo "SECscriptSelfNameParent=$SECscriptSelfNameParent"
-#echo "SECscriptSelfName=$SECscriptSelfName"
+#echo "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
+#echo "SECstrScriptSelfName=$SECstrScriptSelfName"
 
 ############### INTERNAL CFG
 sedQuoteLines='s".*"\"&\""'
@@ -541,7 +541,7 @@ elif $bAddFilesMode; then
 		
 		if $bUseUnison;then
 			# create a symlink #TODO to be used with unison #TODO code its removal
-			strSymlinkToUnison="$SECstrUserHomeConfigPath/$SECscriptSelfName/Home/$strRelativeFile"
+			strSymlinkToUnison="$SECstrUserHomeConfigPath/$SECstrScriptSelfName/Home/$strRelativeFile"
 			mkdir -vp "`dirname "$strSymlinkToUnison"`"
 			ln -vsf "$strFile" "$strSymlinkToUnison"
 		fi

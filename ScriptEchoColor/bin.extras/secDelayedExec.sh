@@ -26,8 +26,7 @@
 
 eval `secinit --nochild`
 
-strSelfName="`basename "$0"`"
-strLogFile="/tmp/.$strSelfName.`id -un`.log"
+strLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log"
 #strFullSelfCmd="`basename $0` $@"
 strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 #echo "strFullSelfCmd='$strFullSelfCmd'"
@@ -37,20 +36,23 @@ bWaitCheckPoint=false
 nDelayAtLoops=1
 bCheckPointDaemon=false
 bCheckIfAlreadyRunning=true
+nSleepFor=0
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "[options] <nDelayToExec> <command> [command params]..."
-		SECFUNCshowHelp --colorize "Sleep for nDelayToExec seconds before executing the command with its params."
+		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
 		SECFUNCshowHelp --nosort
 		exit
+	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help <nSleepFor> seconds before executing the command with its params.
+		shift
+		nSleepFor="${1-}"
 	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
 		shift
 		nDelayAtLoops="${1-}"
-	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), allows waiting instances to run
+	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), allows waiting instances to run; so must return non 0 to keep holding them.
 		shift
 		strCustomCommand="${1-}"
 		bCheckPointDaemon=true
-	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nDelayToExec, also waits checkpoint tmp file to be removed
+	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nSleepFor, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--noalready" || "$1" == "-n" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
@@ -67,6 +69,36 @@ elif((nDelayAtLoops<1));then
 	nDelayAtLoops=1
 fi
 
+strWaitCheckPointIndicator=""
+if $bWaitCheckPoint;then
+	strWaitCheckPointIndicator="w+"
+fi
+strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
+
+function FUNClog() { #help <type with 3 letters> [comment]
+	local lstrType="$1"
+	local lstrLogging=" $lstrType -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"
+	local lstrComment="${@:2}" #"${2-}" fails to '$@' as param when calling this function
+	
+	if [[ -n "$lstrComment" ]];then
+		lstrLogging+="; # $lstrComment"
+	fi
+	
+	case "$lstrType" in
+		"wrn"|"Err"|"ini"|"RUN"|"end");; #recognized ok
+		*)
+			echoc -p "invalid lstrType='$lstrType'" >>/dev/stderr;
+			_SECFUNCcriticalForceExit;;
+	esac
+	
+	if [[ "$lstrType" == "wrn" ]];then
+		SEC_WARN=true SECFUNCechoWarnA "$lstrLogging"
+	fi
+	
+	echo "$lstrLogging" >>/dev/stderr
+	echo "$lstrLogging" >>"$strLogFile"
+}
+
 if $bCheckPointDaemon;then
 	echo "see log at: $strLogFile" >>/dev/stderr
 	
@@ -74,7 +106,7 @@ if $bCheckPointDaemon;then
 	exec 1>&2
 	
 	if [[ -z "$strCustomCommand" ]];then
-		echoc -p "invalid empty strCustomCommand"
+		FUNClog Err "invalid empty strCustomCommand"
 		exit 1
 	fi
 	
@@ -95,44 +127,17 @@ if $bCheckPointDaemon;then
 	exit
 fi
 
-####################### EXEC A COMMAND ##########################
+####################### MAIN CODE ##########################
 
-nDelayToExec="${1-}"
-if [[ -z "$nDelayToExec" ]] || [[ -n "`echo "$nDelayToExec" |tr -d "[:digit:]"`" ]];then
-	echo "invalid nDelayToExec='$nDelayToExec'" >>/dev/stderr
+if ! SECFUNCisNumber -dn $nSleepFor;then
+	FUNClog Err "invalid nSleepFor='$nSleepFor'"
 	exit 1
 fi
-
-shift
 
 if [[ -z "$@" ]];then
-	echo "invalid command '$@'" >>/dev/stderr
+	FUNClog Err "invalid command '$@'"
 	exit 1
 fi
-
-strExecCmd="`SECFUNCparamsToEval "$@"`"
-
-strWaitCheckPointIndicator=""
-if $bWaitCheckPoint;then
-	strWaitCheckPointIndicator="w+"
-fi
-strToLog="${strWaitCheckPointIndicator}${nDelayToExec}s;pid='$$';$strExecCmd"
-
-function FUNClog() {
-	local lstrLogging=" $1 -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"
-	local lstrComment="${2-}"
-	
-	if [[ -n "$lstrComment" ]];then
-		lstrLogging+="; # $lstrComment"
-	fi
-	
-	if [[ "$1" == "wrn" ]];then
-		SEC_WARN=true SECFUNCechoWarnA "$lstrLogging"
-	fi
-	
-	echo "$lstrLogging" >>/dev/stderr
-	echo "$lstrLogging" >>"$strLogFile"
-}
 
 #echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
 FUNClog ini
@@ -140,7 +145,7 @@ FUNClog ini
 #if $bWaitCheckPoint;then
 #	SECONDS=0
 #	while ! SECFUNCuniqueLock --isdaemonrunning;do
-#		echo -ne "$strSelfName: waiting daemon (${SECONDS}s)...\r"
+#		echo -ne "$SECstrScriptSelfName: waiting daemon (${SECONDS}s)...\r"
 #		sleep $nDelayAtLoops
 #	done
 #	
@@ -152,7 +157,7 @@ FUNClog ini
 #		if $bCheckPoint;then
 #			break
 #		fi
-#		echo -ne "$strSelfName: waiting checkpoint be activated at daemon (${SECONDS}s)...\r"
+#		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (${SECONDS}s)...\r"
 #		sleep $nDelayAtLoops
 #	done
 #	
@@ -167,13 +172,13 @@ if $bWaitCheckPoint;then
 				break
 			fi
 		fi
-		echo -ne "$strSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
+		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
 		sleep $nDelayAtLoops
 	done
 	echo
 fi
 
-sleep $nDelayToExec #timings are adjusted against each other, the checkpoint is actually a starting point
+sleep $nSleepFor #timings are adjusted against each other, the checkpoint is actually a starting point
 
 if $bCheckIfAlreadyRunning;then
 	while true;do
@@ -208,14 +213,26 @@ if $bCheckIfAlreadyRunning;then
 	done
 fi
 
-#echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;${strWaitCheckPointIndicator}${nDelayToExec}s;$strExecCmd" >>"$strLogFile"
-#echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+# do RUN
 FUNClog RUN
-SECFUNCcleanEnvironment #nothing related to SEC will run after this unless if reinitialized, also `env -i bash -c "$strExecCmd"` did not fully work as vars like TERM have not required value (despite this is expected)
-nRet=0;if "$@";then	: ;else nRet=$?;fi
-
-eval `secinit`
+SECFUNCdelay RUN --init
+# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
+# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+strRunLogFile="$SECstrRunLogFile" #all SEC environment will be cleared
+#nRet=0;if (SECFUNCcleanEnvironment;"$@" 2>&1 >>"$strRunLogFile");then : ;else nRet=$?;fi
+nRet=0;if (
+	SECFUNCcleanEnvironment;
+	#exec 2>&1;exec  >>"$strRunLogFile"; #did not work
+	#exec 1>&2;exec 2>>"$strRunLogFile"; #did not work
+	exec 1>>"$strRunLogFile";exec 2>>"$strRunLogFile"; #worked! :/
+	"$@";
+);then
+	: ; # ':' is a dummy "do nothing" example!
+else nRet=$?;fi
 if((nRet!=0));then
-	echoc -p "command '$@' failed, nRet='$nRet'"
+	FUNClog Err "RUN command '$@' failed, nRet='$nRet'"
 fi
+
+# end Log
+FUNClog end "delay `SECFUNCdelay RUN --getpretty`"
 

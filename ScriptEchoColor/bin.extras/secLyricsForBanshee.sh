@@ -24,7 +24,7 @@
 
 eval `secinit`
 
-strFileLyricsTmp="/tmp/$SECscriptSelfName.lyrics.tmp"
+strFileLyricsTmp="/tmp/$SECstrScriptSelfName.lyrics.tmp"
 strPathLyrics="$HOME/.cache/banshee-1/extensions/lyrics/"
 
 bGraphicalDialog=false
@@ -64,7 +64,7 @@ fi
 pidGfxReader=""
 if ! $bUseMozrepl;then
 	if $bGraphicalDialog;then
-		#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
+		#yad --title "$SECstrScriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
 	
 		if $bCloseWithWindow;then
 			evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
@@ -199,7 +199,7 @@ function FUNConlineLyrics(){
 		fi
 	}
 	
-	strFolderTmpLyricsDownload="/tmp/.$SECscriptSelfName.lyricsDownload"
+	strFolderTmpLyricsDownload="/tmp/.$SECstrScriptSelfName.lyricsDownload"
 	mkdir -vp "$strFolderTmpLyricsDownload"
 	cd "$strFolderTmpLyricsDownload";SECFUNCreturnOnFailDbgA
 	
@@ -226,7 +226,7 @@ function FUNConlineLyrics(){
 		# remove after lyrics
 		sed -i "/^${lstrEndingRegex}$/,$""d" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
 		sed -i "1i ..." "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
-		sed -i "1i DownloadedWith:$SECscriptSelfName" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
+		sed -i "1i DownloadedWith:$SECstrScriptSelfName" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
 		sed -i "1i DownloadedFrom:$lstrLyricsFullUrl" "${lstrLyricsLocalFileId}.txt";SECFUNCreturnOnFailDbgA
 		cp -v "${lstrLyricsLocalFileId}.txt" "$lstrLyricsMissingFile";SECFUNCreturnOnFailDbgA
 		#enscript "${lstrLyricsLocalFileId}.txt" -p "${lstrLyricsLocalFileId}.pdf";SECFUNCreturnOnFailDbgA
@@ -320,7 +320,7 @@ while true; do
 	nSleepDelay=3
 	if ! $bUseMozrepl;then
 		if $bGraphicalDialog;then
-			#yad --title "$SECscriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
+			#yad --title "$SECstrScriptSelfName" --text-info --listen --filename="$strFileLyricsTmp"&
 	
 			if ! $bCloseWithWindow;then
 				if pgrep "^banshee$" >/dev/null;then

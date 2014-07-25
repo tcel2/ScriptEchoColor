@@ -37,7 +37,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCshowHelp --colorize "\t'disable' the internet using nmcli"
 		SECFUNCshowHelp --colorize "\tDelayInSeconds - delay between executing each param"
 		SECFUNCshowHelp --colorize "This example will disable on startup, wait 120s and enable again:"
-		echoc --info "\t$SECscriptSelfName disable 120 enable"
+		echoc --info "\t$SECstrScriptSelfName disable 120 enable"
 		SECFUNCshowHelp --nosort
 		exit
 	elif [[ "$1" == "--validateonly" || "$1" == "-v" ]];then #help just validate the params and exit without executing them.
