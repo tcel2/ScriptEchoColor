@@ -77,7 +77,11 @@ function FUNCexecParam() {
 		echoc -x "nmcli nm enable false"
 	elif SECFUNCisNumber -dn "$lstrParam";then
 		if $lbValidateOnly;then echo "ok '$lstrParam'"; return;fi
-		echoc -w -t $lstrParam "If a key is pressed, next param will be executed now"
+		if [[ "`tty`" != "not a tty" ]];then
+			echoc -w -t $lstrParam "If a key is pressed, next param will be executed now"
+		else
+			sleep $lstrParam
+		fi
 	else
 		echoc -p "invalid param '$lstrParam'"
 		return 1
@@ -92,7 +96,7 @@ for strParam in "${astrParams[@]}";do
 		echoc -p "param commands cannot begin with '-'"
 		exit 1
 	fi
-	if ! FUNCexecParam	--validateonly "$strParam";then
+	if ! FUNCexecParam --validateonly "$strParam";then
 		exit 1
 	fi
 done

@@ -29,16 +29,19 @@ fi
 
 eval `secinit` #if it is already installed on the system it will help!
 
-strSelfName="`basename "$0"`"
-strFileCfg="$HOME/.${strSelfName}.cfg"
+export SECDEVstrSelfName="`basename "$0"`"
+echo "Self: $0" >>/dev/stderr
+strFileCfg="$HOME/.${SECDEVstrSelfName}.cfg"
 
 export SECDEVbInitialized=false
-export SECDEVbSecInit=true
-export SECDEVbFullDebug=false
+
+# on the execute twice mode, if these vars are already set, default values are skipped and the second execution works fine!
+: ${SECDEVbExitAfterUserCmd:=false};export SECDEVbExitAfterUserCmd
+: ${SECDEVbSecInit:=true};export SECDEVbSecInit
+: ${SECDEVbFullDebug:=false};export SECDEVbFullDebug
+: ${SECDEVstrProjectPath:=""};export SECDEVstrProjectPath
+: ${SECDEVbCdDevPath:=false};export SECDEVbCdDevPath
 bCfgPath=false
-export SECDEVstrProjectPath=""
-export SECDEVbCdDevPath=false
-export SECDEVbExitAfterUserCmd=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	SECFUNCsingleLetterOptionsA; #this wont work if there is no secinit yet ...
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -69,17 +72,22 @@ if $bCfgPath;then
 	if [[ "${SECDEVstrProjectPath:0:1}" != "/" ]];then
 		SECDEVstrProjectPath="`pwd`/$SECDEVstrProjectPath"
 	fi
-	if [[ -f "$SECDEVstrProjectPath/bin.extras/$strSelfName" ]];then
+	if [[ -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
 		echo "$SECDEVstrProjectPath" >"$strFileCfg"
 	fi
 fi
 
 if [[ -z "$SECDEVstrProjectPath" ]];then
-	SECDEVstrProjectPath="`cat "$HOME/.${strSelfName}.cfg"`"
+	SECDEVstrProjectPath="`cat "$HOME/.${SECDEVstrSelfName}.cfg"`"
 fi
-if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$strSelfName" ]];then
+if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
 	echo "invalid project development path '$SECDEVstrProjectPath'" >>/dev/stderr
 	exit 1
+fi
+
+export SECDEVbExecTwice=false
+if ! cmp "$0" "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName";then
+	SECDEVbExecTwice=true
 fi
 
 if $SECDEVbFullDebug;then
@@ -131,6 +139,13 @@ function SECFUNCaddToRcFile() {
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
 	echo " PATH='$PATH'" >>/dev/stderr
+	
+	if $SECDEVbExecTwice;then #this grants all is updated
+		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
+		SECDEVbExecTwice=false #prevent infinite recursive loop
+		$SECDEVstrSelfName #all options are already in exported variables
+		exit #must exit to not execute the options twice, only once above.
+	fi
 	
 	# must be after PATH setup
 	if $SECDEVbSecInit;then

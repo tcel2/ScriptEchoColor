@@ -914,6 +914,13 @@ fi
 
 strCommandWasMsg=`basename $0`" $@"
 
+#FUNCread() {
+#	if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi #read requires interactiveness
+#	read "$@";return $?
+#}
+#alias FUNCreadA=read
+alias FUNCreadA='if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
+
 FUNCtestIgnore(){
   local strTestIgnore=""
   if $bLimitColor    ; then strTestIgnore="$strTestIgnore""a"; fi
@@ -950,7 +957,7 @@ if [[   -f "$strUserCfgFile" ]]; then
    
     # Ask user to do the import
     _hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-    read -n 1 strResp; echo >>/dev/stderr
+    FUNCreadA -n 1 strResp; echo >>/dev/stderr
     if [[ "$strResp" != "y" ]]; then
       _hi "Creating '$strUserCfgFile' with default values."
       strUserCfgFilePreviousVersion=""
@@ -2675,7 +2682,7 @@ FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pre
   local nKeyPressed=1 # false
   declare -a aProgress=("\|" "/" "-" '\\\\')
   local nCount=0
-  while read -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
+  while FUNCreadA -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
     echo -ne "${aProgress[$((nCount++ % 4))]}\b" >>/dev/stderr
     nKeyPressed=0 # true
   done 
@@ -2841,7 +2848,11 @@ FUNCcmdEscapedChars(){
 if $bWaitAKey; then #WAIT A KEY MODE
   char=`FUNCclearInputBufferGetLastChar`#;nRet=$?
   FUNCdoTheEcho
-  eval "read -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+  if [[ "`tty`" != "not a tty" ]];then
+	  eval "read -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+	else
+		sleep $nWaitTime
+	fi
   FUNCstrNL
   if ! $bKeepPosition; then
     eval echo -n $strRestorePos $stderr
@@ -2861,9 +2872,9 @@ elif $bStringQuestion; then
       strLogOption=" -l \"$strUnformattedFileNameLog\" "
     fi
     eval $strSelfName -n $strLogOption "\"${strColorAddYesNoQuestion}Type your answer: \"" $stderr
-    read strResp
+    FUNCreadA strResp
   elif ! $bHideStringQuestion; then
-    read strResp
+    FUNCreadA strResp
   fi
   
   if ! $bKeepPosition; then
@@ -2889,7 +2900,7 @@ elif $bStringQuestion; then
 elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
   char=`FUNCclearInputBufferGetLastChar`
   FUNCdoTheEcho
-  while eval "read -s -n 1 $strNWaitTime -p \"\" strResp"; do
+  while FUNCreadA -s -n 1 $strNWaitTime -p "" strResp; do
     strNWaitTime="" # to wait only the begin of typing
     
     if [[ -z "$strResp" ]]; then # Enter/Space
@@ -2900,7 +2911,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
     if [[ $asciicode == '\47' ]]; then # backspace
       continue
     elif [[ $asciicode == '\33' ]]; then # escape chars
-      if ! read -s -t 1 -n 2 -p "" strResp; then #esc key
+	    if ! FUNCreadA -s -t 1 -n 2 -p "" strResp; then #esc key
         nEQMCurrent=$((-1))
       fi
       asciicode=`$SECinstallPath/bin/secasciicode $strResp`
@@ -2913,7 +2924,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
       elif [[ $asciicode == '\133\103' ]]; then # Right key
         FUNCWalkEQM +1
       else # eliminates other escaped keys
-        read -s -t 1 -p ""
+		    FUNCreadA -s -t 1 -p ""
       fi
       FUNCdoTheEcho GoToBeginOfLine
     else
