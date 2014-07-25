@@ -36,15 +36,285 @@ SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.s
 
 SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
 
+# INITIALIZATIONS
+function SECFUNCgetUserNameOrId(){ #help outputs username (prefered) or userid
+	if [[ -n "${USER-}" ]];then
+		echo "$USER"
+		return
+	fi
+	
+	local lstrUser="`_SECFUNCbugTrackExec strace id -un`"
+	if [[ -n "$lstrUser" ]];then
+		echo "$lstrUser"
+		return
+	fi
+	
+#	(echo -n " `date "+%Y%m%d+%H%M%S.%N"`,p$$;strace id -un;" && strace id -un 2>&1) >>"$SECstrBugTrackLogFile"
+#	_SECFUNCbugTrackExec strace id -un
+	
+	# teoretically, this line should never be reached...
+	_SECFUNCbugTrackExec strace id -u
+}
+function SECFUNCgetUserName(){ #help this is not an atomic function.
+	local lstrUserName=`SECFUNCgetUserNameOrId`
+	if [[ -z "`echo "$lstrUserName" |tr -d "[:digit:]"`" ]];then
+		SECFUNCechoErrA "lstrUserName='$lstrUserName' must NOT be numeric"
+		_SECFUNCcriticalForceExit
+	fi
+	echo "$lstrUserName"
+}
+
+function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
+	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
+	if ${!1+false};then 
+		declare -a -g ${1}='()';
+	else
+		local lstrCheck="`declare -p "$1" 2>/dev/null`";
+		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
+			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+			_SECFUNCcriticalForceExit
+		fi
+	fi
+}
+
+if [[ -z "${SECstrTmpFolderBase-}" ]];then
+	export SECstrTmpFolderBase="/dev/shm"
+	if [[ ! -d "$SECstrTmpFolderBase" ]];then
+		SECstrTmpFolderBase="/run/shm"
+		if [[ ! -d "$SECstrTmpFolderBase" ]];then
+			SECstrTmpFolderBase="/tmp"
+			# is not fast as ramdrive (shm) and may be troublesome..
+		fi
+	fi
+	if [[ -L "$SECstrTmpFolderBase" ]];then
+		SECstrTmpFolderBase="`readlink -f "$SECstrTmpFolderBase"`" #required with `find` that would fail on symlink to a folder..
+	fi
+fi
+if [[ -z "${SEC_TmpFolder-}" ]];then
+	export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+	#export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`id -un`"
+	if [[ ! -d "$SEC_TmpFolder" ]];then
+		#mkdir "$SEC_TmpFolder" 2>>"$SECstrBugTrackLogFile"
+		_SECFUNCbugTrackExec mkdir "$SEC_TmpFolder"
+	fi
+fi
+#TODO ln -sT; -T prevents creation of symlink inside a folder by requiring folder to not exist; check other "ln.*-.*s" that could be improved with `-T`
+
+#export SECstrTmpFolderUserName="$SECstrTmpFolderBase/.SEC.`SECFUNCgetUserNameOrId`"
+#if [[ "$SEC_TmpFolder" != "$SECstrTmpFolderUserName" ]];then
+#	# using user name
+##	if ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName" 2>>"$SECstrBugTrackLogFile";then
+#	if _SECFUNCbugTrackExec ln -sT "$SEC_TmpFolder" "$SECstrTmpFolderUserName";then
+#		SEC_TmpFolder="$SECstrTmpFolderUserName"
+#	fi
+#fi
+
+export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
+
+#if ${SECastrBashDebugFunctionIds+false};then 
+#	SECastrBashDebugFunctionIds=(); #help if array has items, wont reach here, tho if it has NO items, it will be re-initialized to what it was: an empty array (will remain the same). If any item of the array is "+all", all functions will match.
+#else
+#	_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds
+##	_SECastrBashDebugFunctionIds_Check="`declare -p SECastrBashDebugFunctionIds 2>/dev/null`";
+##	if [[ "${_SECastrBashDebugFunctionIds_Check:0:10}" != 'declare -a' ]];then
+##		echo "SECastrBashDebugFunctionIds='$SECastrBashDebugFunctionIds' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+##		_SECFUNCcriticalForceExit
+##	fi
+#fi
+_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds
+export SECastrBashDebugFunctionIds
+
+export SECnFixDate="$((3600*3))" #to fix from: "31/12/1969 21:00:00.000000000" when used with `date -d` command
+
+export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
+
+export SECstrExportedArrayPrefix="SEC_EXPORTED_ARRAY_"
+
+#if ${SECastrFunctionStack+false};then 
+#	SECastrFunctionStack=();
+#else
+#	_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
+#fi
+#export SECastrFunctionStack=() 
+_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
+
+#export _SECbugFixDate="0" #seems to be working now...
+
+#alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
+# if echo "$1" |grep -q "[^-]?\-[[:alpha:]][[:alpha:]]";then
+alias SECFUNCsingleLetterOptionsA='
+ if echo "$1" |grep -q "^-[[:alpha:]]*$";then
+   set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" -- "$1"` "${@:2}";
+ fi'
+
+alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
+
+# IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
+
+######### EXTERNAL VARIABLES can be set by user #########
+: ${SEC_DEBUG:=false}
+if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
+	export SEC_DEBUG=false # of course, np if already "false"
+fi
+
+# this lets -x fully works
+: ${SEC_DEBUGX:=false}
+if [[ "$SEC_DEBUGX" != "true" ]]; then #compare to inverse of default value
+	export SEC_DEBUGX=false # of course, np if already "false"
+fi
+
+: ${SEC_WARN:=false}
+if [[ "$SEC_WARN" != "true" ]]; then #compare to inverse of default value
+	export SEC_WARN=false # of course, np if already "false"
+fi
+
+: ${SEC_BUGTRACK:=false}
+if [[ "$SEC_BUGTRACK" != "true" ]]; then #compare to inverse of default value
+	export SEC_BUGTRACK=false # of course, np if already "false"
+fi
+
+: ${SEC_MsgColored:=true}
+if [[ "$SEC_MsgColored" != "false" ]];then
+	export SEC_MsgColored=true
+fi
+
+: ${SEC_ShortFuncsAliases:=true}
+if [[ "$SEC_ShortFuncsAliases" != "false" ]]; then
+	export SEC_ShortFuncsAliases=true
+fi
+
+: ${SECfuncPrefix:=sec} #this prefix can be setup by the user
+export SECfuncPrefix #help function aliases for easy coding
+
+: ${SEC_DEBUG_FUNC:=}
+export SEC_DEBUG_FUNC #help this variable can be a function name to be debugged, only debug lines on that funcion will be shown
+
+# between each lock check, validation or attempt, this is the sleep delay
+: ${SECnLockRetryDelay:=100} #in miliseconds
+if((SECnLockRetryDelay<1));then
+	SECnLockRetryDelay=1
+elif((SECnLockRetryDelay>10000));then
+	SECnLockRetryDelay=10000
+fi
+export SECnLockRetryDelay
+
+###################### INTERNAL VARIABLES are set by functions ########
+: ${SECcfgFileName:=} #do NOT export, each script must know its cfg file properly; a script calling another could mess that other cfg filename if it is exported...
+
+: ${SECnPidDaemon:=0}
+export SECnPidDaemon
+
+: ${SECbDaemonWasAlreadyRunning:=false}
+export SECbDaemonWasAlreadyRunning
+
+###################### SETUP ENVIRONMENT
+if $SEC_ShortFuncsAliases; then 
+	#TODO validate if such aliases or executables exist before setting it here and warn about it
+	#TODO for all functions, create these aliases automatically
+	alias "$SECfuncPrefix"delay='SECFUNCdelay';
+fi
+
+_SECdbgVerboseOpt=""
+if [[ "$SEC_DEBUG" == "true" ]];then
+	_SECdbgVerboseOpt="-v"
+fi
+
+: ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
+
 # MAIN CODE
 #export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
 
-export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
-alias SECFUNCechoErrA="SECFUNCechoErr --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+function SECFUNCarraySize() { #help usefull to prevent unbound variable error message
+	local lstrArrayId="$1"
+	if ! ${!lstrArrayId+false};then #this becomes false if unbound
+		eval 'echo "${#'$lstrArrayId'[@]}"'
+	else
+		echo "0"
+	fi
+}
+
+#export _SECmsgCallerPrefix='`basename $0`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
+: ${SECstrBashSourceFiles:=}
+export SECstrBashSourceFiles
+_SECFUNCcheckIfIsArrayAndInit SECastrBashSourceFilesPrevious
+: ${SECbBashSourceFilesShow:=false}
+: ${SECbBashSourceFilesForceShowOnce:=false}
+function SECFUNCbashSourceFiles() {
+	if ! $SECbBashSourceFilesForceShowOnce;then
+		if ! $SECbBashSourceFilesShow;then
+			return
+		fi
+		if ! ($SEC_DEBUG || $SEC_WARN || $SEC_BUGTRACK);then
+			return
+		fi
+	fi
+	SECbBashSourceFilesForceShowOnce=false
+	
+	if [[ "${SECastrBashSourceFilesPrevious[@]-}" == "${BASH_SOURCE[@]-}" ]];then
+		#TODO this doesnt seem to help to speed up?
+		echo "$SECstrBashSourceFiles"
+		return
+	fi
+	SECastrBashSourceFilesPrevious=("${BASH_SOURCE[@]-}")
+	
+	local lstrSourceFileList=""
+	#for lstrSourceFile in "${BASH_SOURCE[@]-}";do
+	if((`SECFUNCarraySize BASH_SOURCE`>0));then
+		for lnSourceFileIndex in "${!BASH_SOURCE[@]}";do
+#			echo ">>>lnSourceFileIndex=$lnSourceFileIndex,${#BASH_SOURCE[@]}-1,${BASH_SOURCE[lnSourceFileIndex]}" >>/dev/stderr
+			#if(( lnSourceFileIndex == (${#BASH_SOURCE[@]}-1) ));then #last is always this script...
+			if(( lnSourceFileIndex == 0 ));then #last shown, and 1st on loop, is always this script...
+				continue; #so skip it
+			fi
+			local lstrSourceFile="${BASH_SOURCE[lnSourceFileIndex]}"
+			if [[ -n "$lstrSourceFileList" ]];then
+				lstrSourceFileList=">$lstrSourceFileList"
+			fi
+			lstrSourceFileList="`basename "$lstrSourceFile"`$lstrSourceFileList"
+		done
+	fi
+	SECstrBashSourceFiles="$lstrSourceFileList"
+	echo "$lstrSourceFileList"
+}
+
+function _SECFUNCfillDebugFunctionPerFileArray() {
+	local lsedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*'\1'"
+	local lastrLibs=(Core Base Misc Vars)
+	local lstrLib 
+	local lstrFunctionId
+	for lstrLib in "${lastrLibs[@]}";do
+		local lastrFuncList=(`grep "^function SECFUNC" "$SECinstallPath/lib/ScriptEchoColor/utils/func$lstrLib.sh" |sed -r "$lsedOnlyFunctions" |sort`)
+#		echo "$lstrFuncList" >>/dev/stderr
+#			|while read lstrFunctionId;do
+		for lstrFunctionId in ${lastrFuncList[@]};do
+			if [[ -n "${SECastrDebugFunctionPerFile[$lstrFunctionId]-}" ]];then
+				if [[ "${SECastrDebugFunctionPerFile[$lstrFunctionId]-}" != "$lstrLib" ]];then
+					SECFUNCechoErrA "$lstrFunctionId (defined at $lstrLib) was already defined at ${SECastrDebugFunctionPerFile[$lstrFunctionId]}"
+					_SECFUNCcriticalForceExit
+				fi
+			fi
+			SECastrDebugFunctionPerFile[$lstrFunctionId]="$lstrLib"
+		done
+	done
+}
+declare -Ax SECastrDebugFunctionPerFile
+#SECastrDebugFunctionPerFile[SECstrBashSourceId]="${BASH_SOURCE[@]}" #easy trick
+#SECastrDebugFunctionPerFile[SECstrBashSourceId]="${BASH_SOURCE[${#BASH_SOURCE[@]}-1]}" #easy trick
+#SECastrDebugFunctionPerFile[SECstrBashSourceId]="`basename "$0"`" #easy trick
+SECastrDebugFunctionPerFile[SECstrBashSourceId]="undefined" #TODO I couldnt find a way to show the script filename yet...
+_SECFUNCfillDebugFunctionPerFileArray
+
+#export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
+#export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceId}]-undefined}(),L$LINENO' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
+export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceId}]-undefined}(),L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
+alias SECFUNCechoErrA="SECbBashSourceFilesForceShowOnce=true;SECFUNCechoErr --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoDbgA="if ! \$SEC_DEBUGX;then set +x;fi;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoWarnA="SECFUNCechoWarn --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-
+alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
+alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 
 # THESE ATOMIC FUNCTIONS are SPECIAL AND CAN COME HERE, they MUST DEPEND only on each other!!!
 function _SECFUNClogMsg() { #<logfile> <params become message>
@@ -84,33 +354,6 @@ function SECFUNCexportFunctions() { #help
 		|grep "export -f pSECFUNC"
 }
 
-function SECFUNCgetUserNameOrId(){ #help outputs username (prefered) or userid
-	if [[ -n "${USER-}" ]];then
-		echo "$USER"
-		return
-	fi
-	
-	local lstrUser="`_SECFUNCbugTrackExec strace id -un`"
-	if [[ -n "$lstrUser" ]];then
-		echo "$lstrUser"
-		return
-	fi
-	
-#	(echo -n " `date "+%Y%m%d+%H%M%S.%N"`,p$$;strace id -un;" && strace id -un 2>&1) >>"$SECstrBugTrackLogFile"
-#	_SECFUNCbugTrackExec strace id -un
-	
-	# teoretically, this line should never be reached...
-	_SECFUNCbugTrackExec strace id -u
-}
-function SECFUNCgetUserName(){ #help this is not an atomic function.
-	local lstrUserName=`SECFUNCgetUserNameOrId`
-	if [[ -z "`echo "$lstrUserName" |tr -d "[:digit:]"`" ]];then
-		SECFUNCechoErrA "lstrUserName='$lstrUserName' must NOT be numeric"
-		_SECFUNCcriticalForceExit
-	fi
-	echo "$lstrUserName"
-}
-
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
@@ -120,13 +363,14 @@ if [[ ! -d "$SECstrUserHomeConfigPath" ]]; then
 fi
 
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
+	SECFUNCdbgFuncInA;
 	local lbColorizeEcho=false
 	local lbSort=true
 	local lstrScriptFile="$0"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			SECFUNCdbgFuncOutA;return
 		elif [[ "${1-}" == "--colorize" || "${1-}" == "-c" ]];then #SECFUNCshowHelp_help helps to colorize specific text
 			shift
 			lstrColorizeEcho="${1-}"
@@ -139,7 +383,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lstrScriptFile="${1-}"
 		else
 			SECFUNCechoErrA "invalid option '$1'"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
@@ -159,14 +403,14 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			|sed -r "$lsedTranslateEscn" \
 			|sed -r "$lsedTranslateEsct" \
 			|cat #dummy to help coding...
-		return
+		SECFUNCdbgFuncOutA;return
 	fi
 	
 	local lstrFunctionNameToken="${1-}"
 	
 #	if [[ ! -f "$lstrScriptFile" ]];then
 #		SECFUNCechoErrA "invalid lstrScriptFile='$lstrScriptFile'"
-#		return 1
+#		SECFUNCdbgFuncOutA;return 1
 #	fi
 	
 	local lastrFile=("$lstrScriptFile")
@@ -180,7 +424,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		else
 			# as help text are comments and `type` wont show them, the real script files is required...
 			SECFUNCechoErrA "unable to access script file '${lastrFile[0]}'"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		#fix duplicity on array
 		SECstrIFSbkp="$IFS";IFS=$'\n';lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`);IFS="$SECstrIFSbkp"
@@ -190,7 +434,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	if [[ -n "$lstrFunctionNameToken" ]];then
 		if [[ -n `echo "$lstrFunctionNameToken" |tr -d '[:alnum:]_'` ]];then
 			SECFUNCechoErrA "invalid prefix '$lstrFunctionNameToken'"
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 		fi
 		
 		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m"
@@ -243,6 +487,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		|sed -r "$lsedTranslateEscn" \
 		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
 		#|sed -r "$lsedAddNewLine"
+		
+	SECFUNCdbgFuncOutA;
 }
 function SECFUNCshowFunctionsHelp() { #help [script filename] show functions specific help for self script or supplied filename
 	#set -x
@@ -342,7 +588,7 @@ function SECFUNCechoErr() { #help echo error messages
 	echo "${l_output}" >>"$SECstrFileErrorLog"
 }
 
-function _SECFUNCmsgCtrl() {
+function SECFUNCmsgCtrl() {
 	local lstrMsgMode="$1"
 	if [[ -f "${SECstrFileMessageToggle}.$lstrMsgMode.$$" ]];then
 		local lstrForceMessage="`cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"`"
@@ -374,7 +620,7 @@ function _SECFUNCmsgCtrl() {
 
 function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DEBUG
 	# Log is stopped on the alias #set +x
-	_SECFUNCmsgCtrl DEBUG
+	SECFUNCmsgCtrl DEBUG
 	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
 		return 0
 	fi
@@ -458,13 +704,20 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 			SECFUNCechoErrA "SEClstrFuncCaller='$SEClstrFuncCaller', SECastrFunctionStack lnLength='$lnLength'"
 		fi
 	fi
+	local strFuncStack=""
 	if((lnLength>0));then
 		local lnCount="$lnLength"
 		if $lbFuncIn;then
 			((lnCount--))
 		fi
 		if((lnCount>0));then
-			strFuncStack="`echo "${SECastrFunctionStack[@]:0:lnCount}" |tr ' ' '.'`: "
+#			strFuncStack="`echo "${SECastrFunctionStack[@]:0:lnCount}" |tr ' ' '.'`: "
+			local lstrFunction
+			for lstrFunction in ${SECastrFunctionStack[@]:0:lnCount};do
+				if [[ -n "$strFuncStack" ]];then strFuncStack+=".";fi
+				strFuncStack+="$lstrFunction@${SECastrDebugFunctionPerFile[$lstrFunction]}"
+			done
+#			strFuncStack+=": "
 		else
 			strFuncStack=""
 		fi
@@ -565,7 +818,7 @@ function SECFUNCechoWarn() { #help
 #		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
 #		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
 #	fi
-	_SECFUNCmsgCtrl WARN
+	SECFUNCmsgCtrl WARN
 	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
 		return 0
 	fi
@@ -605,7 +858,7 @@ function SECFUNCechoBugtrack() { #help
 #		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
 #		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
 #	fi
-	_SECFUNCmsgCtrl BUGTRACK
+	SECFUNCmsgCtrl BUGTRACK
 	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
 		return 0
 	fi
