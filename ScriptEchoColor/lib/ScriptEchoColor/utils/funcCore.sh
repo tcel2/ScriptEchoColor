@@ -27,6 +27,7 @@
 # BEFORE EVERYTHING: UNIQUE CHECK, SPECIAL CODE
 if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >>/dev/stderr;exit 1;fi
 
+trap "SECstrErrorTrap=\" [$(date +\"%Y%m%d+%H%M%S.%N\")]SECERROR(trap): SECastrFunctionStack='\${SECastrFunctionStack[@]-}';FUNCNAME='\${FUNCNAME-}',LINENO='\$LINENO';BASH_COMMAND='\${BASH_COMMAND-}';BASH_SOURCE[@]='\${BASH_SOURCE[@]-}';\";echo \"\$SECstrErrorTrap\" >>\"\$SECstrFileErrorLog\";echo \"\$SECstrErrorTrap\" >>/dev/stderr;exit 1;" ERR
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
@@ -146,10 +147,6 @@ alias SECFUNCsingleLetterOptionsA='
  if echo "$1" |grep -q "^-[[:alpha:]]*$";then
    set -- `SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" -- "$1"` "${@:2}";
  fi'
-
-alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
-alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
 
@@ -315,6 +312,10 @@ alias SECFUNCechoWarnA="SECFUNCechoWarn --callerfunc \"\${FUNCNAME-}\" --caller 
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
+
+alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
 
 # THESE ATOMIC FUNCTIONS are SPECIAL AND CAN COME HERE, they MUST DEPEND only on each other!!!
 function _SECFUNClogMsg() { #<logfile> <params become message>

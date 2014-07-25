@@ -212,5 +212,10 @@ fi
 #echo " RUN -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
 FUNClog RUN
 SECFUNCcleanEnvironment #nothing related to SEC will run after this unless if reinitialized, also `env -i bash -c "$strExecCmd"` did not fully work as vars like TERM have not required value (despite this is expected)
-"$@"
+nRet=0;if "$@";then	: ;else nRet=$?;fi
+
+eval `secinit`
+if((nRet!=0));then
+	echoc -p "command '$@' failed, nRet='$nRet'"
+fi
 
