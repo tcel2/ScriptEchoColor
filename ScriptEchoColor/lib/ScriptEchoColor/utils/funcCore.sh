@@ -1001,11 +1001,11 @@ export SECbScriptSelfNameChanged=false
 if SECFUNCscriptSelfNameCheckAndSet;then
 	SECbScriptSelfNameChanged=true
 fi
-export SECstrTmpFolderForSure="/tmp/.SEC.`SECFUNCgetUserName`"
-#mkdir -p "$SECstrTmpFolderForSure"
-export SECstrTmpFolderLogForSure="$SECstrTmpFolderForSure/log"
-mkdir -p "$SECstrTmpFolderLogForSure"
-export SECstrRunLogFile="$SECstrTmpFolderLogForSure/$SECstrScriptSelfName.$$.log"
+
+export SECstrTmpFolderLog="$SEC_TmpFolder/log"
+mkdir -p "$SECstrTmpFolderLog"
+
+export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
 
 # LAST THINGS CODE
 if [[ `basename "$0"` == "funcCore.sh" ]];then
