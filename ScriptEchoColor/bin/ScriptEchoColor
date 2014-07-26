@@ -127,10 +127,12 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 ##case "$SEC_HEADEREXEC" in pid  | name   | shortname | pidshortname);; *)SEC_HEADEREXEC=""  ;; esac
 
 # SPEEDUP
-if [[ -z "${SEC_TmpFolder-}" ]];then
-	SECvarCheckScriptSelfNameParentChange=false
-	eval `secinit --core`
-fi
+#if [[ -z "${SEC_TmpFolder-}" ]];then
+#	SECvarCheckScriptSelfNameParentChange=false
+#	eval `secinit --core`
+#fi
+eval `secinit --core` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
+
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
   if [[ `head -n 1 "$strSpeedupFile"` != "$strCfgHeader" ]]; then
@@ -1207,10 +1209,11 @@ while [[ -n "${1-}" ]]; do
 ##    strString="$strHeaderExec$strString"
 ##  fi
   if((n > 0)); then
-    strString=$strString" "
+    strString="${strString} "
 	fi
-	strString=$strString"$1"
-  ((n++))
+	strString="${strString}${1}"
+	#echo "n=$((n++))" >>/dev/stderr
+  ((n++))&&: #when n=0, this returns error!!!! :o 
   shift
 done
 
@@ -1879,7 +1882,7 @@ elif $bProblem ||
   
   if $bProblem; then
 	  strString="$strHeadProblem$strString"
-  	SECFUNCechoErr "'$strString' at PPID='$PPID';BASH_SOURCE[@]='${BASH_SOURCE[@]}'" 2>/dev/null #no error happened here.. just to log the problem mode!
+  	SECFUNCechoErrA --logonly "'$strString' at BASH_SOURCE[@]='${BASH_SOURCE[@]}'" #no error happened here.. just to log the problem mode!
 	
 	  if   $bAddYesNoQuestion || $bExtendedQuestionMode || $bStringQuestion; then
       if $bStringQuestion && ((fWaitTime > 0)); then
@@ -3008,15 +3011,18 @@ else
   nRet=0
   if $bExecuteAsCommandLine; then
     if [[ -z "$strCommandLine" ]]; then
-      _hw;eval echo "strCommandLine is Empty" $stderr
+    	strErrCmdLineEmpty="strCommandLine is Empty"
+      #_hw;eval echo "$strErrCmdLineEmpty" $stderr
+     	#SEC_WARN=true SECbBashSourceFilesForceShowOnce=true SECFUNCechoWarnA "'$strErrCmdLineEmpty' at BASH_SOURCE[@]='${BASH_SOURCE[@]}'"
+     	#export SEC_WARN=true;export SECbBashSourceFilesForceShowOnce=true;SECFUNCechoWarnA "'$strErrCmdLineEmpty'"
+     	SECFUNCechoErrA "'$strErrCmdLineEmpty'" #TODO was only a warning because user coded the strCommandLine?
       exit 1
     fi
     strCmd="`echo $strEchoNormalOption "$strCommandLine"`" #this way execution will also be formatted
 ##    strCmd=`FUNCcmdEscapedChars "$strCmd"`
 ##    eval "`echo $strEchoNormalOption "$strCommandLine"`" #this way execution will also be formatted
 		while true; do
-		  eval "$strCmd"
-			nRet=$?
+	  	nRet=0;if eval "$strCmd";then :;else nRet=$?;fi
 			if ((nRet!=0)); then
 				$strSelfName "$strColorAddYesNoQuestionProblem [exit $nRet] \`$strCmd\` "
 				if $bExecuteRetry; then

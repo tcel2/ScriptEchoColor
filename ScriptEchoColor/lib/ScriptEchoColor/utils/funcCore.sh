@@ -346,7 +346,7 @@ _SECFUNCfillDebugFunctionPerFileArray
 
 #export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}(),L$LINENO'
 #export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`,p$$,bp$BASHPID,bss$BASH_SUBSHELL,${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceId}]-undefined}(),L$LINENO' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
-export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceId}]-undefined}(),L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
+export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceId}]-undefined}(),L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
 alias SECFUNCechoErrA="SECbBashSourceFilesForceShowOnce=true;SECFUNCechoErr --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoDbgA="if ! \$SEC_DEBUGX;then set +x;fi;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoWarnA="SECFUNCechoWarn --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
@@ -635,6 +635,7 @@ function SECFUNCechoErr() { #help echo error messages
 	local lstrCaller=""
 #	local lbShowTime=true
 	local SEClstrFuncCaller=""
+	local lbLogOnly=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoErr_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -647,6 +648,9 @@ function SECFUNCechoErr() { #help echo error messages
 			SEClstrFuncCaller="${1}"
 #		elif [[ "$1" == "--skiptime" ]];then #SECFUNCechoErr_help to be used at SECFUNCdtFmt preventing infinite loop
 #			lbShowTime=false
+		elif [[ "$1" == "--logonly" ]];then #SECFUNCechoErr_help to not output to stderr and only log it
+			shift
+			lbLogOnly=true
 		else
 			echo "[`SECFUNCdtTimeForLogMessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
 			return 1
@@ -656,10 +660,12 @@ function SECFUNCechoErr() { #help echo error messages
 	
 	###### main code
 	local l_output="[`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
-	if $SEC_MsgColored;then
-		echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
-	else
-		echo "${l_output}" >>/dev/stderr
+	if ! $lbLogOnly;then
+		if $SEC_MsgColored;then
+			echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
+		else
+			echo "${l_output}" >>/dev/stderr
+		fi
 	fi
 	echo "${l_output}" >>"$SECstrFileErrorLog"
 }
