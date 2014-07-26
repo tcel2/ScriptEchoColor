@@ -187,7 +187,7 @@ if $bDaemon;then
 	if [[ "$strTitle" == "$strTitleDefault" ]];then
 		# actually this will never be reached because of the automatic strTitle being the command...
 		echoc -p "Daemons requires non default title to create the unique lock..."
-		echoc -w 
+		echoc -w -t 60
 		exit 1
 	fi
 fi
@@ -211,13 +211,13 @@ function FUNCexecParams() {
 	eval "${strSudoPrefix} ${strFUNCexecParams}"; nRet=$?
 	if((nRet!=0));then
 		echoc -p "returned $nRet"
-		echoc -w
+		echoc -w -t 60
 	fi
 	
 	if((nExitWait>0));then
 		echoc -w -t $nExitWait #wait some time so any log can be read..
 	fi
-	#echoc -w
+	#echoc -w -t 60
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"

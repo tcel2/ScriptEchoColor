@@ -121,8 +121,8 @@ function SECFUNCrealFile(){ #help
 		return 1
 	fi
 	
-	lfile="`which "$lfile"`"
-	lfile="`readlink -f "$lfile"`"
+	lfile="`type -P "$lfile"`"
+	lfile="`readlink -f "$lfile"`" #canonical name
 	
 	echo "$lfile"
 }
@@ -652,10 +652,10 @@ function SECFUNCexec() { #help
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one
 			shift
 			lstrCaller="${1}: "
-		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoErr_help <FUNCNAME>
+		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCexec_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
-		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCechoErr_help output colored
+		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCexec_help output colored
 			lbColorize=true
 		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
 			bOmitOutput=true

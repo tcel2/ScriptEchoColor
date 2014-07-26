@@ -1881,6 +1881,7 @@ elif $bProblem ||
   
   if $bProblem; then
 	  strString="$strHeadProblem$strString"
+  	SECFUNCechoErr "'$strString' at PPID='$PPID';BASH_SOURCE[@]='${BASH_SOURCE[@]}'" 2>/dev/null #no error happened here.. just to log the problem mode!
 	
 	  if   $bAddYesNoQuestion || $bExtendedQuestionMode || $bStringQuestion; then
       if $bStringQuestion && ((fWaitTime > 0)); then

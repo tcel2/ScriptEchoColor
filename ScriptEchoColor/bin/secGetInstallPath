@@ -24,7 +24,7 @@
 
 strMainAppName="ScriptEchoColor"
 
-installPath=`which "$strMainAppName"`
+installPath="`type -P "$strMainAppName"`"
 if [[ -h "$installPath" ]]; then
 	installPath=`readlink "$installPath"`
 fi

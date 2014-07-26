@@ -74,7 +74,7 @@ SECFUNCechoDbgA "strNethogsVersion='$strNethogsVersion', strNethogsMinVersion='$
 
 strNethogsLogFile="/tmp/.$strSelfName.nethogs.log"
 if $bDaemon;then
-	strCmdNetHogs="`which nethogs` -b -v 2"
+	strCmdNetHogs="`type -P nethogs` -b -v 2"
 	
 	while true;do
 		if $bRestart;then

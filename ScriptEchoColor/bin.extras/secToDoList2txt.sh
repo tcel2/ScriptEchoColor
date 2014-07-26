@@ -28,7 +28,7 @@ eval `secinit`
 
 bHTML=true
 
-if ! which echoc >/dev/null 2>&1 ; then
+if ! type -P echoc >/dev/null 2>&1 ; then
 	function echoc() {
 		echo "$@"
 	}

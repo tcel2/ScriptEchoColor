@@ -226,8 +226,7 @@ nRet=0;if (
 	#exec 1>&2;exec 2>>"$strRunLogFile"; #did not work
 	exec 1>>"$strRunLogFile";exec 2>>"$strRunLogFile"; #worked! :/
 	"$@";
-);then
-	: ; # ':' is a dummy "do nothing" example!
+);then :; # ':' is a dummy "do nothing" example!
 else nRet=$?;fi
 if((nRet!=0));then
 	FUNClog Err "RUN command '$@' failed, nRet='$nRet'"

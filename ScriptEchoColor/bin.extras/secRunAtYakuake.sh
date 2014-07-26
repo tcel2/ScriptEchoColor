@@ -163,7 +163,7 @@ elif [[ -n "$params" ]]; then
     #FUNCtask "$1"
     FUNCtask "$params"
     exit 0
-    #strExec=`which "$1"`
+    #strExec=`type -P "$1"`
     #if [[ -x "$strExec" ]]; then
     #  FUNCtask `basename "$strExec"`
     #  exit 0

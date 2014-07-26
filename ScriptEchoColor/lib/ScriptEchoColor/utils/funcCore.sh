@@ -32,9 +32,12 @@ trap "SECstrErrorTrap=\"[$(date +\"%Y%m%d+%H%M%S.%N\")]SECERROR(trap):\
  FUNCNAME='\${FUNCNAME-}',LINENO='\$LINENO';\
  BASH_COMMAND='\${BASH_COMMAND-}';\
  BASH_SOURCE[@]='\${BASH_SOURCE[@]-}';\";\
-	echo \"\$SECstrErrorTrap\" >>\"\$SECstrFileErrorLog\";\
-	echo \"\$SECstrErrorTrap\" >>/dev/stderr;\
-	if [[ -n \"\${BASH_SOURCE[@]-}\" ]];then exit 1;fi;" ERR # if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
+	SECastrBashSourceTrap=\"\${BASH_SOURCE[@]-}\";\ 
+	if [[ -n \"\$SECastrBashSourceTrap\" && \"\${SECastrBashSourceTrap}\" != *bash_completion ]];then \
+		echo \"\$SECstrErrorTrap\" >>\"\$SECstrFileErrorLog\";\
+		echo \"\$SECstrErrorTrap\" >>/dev/stderr;\
+		exit 1;\
+	fi;" ERR # if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
 
@@ -385,7 +388,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	local lstrScriptFile="$0"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
-			SECFUNCshowHelp ${FUNCNAME}
+			SECFUNCshowHelp --nosort ${FUNCNAME}
 			SECFUNCdbgFuncOutA;return
 		elif [[ "${1-}" == "--colorize" || "${1-}" == "-c" ]];then #SECFUNCshowHelp_help helps to colorize specific text
 			shift
@@ -397,6 +400,9 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help set the script file to gather help data
 			shift
 			lstrScriptFile="${1-}"
+		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
+			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
+			SECFUNCdbgFuncOutA;return
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCdbgFuncOutA;return 1
@@ -920,7 +926,7 @@ function SECFUNCechoBugtrack() { #help
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoBugtrack_help is the name of the function calling this one
 			shift
 			lstrCaller="${1}: "
-		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoWarn_help <FUNCNAME>
+		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoBugtrack_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
 			#local SEClstrFuncCaller=""

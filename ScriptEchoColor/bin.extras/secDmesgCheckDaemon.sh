@@ -59,7 +59,7 @@ if [[ ! -f "$SECcfgFileName" ]]; then
 fi
 
 echo "Add checks to '$SECcfgFileName'"
-grep "#help" `which $0` |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
+grep "#help" "`type -P $0`" |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
 echo "You can test this way: echo 'dmesg message go here' |sudo -k tee /dev/kmsg"
 echoc -x "cat '$SECcfgFileName'"
 

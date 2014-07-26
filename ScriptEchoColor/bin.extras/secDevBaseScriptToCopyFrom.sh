@@ -24,6 +24,25 @@
 
 eval `secinit`
 
+echo
+SECFUNCdrawLine "`echoc " @{lb}CODING GUIDE LINES@w @{lw}>>@{-ty}---@{ly}> "`" "~"
+echoc "@{lw}Environment variables used as these types -> will begins with:
+  @cString\t@y->\t@g'str'
+  @cDecimal\t@y->\t@g'n'
+  @cFloating\t@y->\t@g'f'
+  @cBoolean\t@y->\t@g'b'
+  @cArray \t@y->\t@g'a' @{-tw}(prefix all other types with 'a' like 'astr' 'af' 'an' 'ab')
+ @{lw}Aliases ends with @g'A'
+ @wFunctions begins with @g'FUNC'
+ 
+ @wWords on identifiers are captalized like: @gstrThisIsAnExampleAndATest
+ @wThis helps with one or another piece of code that expects for this way of coding like @bSECFUNCseparateInWords@y()"
+#SECFUNCexec --echo --colorize SECFUNCseparateInWords --notype strThisIsAnExampleAndATest
+echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
+echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'"
+SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
+echo
+
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
