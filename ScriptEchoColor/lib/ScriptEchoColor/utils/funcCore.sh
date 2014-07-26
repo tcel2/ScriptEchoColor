@@ -27,19 +27,42 @@
 # BEFORE EVERYTHING: UNIQUE CHECK, SPECIAL CODE
 if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >>/dev/stderr;exit 1;fi
 
-trap "SECstrErrorTrap=\"[$(date +\"%Y%m%d+%H%M%S.%N\")]SECERROR(trap):\
- SECastrFunctionStack='\${SECastrFunctionStack[@]-}';\
- FUNCNAME='\${FUNCNAME-}',LINENO='\$LINENO';\
- BASH_COMMAND='\${BASH_COMMAND-}';\
- BASH_SOURCE[@]='\${BASH_SOURCE[@]-}';\";\
-	SECastrBashSourceTrap=\"\${BASH_SOURCE[@]-}\";\ 
-	if [[ -n \"\$SECastrBashSourceTrap\" && \"\${SECastrBashSourceTrap}\" != *bash_completion ]];then \
-		echo \"\$SECstrErrorTrap\" >>\"\$SECstrFileErrorLog\";\
-		echo \"\$SECstrErrorTrap\" >>/dev/stderr;\
-		exit 1;\
-	fi;" ERR # if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
+
+#trap "if ! (SECstrErrorTrap=\"[\$(date +\"%Y%m%d+%H%M%S.%N\")]SECERROR(trap):\
+# SECastrFunctionStack='\${SECastrFunctionStack[@]-}.\${FUNCNAME-}',LINENO='\$LINENO';\
+# BASH_COMMAND='\${BASH_COMMAND-}';\
+# BASH_SOURCE[@]='\${BASH_SOURCE[@]-}';\";\
+#	SECastrBashSourceTrap=\"\${BASH_SOURCE[@]-}\";\ 
+#	if [[ -n \"\$SECastrBashSourceTrap\" ]] && [[ \"\${SECastrBashSourceTrap}\" != *bash_completion ]];then \
+#		echo \"\$SECstrErrorTrap\" >>\"\$SECstrFileErrorLog\";\
+#		echo \"\$SECstrErrorTrap\" >>/dev/stderr;\
+#		exit 1;\
+#	fi;);then exit 1;fi;" ERR # if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
+function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMAND-}"> <"${BASH_SOURCE[@]-}">
+	local lstrFuncName="$1";shift
+	local lstrLineNo="$1";shift
+	local lstrBashCommand="$1";shift
+	local lastrBashSource=("$@"); #MUST BE THE LAST PARAM!!!
+	
+	#local lstrBashSourceListTrap="${BASH_SOURCE[@]-}";
+	local lstrBashSourceListTrap="${lastrBashSource[@]}";
+	
+	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
+	lstrErrorTrap+="SECERROR(trap):"
+	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
+	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"
+	lstrErrorTrap+="BASH_SOURCE[@]='${lstrBashSourceListTrap}';"
+	
+	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
+	 	# if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
+		echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
+		echo "$lstrErrorTrap" >>/dev/stderr;
+		return 1;
+	fi;
+}
+trap 'if ! SECFUNCtrapErr "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >>/dev/stderr;exit 1;fi' ERR
 
 # TOP CODE
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster

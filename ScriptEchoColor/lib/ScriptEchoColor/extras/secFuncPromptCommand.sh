@@ -35,20 +35,21 @@ function SECFUNCcheckIfSudoIsActive() { #help
 }
 
 function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh
-	local lstrDummyVariable;
+	:
 }
 
 function SECFUNCpromptCommand_CustomUserCommand(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh, will run as last thing
-	local lstrDummyVariable;
+	:
 }
 
 function SECFUNCbeforePromptCommand(){ #help 
+	# will initialize if it is unset, can be with Sec or Nano
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
 		SECdtBeforeCommandSec="`date +"%s"`"
 		SECdtBeforeCommandNano="`date +"%N"`"
 	fi
 }
-trap 'SECFUNCbeforePromptCommand' DEBUG
+trap 'SECFUNCbeforePromptCommand;' DEBUG
 function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh" ]];then source "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh";fi
 	#TODO if time() is used with a command, the delay messes up becoming very low...
 	SECfCommandDelay="`bc <<< "\`date +"%s.%N"\`-($SECdtBeforeCommandSec.$SECdtBeforeCommandNano)"`"
