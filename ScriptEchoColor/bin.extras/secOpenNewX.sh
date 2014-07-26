@@ -881,6 +881,9 @@ while ! FUNCisX1running; do
 done
 varset --show pidX1=`FUNCisX1running`
 
+# say in what tty it is running
+echoc --say "X at `ps -A -o tty,comm |grep Xorg |grep -v tty7 |grep -o "tty." |sed 's"."& "g'`"
+
 if [[ -n "$strGeometry" ]];then
 	xrandr -display :1 -s $strGeometry
 	sleep 1
