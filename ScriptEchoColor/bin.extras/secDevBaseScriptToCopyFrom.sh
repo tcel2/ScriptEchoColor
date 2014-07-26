@@ -26,7 +26,7 @@ eval `secinit`
 
 echo
 SECFUNCdrawLine "`echoc " @{lb}CODING GUIDE LINES@w @{lw}>>@{-ty}---@{ly}> "`" "~"
-echoc "@{lw}Environment variables used as these types -> will begins with:
+echoc "@{lw}Environment variables used as these types below, will begin with ->
   @cString\t@y->\t@g'str'
   @cDecimal\t@y->\t@g'n'
   @cFloating\t@y->\t@g'f'
@@ -44,7 +44,7 @@ echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @w
 
  @wCoding Tips: 
   @wBecause of 'trap ERR', commands that can fail may simply end with '&&:' ex.: @gln -s a b&&:
-  @wBecause of 'set -u' if a variable is not set, set it up or, use this: @g\${variable-}" #TODO <-- fix scripteechocolor about that
+  @wBecause of 'set -u', if a variable is not set, do set it up. Or use this: @g\${variable-}" #TODO <-- fix scripteechocolor about that
 SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
 echo
 

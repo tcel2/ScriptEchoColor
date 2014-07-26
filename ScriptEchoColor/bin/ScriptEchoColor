@@ -920,7 +920,20 @@ strCommandWasMsg=`basename $0`" $@"
 #	if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi #read requires interactiveness
 #	read "$@";return $?
 #}
-alias FUNCreadA='if ! SECFUNCisShellInteractive;then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
+#alias FUNCreadA='if ! SECFUNCisShellInteractive;then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
+FUNCread() {
+	#read requires interactiveness.
+	if ! SECFUNCisShellInteractive;then
+		SECFUNCechoErrA "Shell is NOT interactive! ";
+		exit 1 # it is `exit` (and not `return`) on this function because interactivity is critical!
+	fi;
+	
+	if read "$@";then
+		return 0
+	else
+		return $?
+	fi
+}
 
 FUNCtestIgnore(){
   local strTestIgnore=""
@@ -948,7 +961,7 @@ if $bOptRecreateConfigFile; then
 fi
 strUserCfgFilePreviousVersion=""
 if [[   -f "$strUserCfgFile" ]]; then
-  if [[ `head -n 1 "$strUserCfgFile"` != "$strCfgHeader" ]]; then
+  if [[ "`head -n 1 "$strUserCfgFile"`" != "$strCfgHeader" ]]; then
     strUserCfgFilePreviousVersion="$SECstrUserHomeConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
     mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
     if [[ -f "$strUserCfgFile" ]]; then
@@ -958,7 +971,7 @@ if [[   -f "$strUserCfgFile" ]]; then
    
     # Ask user to do the import
     _hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-    FUNCreadA -n 1 strResp; echo >>/dev/stderr
+    FUNCread -n 1 strResp;echo >>/dev/stderr; #`echo` to append a new line as read wont do that after we type a key
     if [[ "$strResp" != "y" ]]; then
       _hi "Creating '$strUserCfgFile' with default values."
       strUserCfgFilePreviousVersion=""
@@ -1786,7 +1799,7 @@ if $bOptHelpLibs; then
 	cd "$SECinstallPath/lib/$strSelfName"
 	
 	#function FUNCechoPipe() {
-	#	read str
+	#	FUNCread str
 	#	echo -en "$str"
 	#};export -f FUNCechoPipe
 	function FUNCtoFind() { 
@@ -2685,7 +2698,7 @@ FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pre
   local nKeyPressed=1 # false
   declare -a aProgress=("\|" "/" "-" '\\\\')
   local nCount=0
-  while FUNCreadA -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
+  while FUNCread -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
     echo -ne "${aProgress[$((nCount++ % 4))]}\b" >>/dev/stderr
     nKeyPressed=0 # true
   done 
@@ -2849,10 +2862,12 @@ FUNCcmdEscapedChars(){
 }
 
 if $bWaitAKey; then #WAIT A KEY MODE
-  char=`FUNCclearInputBufferGetLastChar`#;nRet=$?
+  #char="`FUNCclearInputBufferGetLastChar`" #;nRet=$?
   FUNCdoTheEcho
   if SECFUNCisShellInteractive;then
-  	eval "read -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+	  char="`FUNCclearInputBufferGetLastChar`"&&:
+  	#eval "FUNCread -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+  	FUNCread -s -n 1 $strNWaitTime -p "" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
  	else
  		sleep $nWaitTime
   fi
@@ -2864,7 +2879,7 @@ if $bWaitAKey; then #WAIT A KEY MODE
 elif $bStringQuestion; then
   # Its expected that Enter is pressed at end of string typing
   if ! $bHideStringQuestion; then
-    char=`FUNCclearInputBufferGetLastChar`
+    char=`FUNCclearInputBufferGetLastChar`&&:
     FUNCdoTheEcho
   fi
   
@@ -2875,9 +2890,9 @@ elif $bStringQuestion; then
       strLogOption=" -l \"$strUnformattedFileNameLog\" "
     fi
     eval $strSelfName -n $strLogOption "\"${strColorAddYesNoQuestion}Type your answer: \"" $stderr
-    FUNCreadA strResp
+    FUNCread strResp
   elif ! $bHideStringQuestion; then
-    FUNCreadA strResp
+    FUNCread strResp
   fi
   
   if ! $bKeepPosition; then
@@ -2901,9 +2916,9 @@ elif $bStringQuestion; then
   
   exit 0
 elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
-  char=`FUNCclearInputBufferGetLastChar`
+  char=`FUNCclearInputBufferGetLastChar`&&:
   FUNCdoTheEcho
-  while FUNCreadA -s -n 1 $strNWaitTime -p "" strResp; do
+  while FUNCread -s -n 1 $strNWaitTime -p "" strResp; do
     strNWaitTime="" # to wait only the begin of typing
     
     if [[ -z "$strResp" ]]; then # Enter/Space
@@ -2914,7 +2929,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
     if [[ $asciicode == '\47' ]]; then # backspace
       continue
     elif [[ $asciicode == '\33' ]]; then # escape chars
-	    if ! FUNCreadA -s -t 1 -n 2 -p "" strResp; then #esc key
+	    if ! FUNCread -s -t 1 -n 2 -p "" strResp; then #esc key
         nEQMCurrent=$((-1))
       fi
       asciicode=`$SECinstallPath/bin/secasciicode $strResp`
@@ -2927,7 +2942,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
       elif [[ $asciicode == '\133\103' ]]; then # Right key
         FUNCWalkEQM +1
       else # eliminates other escaped keys
-		    FUNCreadA -s -t 1 -p ""
+		    FUNCread -s -t 1 -p ""
       fi
       FUNCdoTheEcho GoToBeginOfLine
     else
