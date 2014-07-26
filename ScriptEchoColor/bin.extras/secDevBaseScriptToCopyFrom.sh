@@ -40,7 +40,11 @@ echoc "@{lw}Environment variables used as these types -> will begins with:
  @wmaking it useful for ex.: @c\`echoc --say\`@w."
 #SECFUNCexec --echo --colorize SECFUNCseparateInWords --notype strThisIsAnExampleAndATest
 echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
-echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'"
+echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'
+
+ @wCoding Tips: 
+  @wBecause of 'trap ERR', commands that can fail may simply end with '&&:' ex.: @gln -s a b&&:
+  @wBecause of 'set -u' if a variable is not set, set it up or, use this: @g\${variable-}" #TODO <-- fix scripteechocolor about that
 SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
 echo
 
