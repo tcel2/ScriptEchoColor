@@ -36,11 +36,29 @@ strFileCfg="$HOME/.${SECDEVstrSelfName}.cfg"
 export SECDEVbInitialized=false
 
 # on the execute twice mode, if these vars are already set, default values are skipped and the second execution works fine!
-: ${SECDEVbExitAfterUserCmd:=false};export SECDEVbExitAfterUserCmd
-: ${SECDEVbSecInit:=true};export SECDEVbSecInit
-: ${SECDEVbFullDebug:=false};export SECDEVbFullDebug
-: ${SECDEVstrProjectPath:=""};export SECDEVstrProjectPath
-: ${SECDEVbCdDevPath:=false};export SECDEVbCdDevPath
+function SECDEVFUNCoptions() {
+	if [[ "${1-}" == "--defaults" ]];then
+		#set |grep -v "^SECDEVFUNC" |grep "^SECDEV[[:alnum:]_]*" -o |sed -r 's".*"unset &;"'
+		unset SECDEVbExitAfterUserCmd
+		unset SECDEVbSecInit
+		unset SECDEVbFullDebug
+		unset SECDEVstrProjectPath
+		unset SECDEVbCdDevPath
+		unset SECDEVbUnboundErr
+		SECDEVFUNCoptions #will now run just setting the defaults! yey!
+	elif [[ -n "${1-}" ]];then
+		echoc -p "invalid option '$1'"
+		_SECFUNCcriticalForceExit
+	else
+		: ${SECDEVbExitAfterUserCmd:=false};export SECDEVbExitAfterUserCmd
+		: ${SECDEVbSecInit:=true};export SECDEVbSecInit
+		: ${SECDEVbFullDebug:=false};export SECDEVbFullDebug
+		: ${SECDEVstrProjectPath:=""};export SECDEVstrProjectPath
+		: ${SECDEVbCdDevPath:=false};export SECDEVbCdDevPath
+		: ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
+	fi
+};export -f SECDEVFUNCoptions
+SECDEVFUNCoptions
 bCfgPath=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	SECFUNCsingleLetterOptionsA; #this wont work if there is no secinit yet ...
@@ -52,6 +70,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECDEVbCdDevPath=true
 	elif [[ "$1" == "--exit" || "$1" == "-e" ]];then #help exit after running user command
 		SECDEVbExitAfterUserCmd=true
+	elif [[ "$1" == "-u" ]];then #help enforce 'unbound variable' error, beware at bash completion...
+		SECDEVbUnboundErr=true
 	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
 		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
@@ -120,6 +140,14 @@ function SECFUNCaddToRcFile() {
 		echo "$lstrBanner"
 		#echo -e \"$lstrBanner\"
 	}
+	function SECFUNCpromptCommand_CustomUserCommand(){
+		#good way to avoid bash completion not working well :)
+		if $SECDEVbUnboundErr;then 
+			set -u;
+		else 
+			set +u;
+		fi 
+	}
 	#export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$lstrBanner\"; ";
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
 	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
@@ -154,7 +182,12 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# must come after secinit
-	echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >>/dev/stderr;set +u;
+	if $SECDEVbUnboundErr;then
+		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
+	else
+#		echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >>/dev/stderr;set +u;
+		echo ' Unbound vars allowed at terminal' >>/dev/stderr
+	fi
 	
 	if $SECDEVbCdDevPath;then
 		echo " cd '$SECinstallPath'" >>/dev/stderr
@@ -166,11 +199,15 @@ function SECFUNCaddToRcFile() {
 		echo " EXEC: ${SECDEVstrCmdTmp}" >>/dev/stderr
 		eval "${SECDEVstrCmdTmp}";
 	fi
-	
+
 	if $SECDEVbExitAfterUserCmd;then
 		echo " Exiting..." >>/dev/stderr
 		sleep 1
 		exit
+	fi
+
+	if ! $SECDEVbExecTwice;then
+		SECDEVFUNCoptions --defaults #this helps on running this script again with default options...
 	fi
 	
 	#history -r

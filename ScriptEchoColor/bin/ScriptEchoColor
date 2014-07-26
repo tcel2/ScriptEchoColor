@@ -918,8 +918,6 @@ strCommandWasMsg=`basename $0`" $@"
 #	if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi #read requires interactiveness
 #	read "$@";return $?
 #}
-#alias FUNCreadA=read
-#alias FUNCreadA='if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
 alias FUNCreadA='if ! SECFUNCisShellInteractive;then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
 
 FUNCtestIgnore(){
@@ -1663,7 +1661,7 @@ if $bOptHelpExtended; then
     echo "  $str"; echo "         "`eval "$str"`
     str="$strSelfName \"@{o/green/BLACK/underline/SaveTypeColor}abc@{/-ResetAllSettings/BLUE} def @{/RestoreTypeColor}ghi\""
     echo "  $str"; echo "         "`eval "$str"`
-    echo "  Some flags can be simulated also ( use your imagination :D ):"
+    echo "  Lets simulate a flag:"
     str="$strSelfName \"@{yoG}<@bo@y>\""
     echo "  $str"; echo "         "`eval "$str"`
     echo
@@ -1691,7 +1689,7 @@ if $bOptHelpExtended; then
     echo " To make tags easy to read, prefer using always @{...} instead of @..."
     echo " While learning, at beggining, use extended format mode. Later on, change to short mode."
     echo 
-    $strSelfName "@{ou}Ideas:@-t Run and Watch :D"
+    $strSelfName "@{ou}Ideas:@-t Run and Watch (some may fail..) "
     for((n=0;n<${#astrIdea[*]};n++));do
       echo -ne "\t$((n+1))) "; echo "${astrIdea[n]}"
     done
@@ -2850,11 +2848,11 @@ FUNCcmdEscapedChars(){
 if $bWaitAKey; then #WAIT A KEY MODE
   char=`FUNCclearInputBufferGetLastChar`#;nRet=$?
   FUNCdoTheEcho
-  if [[ "`tty`" != "not a tty" ]];then
-	  eval "read -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
-	else
-		sleep $nWaitTime
-	fi
+  if SECFUNCisShellInteractive;then
+  	eval "read -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+ 	else
+ 		sleep $nWaitTime
+  fi
   FUNCstrNL
   if ! $bKeepPosition; then
     eval echo -n $strRestorePos $stderr

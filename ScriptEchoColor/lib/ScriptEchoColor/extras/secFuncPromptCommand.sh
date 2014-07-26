@@ -38,6 +38,10 @@ function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this func
 	local lstrDummyVariable;
 }
 
+function SECFUNCpromptCommand_CustomUserCommand(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh, will run as last thing
+	local lstrDummyVariable;
+}
+
 function SECFUNCbeforePromptCommand(){ #help 
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
 		SECdtBeforeCommandSec="`date +"%s"`"
@@ -75,6 +79,8 @@ function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetI
 	
 	unset SECdtBeforeCommandSec
 	unset SECdtBeforeCommandNano
+	
+	SECFUNCpromptCommand_CustomUserCommand
 }
 export PROMPT_COMMAND=SECFUNCpromptCommand
 #export PS1="\`FUNCsudoOn\`$PS1" #use this or PROMPT_COMMAND

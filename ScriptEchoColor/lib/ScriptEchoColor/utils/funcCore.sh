@@ -998,7 +998,20 @@ function SECFUNCaddToString() { #help <lstrVariableId> <lstrSeparator> <lstrWhat
 }
 
 function SECFUNCisShellInteractive() {
-	if [[ "`tty`" == "not a tty" ]];then
+#	if [[ "`tty`" == "not a tty" ]];then
+#		return 1
+#	fi
+#	if ! [ -t 0 ];then 
+#		return 1
+#	fi
+#	if ! test -t 0;then
+#		return 1
+#	fi
+	if test -t 0;then #0 = STDIN is a tty? 1 = STDOUT, 2 = STDERR
+		SECFUNCechoDbgA "shell is interactive"
+		return 0
+	else
+		SECFUNCechoDbgA "shell is NOT interactive"
 		return 1
 	fi
 }

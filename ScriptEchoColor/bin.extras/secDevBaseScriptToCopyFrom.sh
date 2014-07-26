@@ -36,7 +36,8 @@ echoc "@{lw}Environment variables used as these types -> will begins with:
  @wFunctions begins with @g'FUNC'
  
  @wWords on identifiers are captalized like: @gstrThisIsAnExampleAndATest
- @wThis helps with one or another piece of code that expects for this way of coding like @bSECFUNCseparateInWords@y()"
+ @wThis helps with one or another piece of code that expects for this way of coding like @bSECFUNCseparateInWords@y()
+ @wmaking it useful for ex.: @c\`echoc --say\`@w."
 #SECFUNCexec --echo --colorize SECFUNCseparateInWords --notype strThisIsAnExampleAndATest
 echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
 echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'"

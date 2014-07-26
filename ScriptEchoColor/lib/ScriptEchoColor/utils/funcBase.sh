@@ -715,7 +715,7 @@ function SECFUNCexec() { #help
 		if [[ -n "$lstrLogFileNew" ]];then
 			lbCreateLogFile=true
 		else
-			if [[ ! -f "$SEClstrLogFileSECFUNCexec" ]];then
+			if [[ ! -f "${SEClstrLogFileSECFUNCexec-}" ]];then
 				# automatic log filename
 				local lstrLogId="$(SECFUNCfixId --justfix $(basename $0))"
 				lstrLogFileNew="log/SEC.$lstrLogId.$$.log"
@@ -744,10 +744,10 @@ function SECFUNCexec() { #help
 			
 			#now lstrLogFileNew exist!
 			
-			if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
-				if [[ "$SEClstrLogFileSECFUNCexec" != "$lstrLogFileNew" ]];then
+			if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
+				if [[ "${SEClstrLogFileSECFUNCexec}" != "$lstrLogFileNew" ]];then
 					# append old log to new
-					cat "$SEClstrLogFileSECFUNCexec" >>"$lstrLogFileNew"
+					cat "${SEClstrLogFileSECFUNCexec}" >>"$lstrLogFileNew"
 					#rm "$SEClstrLogFileSECFUNCexec" #TODO more log is better than less?
 				fi
 			fi
@@ -758,11 +758,11 @@ function SECFUNCexec() { #help
 	
 	###### main code
 	if $lbShowLog;then
-		if [[ -f "$SEClstrLogFileSECFUNCexec" ]];then
+		if [[ -f "${SEClstrLogFileSECFUNCexec}" ]];then
 			echo "SEClnLogQuotaSECFUNCexec=$SEClnLogQuotaSECFUNCexec"
-			echo "SEClstrLogFileSECFUNCexec='$SEClstrLogFileSECFUNCexec'"
+			echo "SEClstrLogFileSECFUNCexec='${SEClstrLogFileSECFUNCexec}'"
 			SECFUNCdrawLine " Contents " " <> "
-			cat "$SEClstrLogFileSECFUNCexec"
+			cat "${SEClstrLogFileSECFUNCexec}"
 		else
 			echo "no log."
 		fi
@@ -999,6 +999,12 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	local lstrWords="${1-}";
 	shift
 	local lstrFill="${1-}"
+
+	local sedRemoveFormatChars='s"[\]E[[][[:digit:]]*m""g'
+	local sedRemoveFormatCharsBin='s"'`printf '\033'`'[[][[:digit:]]*m""g'
+	local lstrWordsNoFmt="`echo "$lstrWords" |sed -r -e "$sedRemoveFormatChars" -e "$sedRemoveFormatCharsBin"`"
+	SECFUNCechoDbgA "lstrWordsNoFmt='$lstrWordsNoFmt' size ${#lstrWordsNoFmt}"
+	local lnWordsFmtDiffSize=$((${#lstrWords}-${#lstrWordsNoFmt}))
 	
 	if [[ -z "$lstrFill" ]];then
 		lstrFill="="
@@ -1015,9 +1021,11 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 		lnTerminalWidth=80 #uses a default generic value...
 	fi
 	
-	local lnTotalFillChars=$((lnTerminalWidth-${#lstrWords}))
+	local lnTotalFillChars=$((lnTerminalWidth-${#lstrWordsNoFmt}))
 	local lnFillCharsLeft=$((lnTotalFillChars/2))
 	local lnFillCharsRight=$((lnTotalFillChars/2))
+
+	SECFUNCechoDbgA "#lstrWordsNoFmt=${#lstrWordsNoFmt}, lnTotalFillChars=$lnTotalFillChars, lnFillCharsLeft=$lnFillCharsLeft, lnFillCharsRight=$lnFillCharsRight, lnWordsFmtDiffSize=$lnWordsFmtDiffSize"
 	
 	# if odd width, add one char
 	if(( (lnTotalFillChars%2) == 1 ));then 
@@ -1051,11 +1059,15 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	
 	#trunc
 	if $lbTrunc;then
-		if((${#lstrOutput}>lnTerminalWidth));then
-			lstrOutput="${lstrOutput:0:lnTerminalWidth}"
+		if(( (${#lstrOutput}-lnWordsFmtDiffSize) > lnTerminalWidth ));then
+			# +lnWordsFmtDiffSize as the formatting characters will be interpreted and removed on the output so it will fit!
+			lstrOutput="${lstrOutput:0:$((lnTerminalWidth+lnWordsFmtDiffSize))}" 
 		fi
 	fi
 	
+	SECFUNCechoDbgA "#lstrWordsNoFmt=${#lstrWordsNoFmt}, lnTotalFillChars=$lnTotalFillChars, lnFillCharsLeft=$lnFillCharsLeft, lnFillCharsRight=$lnFillCharsRight"
+	
+#	echo "$lstrOutput$loptCarryageReturn" >>/dev/stderr
 	echo -e $loptNewLine "$lstrOutput$loptCarryageReturn"
 	
 	SECFUNCdbgFuncOutA;
