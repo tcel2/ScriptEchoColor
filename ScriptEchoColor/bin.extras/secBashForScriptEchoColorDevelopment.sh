@@ -169,7 +169,10 @@ function SECFUNCaddToRcFile() {
 	echo " PATH='$PATH'" >>/dev/stderr
 	
 	if $SECDEVbExecTwice;then #this grants all is updated
+		echo
 		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
+		echoc --info " Loading '$SECstrScriptSelfName' twice as the project development one differs."
+		echo
 		SECDEVbExecTwice=false #prevent infinite recursive loop
 		$SECDEVstrSelfName #all options are already in exported variables
 		exit #must exit to not execute the options twice, only once above.
