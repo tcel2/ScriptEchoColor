@@ -2699,7 +2699,7 @@ if $bWARNBEEP && [[ $SEC_BEEP != "mute" ]]; then
   fi
 fi
 
-FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pressed key
+FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pressed key, and outputs progress info
   echo -n "$strClrKeyBufMsg" >>/dev/stderr # tells user that its clearing keyboard buffer and waiting 1 second
   local char=""
   local nKeyPressed=1 # false
@@ -2869,12 +2869,12 @@ FUNCcmdEscapedChars(){
 }
 
 if $bWaitAKey; then #WAIT A KEY MODE
-  #char="`FUNCclearInputBufferGetLastChar`" #;nRet=$?
+  if SECFUNCisShellInteractive;then
+	  char="`FUNCclearInputBufferGetLastChar`"&&: #this outputs progress info
+	fi
   FUNCdoTheEcho
   #eval `secinit --core` #for SECFUNCisShellInteractive
   if SECFUNCisShellInteractive;then
-	  char="`FUNCclearInputBufferGetLastChar`"&&:
-  	#eval "FUNCread -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
   	FUNCread -s -n 1 $strNWaitTime -p "" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
  	else
  		sleep $nWaitTime
