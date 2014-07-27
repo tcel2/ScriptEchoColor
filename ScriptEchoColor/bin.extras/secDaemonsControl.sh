@@ -144,7 +144,7 @@ if $bMonitorDaemons;then
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
-		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_auto hold on screen lock"; case "`secascii $?`" in 
+		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_auto hold on screen lock"&&:; case "`secascii $?`" in 
 			a)	SECFUNCvarToggle --show bAutoHoldOnScreenLock;; 
 			h)	$strSelfName --holdall;; 
 			r)	$strSelfName --releaseall;; 
@@ -180,7 +180,7 @@ elif $bCheckHold;then
 			echo -ne "${SECONDS}s\r"
 		
 			#sleep 5
-			read -n 1 -t 5 strResp
+			read -n 1 -t 5 strResp&&:
 			if [[ "$strResp" == "y" ]];then
 				break
 			elif [[ "$strResp" == "r" ]];then
