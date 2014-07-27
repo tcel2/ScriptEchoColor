@@ -165,7 +165,7 @@ while true; do
 	
   # this is good that prevents mouse scroll outputting messy characters... no problem if you press ENTER for any reason..
 	bFirstLoop=false
-  read -s -t 10 -p "" #sleep 5
+	sleep 10 #read -s -t 10 -p ""
   
   if $bAskExit;then
 		if echoc -q "exit";then

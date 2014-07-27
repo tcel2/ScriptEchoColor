@@ -246,14 +246,20 @@ if pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
 	bOpenOnce=false
 fi
 while true; do
-	pidBanshee="`pgrep banshee`"
+	pidBanshee="`pgrep banshee`"&&:
 	
 	if [[ -n "$pidBanshee" ]];then
-		read strMusicNew < <(\
-			echo "`xdotool search --pid $pidBanshee 2>/dev/null`" |\
-				while read nWindowId;do \
-					xdotool getwindowname $nWindowId |grep -v "^Banshee";\
-				done);
+#		read strMusicNew < <(\
+#			echo "`xdotool search --pid $pidBanshee 2>/dev/null`" |\
+#				while read nWindowId;do \
+#					xdotool getwindowname $nWindowId |grep -v "^Banshee";\
+#				done);
+		anWindowIdList=(`xdotool search --pid  3527660 2>>/dev/null`)
+		for nWindowId in ${anWindowIdList[@]};do
+			if strMusicNew="`xdotool getwindowname $nWindowId |grep -v "^Banshee"`";then
+				break
+			fi
+		done
 				
 		if [[ -n "$strMusicNew" ]] && ( [[ "$strMusicNew" != "$strMusic" ]] || $bJustDownloadedLyrics );then
 			bJustDownloadedLyrics=false

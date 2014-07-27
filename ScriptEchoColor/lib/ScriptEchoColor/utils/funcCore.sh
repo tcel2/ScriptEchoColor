@@ -32,6 +32,7 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh";
 # FUNCTIONS
 
 function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMAND-}"> <"${BASH_SOURCE[@]-}">
+	local lnRetTrap="$1";shift
 	local lstrFuncName="$1";shift
 	local lstrLineNo="$1";shift
 	local lstrBashCommand="$1";shift
@@ -42,6 +43,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	
 	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
 	lstrErrorTrap+="SECERROR(trap):"
+	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
 	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"

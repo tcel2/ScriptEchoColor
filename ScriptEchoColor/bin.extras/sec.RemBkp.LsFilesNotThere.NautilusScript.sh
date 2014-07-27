@@ -22,20 +22,27 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-strMainExecutable="ScriptEchoColor"
+# nautilus passing params is strange, dont try to use them...
+#while [[ -n "$1" ]]; do
+#	echoc --info "$1"
+#	shift
+#done
+#echoc --info "nautilus params: $@"
 
-strFullPathMainExecutable="`type -P "$strMainExecutable"`"
-if [[ -h "$strFullPathMainExecutable" ]]; then
-	strFullPathMainExecutable=`readlink -f "$strFullPathMainExecutable"`
-fi
+function FUNCdoIt() {
+	sedUrlDecoder='s % \\\\x g'
+	path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 
-installPath="`dirname "$strFullPathMainExecutable"`"
+	#zenity --info --text "`pwd`;$path"
+	cd "$path";
+	#export bSkipNautilusCheckNow=true;
+	secUpdateRemoteBackupFiles.sh --skipnautilus --lsnot --addfiles;
+	echoc -w -t 60
+};export -f FUNCdoIt
 
-if [[ "`basename "$installPath"`" != "bin" ]];then
-	echo "SECERROR: '$strMainAppName' should be at a '.../bin/' path!" >>/dev/stderr
-	exit 1
-fi
-installPath="`dirname "$installPath"`" #remove the bin path
-
-echo "$installPath"
+#strExec="FUNCdoIt #skipCascade"
+#xterm -e "$strExec"
+#xtermDetached.sh "$strExec"
+bash -i -c "xtermDetached.sh --skipcascade FUNCdoIt"
+#echoc -w
 

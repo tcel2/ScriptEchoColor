@@ -22,20 +22,23 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-strMainExecutable="ScriptEchoColor"
+eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
+strFile="${astrFiles[0]}"
 
-strFullPathMainExecutable="`type -P "$strMainExecutable"`"
-if [[ -h "$strFullPathMainExecutable" ]]; then
-	strFullPathMainExecutable=`readlink -f "$strFullPathMainExecutable"`
-fi
+#xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
-installPath="`dirname "$strFullPathMainExecutable"`"
+function FUNCrenameSymlink() {
+	local lstrFile="${1-}"
+	if [[ ! -L "$lstrFile" ]];then
+		zenity --info --text "File is not a symlink: '$lstrFile'"
+	else
+		strNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
+		echoc -x "rm -v '$lstrFile'"
+		echoc -x "ln -sv '$strNewSymlink' '$lstrFile'"
+		echoc -w -t 60
+	fi
+};export -f FUNCrenameSymlink
 
-if [[ "`basename "$installPath"`" != "bin" ]];then
-	echo "SECERROR: '$strMainAppName' should be at a '.../bin/' path!" >>/dev/stderr
-	exit 1
-fi
-installPath="`dirname "$installPath"`" #remove the bin path
-
-echo "$installPath"
+cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
+xterm -e "bash -i -c \"FUNCrenameSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
 

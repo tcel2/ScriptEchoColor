@@ -22,20 +22,17 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-strMainExecutable="ScriptEchoColor"
+# nautilus passing params is strange, dont try to use them...
+#while [[ -n "$1" ]]; do
+#	echoc --info "$1"
+#	shift
+#done
+#echoc --info "nautilus params: $@"
 
-strFullPathMainExecutable="`type -P "$strMainExecutable"`"
-if [[ -h "$strFullPathMainExecutable" ]]; then
-	strFullPathMainExecutable=`readlink -f "$strFullPathMainExecutable"`
-fi
-
-installPath="`dirname "$strFullPathMainExecutable"`"
-
-if [[ "`basename "$installPath"`" != "bin" ]];then
-	echo "SECERROR: '$strMainAppName' should be at a '.../bin/' path!" >>/dev/stderr
-	exit 1
-fi
-installPath="`dirname "$installPath"`" #remove the bin path
-
-echo "$installPath"
+#xterm -e "updateUbuntuOneFiles.sh #skipCascade"
+function FUNCdoIt() {
+	secUpdateRemoteBackupFiles.sh #has builtin support to work with nautilus!
+#	echoc -w 
+};export -f FUNCdoIt
+bash -i -c "xtermDetached.sh --skipcascade FUNCdoIt"
 

@@ -241,9 +241,9 @@ for((i=0;i<${#aWindowList[@]};i++));do
 			$(( (basePosY-viewportY)+y )) 2>/dev/null; 
 	fi
 		
-	((x+=addX)); 
+	((x+=addX))&&: 
 	if $bDoAddY; then
-		((y+=addY)); 
+		((y+=addY))&&: 
 	fi
 	
 	#if ! sleep 3;then exit 1;fi

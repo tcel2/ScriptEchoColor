@@ -22,20 +22,17 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-strMainExecutable="ScriptEchoColor"
+#strLess="file://"
+sedUrlDecoder='s % \\\\x g'
+strPath="$NAUTILUS_SCRIPT_CURRENT_URI"
+#strPath="${strPath:${#strLess}}"
+strPath=`echo "$strPath" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 
-strFullPathMainExecutable="`type -P "$strMainExecutable"`"
-if [[ -h "$strFullPathMainExecutable" ]]; then
-	strFullPathMainExecutable=`readlink -f "$strFullPathMainExecutable"`
-fi
+cmd="cd \"$strPath\""
+runAtYakuake.sh "${cmd//%20/ }"
 
-installPath="`dirname "$strFullPathMainExecutable"`"
-
-if [[ "`basename "$installPath"`" != "bin" ]];then
-	echo "SECERROR: '$strMainAppName' should be at a '.../bin/' path!" >>/dev/stderr
-	exit 1
-fi
-installPath="`dirname "$installPath"`" #remove the bin path
-
-echo "$installPath"
+# $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
+# $NAUTILUS_SCRIPT_SELECTED_URIS
+# $NAUTILUS_SCRIPT_CURRENT_URI
+# $NAUTILUS_SCRIPT_WINDOW_GEOMETRY
 

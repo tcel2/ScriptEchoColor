@@ -135,7 +135,7 @@ declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
 while true; do 
 	windowId=`xdotool getactivewindow`;
-	windowName=`xdotool getwindowname $windowId 2>"$strLogFile" `
+	windowName=`xdotool getwindowname $windowId 2>"$strLogFile" &&:`
 
 	bOk=true
 
