@@ -1229,6 +1229,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 #	local lbNow=false
 	local lbCheckOrInit=false
 	local l_b1stIsTrueOnCheckOrInit=false
+	local lbGetPrettyFull=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
 			SECFUNCshowHelp ${FUNCNAME}
