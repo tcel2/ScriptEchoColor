@@ -22,6 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+bFast=false
 bCore=false
 bBase=false
 bMisc=false
@@ -29,6 +30,7 @@ bVars=false
 bMaintenanceDaemon=true
 bVarChildDB=true
 bForceReload=false
+bExportFunctions=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
@@ -37,7 +39,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		eval `secinit --core`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
 		exit
-	elif [[ "$1" == "--help-core" ]];then #help help for base lib
+	elif [[ "$1" == "--help-fast" ]];then #help help for fast lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcFast.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcFast.sh --help'
+		exit
+	elif [[ "$1" == "--help-core" ]];then #help help for core lib
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
 		exit
@@ -65,6 +71,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions" |sort |column -c `tput cols` |column -t
 		done
 		exit
+	elif [[ "$1" == "--fast" ]];then #help fastest setup (only aliases and arrays are restored), expects parent environment has exported everything necessary already.
+		bFast=true
 	elif [[ "$1" == "--core" ]];then #help load core lib
 		bCore=true
 	elif [[ "$1" == "--base" ]];then #help load base lib
@@ -80,14 +88,26 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
 		bMaintenanceDaemon=false
 	else
-		echo "PROBLEM: invalid option: $1"
+		echo "SECERROR: PROBLEM: invalid option: $1" >>/dev/stderr
 		exit 1
 	fi
 	shift
 done
 
+if $bFast;then
+	if ${SECinstallPath+false};then
+		echo "SECWARN: SECinstallPath is not defined yet for Fast lib to work, upgrading to Core option..." >>/dev/stderr
+		bFast=false
+		bCore=true #if environment is not set, Fast option is upgraded to Core
+	else
+		# Fast option is valid, so complement it.
+		bExportFunctions=false
+		bMaintenanceDaemon=false
+	fi
+fi
+
 #if ! $bBase && ! $bMisc && ! $bVars;then
-if ! $bCore && ! $bBase && ! $bMisc && ! $bVars;then
+if ! $bFast && ! $bCore && ! $bBase && ! $bMisc && ! $bVars;then
 	# the one that uses most libs shall be the default
 	bVars=true
 fi
@@ -95,13 +115,18 @@ fi
 # DO NOT SKIP INITIALIZATION LIKE this, it break aliases :( -> #if ! ${SECinitialized-false};then
 # $PPID is the pid where the output of this script may have already been evaluated
 
-if $bForceReload || ${SECinstallPath+false};then 
-	export SECinstallPath="`secGetInstallPath.sh`"; #to be faster
-	echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
-fi;
+if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bForceReload option could override the previous validation...
+	if $bForceReload || ${SECinstallPath+false};then 
+		export SECinstallPath="`secGetInstallPath.sh`"; #to be faster
+		echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
+	fi;
+fi
 
 #echo "${SECnPidInitLibBase-},${SECnPidInitLibMisc-},${SECnPidInitLibVars-},$$,$PPID" >>/dev/stderr
-if $bCore;then 
+if $bFast;then 
+	if ! $bForceReload && [[ "${SECnPidInitLibFast-}" == "$PPID" ]];then exit;fi
+	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh\";"
+elif $bCore;then 
 	if ! $bForceReload && [[ "${SECnPidInitLibCore-}" == "$PPID" ]];then exit;fi
 	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh\";"
 elif $bBase;then
@@ -116,7 +141,9 @@ elif $bVars;then
 fi
 
 # export function before running any function!
-echo 'eval "`SECFUNCexportFunctions`";'
+if $bExportFunctions;then
+	echo 'eval "`SECFUNCexportFunctions`";'
+fi
 
 # if functions have been exported before this, if his opens any subshell, exported functions will work (despite aliases and arrays wont)... mmm... may be it is pointless...
 if $bVars;then

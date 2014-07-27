@@ -32,7 +32,7 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh";
 # MAIN CODE
 
 ########################## FUNCTIONS
-function SECFUNCexecOnSubShell(){ #help runs one parameter with `bash -c "$1"`
+function SECFUNCexecOnSubShell(){ #help runs one parameter with `bash -c "$1"`, and grants arrays are exported
 	SECFUNCdbgFuncInA
 	
 	SECFUNCarraysExport
@@ -169,21 +169,9 @@ function SECFUNCarraysExport() { #help export all arrays
 		
 		# creates the variable to be restored on a child shell
 		eval "export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
+		
+		export SECbHasExportedArrays=true
 	done
-	SECFUNCdbgFuncOutA;
-}
-function SECFUNCarraysRestore() { #help restore all exported arrays
-	SECFUNCdbgFuncInA;
-	
-	# declare associative arrays to make it work properly
-	eval "${SECcmdExportedAssociativeArrays-}"
-	unset SECcmdExportedAssociativeArrays
-	
-	# restore the exported arrays
-	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
-	
-	# remove the temporary variables representing exported arrays
-	eval "`declare |sed -r "s%^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)='(.*)'$%unset \1;%;tfound;d;:found"`"
 	SECFUNCdbgFuncOutA;
 }
 
@@ -1366,8 +1354,6 @@ if [[ `basename "$0"` == "funcBase.sh" ]];then
 		shift
 	done
 fi
-
-SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
 
 export SECnPidInitLibBase=$$
 

@@ -131,7 +131,7 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 #	SECvarCheckScriptSelfNameParentChange=false
 #	eval `secinit --core`
 #fi
-eval `secinit --core` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
+eval `secinit --fast` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
 
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
@@ -298,6 +298,7 @@ optGfxMostreliable="--gfx-mostreliable"
 optGfxTputmacs="--gfx-tputmacs"
 optGuessTermEmulator="--guesstermemulator"
 optHelpExtended="--help-extended"
+optHelpExtendedInfo="--help-extended-info"
 optHelp="--help"
 optHelpLGE="$optHelp-list${optGfxE294char:1}"
 optHelpLGM="$optHelp-list${optGfxMostreliable:1}"
@@ -332,6 +333,7 @@ bOptEscapedChars=false
 bOptGuessTermEmulator=false
 bOptHelp=false
 bOptHelpExtended=false
+bOptHelpExtendedInfo=false
 bOptHelpLGE=false
 bOptHelpLGM=false
 bOptHelpLGT=false
@@ -483,6 +485,9 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
           ;;
       "${optHelpExtended:2}") 
           bOptHelpExtended=true
+          ;;
+      "${optHelpExtendedInfo:2}") 
+          bOptHelpExtendedInfo=true
           ;;
       "${optInfo:2}") 
           bOptInfo=true
@@ -638,7 +643,7 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
   shift; strOpt="${1-}"
 done
 # Take care of options problems
-if ! $bOptHelp && ! $bOptHelpExtended; then
+if ! $bOptHelp && ! $bOptHelpExtended && ! $bOptHelpExtendedInfo; then
   strBeep="\a"
   if [[ "$SEC_BEEP" == "mute" ]]; then
     strBeep=""
@@ -916,12 +921,8 @@ fi
 
 strCommandWasMsg=`basename $0`" $@"
 
-#FUNCread() {
-#	if [[ "`tty`" == "not a tty" ]];then SECFUNCechoErrA "not a tty";fi #read requires interactiveness
-#	read "$@";return $?
-#}
-#alias FUNCreadA='if ! SECFUNCisShellInteractive;then SECFUNCechoErrA "not a tty";fi;read' #read requires interactiveness. Better be an alias because the variable set by read, if inside a function will be troubling to code...
 FUNCread() {
+	#eval `secinit --core` #for SECFUNCisShellInteractive
 	#read requires interactiveness.
 	if ! SECFUNCisShellInteractive;then
 		SECFUNCechoErrA "Shell is NOT interactive! ";
@@ -1397,6 +1398,7 @@ if $bOptHelp; then
     echo " $optHelpListExtdFmt: extended format list"
     echo " $optHelpLibs: show help info about libs functions"
     echo " $optHelpExtended: extended help/usage information and examples!"
+    echo " $optHelpExtendedInfo: same as extended help but shown with \`| less -R\`"
     echo " $optInfo: easy info coloring"
     echo " $optAlert: easy alert coloring"
     echo " $optTest: test terminal capabilities and helps to bug report"
@@ -1431,6 +1433,11 @@ if $bOptHelp; then
     echo 
     echo "Observation: the default is to interpret escape characters, to disable it use -E"
     exit 0
+fi
+
+if $bOptHelpExtendedInfo;then
+	$strSelfName $optHelpExtended |less -R
+	exit 0
 fi
 
 if $bOptHelpExtended; then
@@ -2864,6 +2871,7 @@ FUNCcmdEscapedChars(){
 if $bWaitAKey; then #WAIT A KEY MODE
   #char="`FUNCclearInputBufferGetLastChar`" #;nRet=$?
   FUNCdoTheEcho
+  #eval `secinit --core` #for SECFUNCisShellInteractive
   if SECFUNCisShellInteractive;then
 	  char="`FUNCclearInputBufferGetLastChar`"&&:
   	#eval "FUNCread -s -n 1 $strNWaitTime -p \"\"" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
