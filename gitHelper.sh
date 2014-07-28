@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+eval `secinit`
+
 SECFUNCuniqueLock --daemonwait
 
 while true;do

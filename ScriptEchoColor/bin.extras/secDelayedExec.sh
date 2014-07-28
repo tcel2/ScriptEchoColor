@@ -188,7 +188,7 @@ if $bCheckIfAlreadyRunning;then
 	#	if ! ps -A -o pid,cmd |grep -v "^[[:blank:]]*[[:digit:]]*[[:blank:]]*grep" |grep -q "$strFullSelfCmd";then
 	#	if ! pgrep -f "$strFullSelfCmd";then
 		nPidOther=""
-		anPidList=(`pgrep -fx "${strFullSelfCmd}$"`)
+		anPidList=(`pgrep -fx "${strFullSelfCmd}$"`)&&:
 		#echo "$$,${anPidList[@]}" >>/dev/stderr
 		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
 			bFound=false
