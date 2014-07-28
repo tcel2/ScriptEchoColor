@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+#TODO try to code this in `/bin/dash` ? got a tip about performance..
+
 bOptEscapedChars=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
