@@ -235,7 +235,7 @@ function FUNClimitCpu() {
 	
 	# to avoid having this buffer cleared by the MAIN daemon and not clear that too
 	export SEC_SAYID="$SEC_SAYID.$FUNCNAME.$$"
-	secSayStack --clearbuffer #to stop saying loads of useless information..
+	secSayStack.sh --clearbuffer #to stop saying loads of useless information..
 	
 	# make main process ignore the pid
 	SECFUNCvarReadDB
@@ -348,7 +348,7 @@ function FUNClimitCpu() {
 					if((`SECFUNCdelay minWaitToCoolCPU --getsec`>=nMinWaitToCoolCPU));then
 						if((nCoolCPUCount>=nCoolCPUCountMax));then
 							if $bForceStop;then
-								secSayStack --clearbuffer #to stop saying loads of useless information..
+								secSayStack.sh --clearbuffer #to stop saying loads of useless information..
 								echoc --waitsay "ready to run again $tmprCurrent"
 							fi
 						
@@ -392,7 +392,7 @@ function FUNCdaemon() {
 	SECFUNCuniqueLock --daemonwait
 	secDaemonsControl.sh --register
 	
-	secSayStack --clearbuffer #to stop saying loads of useless information.. when this app is restarted..
+	secSayStack.sh --clearbuffer #to stop saying loads of useless information.. when this app is restarted..
 	
 	local maxTemperature=0
 	local prevTemperature=0
@@ -476,7 +476,7 @@ function FUNCdaemon() {
 					echoc --say "$tmprCurrent"
 				done
 				SECFUNCvarSet isLoweringTemperature=false
-				secSayStack --clearbuffer #to stop saying loads of useless information..
+				secSayStack.sh --clearbuffer #to stop saying loads of useless information..
 				#echoc --say "running $tmprCurrent"
 			
 				echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"

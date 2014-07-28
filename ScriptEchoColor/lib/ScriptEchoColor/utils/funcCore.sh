@@ -48,6 +48,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"
 	lstrErrorTrap+="BASH_SOURCE[@]='${lstrBashSourceListTrap}';"
+	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd`';"
 	
 	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
 	 	# if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...

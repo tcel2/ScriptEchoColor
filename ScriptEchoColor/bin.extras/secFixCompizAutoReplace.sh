@@ -151,7 +151,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #				if xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
 #					while true; do
 #						if ! xdotool getwindowpid "$nWindowIdDialog" 2>/dev/null;then
-#							return # exit function
+#							return 0 # exit function
 #						fi
 #						#wmctrl -i -r $nWindowIdDialog -b add,above;
 #						wmctrl -i -r $nWindowIdDialog -b toggle,above;
