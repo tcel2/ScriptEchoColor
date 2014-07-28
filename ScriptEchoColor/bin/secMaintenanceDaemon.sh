@@ -193,7 +193,7 @@ elif $bPidsMonitor;then
 	done
 	exit
 elif $bShowErrors;then
-	echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"
+	echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:
 	exit
 elif $bErrorsMonitor;then
 	tail -F "${SEC_TmpFolder}/.SEC.Error.log"
