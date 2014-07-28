@@ -927,6 +927,7 @@ FUNCread() {
 	#read requires interactiveness.
 	if ! SECFUNCisShellInteractive;then
 		SECFUNCechoErrA "Shell is NOT interactive! ";
+		sleep 60 # this prevents bloated error logs in ex. question mode (-q) and prevents cpu load too
 		exit 1 # it is `exit` (and not `return`) on this function because interactivity is critical!
 	fi;
 	
