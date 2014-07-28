@@ -201,7 +201,16 @@ for((i=0;i<${#aWindowList[@]};i++));do
 	echo "windowId=$windowId"
 	
 	# skipCascade
-	xtermCmd=`ps --no-headers -p \`xdotool getwindowpid $windowId\` -o command`
+	nWindowPid="`xdotool getwindowpid $windowId`"&&:
+	#echo "nWindowPid='$nWindowPid'"
+	if [[ -z "$nWindowPid" ]];then
+		continue
+	fi
+	xtermCmd="`ps --no-headers -p $nWindowPid -o command`"&&:
+	#echo "xtermCmd='$xtermCmd'"
+	if [[ -z "$xtermCmd" ]];then
+		continue
+	fi
 	if echo "$xtermCmd" |grep -q "#skipCascade";then
 		echo "skipping $windowId cmd: $xtermCmd"
 		((countSkips++))
@@ -217,8 +226,8 @@ for((i=0;i<${#aWindowList[@]};i++));do
 	
 	echo
 	
-	xdotool getwindowname $windowId
-	xdotool getwindowgeometry $windowId |grep "Geometry:"
+	if ! xdotool getwindowname $windowId;then	continue;fi
+	if ! xdotool getwindowgeometry $windowId |grep "Geometry:";then continue;fi
 	
 	if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
 		# adjust size
