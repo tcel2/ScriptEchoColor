@@ -22,16 +22,39 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+eval `secinit`
+
+#strSelfName="`basename "$0"`"
+#strLogFile="/tmp/.${strSelfName}.log"
+
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then
+		echo "log at '$SECstrRunLogFile'"
+		exit
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+done
+
+if ! SECFUNCisShellInteractive;then
+	exec 2>>"$SECstrRunLogFile"
+	exec 1>&2
+fi
+
 SECFUNCuniqueLock --daemonwait
 
+nPidDropbox=""
+nCpuLimitPercentual=1
 while true;do
-	echoc --info "Git helper (hit ctrl+c to exit)"
-	echoc -Q "git@O_commitWithGitGui/_diffLastTagFromMaster/_pushTagsToRemote/_browseWithGitk";
-	case "`secascii $?`" in 
-		c) echoc -x "git gui";; 
-		b) echoc -x "gitk";; 
-		p) echoc -x "git push --tags";;
-		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\"";;
-	esac
+	#nPidDropbox=`ps -A -o pid,comm |egrep " dropbox$" |sed -r "s'^ *([[:digit:]]*) .*'\1'"`
+	nPidDropbox="`pgrep dropbox`"&&:
+	if [[ -n "$nPidDropbox" ]];then
+		renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "` # several pids, do not surround with "
+		#echoc -x "cpulimit -v -p $nPidDropbox -l $nCpuLimitPercentual"
+		echoc -x "cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"
+	fi
+	
+	echoc -t 60 -w "waiting for dropbox to start"
 done
 

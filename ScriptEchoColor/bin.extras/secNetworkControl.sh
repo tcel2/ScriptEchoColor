@@ -50,6 +50,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 done
 
 # Main code
+SECFUNCuniqueLock --daemonwait
 
 function FUNCexecParam() {
 	local lbValidateOnly=false

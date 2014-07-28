@@ -26,7 +26,10 @@
 
 eval `secinit --nochild`
 
-strLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log"
+echo " SECstrRunLogFile='$SECstrRunLogFile'" >>/dev/stderr
+echo " \$@='$@'" >>/dev/stderr
+
+strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #all exec thru this script will have a log entry here
 #strFullSelfCmd="`basename $0` $@"
 strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 #echo "strFullSelfCmd='$strFullSelfCmd'"
@@ -96,13 +99,13 @@ function FUNClog() { #help <type with 3 letters> [comment]
 	fi
 	
 	echo "$lstrLogging" >>/dev/stderr
-	echo "$lstrLogging" >>"$strLogFile"
+	echo "$lstrLogging" >>"$strExecGlobalLogFile"
 }
 
 if $bCheckPointDaemon;then
-	echo "see log at: $strLogFile" >>/dev/stderr
+	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >>/dev/stderr
 	
-	exec 2>>"$strLogFile"
+	exec 2>>"$strExecGlobalLogFile"
 	exec 1>&2
 	
 	if [[ -z "$strCustomCommand" ]];then
@@ -139,7 +142,7 @@ if [[ -z "$@" ]];then
 	exit 1
 fi
 
-#echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strLogFile"
+#echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strExecGlobalLogFile"
 FUNClog ini
 
 #if $bWaitCheckPoint;then
@@ -166,13 +169,13 @@ FUNClog ini
 if $bWaitCheckPoint;then
 	SECFUNCdelay bWaitCheckPoint --init
 	while true;do
+		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
 		if SECFUNCuniqueLock --isdaemonrunning;then
 			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
 			if $bCheckPoint;then
 				break
 			fi
 		fi
-		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
 		sleep $nDelayAtLoops
 	done
 	echo
@@ -190,7 +193,7 @@ if $bCheckIfAlreadyRunning;then
 		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
 			bFound=false
 			for nPidOther in ${anPidOther[@]-};do
-				if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strLogFile";then
+				if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
 					bFound=true
 					break;
 				fi
@@ -204,7 +207,7 @@ if $bCheckIfAlreadyRunning;then
 			fi
 			break;
 		fi
-		#echo " wrn -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog; # ALREADY RUNNING..." >>"$strLogFile"
+		#echo " wrn -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog; # ALREADY RUNNING..." >>"$strExecGlobalLogFile"
 		FUNClog wrn "IT IS ALREADY RUNNING AT nPidOther='$nPidOther' !!! "
 		#sleep 60
 		if echoc -q -t 60 "skip check if already running?";then

@@ -654,8 +654,9 @@ if ! $bOptHelp && ! $bOptHelpExtended && ! $bOptHelpExtendedInfo; then
   fi
 fi
 
-nTermCols=`tput cols`
-nTermLines=`tput lines`
+#would require interactivity? anyway not being used...
+#nTermCols=`tput cols`
+#nTermLines=`tput lines`
 
 FUNCboolFromStrMatch(){
   local str="$1"
@@ -2877,7 +2878,7 @@ if $bWaitAKey; then #WAIT A KEY MODE
   if SECFUNCisShellInteractive;then
   	FUNCread -s -n 1 $strNWaitTime -p "" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
  	else
- 		sleep $nWaitTime
+ 		sleep $nWaitTime #if not interactive, and -t wasnt specified, it will sleep for 0s as no key can be pressed...
   fi
   FUNCstrNL
   if ! $bKeepPosition; then
