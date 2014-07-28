@@ -65,6 +65,30 @@ SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.s
 SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
 
 # INITIALIZATIONS
+
+function _SECFUNClogMsg() { #<logfile> <params become message>
+	local lstrLogFile="$1"
+	shift
+	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
+}
+function _SECFUNCbugTrackExec() {
+	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
+#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
+	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -un`.log"
+	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
+	"$@" 2>>"$lstrBugTrackLogFile"
+}
+function _SECFUNCcriticalForceExit() {
+	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
+#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
+	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
+	while true;do
+		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
+		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
+		sleep 1
+	done
+}
+
 function SECFUNCgetUserNameOrId(){ #help outputs username (prefered) or userid
 	if [[ -n "${USER-}" ]];then
 		echo "$USER"
@@ -319,30 +343,6 @@ function _SECFUNCfillDebugFunctionPerFileArray() {
 #SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="${BASH_SOURCE[${#BASH_SOURCE[@]}-1]}" #easy trick
 #SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="`basename "$0"`" #easy trick
 _SECFUNCfillDebugFunctionPerFileArray
-
-# THESE ATOMIC FUNCTIONS are SPECIAL AND CAN COME HERE, they MUST DEPEND only on each other!!!
-function _SECFUNClogMsg() { #<logfile> <params become message>
-	local lstrLogFile="$1"
-	shift
-	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
-}
-function _SECFUNCbugTrackExec() {
-	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
-#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
-	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -un`.log"
-	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
-	"$@" 2>>"$lstrBugTrackLogFile"
-}
-function _SECFUNCcriticalForceExit() {
-	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
-#	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
-	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
-	while true;do
-		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
-		sleep 1
-	done
-}
 
 function SECFUNCexportFunctions() { #help 
 	declare -F \
