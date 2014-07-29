@@ -21,6 +21,7 @@
 #
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
+
 strSelfName="`basename "$0"`"
 
 strUser=${USER-}

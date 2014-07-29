@@ -47,7 +47,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"
-	lstrErrorTrap+="BASH_SOURCE[@]='${lstrBashSourceListTrap}';"
+	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap});"
 	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd`';"
 	
 	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
