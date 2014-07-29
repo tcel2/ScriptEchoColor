@@ -54,10 +54,10 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #FUNCexample_help
-			SECFUNCshowHelp --nosort $FUNCNAME
+			SECFUNCshowHelp $FUNCNAME
 			return
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help MISSING DESCRIPTION
-			echo "#TODO"
+			echo "#your code goes here"
 		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options
 			shift
 			break
@@ -77,10 +77,10 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
-		SECFUNCshowHelp --nosort
+		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
-		echo "#MISSING DESCRIPTION"
+		echo "#your code goes here"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break

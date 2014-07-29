@@ -194,7 +194,9 @@ elif $bPidsMonitor;then
 	done
 	exit
 elif $bShowErrors;then
-	echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:
+	while ! echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:;do
+		echoc -w -t 60 "waiting some error log to happen"
+	done
 	exit
 elif $bErrorsMonitor;then
 	tail -F "${SEC_TmpFolder}/.SEC.Error.log"

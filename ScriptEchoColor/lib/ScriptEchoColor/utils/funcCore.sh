@@ -366,7 +366,7 @@ fi
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
 	SECFUNCdbgFuncInA;
 	local lbColorizeEcho=false
-	local lbSort=true
+	local lbSort=false
 	local lstrScriptFile="$0"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
@@ -377,7 +377,9 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lstrColorizeEcho="${1-}"
 		
 			lbColorizeEcho=true
-		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options
+		elif [[ "${1-}" == "--sort" ]];then #SECFUNCshowHelp_help sort the help options
+			lbSort=true
+		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options (is default now)
 			lbSort=false
 		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help set the script file to gather help data
 			shift
@@ -601,7 +603,11 @@ function SECFUNCechoErr() { #help echo error messages
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCechoErr_help is the name of the function calling this one
 			shift
-			lstrCaller="${1}: "
+#			lstrCaller="${1};pidcmd=$(ps --no-headers -o comm -p $$);ppidcmd=$(ps --no-headers -o comm -p $$): "
+			lstrCaller="${1};"
+			lstrCaller+="cmd='`ps --no-headers -o cmd -p $$`';"
+			lstrCaller+="PPIDcmd='`ps --no-headers -o cmd -p $PPID`';"
+			lstrCaller+=": "
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCechoErr_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
