@@ -166,13 +166,13 @@ aWindowList=(`FUNCwindowList`)
 #@@@R for asdfasdf in ${aWindowList[@]};do echo "<$asdfasdf>";done;echo "<${aWindowList[@]}>";exit #@@@R
 windowCount=${#aWindowList[@]}
 #if(( (windowCount%2)==1 ));then
-#	((windowCount++))
+#	((windowCount++))&&:
 #fi
 echo "window list: ${aWindowList[@]}"
 
 columns=$((windowCount/maxRows))
 if(( (windowCount%maxRows)>0 ));then
-	((columns++))
+	((columns++))&&:
 fi
 if((columns>maxCols));then
 	columns=$maxCols
@@ -213,7 +213,7 @@ for((i=0;i<${#aWindowList[@]};i++));do
 	fi
 	if echo "$xtermCmd" |grep -q "#skipCascade";then
 		echo "skipping $windowId cmd: $xtermCmd"
-		((countSkips++))
+		((countSkips++))&&:
 		continue
 	fi
 	

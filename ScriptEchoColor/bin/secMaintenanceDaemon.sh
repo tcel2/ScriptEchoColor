@@ -130,7 +130,7 @@ function FUNCkillDaemon() {
 			sleep 0.1
 		done
 		
-		FUNCcheckDaemonStarted # to update nPidDaemon
+		FUNCcheckDaemonStarted&&: # to update nPidDaemon
 	fi
 }
 
@@ -306,7 +306,7 @@ while true;do
 		# pid wraps count
 		echo -n & nPidLast=$!
 		if((nPidLast<nPidWrapPrevious));then
-			((nPidWrapCount++))
+			((nPidWrapCount++))&&:
 		fi
 		nPidWrapPrevious=$nPidLast
 	fi
