@@ -35,19 +35,27 @@ fi
 SECFUNCuniqueLock --daemonwait
 
 while true;do
-	bOk=true
+	if ! xscreensaver-command -time |grep "screen locked since";then
+		bOk=true
 	
-	if ! nActiveVirtualTerminal="$(sudo fgconsole)";then bOk=false;fi
-	if ! anXorgPidList=(`pgrep Xorg`);then bOk=false;fi
-	if ! nRunningAtVirtualTerminal="`ps --no-headers -o tty,cmd -p ${anXorgPidList[@]} |grep $DISPLAY |sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bOk=false;fi
-	if xscreensaver-command -time |grep "screen locked since";then bOk=false;fi
-	if ! ((nRunningAtVirtualTerminal!=nActiveVirtualTerminal));then bOk=false;fi
+		if ! nActiveVirtualTerminal="$(sudo fgconsole)";then bOk=false;fi
+		if ! anXorgPidList=(`pgrep Xorg`);then bOk=false;fi
+		if ! nRunningAtVirtualTerminal="`\
+			ps --no-headers -o tty,cmd -p ${anXorgPidList[@]} \
+			|grep $DISPLAY \
+			|sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bOk=false;fi
+	#	if xscreensaver-command -time |grep "screen locked since";then bOk=false;fi
+		if ! ((nRunningAtVirtualTerminal!=nActiveVirtualTerminal));then bOk=false;fi
 	
-	echo "nActiveVirtualTerminal=$nActiveVirtualTerminal;nRunningAtVirtualTerminal=$nRunningAtVirtualTerminal;anXorgPidList[@]=(${anXorgPidList[@]})"
+		echo "nActiveVirtualTerminal=$nActiveVirtualTerminal;"
+		echo "nRunningAtVirtualTerminal=$nRunningAtVirtualTerminal;"
+		echo "anXorgPidList[@]=(${anXorgPidList[@]})"
 	
-	if $bOk;then
-		echoc --say "locking t t y $nRunningAtVirtualTerminal"
-		echoc -x "xscreensaver-command -lock"
+		if $bOk;then
+			echoc --say "locking t t y $nRunningAtVirtualTerminal"
+			echoc -x "xscreensaver-command -lock"
+			echoc -x "xscreensaver-command -select 1" #forces a lightweight screensaver
+		fi
 	fi
 	
 	echoc -w -t 10
