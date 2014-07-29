@@ -246,7 +246,7 @@ if ! $bSkipNautilusCheckNow && set |grep -q "NAUTILUS_SCRIPT"; then #set causes 
 	exit 0
 fi
 if $bSkipNautilusCheckNow; then #nautilus way
-	set |grep "NAUTILUS_SCRIPT"
+	set |grep "NAUTILUS_SCRIPT"&&:
 fi
 
 ################## FUNCTIONS 
@@ -368,6 +368,7 @@ function FUNCzenitySelectFiles() {
 function FUNCzenitySelectAndAddFiles() {
 	local lstrFilesToAdd=`FUNCzenitySelectFiles "file to add" "$@"`
 	echoc --info "Adding requested files."
+	#echo "lstrFilesToAdd='$lstrFilesToAdd'" >>/dev/stderr
 	eval $0 --skipnautilus --addfiles $lstrFilesToAdd
 };export -f FUNCzenitySelectAndAddFiles
 
