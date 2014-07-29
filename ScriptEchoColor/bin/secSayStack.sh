@@ -211,7 +211,7 @@ function FUNCsayStack() {
 				
 				if ! $lbConversionWorked;then
 					if ! FUNCexecSS avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
-						SECFUNCechoErrA "avconv failed."
+						SECFUNCechoErrA "avconv failed." #is avconv broken?
 						rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
 					else
 						lbConversionWorked=true

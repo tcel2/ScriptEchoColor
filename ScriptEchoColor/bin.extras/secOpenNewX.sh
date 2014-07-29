@@ -650,12 +650,14 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
 #    fi
     if varset --show pidX1="`FUNCisX1running`";then
 	    #echo "pidX1=$pidX1"
-      echoc -x "ps -p $pidX1"
-      if [[ "$pidX1" == "`pgrep -t tty8,tty9 -x Xorg`" ]];then
-	      echoc -x "sudo -k pkill -t tty8,tty9 -x Xorg"
-	    else
-	      echoc -x "sudo -k kill -SIGKILL $pidX1"
-      fi
+	    if [[ -n "$pidX1" ]];then
+		    echoc -x "ps -p $pidX1"
+		    if [[ "$pidX1" == "`pgrep -t tty8,tty9 -x Xorg`" ]];then
+			    echoc -x "sudo -k pkill -t tty8,tty9 -x Xorg"
+			  else
+			    echoc -x "sudo -k kill -SIGKILL $pidX1"
+		    fi
+		  fi
     fi
     
   	# kill xscreensaver if it was used at :1
@@ -666,9 +668,11 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
 #      kill -SIGKILL $pidXscrsv
 #    fi
     if pidXscrsv=`ps -A -o pid,command |grep "xscreensaver -display :1" |grep -v grep |sed -r "$sedOnlyPid"`;then
-	    echo "pidXscrsv=$pidXscrsv"
-      ps -p $pidXscrsv
-      kill -SIGKILL $pidXscrsv
+    	if [[ -n "$pidXscrsv" ]];then
+			  echo "pidXscrsv=$pidXscrsv"
+		    ps -p $pidXscrsv
+		    kill -SIGKILL $pidXscrsv
+		  fi
     fi
     
     exit 0
@@ -916,6 +920,8 @@ sleep 2 #TODO improve with qdbus waiting for jwm?
 xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
 if $bScreenSaverOnlyLockByHand;then
 	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
+else
+	xterm -geometry 1x1 -display :1 -e "secAutoScreenLock.sh; #kill=skip"&
 fi
 #xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 

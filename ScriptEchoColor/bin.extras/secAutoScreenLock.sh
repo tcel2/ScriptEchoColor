@@ -24,6 +24,8 @@
 
 eval `secinit`
 
+export SEC_SAYVOL=20
+
 echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
 echo "works with xscreensaver" >>/dev/stderr
 
@@ -32,13 +34,13 @@ if ! SECFUNCisShellInteractive;then
 	exec 2>"$SECstrRunLogFile"
 fi
 
-SECFUNCuniqueLock --daemonwait
+SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
 while true;do
 	if ! xscreensaver-command -time |grep "screen locked since";then
 		bOk=true
 	
-		if ! nActiveVirtualTerminal="$(sudo fgconsole)";then bOk=false;fi
+		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bOk=false;fi
 		if ! anXorgPidList=(`pgrep Xorg`);then bOk=false;fi
 		if ! nRunningAtVirtualTerminal="`\
 			ps --no-headers -o tty,cmd -p ${anXorgPidList[@]} \
@@ -52,9 +54,10 @@ while true;do
 		echo "anXorgPidList[@]=(${anXorgPidList[@]})"
 	
 		if $bOk;then
-			echoc --say "locking t t y $nRunningAtVirtualTerminal"
-			echoc -x "xscreensaver-command -lock"
-			echoc -x "xscreensaver-command -select 1" #forces a lightweight screensaver
+			if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
+				echoc --say "locking t t y $nRunningAtVirtualTerminal"
+				echoc -x "xscreensaver-command -select 1" #forces a lightweight screensaver
+			fi
 		fi
 	fi
 	
