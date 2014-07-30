@@ -36,8 +36,16 @@ fi
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
+nLightweightHackId=1
 while true;do
-	if ! xscreensaver-command -time |grep "screen locked since";then
+	strXscreensaverStatus="`xscreensaver-command -time`"
+	
+	bIsLocked=false
+	if echo "$strXscreensaverStatus" |grep "screen locked since";then
+		bIsLocked=true
+	fi
+	
+	if ! $bIsLocked;then
 		bOk=true
 	
 		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bOk=false;fi
@@ -56,8 +64,16 @@ while true;do
 		if $bOk;then
 			if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 				echoc --say "locking t t y $nRunningAtVirtualTerminal"
-				echoc -x "xscreensaver-command -select 1" #forces a lightweight screensaver
+				bIsLocked=true #update status
+				sleep 1 #TODO how to detect if xscreensaver can already accept other commands?
 			fi
+		fi
+	fi
+	
+	if $bIsLocked;then
+		nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+		if((nCurrentHackId!=nLightweightHackId));then
+			echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
 		fi
 	fi
 	
