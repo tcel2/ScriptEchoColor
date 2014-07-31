@@ -43,6 +43,7 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 	exit 1
 fi
 
+export SECbRunLogForce=false #if allowed to be 'true', `less` will fail
 eval `secinit --novarchilddb --nomaintenancedaemon`
 if [[ "$nPidDaemon" != "-1" ]];then
 	if [[ -d "/proc/$nPidDaemon" ]];then

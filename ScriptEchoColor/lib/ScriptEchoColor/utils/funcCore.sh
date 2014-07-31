@@ -1030,7 +1030,7 @@ fi
 export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"
 
-: ${SECbRunLogForce:=false}
+: ${SECbRunLogForce:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
 export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
 SECFUNCcheckForceRunLog
 
