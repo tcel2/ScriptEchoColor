@@ -232,14 +232,16 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 		SECONDS=0
 		while true;do
 			#set -x
-			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO WHY?
+			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO EXPLAIN WHY?!
+			local lnRunningDaemonPid=0
 			if SECFUNCuniqueLock --quiet --id "$lstrId"; then
 				SECFUNCvarSetDB -f
 				SECnPidDaemon=$l_pid # ONLY after the lock has been acquired!
 			else
 				#echo ">>>$SECvarFile,$lstrId,`SECFUNCuniqueLock --id "$lstrId"`"
 				#set -x
-				SECFUNCvarSetDB `SECFUNCuniqueLock --id "$lstrId"` #allows intercommunication between proccesses started from different parents
+				lnRunningDaemonPid="`SECFUNCuniqueLock --id "$lstrId"`"
+				SECFUNCvarSetDB $lnRunningDaemonPid #allows intercommunication between proccesses started from different parents
 				#set +x
 				#echo ">>>$SECvarFile"
 				SECbDaemonWasAlreadyRunning=true
@@ -248,7 +250,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			
 			if ${lbWaitDaemon:?};then
 				if $SECbDaemonWasAlreadyRunning;then
-					echo -ne "$FUNCNAME: Wait Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
+					echo -ne "$FUNCNAME: Wait other ($lnRunningDaemonPid) Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
 					sleep 1 #keep trying to become the daemon
 				else
 					break #has become the daemon, breaks loop..
