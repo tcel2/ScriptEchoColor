@@ -31,10 +31,10 @@ eval `secinit`
 
 #echo "parms: $@";echoc -w
 
-: ${SECbTermLog:=false}
-if [[ "$SECbTermLog" != "true" ]];then
-	export SECbTermLog=false
-fi
+#: ${SECbTermLog:=false}
+#if [[ "$SECbTermLog" != "true" ]];then
+#	export SECbTermLog=false
+#fi
 
 bDoNotClose=false
 bSkipCascade=false
@@ -47,16 +47,16 @@ export nExitWait=0
 strTitleDefault="Xterm_Detached" #TODO check if this is useless?
 varset strTitle="$strTitleDefault"
 strTitleForce=""
-export bLog=$SECbTermLog
-export strLogFile=""
+#export bLog=$SECbTermLog
+#export strLogFile=""
 echoc --info "Options: $@"
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Opens a terminal that will keep running after its parent terminal ends execution."
 		echo -e "\t[options] <CommandToBeRun>"
-		echo "User can set:"
-		echo -e "\tSECbTermLog=<<true>|<false>> so log file will be automatically created."
+#		echo "User can set:"
+#		echo -e "\tSECbTermLog=<<true>|<false>> so log file will be automatically created."
 		echo
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp --nosort
@@ -86,14 +86,14 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bSkipCascade=true
 	elif [[ "$1" == "--killskip" ]];then #help to xterm not be killed
 		bKillSkip=true
-	elif [[ "$1" == "--log" ]];then #help log all the output to automatic file
-		bLog=true
-	elif [[ "$1" == "--nolog" ]];then #help disable automatic log
-		bLog=false
-	elif [[ "$1" == "--logcustom" ]];then #help <logFile>
-		shift
-		strLogFile="$1"
-		bLog=true
+#	elif [[ "$1" == "--log" ]];then #help log all the output to automatic file
+#		bLog=true
+#	elif [[ "$1" == "--nolog" ]];then #help disable automatic log
+#		bLog=false
+#	elif [[ "$1" == "--logcustom" ]];then #help <logFile>
+#		shift
+#		strLogFile="$1"
+#		bLog=true
 	elif [[ "$1" == "--skipchilddb" ]];then #help do not wait for a child to have its SEC DB symlinked to this SEC DB; this is necessary if a child will not use SEC DB, or if it will have a new SEC DB real file forcedly created.
 		bWaitDBsymlink=false
 	else
@@ -133,34 +133,34 @@ if $bKillSkip;then
 	strKillSkip="#kill=skip"
 fi
 
-cmdLogFile=""
-if $bLog;then
-	if [[ -z "$strLogFile" ]];then
-		strLogFile="$HOME/.ScriptEchoColor/SEC.App.log/$strTitle.log"		
-	fi
-	
-#	if [[ -x "$strLogFile" ]];then
-#		# may cause trouble on non linux fs
-#		echoc -p "invalid log file '$strLogFile' is executable..."
-#		exit 1
+#cmdLogFile=""
+#if $bLog;then
+#	if [[ -z "$strLogFile" ]];then
+#		strLogFile="$HOME/.ScriptEchoColor/SEC.App.log/$strTitle.log"		
 #	fi
-	
-	if [[ -n "$strLogFile" ]];then
-		mkdir -vp "`dirname "$strLogFile"`"
-		
-		# create file
-		echo -n >>"$strLogFile"
-		
-		if [[ ! -f "$strLogFile" ]];then
-			echoc -p "invalid log file '$strLogFile'"
-			exit 1
-		fi
-		
-		cmdLogFile=" 2>&1 |tee \"$strLogFile\""
-	fi
-	
-	echoc --info "Log at: '$strLogFile'"
-fi
+#	
+##	if [[ -x "$strLogFile" ]];then
+##		# may cause trouble on non linux fs
+##		echoc -p "invalid log file '$strLogFile' is executable..."
+##		exit 1
+##	fi
+#	
+#	if [[ -n "$strLogFile" ]];then
+#		mkdir -vp "`dirname "$strLogFile"`"
+#		
+#		# create file
+#		echo -n >>"$strLogFile"
+#		
+#		if [[ ! -f "$strLogFile" ]];then
+#			echoc -p "invalid log file '$strLogFile'"
+#			exit 1
+#		fi
+#		
+#		cmdLogFile=" 2>&1 |tee \"$strLogFile\""
+#	fi
+#	
+#	echoc --info "Log at: '$strLogFile'"
+#fi
 
 strDoNotClose=""
 if $bDoNotClose;then
@@ -174,7 +174,8 @@ while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	strPseudoFunctionId="${strPseudoFunctionId}_"
 done
 #eval "function $strPseudoFunctionId () { local ln=0; };export -f $strPseudoFunctionId"
-eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strDoNotClose}; };export -f $strPseudoFunctionId"
+#eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strDoNotClose}; };export -f $strPseudoFunctionId"
+eval "function $strPseudoFunctionId () { FUNCexecParams${strDoNotClose}; };export -f $strPseudoFunctionId"
 #type $strPseudoFunctionId
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P

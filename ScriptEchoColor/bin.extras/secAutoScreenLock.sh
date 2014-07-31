@@ -65,6 +65,7 @@ while true;do
 		bIsLocked=true
 	else
 		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
+		bHackIdChecked=false #just to reset the value as screen is unlocked
 	fi
 	
 	if ! $bIsLocked;then
