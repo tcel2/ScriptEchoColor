@@ -1010,10 +1010,17 @@ function SECFUNCisShellInteractive() {
 	fi
 }
 
-if ! SECFUNCisShellInteractive;then
-	exec 1>"$SECstrRunLogFile"
-	exec 2>"$SECstrRunLogFile"
-fi
+function SECFUNCrunLogForce() {
+	#echo "SECbRunLogForce=$SECbRunLogForce"
+	if ( ! SECFUNCisShellInteractive ) || $SECbRunLogForce;then
+#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
+		echo "SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
+	#	exec 1>"$SECstrRunLogFile"
+	#	exec 2>"$SECstrRunLogFile"
+		exec > >(tee "$SECstrRunLogFile")
+		exec 2>&1
+	fi
+}
 
 export SECbScriptSelfNameChanged=false
 if SECFUNCscriptSelfNameCheckAndSet;then
@@ -1023,7 +1030,9 @@ fi
 export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"
 
+: ${SECbRunLogForce:=false}
 export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
+SECFUNCrunLogForce
 
 # LAST THINGS CODE
 if [[ "$0" == */funcCore.sh ]];then

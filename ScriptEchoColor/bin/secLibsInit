@@ -27,6 +27,7 @@ bCore=false
 bBase=false
 bMisc=false
 bVars=false
+bRunLogForce=false
 bMaintenanceDaemon=true
 bVarChildDB=true
 bForceReload=false
@@ -65,7 +66,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func"*".sh" \
 		#sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*#help (.*)'\1\t\2'"
 		sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*'\1'"
-		astrLibs=(Core Base Misc Vars)
+		astrLibs=(Fast Core Base Misc Vars)
 		for strLib in "${astrLibs[@]}";do
 			SECFUNCdrawLine --left " $strLib " "~"
 			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions" |sort |column -c `tput cols` |column -t
@@ -83,6 +84,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bVars=true
 	elif [[ "$1" == "--force" || "$1" == "-f" ]];then #help force reload of libs, probably only useful for this project development
 		bForceReload=true
+	elif [[ "$1" == "--log" ]];then #help stdout and stderr will be copied to $SECstrRunLogFile, while the terminal will remain interactive if it already was.
+		bRunLogForce=true
 	elif [[ "$1" == "--novarchilddb" || "$1" == "--nochild" ]];then #help "is not a child" makes the script calling this option to do NOT inherit its parent pid shared environment variables DB, only works if vars lib is present
 		bVarChildDB=false
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
@@ -120,6 +123,10 @@ if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bFo
 		export SECinstallPath="`secGetInstallPath.sh`"; #to be faster
 		echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
 	fi;
+fi
+
+if $bRunLogForce;then
+	echo 'export SECbRunLogForce=true;'
 fi
 
 #echo "${SECnPidInitLibBase-},${SECnPidInitLibMisc-},${SECnPidInitLibVars-},$$,$PPID" >>/dev/stderr

@@ -65,9 +65,9 @@ nPidCaller="$PPID"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--set" ]];then #help <Variable> <Value>
 		shift
-		strVar="$1"
+		strVar="${1-}"
 		shift
-		strVal="$1"
+		strVal="${1-}"
 		
 		if [[ -z "$strVal" ]];then
 			echoc -p "$selfName: value for '$strVar' is empty"
@@ -80,7 +80,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit
 	elif [[ "$1" == "--unset" ]];then #help <Variable>
 		shift
-		strVar="${1}_RemoteInfo_${nPidCaller}"
+		strVar="${1-}"
+		if [[ -z "$strVar" ]];then
+			echoc -p "$selfName: strVar='$strVar' is empty"
+			exit 1
+		fi
+		strVar+="_RemoteInfo_${nPidCaller}"
 		SECFUNCcfgWriteVar --remove "${strVar}"
 		exit
 	elif [[ "$1" == "--infoloop" ]];then #help just read stored info in a loop
