@@ -133,6 +133,7 @@ fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
+	export SECbRunLogForce=false #to make it sure it wont mess in case .bashrc has it 'true'
 	
 	source "$SECDEVstrProjectPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
 	function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
