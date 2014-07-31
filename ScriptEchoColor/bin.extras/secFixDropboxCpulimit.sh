@@ -48,11 +48,12 @@ nPidDropbox=""
 nCpuLimitPercentual=1
 while true;do
 	#nPidDropbox=`ps -A -o pid,comm |egrep " dropbox$" |sed -r "s'^ *([[:digit:]]*) .*'\1'"`
-	nPidDropbox="`pgrep dropbox`"&&:
+	nPidDropbox="`pgrep -f "/dropbox " |head -n 1`"&&:
 	if [[ -n "$nPidDropbox" ]];then
+		#ps -o pid,cmd -p `pgrep -f "/dropbox "`&&:
 		renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "` # several pids, do not surround with "
 		#echoc -x "cpulimit -v -p $nPidDropbox -l $nCpuLimitPercentual"
-		echoc -x "cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"
+		echoc -x "cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"&&:
 	fi
 	
 	echoc -t 60 -w "waiting for dropbox to start"
