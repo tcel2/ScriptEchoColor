@@ -47,13 +47,21 @@ done
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
+function FUNCxscreensaverStatus() {
+	xscreensaver-command -time&&:
+	return 0
+}
+
 nLightweightHackId=1
 bWasLockedByThisScript=false
+bHackIdChecked=false
 while true;do
-	strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
-	
 	bIsLocked=false
-	if echo "$strXscreensaverStatus" |grep "screen locked since";then
+	
+	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
+	
+	#if echo "$strXscreensaverStatus" |grep "screen locked since";then
+	if FUNCxscreensaverStatus |grep "screen locked since";then
 		bIsLocked=true
 	else
 		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
@@ -80,6 +88,7 @@ while true;do
 				echoc --say "locking t t y $nRunningAtVirtualTerminal"
 				bIsLocked=true #update status
 				bWasLockedByThisScript=true
+				bHackIdChecked=false
 				sleep 1 #TODO how to detect if xscreensaver can already accept other commands?
 			fi
 		fi
@@ -87,10 +96,17 @@ while true;do
 	
 	if $bIsLocked;then
 		if $bWasLockedByThisScript || $bForceLightWeight;then
-			nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
-			if((nCurrentHackId!=nLightweightHackId));then
-				echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+			if ! $bHackIdChecked;then
+				#nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+				nCurrentHackId="`FUNCxscreensaverStatus |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+				if((nCurrentHackId!=nLightweightHackId));then
+					echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+				else
+					bHackIdChecked=true
+				fi
 			fi
+		else
+			echo "Screen locked manually."
 		fi
 	fi
 	
