@@ -49,6 +49,7 @@ eval `secinit`
 #bByPath=false
 #bByUuid=false
 bList=false
+bRetry=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "To let a backup storage go safely sleep, its base id must be supplied (the one that doesnt ends with '-part?')."
@@ -65,6 +66,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #		bByUuid=true
 	elif [[ "$1" == "--list" ]];then #help list all devices available
 		bList=true
+	elif [[ "$1" == "--retry" ]];then #help device may not be ready so keep trying
+		bRetry=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -103,6 +106,12 @@ for strDevTemp in "${astrDevTemp[@]-}";do
 		fi
 	else
 		strDevTemp="$strDevIdsPath/$strDevTemp"
+	fi
+	
+	if $bRetry;then
+		while [[ ! -a "$strDevTemp" ]];do
+			echoc -w -t 60 "waiting device '$strDevTemp' become available"
+		done
 	fi
 	
 	# add to array

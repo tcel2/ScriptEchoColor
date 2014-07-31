@@ -232,19 +232,19 @@ for((i=0;i<${#aWindowList[@]};i++));do
 	if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
 		# adjust size
 		eval `xdotool getwindowgeometry $windowId |grep "Geometry:" |sed -r 's"^.*Geometry: ([[:digit:]]*)x([[:digit:]]*).*$"\
-			SECFUNCvarSet --showdbg windowWidthCurrent=\1;\
-			SECFUNCvarSet --showdbg windowHeightCurrent=\2;"'`
+			windowWidthCurrent=\1;\
+			windowHeightCurrent=\2;"'`
 		#@@@TODO after size is set, the collected size always differ from the asked one...
 		if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
 			SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight
-			xdotool getwindowgeometry $windowId |grep "Geometry:"
+			xdotool getwindowgeometry $windowId |grep "Geometry:"&&:
 		fi
 	
 		# adjust position
 		#xdotool fails to dethermine viewport, use wmctrl
 		eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
-			SECFUNCvarSet --showdbg viewportX=\1;\
-			SECFUNCvarSet --showdbg viewportY=\2;"'`
+			viewportX=\1;\
+			viewportY=\2;"'`
 		SECFUNCexecA --echo xdotool windowmove --sync $windowId \
 			$(( (basePosX-viewportX)+x )) \
 			$(( (basePosY-viewportY)+y )) 2>/dev/null; 
