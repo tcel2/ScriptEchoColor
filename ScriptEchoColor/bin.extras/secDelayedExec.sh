@@ -125,7 +125,7 @@ if $bCheckPointDaemon;then
 			if bash -c "$strCustomCommand";then
 				varset bCheckPoint=true
 				echo "Check Point reached at `date "+%Y%m%d+%H%M%S.%N"`"
-				echo "Waiting commands will only run if this one remain active!!! "
+				echo "'waiting commands' will only run if this one remain active!!! "
 				#TODO check what commands 'ini' if they all already 'RUN' before exiting here?
 			fi
 		fi
