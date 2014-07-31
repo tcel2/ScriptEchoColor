@@ -29,10 +29,9 @@ eval `secinit --nochild`
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >>/dev/stderr
 echo " \$@='$@'" >>/dev/stderr
 
-strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #all exec thru this script will have a log entry here
 #strFullSelfCmd="`basename $0` $@"
 strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
-#echo "strFullSelfCmd='$strFullSelfCmd'"
+echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
 
 varset bCheckPoint=false
 bWaitCheckPoint=false
@@ -40,6 +39,7 @@ nDelayAtLoops=1
 bCheckPointDaemon=false
 bCheckIfAlreadyRunning=true
 nSleepFor=0
+bListAlreadyRunningAndNew=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -59,11 +59,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--noalready" || "$1" == "-n" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
+	elif [[ "$1" == "--alreadylist" ]];then #help list pids that are already running and new pids trying to run the same command
+		bListAlreadyRunningAndNew=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
 	shift
 done
+
+strItIsAlreadyRunning="IT IS ALREADY RUNNING"
 
 if ! SECFUNCisNumber -dn "$nDelayAtLoops";then
 	echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
@@ -78,6 +82,7 @@ if $bWaitCheckPoint;then
 fi
 strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
 
+strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
 function FUNClog() { #help <type with 3 letters> [comment]
 	local lstrType="$1"
 	local lstrLogging=" $lstrType -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"
@@ -105,9 +110,6 @@ function FUNClog() { #help <type with 3 letters> [comment]
 if $bCheckPointDaemon;then
 	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >>/dev/stderr
 	
-	exec 2>>"$strExecGlobalLogFile"
-	exec 1>&2
-	
 	if [[ -z "$strCustomCommand" ]];then
 		FUNClog Err "invalid empty strCustomCommand"
 		exit 1
@@ -130,7 +132,20 @@ if $bCheckPointDaemon;then
 	exit
 fi
 
-####################### MAIN CODE ##########################
+if $bListAlreadyRunningAndNew;then
+	grep -o "${strItIsAlreadyRunning}.*" "$strExecGlobalLogFile" \
+		|sort -u \
+		|sed -r 's".*nPidSelf=([[:digit:]]*) nPidOther=([[:digit:]]*)"\1 \2"' \
+		|while read strLine;do
+			anPids=($strLine)
+			if [[ -d "/proc/${anPids[0]}" ]] && [[ -d "/proc/${anPids[1]}" ]];then
+				echo " New ${anPids[0]}, Old ${anPids[1]}, `ps --no-headers -o cmd -p ${anPids[0]}`"
+			fi
+		done
+	exit
+fi
+
+####################### MAIN "RUN IT" CODE ##########################
 
 if ! SECFUNCisNumber -dn $nSleepFor;then
 	FUNClog Err "invalid nSleepFor='$nSleepFor'"
@@ -142,7 +157,6 @@ if [[ -z "$@" ]];then
 	exit 1
 fi
 
-#echo " ini -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog" >>"$strExecGlobalLogFile"
 FUNClog ini
 
 #if $bWaitCheckPoint;then
@@ -191,26 +205,27 @@ if $bCheckIfAlreadyRunning;then
 		anPidList=(`pgrep -fx "${strFullSelfCmd}$"`)&&:
 		#echo "$$,${anPidList[@]}" >>/dev/stderr
 		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
+			#echo " anPidOther[@]=(${anPidOther[@]})" >>/dev/stderr
 			bFound=false
 			for nPidOther in ${anPidOther[@]-};do
-				if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
+				#echo "\"^ RUN -> .*;pid='$nPidOther';\"" >>/dev/stderr
+				#if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
+				if grep -q " RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
 					bFound=true
 					break;
 				fi
-			done
-			if ! $bFound;then
-				break;
-			fi
+			done;if ! $bFound;then break;fi
 		else
 			if ! echo "${anPidList[@]-}" |grep -qw "$$";then
 				FUNClog wrn "could not find self! "
 			fi
 			break;
 		fi
-		#echo " wrn -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog; # ALREADY RUNNING..." >>"$strExecGlobalLogFile"
-		FUNClog wrn "IT IS ALREADY RUNNING AT nPidOther='$nPidOther' !!! "
+		FUNClog wrn "$strItIsAlreadyRunning nPidSelf=$$ nPidOther=$nPidOther"
 		#sleep 60
-		if echoc -q -t 60 "skip check if already running?";then
+		#if echoc -q -t 60 "skip check if already running?";then
+		if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is already running?";then
+			echoc -x "kill -SIGKILL $nPidOther"
 			break
 		fi
 	done

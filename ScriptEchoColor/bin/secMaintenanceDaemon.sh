@@ -62,6 +62,7 @@ bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
+bLogsList=false
 bShowErrors=false
 #bSetStatusLine=false
 varset --default bShowStatusLine=false
@@ -79,7 +80,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 #	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
 #		bSetStatusLine=true
 #		varset --show bShowStatusLine=false
-	elif [[ "$1" == "--logmon" ]];then #help log monitor
+	elif [[ "$1" == "--logmon" ]];then #help log monitor for activities of this script and also shows a status line
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
 		bLockMonitor=true
@@ -91,6 +92,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bErrorsMonitor=true
 	elif [[ "$1" == "--errors" ]];then #help show all errors (not only last ones)
 		bShowErrors=true
+	elif [[ "$1" == "--loglist" ]];then #help list all log files for running pids
+		bLogsList=true
 	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
 		shift
 		fMonitorDelay="${1-}"
@@ -200,6 +203,21 @@ elif $bShowErrors;then
 	exit
 elif $bErrorsMonitor;then
 	tail -F "${SEC_TmpFolder}/.SEC.Error.log"
+	exit
+elif $bLogsList;then
+#	bRunningPidsOnly=true
+#	if echoc -q -t 3 "show log files for all pids (default is only running pids)?";then
+#		bRunningPidsOnly=false
+#	fi
+	echoc --info "Logs at: '$SECstrTmpFolderLog'"
+	echoc --info "LogFile, CommandLine"
+	strSedOnlyPid='s".*[.]([[:digit:]]*)[.]log$"\1"'
+	anLogPidList=(`ls -1 "$SECstrTmpFolderLog/" |sed -r "$strSedOnlyPid"`)
+	for nLogPid in ${anLogPidList[@]};do
+		if [[ -d "/proc/$nLogPid" ]];then
+			echo "`ls -1 "$SECstrTmpFolderLog/"*"${nLogPid}.log"` `ps --no-headers -o cmd -p $nLogPid`"
+		fi
+	done
 	exit
 fi
 
