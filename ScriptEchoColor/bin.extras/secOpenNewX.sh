@@ -105,47 +105,47 @@ function FUNCCHILDPreventAutoLock() {
 	done
 };export -f FUNCCHILDPreventAutoLock
 
-function FUNCCHILDScreenSaver() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
-	#SECFUNCvarShow bUseXscreensaver #@@@r
-	local strCmdXscreensaver1="xscreensaver -display :1"
-	function FUNClightWeightXscreensaver() {
-		while [[ -d "/proc/$nXscreensaver1Pid" ]];do
-			echo "check for a lightweight screensaver `date`"
-			if FUNCisScreenLockRunning;then
-				# xscreensaver spawns a child with the actual screensaver
-				if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
-					DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver
-					echo "set a lightweight screensaver (maze) `date`"
-				fi
-			fi
-		
-			sleep 10
-		done
-	}
-	function FUNCgetXscreensaverPid(){
-		while true;do	
-			if nXscreensaver1Pid="`pgrep -fx "$strCmdXscreensaver1"`";then
-				varset --show nXscreensaver1Pid=$nXscreensaver1Pid
-				FUNClightWeightXscreensaver
-				break;
-			fi
-			echo "waiting nXscreensaver1Pid be set..."
-			sleep 1
-		done
-	}
-	
-	while true;do #in case it is killed
-		echo "activating screen saver at `date`: '$strCmdXscreensaver1'"
-		if $bUseXscreensaver; then
-			FUNCgetXscreensaverPid&
-			$strCmdXscreensaver1
-	#	else
-	#		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
-		fi
-		sleep 1
-	done
-}; export -f FUNCCHILDScreenSaver
+#function FUNCCHILDScreenSaver() {
+#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	#SECFUNCvarShow bUseXscreensaver #@@@r
+#	local strCmdXscreensaver1="xscreensaver -display :1"
+#	function FUNClightWeightXscreensaver() {
+#		while [[ -d "/proc/$nXscreensaver1Pid" ]];do
+#			echo "check for a lightweight screensaver `date`"
+#			if FUNCisScreenLockRunning;then
+#				# xscreensaver spawns a child with the actual screensaver
+#				if [[ "`ps --ppid $nXscreensaver1Pid -o comm --no-headers`" != "maze" ]];then
+#					DISPLAY=:1 xscreensaver-command -select 1 #grants a lightweight screensaver
+#					echo "set a lightweight screensaver (maze) `date`"
+#				fi
+#			fi
+#		
+#			sleep 10
+#		done
+#	}
+#	function FUNCgetXscreensaverPid(){
+#		while true;do	
+#			if nXscreensaver1Pid="`pgrep -fx "$strCmdXscreensaver1"`";then
+#				varset --show nXscreensaver1Pid=$nXscreensaver1Pid
+#				FUNClightWeightXscreensaver
+#				break;
+#			fi
+#			echo "waiting nXscreensaver1Pid be set..."
+#			sleep 1
+#		done
+#	}
+#	
+#	while true;do #in case it is killed
+#		echo "activating screen saver at `date`: '$strCmdXscreensaver1'"
+#		if $bUseXscreensaver; then
+#			FUNCgetXscreensaverPid&
+#			$strCmdXscreensaver1
+#	#	else
+#	#		DISPLAY=:1 xautolock -locker "bash -c FUNCxlock"
+#		fi
+#		sleep 1
+#	done
+#}; export -f FUNCCHILDScreenSaver
 
 function FUNCisScreenLockRunning() {
 	local lstrDisplay="${1-}"
@@ -917,11 +917,12 @@ fi
 sleep 2 #TODO improve with qdbus waiting for jwm? 
 #SECFUNCvarShow bUseXscreensaver #@@@r
 #xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCCHILDScreenSaver; #kill=skip\""&
-xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
+#xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
+xscreensaver -display :1&
 if $bScreenSaverOnlyLockByHand;then
 	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
 else
-	xterm -geometry 1x1 -display :1 -e "secAutoScreenLock.sh; #kill=skip"&
+	xterm -geometry 1x1 -display :1 -e "secAutoScreenLock.sh --forcelightweight; #kill=skip"&
 fi
 #xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 

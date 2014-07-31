@@ -1010,6 +1010,11 @@ function SECFUNCisShellInteractive() {
 	fi
 }
 
+if ! SECFUNCisShellInteractive;then
+	exec 1>"$SECstrRunLogFile"
+	exec 2>"$SECstrRunLogFile"
+fi
+
 export SECbScriptSelfNameChanged=false
 if SECFUNCscriptSelfNameCheckAndSet;then
 	SECbScriptSelfNameChanged=true

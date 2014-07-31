@@ -25,24 +25,38 @@
 eval `secinit`
 
 export SEC_SAYVOL=20
+#echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
 
-echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
-echo "works with xscreensaver" >>/dev/stderr
-
-if ! SECFUNCisShellInteractive;then
-	exec 1>"$SECstrRunLogFile"
-	exec 2>"$SECstrRunLogFile"
-fi
+bForceLightWeight=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "Works with xscreensaver."
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--forcelightweight" || "$1" == "-f" ]];then #help force a lightweight screensaver to be set, even if screen was manually locked
+		bForceLightWeight=true
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
 nLightweightHackId=1
+bWasLockedByThisScript=false
 while true;do
-	strXscreensaverStatus="`xscreensaver-command -time`"
+	strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
 	
 	bIsLocked=false
 	if echo "$strXscreensaverStatus" |grep "screen locked since";then
 		bIsLocked=true
+	else
+		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
 	fi
 	
 	if ! $bIsLocked;then
@@ -65,15 +79,18 @@ while true;do
 			if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 				echoc --say "locking t t y $nRunningAtVirtualTerminal"
 				bIsLocked=true #update status
+				bWasLockedByThisScript=true
 				sleep 1 #TODO how to detect if xscreensaver can already accept other commands?
 			fi
 		fi
 	fi
 	
 	if $bIsLocked;then
-		nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
-		if((nCurrentHackId!=nLightweightHackId));then
-			echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+		if $bWasLockedByThisScript || $bForceLightWeight;then
+			nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+			if((nCurrentHackId!=nLightweightHackId));then
+				echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+			fi
 		fi
 	fi
 	
