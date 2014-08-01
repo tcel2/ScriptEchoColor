@@ -34,6 +34,7 @@ fi
 
 strSelfName="`basename "$0"`"
 declare -A aDaemonsPid
+export SEC_SAYVOL=20
 
 #aDaemonsPid=()
 
