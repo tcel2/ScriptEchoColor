@@ -37,7 +37,8 @@ if [[ -z "$SEC_SAYID" ]]; then
 fi
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-source "`secGetInstallPath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+#source "`secGetInstallPath`/lib/ScriptEchoColor/utils/funcMisc.sh"
+eval `secinit --ilog --misc`
 
 function FUNCsayStack() {
 	####################### internal cfg of variables, functions and base initializations
@@ -95,7 +96,7 @@ function FUNCsayStack() {
 		# this is necessary as pid ids wrap at `cat /proc/sys/kernel/pid_max`
   	# the pid 'command' at `ps` must have this script filename
   	# this prevents this file from being sourced, see (*1) at the end...
-  	# do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO why?
+  	# do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO explain why...
   	if ! ps -p $1 --no-headers -o command |grep -q "$_SECSAYselfBaseName"; then
   		return 1
   	fi

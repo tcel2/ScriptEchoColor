@@ -27,8 +27,7 @@ if ! type -P secinit >/dev/null;then
 	exit 1
 fi
 
-export SECbRunLogForce=false #TODO if true, for some reason this script freezes?
-eval `secinit` #if it is already installed on the system it will help!
+eval `secinit --nolog` #--nolog otherwise this script will freeze?
 
 export SECDEVstrSelfName="`basename "$0"`"
 echo "Self: $0" >>/dev/stderr
@@ -133,7 +132,7 @@ fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
-	export SECbRunLogForce=false #to make it sure it wont mess in case .bashrc has it 'true'
+	export SECbRunLog=false #to make it sure it wont mess in case .bashrc has it 'true'
 	
 	source "$SECDEVstrProjectPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
 	function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh

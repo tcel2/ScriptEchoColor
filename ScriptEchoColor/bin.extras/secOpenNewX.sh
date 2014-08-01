@@ -922,7 +922,7 @@ xscreensaver -display :1&
 if $bScreenSaverOnlyLockByHand;then
 	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
 else
-	xterm -geometry 1x1 -display :1 -e "export SECbRunLogForce=true;secAutoScreenLock.sh --forcelightweight; #kill=skip"&
+	xterm -geometry 1x1 -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --forcelightweight; #kill=skip"&
 fi
 #xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 

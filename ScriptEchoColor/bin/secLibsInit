@@ -28,10 +28,12 @@ bBase=false
 bMisc=false
 bVars=false
 bRunLogForce=false
+bRunLogDisable=false
 bMaintenanceDaemon=true
 bVarChildDB=true
 bForceReload=false
 bExportFunctions=true
+bInheritParentPidLogFile=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
@@ -86,6 +88,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bForceReload=true
 	elif [[ "$1" == "--log" ]];then #help stdout and stderr will be copied to $SECstrRunLogFile, while the terminal will remain interactive if it already was.
 		bRunLogForce=true
+	elif [[ "$1" == "--nolog" ]];then #help as SECbRunLog may have been set previously to calling this script, this ensures it gets disabled (unless SECbRunLogForce has been set also).
+		bRunLogDisable=true
+	elif [[ "$1" == "--ilog" ]];then #help inherit parent log config
+		bInheritParentPidLogFile=true
 	elif [[ "$1" == "--novarchilddb" || "$1" == "--nochild" ]];then #help "is not a child" makes the script calling this option to do NOT inherit its parent pid shared environment variables DB, only works if vars lib is present
 		bVarChildDB=false
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
@@ -125,8 +131,19 @@ if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bFo
 	fi;
 fi
 
-if $bRunLogForce;then
-	echo 'export SECbRunLogForce=true;'
+if $bInheritParentPidLogFile;then
+	echo 'export SECbInheritParentPidLogFile=true;'
+fi
+
+if ${SECbRunLogForce-false};then #this is an override
+	echo 'export SECbRunLog=true;'
+else
+	if $bRunLogForce;then
+		echo 'export SECbRunLog=true;'
+	fi
+	if $bRunLogDisable;then
+		echo 'export SECbRunLog=false;'
+	fi
 fi
 
 #echo "${SECnPidInitLibBase-},${SECnPidInitLibMisc-},${SECnPidInitLibVars-},$$,$PPID" >>/dev/stderr

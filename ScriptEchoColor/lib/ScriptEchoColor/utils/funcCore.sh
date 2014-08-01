@@ -762,7 +762,7 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 			local lstrFunction
 			for lstrFunction in ${SECastrFunctionStack[@]:0:lnCount};do
 				if [[ -n "$strFuncStack" ]];then strFuncStack+=".";fi
-				strFuncStack+="$lstrFunction@${SECastrDebugFunctionPerFile[$lstrFunction]}"
+				strFuncStack+="$lstrFunction@${SECastrDebugFunctionPerFile[$lstrFunction]-}"
 			done
 #			strFuncStack+=": "
 		else
@@ -1010,15 +1010,34 @@ function SECFUNCisShellInteractive() {
 	fi
 }
 
-function SECFUNCcheckForceRunLog() {
-	#echo "SECbRunLogForce=$SECbRunLogForce"
-	if ( ! SECFUNCisShellInteractive ) || $SECbRunLogForce;then
-#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
-		echo "SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
-	#	exec 1>"$SECstrRunLogFile"
-	#	exec 2>"$SECstrRunLogFile"
-		exec > >(tee "$SECstrRunLogFile")
-		exec 2>&1
+function SECFUNCcheckActivateRunLog() {
+	local lbSetNewLogFile=false
+	
+	if ! ${SECstrRunLogFile+false};then 
+		#if already initialized
+		if $SECbInheritParentPidLogFile;then # will be inherited
+			# parent issued `tee` will keep handling the log
+			return 0
+		else # if NOT inherited, will be reinitialized!
+			lbSetNewLogFile=true
+		fi
+	else
+		# if NOT initialized, will be initialized
+		lbSetNewLogFile=true
+	fi
+	
+	if $lbSetNewLogFile;then
+		export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
+
+		#echo "SECbRunLog=$SECbRunLog"
+		if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
+	#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
+			echo "SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
+		#	exec 1>"$SECstrRunLogFile"
+		#	exec 2>"$SECstrRunLogFile"
+			exec > >(tee "$SECstrRunLogFile")
+			exec 2>&1
+		fi
 	fi
 }
 
@@ -1030,9 +1049,10 @@ fi
 export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"
 
-: ${SECbRunLogForce:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
-export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
-SECFUNCcheckForceRunLog
+: ${SECbRunLogForce:=false} # the override default, only actually used at secLibsInit.sh
+: ${SECbRunLog:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
+: ${SECbInheritParentPidLogFile:=false}
+SECFUNCcheckActivateRunLog #initializes SECstrRunLogFile
 
 # LAST THINGS CODE
 if [[ "$0" == */funcCore.sh ]];then
