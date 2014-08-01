@@ -85,7 +85,9 @@ while true;do
 		echo "anXorgPidList[@]=(${anXorgPidList[@]})"
 	
 		if $bOk;then
-			if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
+			#if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
+			if echoc -x "xscreensaver-command -select $nLightweightHackId";then #lock may fail, but will be retried; -select may lock also depending on user xscreensaver-demo configuration; -select is good as the lightweight one is promptly chosen, in case user has an opengl one by default..
+				echoc -x "xscreensaver-command -lock"&&: #to help on really locking if -select didnt
 				echoc --say "locking t t y $nRunningAtVirtualTerminal"
 				bIsLocked=true #update status
 				bWasLockedByThisScript=true
