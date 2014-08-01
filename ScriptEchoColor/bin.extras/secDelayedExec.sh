@@ -41,6 +41,7 @@ bCheckIfAlreadyRunning=true
 nSleepFor=0
 bListAlreadyRunningAndNew=false
 bListIniCommands=false
+bStay=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -58,8 +59,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckPointDaemon=true
 	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nSleepFor, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
-	elif [[ "$1" == "--noalready" || "$1" == "-n" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
+	elif [[ "$1" == "--nounique" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
+	elif [[ "$1" == "--shouldnotexit" || "$1" == "-d" ]];then #help indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
+		bStay=true
 	elif [[ "$1" == "--alreadylist" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
 	elif [[ "$1" == "--listcmdsini" ]];then #help list commands that entered (ini) the log file
@@ -106,16 +109,17 @@ function FUNClog() { #help <type with 3 letters> [comment]
 		lstrLogging+="; # $lstrComment"
 	fi
 	
-	case "$lstrType" in
-		"wrn"|"Err"|"ini"|"RUN"|"end");; #recognized ok
-		*)
-			echoc -p "invalid lstrType='$lstrType'" >>/dev/stderr;
-			_SECFUNCcriticalForceExit;;
+	case "$lstrType" in	"wrn"|"Err"|"Sne"|"ini"|"RUN"|"end");; #recognized ok
+		*) SECFUNCechoErrA "invalid lstrType='$lstrType'" >>/dev/stderr;
+			 _SECFUNCcriticalForceExit;;
 	esac
 	
 	if [[ "$lstrType" == "wrn" ]];then
 		SEC_WARN=true SECFUNCechoWarnA "$lstrLogging"
 	fi
+	case "$lstrType" in "Err"|"Sne")
+		SECFUNCechoErrA "$lstrLogging";;
+	esac
 	
 	echo "$lstrLogging" >>/dev/stderr
 	echo "$lstrLogging" >>"$strExecGlobalLogFile"
@@ -265,7 +269,10 @@ nRet=0;if (
 );then :; # ':' is a dummy "do nothing" example!
 else nRet=$?;fi
 if((nRet!=0));then
-	FUNClog Err "RUN command '$@' failed, nRet='$nRet'"
+	FUNClog Err "RUN failed, nRet='$nRet'"
+fi
+if $bStay;then
+	FUNClog Sne "Should not have exited..."
 fi
 
 # end Log
