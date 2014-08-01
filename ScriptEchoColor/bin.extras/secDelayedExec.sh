@@ -40,6 +40,7 @@ bCheckPointDaemon=false
 bCheckIfAlreadyRunning=true
 nSleepFor=0
 bListAlreadyRunningAndNew=false
+bListIniCommands=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -61,6 +62,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckIfAlreadyRunning=false
 	elif [[ "$1" == "--alreadylist" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
+	elif [[ "$1" == "--listcmdsini" ]];then #help list commands that entered (ini) the log file
+		bListIniCommands=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
@@ -68,6 +71,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 done
 
 strItIsAlreadyRunning="IT IS ALREADY RUNNING"
+strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+
+if $bListIniCommands;then
+	SEC_WARN=true SECFUNCechoWarnA "this output still needs more cleaning..."
+	cat "$strExecGlobalLogFile" \
+		|grep ini \
+		|grep -o "sec.*" \
+		|sed -r 's@^(.*)[\]""[[:blank:]]*$@\1@'	
+	exit
+fi
 
 if ! SECFUNCisNumber -dn "$nDelayAtLoops";then
 	echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
@@ -82,7 +95,6 @@ if $bWaitCheckPoint;then
 fi
 strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
 
-strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
 function FUNClog() { #help <type with 3 letters> [comment]
 	local lstrType="$1"
 	local lstrLogging=" $lstrType -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"

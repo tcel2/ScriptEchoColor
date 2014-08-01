@@ -36,7 +36,7 @@ bOff=false
 nPid=""
 bBashDebug=false
 strFunctionNames=""
-bListPids=false
+#bListPids=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA; #echo "$@"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -66,8 +66,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strFunctionNames="${1-}"
 		
 		bBashDebug=true
-	elif [[ "$1" == "--list" ]];then #help list pids that are detected as using sec functions
-		bListPids=true
+#	elif [[ "$1" == "--list" ]];then #help list pids that are detected as using sec functions
+#		bListPids=true
 #	elif [[ "$1" == "--test" ]];then #help e --a-b e -b <a> d <b> s [c] f [e] d
 #		exit 1
 	else
@@ -77,23 +77,23 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-if $bListPids;then
-	anListPids=(`ls -1 "$SEC_TmpFolder/SEC."*"."*".vars.tmp" |sed -r 's".*/SEC[.][[:alnum:]_]*[.]([[:digit:]]*)[.]vars[.]tmp"\1"' |sort -un`)
-	nPidsCount=0
-	strOutput=$(
-		for nListPid in ${anListPids[@]};do
-			if [[ -d "/proc/$nListPid" ]];then
-				if [[ "`cat /proc/$nListPid/comm`" != "echoc" ]];then # just skip it...
-					ps --no-headers -o pid,cmd -p "$nListPid"
-					((nPidsCount++))
-				fi
-			fi
-		done
-		SECFUNCdrawLine " `SECFUNCdtFmt --pretty`, Total=$nPidsCount "
-	)
-	echo "$strOutput"
-	exit
-fi
+#if $bListPids;then
+#	anListPids=(`ls -1 "$SEC_TmpFolder/SEC."*"."*".vars.tmp" |sed -r 's".*/SEC[.][[:alnum:]_]*[.]([[:digit:]]*)[.]vars[.]tmp"\1"' |sort -un`)
+#	nPidsCount=0
+#	strOutput=$(
+#		for nListPid in ${anListPids[@]};do
+#			if [[ -d "/proc/$nListPid" ]];then
+#				if [[ "`cat /proc/$nListPid/comm`" != "echoc" ]];then # just skip it...
+#					ps --no-headers -o pid,cmd -p "$nListPid"
+#					((nPidsCount++))
+#				fi
+#			fi
+#		done
+#		SECFUNCdrawLine " `SECFUNCdtFmt --pretty`, Total=$nPidsCount "
+#	)
+#	echo "$strOutput"
+#	exit
+#fi
 
 if $bBashDebug;then
 	if [[ -n "$strFunctionNames" ]];then

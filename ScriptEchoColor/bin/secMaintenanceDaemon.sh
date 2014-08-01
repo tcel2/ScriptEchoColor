@@ -64,6 +64,7 @@ fMonitorDelay="3.0"
 bErrorsMonitor=false
 bLogsList=false
 bShowErrors=false
+bListPids=false
 #bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -85,11 +86,13 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
 		bLockMonitor=true
 		fMonitorDelay=1
-	elif [[ "$1" == "--pidsmon" ]];then #help pids using SEC, monitor
+	elif [[ "$1" == "--pidmon" ]];then #help pids using SEC, monitor
 		bPidsMonitor=true
 		fMonitorDelay=30
 	elif [[ "$1" == "--errmon" ]];then #help errors monitor
 		bErrorsMonitor=true
+	elif [[ "$1" == "--pidlist" ]];then #help list pids that are detected as using sec functions
+		bListPids=true
 	elif [[ "$1" == "--errors" ]];then #help show all errors (not only last ones)
 		bShowErrors=true
 	elif [[ "$1" == "--loglist" ]];then #help list all log files for running pids
@@ -151,6 +154,30 @@ function FUNClocksList(){
 	eval "ls --color -l \"$SEC_TmpFolder/.SEC.FileLock.\"*\".lock$lstrIntermediaryOnly\"$lstrAll 2>/dev/null";
 }
 
+function FUNClistSecPids() {
+	local lanPidList=(`ls -1 "$SEC_TmpFolder/SEC."*"."*".vars.tmp" |sed -r 's".*/SEC[.][[:alnum:]_]*[.]([[:digit:]]*)[.]vars[.]tmp"\1"' |sort -un`)
+	local lnPidsCount=0
+	local lnPid
+	echo "PID,PPID,CMD"
+	local lanActivePids=()
+	local lstrOutput=$(
+		for lnPid in ${lanPidList[@]};do
+			if [[ -d "/proc/$lnPid" ]];then
+				if [[ "`cat /proc/$lnPid/comm`" != "echoc" ]];then # just skip it...
+#					ps --no-headers --forest -o pid,ppid,cmd -p "$lnPid"
+					lanActivePids+=($lnPid)
+					((lnPidsCount++))
+				fi
+			fi
+		done
+		if [[ -n "${lanActivePids[@]-}" ]];then
+			ps --no-headers --forest -o pid,ppid,cmd -p ${lanActivePids[@]}
+		fi
+		SECFUNCdrawLine " `SECFUNCdtFmt --pretty`, Total=$lnPidsCount "
+	)
+	echo "$lstrOutput"
+}
+
 # shall exit if not daemon...
 
 #if $bSetStatusLine;then
@@ -189,9 +216,13 @@ elif $bLockMonitor;then
 		sleep $fMonitorDelay;
 	done
 	exit
+elif $bListPids;then
+	FUNClistSecPids
+	exit
 elif $bPidsMonitor;then
 	while true;do
-		secMessagesControl.sh --list
+#		secMessagesControl.sh --list
+		FUNClistSecPids
 		#sleep $fMonitorDelay;
 		echoc -w -t $fMonitorDelay
 	done
@@ -217,7 +248,7 @@ elif $bLogsList;then
 	anLogPidList=(`ls -1 "$SECstrTmpFolderLog/" |sed -r "$strSedOnlyPid"`)
 	for nLogPid in ${anLogPidList[@]};do
 		if [[ -d "/proc/$nLogPid" ]];then
-			echo "`ls -1 "$SECstrTmpFolderLog/"*"${nLogPid}.log"` `ps --no-headers -o cmd -p $nLogPid`"
+			echo " log='`ls -1 "$SECstrTmpFolderLog/"*"${nLogPid}.log"`';cmd='`ps --no-headers -o cmd -p $nLogPid`';"
 		fi
 	done
 	exit
@@ -337,7 +368,8 @@ while true;do
 	if $bShowStatusLine;then
 		if SECFUNCdelay "Totals" --checkorinit1 10;then
 			nTotPids="`ps -A -L -o lwp |sort  -n |wc -l`"
-			nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
+#			nTotSecPids=$((`secMessagesControl.sh --list |wc -l`-1))
+			nTotSecPids=$((`FUNClistSecPids |wc -l`-1))
 			nTotLocks="`FUNClocksList |wc -l`"
 		fi
 	

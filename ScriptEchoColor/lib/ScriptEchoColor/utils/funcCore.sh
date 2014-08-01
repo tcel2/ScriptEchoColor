@@ -1031,27 +1031,27 @@ function SECFUNCcheckActivateRunLog() {
 	if $lbRestoreDefaults;then
 #		exec 1>/dev/stdout
 #		exec 2>/dev/stderr
-		exec 1>&3 2>&4
+		exec 1>&3 2>&4 #restore
 		return 0
 	fi
 	
-	local lbSetNewLogFile=false
+#	local lbReinitialize=false
 	
-	if ! ${SECstrRunLogFile+false};then 
-		#if already initialized
+#	if ! ${SECstrRunLogFile+false};then # it will always be initialized...
+#		#if already initialized
 		if $SECbRunLogParentInherited;then # will be inherited
 			# parent issued `tee` will keep handling the log
 			return 0
-		else # if NOT inherited, will be reinitialized!
-			lbSetNewLogFile=true
+#		else # if NOT inherited, will be reinitialized!
+#			lbReinitialize=true
 		fi
-	else
-		# if NOT initialized, will be initialized
-		lbSetNewLogFile=true
-	fi
+#	else # it will always be initialized...
+#		# if NOT initialized, will be initialized
+#		lbReinitialize=true
+#	fi
 	
-	if $lbSetNewLogFile;then
-		export SECstrRunLogFile="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
+#	if $lbReinitialize;then
+		SECstrRunLogFile="$SECstrRunLogFileDefault" #ensure it is properly set to current script
 
 		#echo "SECbRunLog=$SECbRunLog"
 		if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
@@ -1063,7 +1063,7 @@ function SECFUNCcheckActivateRunLog() {
 			exec > >(tee "$SECstrRunLogFile")
 			exec 2>&1
 		fi
-	fi
+#	fi
 }
 
 export SECbScriptSelfNameChanged=false
@@ -1075,9 +1075,19 @@ export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"
 
 : ${SECbRunLogForce:=false} # the override default, only actually used at secLibsInit.sh
+export SECbRunLogForce
+
 : ${SECbRunLog:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
+export SECbRunLog
+
 : ${SECbRunLogParentInherited:=false}
-SECFUNCcheckActivateRunLog #initializes SECstrRunLogFile
+export SECbRunLogParentInherited
+
+export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
+: ${SECstrRunLogFile:="$SECstrRunLogFileDefault"}
+export SECstrRunLogFile
+
+SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 
 # LAST THINGS CODE
 if [[ "$0" == */funcCore.sh ]];then

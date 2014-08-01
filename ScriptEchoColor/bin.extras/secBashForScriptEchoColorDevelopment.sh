@@ -27,7 +27,12 @@ if ! type -P secinit >/dev/null;then
 	exit 1
 fi
 
-eval `secinit --nolog` #--nolog otherwise this script will freeze?
+export SECDEVbRunLog=false #if 'true' will restore at user session at the end
+if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or this script will freeze
+	SECDEVbRunLog=$SECbRunLog
+fi
+
+eval `secinit --nolog` #TODO --nolog otherwise this script will freeze, why?
 
 export SECDEVstrSelfName="`basename "$0"`"
 echo "Self: $0" >>/dev/stderr
@@ -203,7 +208,11 @@ function SECFUNCaddToRcFile() {
 		echo " EXEC: ${SECDEVstrCmdTmp}" >>/dev/stderr
 		eval "${SECDEVstrCmdTmp}";
 	fi
-
+	
+	if $SECDEVbRunLog;then
+		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
+	fi
+	
 	if $SECDEVbExitAfterUserCmd;then
 		echo " Exiting..." >>/dev/stderr
 		sleep 1
