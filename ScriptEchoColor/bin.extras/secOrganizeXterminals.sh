@@ -128,13 +128,12 @@ screenWidth=1024
 screenHeight=768
 windowTitleHeight=25
 windowBorderSize=5 #2 #5
+screenHeight=$((screenHeight-screenStatusBarHeight)) #workable area
 
 ############## DAEMON LOOP
 
 function FUNCorganize() {
 	###### AUTO SETUP
-	screenHeight=$((screenHeight-screenStatusBarHeight)) #workable area
-
 	#@@@R FUNCwindowList
 	aWindowList=(`FUNCwindowList`)
 	#@@@R for asdfasdf in ${aWindowList[@]};do echo "<$asdfasdf>";done;echo "<${aWindowList[@]}>";exit #@@@R
@@ -161,6 +160,10 @@ function FUNCorganize() {
 	windowWidth=$(( (screenWidth/columns)-windowBorderSize ))
 	windowHeight=$(( screenHeight/((windowCount+windowCountAdd)/columns) ))
 	windowHeight=$((windowHeight-windowTitleHeight-(windowBorderSize*2)))
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( screenHeight/((windowCount+windowCountAdd)/columns) ))";SEC_DEBUG=false
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( $screenHeight/(($windowCount+$windowCountAdd)/$columns) ))";SEC_DEBUG=false
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$((windowHeight-windowTitleHeight-(windowBorderSize*2)))";SEC_DEBUG=false
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(($windowHeight-$windowTitleHeight-($windowBorderSize*2)))";SEC_DEBUG=false
 
 	x=0
 	y=$screenStatusBarHeight
