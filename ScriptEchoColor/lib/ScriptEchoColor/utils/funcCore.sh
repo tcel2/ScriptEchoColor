@@ -1011,11 +1011,35 @@ function SECFUNCisShellInteractive() {
 }
 
 function SECFUNCcheckActivateRunLog() {
+	local lbRestoreDefaults=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCcheckActivateRunLog_help
+			SECFUNCshowHelp $FUNCNAME
+			return
+		elif [[ "$1" == "--restoredefaultoutputs" ]];then #SECFUNCcheckActivateRunLog_help restore default outputs to stdout and stderr
+			lbRestoreDefaults=true
+		elif [[ "$1" == "--" ]];then #SECFUNCcheckActivateRunLog_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	
+	if $lbRestoreDefaults;then
+#		exec 1>/dev/stdout
+#		exec 2>/dev/stderr
+		exec 1>&3 2>&4
+		return 0
+	fi
+	
 	local lbSetNewLogFile=false
 	
 	if ! ${SECstrRunLogFile+false};then 
 		#if already initialized
-		if $SECbInheritParentPidLogFile;then # will be inherited
+		if $SECbRunLogParentInherited;then # will be inherited
 			# parent issued `tee` will keep handling the log
 			return 0
 		else # if NOT inherited, will be reinitialized!
@@ -1035,6 +1059,7 @@ function SECFUNCcheckActivateRunLog() {
 			echo "SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
 		#	exec 1>"$SECstrRunLogFile"
 		#	exec 2>"$SECstrRunLogFile"
+			exec 3>&1 4>&2 #backup
 			exec > >(tee "$SECstrRunLogFile")
 			exec 2>&1
 		fi
@@ -1051,7 +1076,7 @@ mkdir -p "$SECstrTmpFolderLog"
 
 : ${SECbRunLogForce:=false} # the override default, only actually used at secLibsInit.sh
 : ${SECbRunLog:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
-: ${SECbInheritParentPidLogFile:=false}
+: ${SECbRunLogParentInherited:=false}
 SECFUNCcheckActivateRunLog #initializes SECstrRunLogFile
 
 # LAST THINGS CODE

@@ -132,7 +132,7 @@ if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bFo
 fi
 
 if $bInheritParentPidLogFile;then
-	echo 'export SECbInheritParentPidLogFile=true;'
+	echo 'export SECbRunLogParentInherited=true;'
 fi
 
 if ${SECbRunLogForce-false};then #this is an override

@@ -43,7 +43,7 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 	exit 1
 fi
 
-eval `secinit --nolog --novarchilddb --nomaintenancedaemon` #`less` requires --nolog to work properly
+eval `secinit --novarchilddb --nomaintenancedaemon` 
 if [[ "$nPidDaemon" != "-1" ]];then
 	if [[ -d "/proc/$nPidDaemon" ]];then
 		SECFUNCvarSetDB $nPidDaemon
@@ -197,6 +197,8 @@ elif $bPidsMonitor;then
 	done
 	exit
 elif $bShowErrors;then
+	#`less` requires log to be deactivated
+	SECFUNCcheckActivateRunLog --restoredefaultoutputs
 	while ! echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:;do
 		echoc -w -t 60 "waiting some error log to happen"
 	done
