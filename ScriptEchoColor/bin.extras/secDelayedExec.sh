@@ -42,6 +42,7 @@ nSleepFor=0
 bListAlreadyRunningAndNew=false
 bListIniCommands=false
 bStay=false
+bListWaiting=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -63,10 +64,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckIfAlreadyRunning=false
 	elif [[ "$1" == "--shouldnotexit" || "$1" == "-d" ]];then #help indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
-	elif [[ "$1" == "--alreadylist" ]];then #help list pids that are already running and new pids trying to run the same command
+	elif [[ "$1" == "--listconcurrent" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
 	elif [[ "$1" == "--listcmdsini" ]];then #help list commands that entered (ini) the log file
 		bListIniCommands=true
+	elif [[ "$1" == "--listwaiting" ]];then #help list commands that entered (ini) the log file but havent RUN yet
+		bListWaiting=true
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
@@ -125,6 +128,40 @@ function FUNClog() { #help <type with 3 letters> [comment]
 	echo "$lstrLogging" >>"$strExecGlobalLogFile"
 }
 
+function FUNCcheckIfWaitCmdsHaveRun() {
+	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \
+	echoc --info "Commands that have not been run yet:"
+	grep "^ ini -> .*;w+[[:alnum:]]*s;pid='" "$strExecGlobalLogFile" \
+		|sed -r "s@.*;pid='([[:alnum:]]*)';.*@\1@" \
+		| { 
+			local lbAllRun=true
+		
+			while read nPid;do 
+				if [[ ! -d "/proc/$nPid" ]];then
+					continue
+				fi
+				if ! grep -q "^ RUN -> .*;pid='$nPid';" "$strExecGlobalLogFile";then
+					echo " nPid='$nPid';cmd='`ps --no-headers -o cmd -p $nPid`'"
+					lbAllRun=false
+				fi
+			done
+		
+			if ! $lbAllRun;then
+				return 1
+			fi
+			
+			return 0
+		}
+	
+	return $?
+}
+
+if $bListWaiting;then
+	FUNCcheckIfWaitCmdsHaveRun&&:
+	#echo "returned $?"
+	exit 0
+fi
+
 if $bCheckPointDaemon;then
 	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >>/dev/stderr
 	
@@ -144,13 +181,20 @@ if $bCheckPointDaemon;then
 				varset bCheckPoint=true
 				echo "Check Point reached at `date "+%Y%m%d+%H%M%S.%N"`"
 				echo "'waiting commands' will only run if this one remain active!!! "
-				#TODO check what commands 'ini' if they all already 'RUN' before exiting here?
+				break
 			fi
 		fi
 		sleep $nDelayAtLoops
 	done
 	
-	exit
+	while true;do
+		if FUNCcheckIfWaitCmdsHaveRun;then
+			break;
+		fi
+		echoc -w -t 60 "waiting all commands be actually RUN"
+	done
+	
+	exit 0
 fi
 
 if $bListAlreadyRunningAndNew;then
