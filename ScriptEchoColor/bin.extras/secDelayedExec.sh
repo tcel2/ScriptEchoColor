@@ -77,8 +77,10 @@ if $bListIniCommands;then
 	SEC_WARN=true SECFUNCechoWarnA "this output still needs more cleaning..."
 	cat "$strExecGlobalLogFile" \
 		|grep ini \
-		|grep -o "sec.*" \
-		|sed -r 's@^(.*)[\]""[[:blank:]]*$@\1@'	
+		|grep -o 'sec[[:upper:]][[:alnum:]_]*[.]sh[^.].*' \
+		|sort -u \
+		|sed -r 's@^(.*)[\]""[[:blank:]]*$@\1@'	\
+		|cat #this cat is dummy just to help coding...
 	exit
 fi
 
@@ -148,6 +150,7 @@ if $bCheckPointDaemon;then
 fi
 
 if $bListAlreadyRunningAndNew;then
+	echoc --info "New,Old,CMD"
 	grep -o "${strItIsAlreadyRunning}.*" "$strExecGlobalLogFile" \
 		|sort -u \
 		|sed -r 's".*nPidSelf=([[:digit:]]*) nPidOther=([[:digit:]]*)"\1 \2"' \

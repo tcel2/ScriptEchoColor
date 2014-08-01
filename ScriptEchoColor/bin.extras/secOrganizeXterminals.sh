@@ -100,6 +100,8 @@ function FUNCwindowList() {
 	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]}" |tr ' ' '\n' |tac`)
 	
 	echo "${listWindowIdsSorted[@]}"
+	
+	return 0
 }
 
 ###################### MAIN CODE
@@ -129,6 +131,108 @@ windowBorderSize=5 #2 #5
 
 ############## DAEMON LOOP
 
+function FUNCorganize() {
+	###### AUTO SETUP
+	screenHeight=$((screenHeight-screenStatusBarHeight)) #workable area
+
+	#@@@R FUNCwindowList
+	aWindowList=(`FUNCwindowList`)
+	#@@@R for asdfasdf in ${aWindowList[@]};do echo "<$asdfasdf>";done;echo "<${aWindowList[@]}>";exit #@@@R
+	windowCount=${#aWindowList[@]}
+	#if(( (windowCount%2)==1 ));then
+	#	((windowCount++))&&:
+	#fi
+	echo "window list: ${aWindowList[@]}"
+
+	columns=$((windowCount/maxRows))
+	if(( (windowCount%maxRows)>0 ));then
+		((columns++))&&:
+	fi
+	if((columns>maxCols));then
+		columns=$maxCols
+	fi
+
+	remainingCols=$((windowCount%columns))
+	windowCountAdd=0
+	if((remainingCols>0));then
+		windowCountAdd=$((columns-(windowCount%columns))) #this is usefull to last row remain on current viewport with empty slots
+	fi
+
+	windowWidth=$(( (screenWidth/columns)-windowBorderSize ))
+	windowHeight=$(( screenHeight/((windowCount+windowCountAdd)/columns) ))
+	windowHeight=$((windowHeight-windowTitleHeight-(windowBorderSize*2)))
+
+	x=0
+	y=$screenStatusBarHeight
+	addX=0
+	addY=$((windowHeight+windowTitleHeight+windowBorderSize)) #windowTitleHeight
+	#for windowId in ${aWindowList[@]}; do 
+	countSkips=0
+	for((i=0;i<${#aWindowList[@]};i++));do
+		windowId=${aWindowList[i]}
+		bDoAddY=true
+	
+		echo "windowId=$windowId"
+	
+		# skipCascade
+		nWindowPid="`xdotool getwindowpid $windowId`"&&:
+		#echo "nWindowPid='$nWindowPid'"
+		if [[ -z "$nWindowPid" ]];then
+			continue
+		fi
+		xtermCmd="`ps --no-headers -p $nWindowPid -o command`"&&:
+		#echo "xtermCmd='$xtermCmd'"
+		if [[ -z "$xtermCmd" ]];then
+			continue
+		fi
+		if echo "$xtermCmd" |grep -q "#skipCascade";then
+			echo "skipping $windowId cmd: $xtermCmd"
+			((countSkips++))&&:
+			continue
+		fi
+	
+		# window at column
+		colIndex=$(( (i-countSkips)%columns ))
+		x=$(( (windowWidth+windowBorderSize)*colIndex))
+		if(( colIndex < (columns-1) ));then
+				bDoAddY=false
+		fi
+	
+		echo
+	
+		if ! xdotool getwindowname $windowId;then	continue;fi
+		if ! xdotool getwindowgeometry $windowId |grep "Geometry:";then continue;fi
+	
+		if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
+			# adjust size
+			eval `xdotool getwindowgeometry $windowId |grep "Geometry:" |sed -r 's"^.*Geometry: ([[:digit:]]*)x([[:digit:]]*).*$"\
+				windowWidthCurrent=\1;\
+				windowHeightCurrent=\2;"'`
+			#@@@TODO after size is set, the collected size always differ from the asked one...
+			if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
+				SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight
+				xdotool getwindowgeometry $windowId |grep "Geometry:"&&:
+			fi
+	
+			# adjust position
+			#xdotool fails to dethermine viewport, use wmctrl
+			eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
+				viewportX=\1;\
+				viewportY=\2;"'`
+			SECFUNCexecA --echo xdotool windowmove --sync $windowId \
+				$(( (basePosX-viewportX)+x )) \
+				$(( (basePosY-viewportY)+y )) 2>/dev/null; 
+		fi
+		
+		((x+=addX))&&: 
+		if $bDoAddY; then
+			((y+=addY))&&: 
+		fi
+	
+		#if ! sleep 3;then exit 1;fi
+	done
+}
+
 bCascadeForceNow=false #set at INT trap
 strPidListPrevious=""
 if $bDaemon; then
@@ -137,7 +241,8 @@ if $bDaemon; then
 		strPidList=`FUNCpidList`
 		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
 			strPidListPrevious="$strPidList"
-			$0 #call self to do the organization
+			#$0 #call self to do the organization
+			FUNCorganize
 			bCascadeForceNow=false
 		fi
 		
@@ -156,106 +261,7 @@ if $bDaemon; then
 		fi
 	done
 	exit 0
+else
+	FUNCorganize
 fi
-
-###### AUTO SETUP
-screenHeight=$((screenHeight-screenStatusBarHeight)) #workable area
-
-#@@@R FUNCwindowList
-aWindowList=(`FUNCwindowList`)
-#@@@R for asdfasdf in ${aWindowList[@]};do echo "<$asdfasdf>";done;echo "<${aWindowList[@]}>";exit #@@@R
-windowCount=${#aWindowList[@]}
-#if(( (windowCount%2)==1 ));then
-#	((windowCount++))&&:
-#fi
-echo "window list: ${aWindowList[@]}"
-
-columns=$((windowCount/maxRows))
-if(( (windowCount%maxRows)>0 ));then
-	((columns++))&&:
-fi
-if((columns>maxCols));then
-	columns=$maxCols
-fi
-
-remainingCols=$((windowCount%columns))
-windowCountAdd=0
-if((remainingCols>0));then
-	windowCountAdd=$((columns-(windowCount%columns))) #this is usefull to last row remain on current viewport with empty slots
-fi
-
-windowWidth=$(( (screenWidth/columns)-windowBorderSize ))
-windowHeight=$(( screenHeight/((windowCount+windowCountAdd)/columns) ))
-windowHeight=$((windowHeight-windowTitleHeight-(windowBorderSize*2)))
-
-x=0
-y=$screenStatusBarHeight
-addX=0
-addY=$((windowHeight+windowTitleHeight+windowBorderSize)) #windowTitleHeight
-#for windowId in ${aWindowList[@]}; do 
-countSkips=0
-for((i=0;i<${#aWindowList[@]};i++));do
-	windowId=${aWindowList[i]}
-	bDoAddY=true
-	
-	echo "windowId=$windowId"
-	
-	# skipCascade
-	nWindowPid="`xdotool getwindowpid $windowId`"&&:
-	#echo "nWindowPid='$nWindowPid'"
-	if [[ -z "$nWindowPid" ]];then
-		continue
-	fi
-	xtermCmd="`ps --no-headers -p $nWindowPid -o command`"&&:
-	#echo "xtermCmd='$xtermCmd'"
-	if [[ -z "$xtermCmd" ]];then
-		continue
-	fi
-	if echo "$xtermCmd" |grep -q "#skipCascade";then
-		echo "skipping $windowId cmd: $xtermCmd"
-		((countSkips++))&&:
-		continue
-	fi
-	
-	# window at column
-	colIndex=$(( (i-countSkips)%columns ))
-	x=$(( (windowWidth+windowBorderSize)*colIndex))
-	if(( colIndex < (columns-1) ));then
-			bDoAddY=false
-	fi
-	
-	echo
-	
-	if ! xdotool getwindowname $windowId;then	continue;fi
-	if ! xdotool getwindowgeometry $windowId |grep "Geometry:";then continue;fi
-	
-	if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
-		# adjust size
-		eval `xdotool getwindowgeometry $windowId |grep "Geometry:" |sed -r 's"^.*Geometry: ([[:digit:]]*)x([[:digit:]]*).*$"\
-			windowWidthCurrent=\1;\
-			windowHeightCurrent=\2;"'`
-		#@@@TODO after size is set, the collected size always differ from the asked one...
-		if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
-			SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight
-			xdotool getwindowgeometry $windowId |grep "Geometry:"&&:
-		fi
-	
-		# adjust position
-		#xdotool fails to dethermine viewport, use wmctrl
-		eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
-			viewportX=\1;\
-			viewportY=\2;"'`
-		SECFUNCexecA --echo xdotool windowmove --sync $windowId \
-			$(( (basePosX-viewportX)+x )) \
-			$(( (basePosY-viewportY)+y )) 2>/dev/null; 
-	fi
-		
-	((x+=addX))&&: 
-	if $bDoAddY; then
-		((y+=addY))&&: 
-	fi
-	
-	#if ! sleep 3;then exit 1;fi
-done
-
 
