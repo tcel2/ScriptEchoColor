@@ -331,7 +331,8 @@ while true; do
 							bOpenNow=true
 							bOpenOnce=false
 						else
-							if echoc -t $nSleepDelay -q "open evince (lyrics pdf viewer) now?";then
+#							if echoc -t $nSleepDelay -q "open evince (lyrics pdf viewer) now?";then
+							if echoc -t 60 -q "open evince (lyrics pdf viewer) now?";then
 								bOpenNow=true
 								bSlept=true
 							fi
