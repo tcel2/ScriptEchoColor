@@ -69,18 +69,6 @@ if ! $bUseMozrepl;then
 		if $bCloseWithWindow;then
 			evince "${strFileLyricsTmp}.pdf" 2>/dev/null&
 			pidGfxReader=$!
-#		else
-#			function FUNCreader() {
-#				while true;do
-#					if pgrep "^banshee$" >/dev/null;then
-#						if ! pgrep -fx "evince ${strFileLyricsTmp}.pdf" >/dev/null;then
-#							evince "${strFileLyricsTmp}.pdf" 2>/dev/null
-#						fi
-#					fi
-#					sleep 1
-#				done
-#			}
-#			FUNCreader&
 		fi
 	fi
 fi
@@ -254,13 +242,20 @@ while true; do
 #				while read nWindowId;do \
 #					xdotool getwindowname $nWindowId |grep -v "^Banshee";\
 #				done);
-		anWindowIdList=(`xdotool search --pid  3527660 2>>/dev/null`)
-		for nWindowId in ${anWindowIdList[@]};do
-			if strMusicNew="`xdotool getwindowname $nWindowId |grep -v "^Banshee"`";then
-				break
-			fi
-		done
-				
+
+#		anWindowIdList=(`xdotool search --pid $pidBanshee 2>>/dev/null`)
+#		for nWindowId in ${anWindowIdList[@]};do
+#			if strMusicNew="`xdotool getwindowname $nWindowId |grep -v "^Banshee"`";then
+#				break
+#			fi
+#		done
+		
+#		strMusicNew=$(gdbus call -e -d org.bansheeproject.Banshee -o /org/bansheeproject/Banshee/PlayerEngine -m org.bansheeproject.Banshee.PlayerEngine.GetCurrentTrack |sed -r "s@.* 'artist': <.([^>]*).>, .* 'name': <.([^>]*).>, .*@\2 by \1 - Banshee Media Player@")&&:
+		strDbusCurrentTrack=$(gdbus call -e -d org.bansheeproject.Banshee -o /org/bansheeproject/Banshee/PlayerEngine -m org.bansheeproject.Banshee.PlayerEngine.GetCurrentTrack)
+		strArtist=$(echo "$strDbusCurrentTrack" |grep "'artist': <" |sed -r "s@.* 'artist': <.([^>]*).>, .*@\1@")&&:
+		strName=$(  echo "$strDbusCurrentTrack" |sed -r "s@.* 'name': <.([^>]*).>, .*@\1@")&&:
+		strMusicNew="$strName by $strArtist - Banshee Media Player"
+		
 		if [[ -n "$strMusicNew" ]] && ( [[ "$strMusicNew" != "$strMusic" ]] || $bJustDownloadedLyrics );then
 			bJustDownloadedLyrics=false
 			if [[ -n "$pidLess" ]] && ps -p $pidLess 2>/dev/null;then
