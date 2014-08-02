@@ -35,6 +35,8 @@ aWindowListToSkip=(
 	"^Yakuake$"
 )
 
+#TODO initially read all windows status, and also detect new windows and read their status too, if not too cpu encumbering...
+
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register
 

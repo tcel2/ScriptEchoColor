@@ -34,12 +34,12 @@ bModeXscreensaver=false
 bDPMSon=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "Works with xscreensaver and gnome-screensaver."
+		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--unity" ]];then #help use Unity to lock the screen
 		bModeUnity=true
-	elif [[ "$1" == "--gnome" ]];then #help use gnome-screensaver-command to lock the screen
+	elif [[ "$1" == "--gnome" ]];then #help use gnome-screensaver to lock the screen
 		bModeGnome=true
 	elif [[ "$1" == "--xscreensaver" ]];then #help use xscreensaver to lock the screen
 		bModeXscreensaver=true
@@ -61,8 +61,11 @@ nModeCount=0
 if $bModeUnity;then ((nModeCount++))&&:;fi
 if $bModeGnome;then ((nModeCount++))&&:;fi
 if $bModeXscreensaver;then ((nModeCount++))&&:;fi
-if((nModeCount>1));then
-	echoc -p "only one mode can be active..."
+if((nModeCount==0));then
+	echoc -p "one screensaver mode is required..."
+	exit 1
+elif((nModeCount>1));then
+	echoc -p "only one screensaver mode can be selected..."
 	exit 1
 fi
 
