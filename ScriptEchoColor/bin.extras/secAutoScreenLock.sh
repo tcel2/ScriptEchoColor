@@ -61,12 +61,15 @@ nModeCount=0
 if $bModeUnity;then ((nModeCount++))&&:;fi
 if $bModeGnome;then ((nModeCount++))&&:;fi
 if $bModeXscreensaver;then ((nModeCount++))&&:;fi
-if((nModeCount>0));then
+if((nModeCount>1));then
 	echoc -p "only one mode can be active..."
 	exit 1
 fi
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
+
+strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
+gdbus monitor -e -d com.canonical.Unity -o /com/canonical/Unity/Session >"$strUnityLog"&
 
 nLightweightHackId=1
 bWasLockedByThisScript=false
@@ -76,11 +79,15 @@ while true;do
 	
 	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
 	
-	if gnome-screensaver-command --query |grep "The screensaver is active";then
+	# The lock may happen by other means than this script...
+	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+		bIsLocked=true
+	fi
+	if ! $bIsLocked && gnome-screensaver-command --query |grep "The screensaver is active";then
 		# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
 		bIsLocked=true
 	fi
-	if xscreensaver-command -time |grep "screen locked since";then
+	if ! $bIsLocked && xscreensaver-command -time |grep "screen locked since";then
 		bIsLocked=true
 	fi
 	
@@ -132,7 +139,8 @@ while true;do
 	
 	if $bIsLocked;then
 		if $bDPMSon;then
-			echoc -x "xset dpms force on"
+			#echoc -x "xset dpms force on" #this would activate energy saving and turn off monitor?
+			echoc -x "xset -dpms" #this prevents energy saving (turn off) from working!
 		fi
 		
 		if $bWasLockedByThisScript || $bForceLightWeight;then
