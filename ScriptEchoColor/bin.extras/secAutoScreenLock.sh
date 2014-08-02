@@ -28,17 +28,23 @@ export SEC_SAYVOL=20
 #echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
 
 bForceLightWeight=false
-bGnomeMode=false
+bModeUnity=false
+bModeGnome=false
+bModeXscreensaver=false
 bDPMSon=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "Works with xscreensaver and gnome-screensaver."
 		SECFUNCshowHelp
 		exit
+	elif [[ "$1" == "--unity" ]];then #help use Unity to lock the screen
+		bModeUnity=true
+	elif [[ "$1" == "--gnome" ]];then #help use gnome-screensaver-command to lock the screen
+		bModeGnome=true
+	elif [[ "$1" == "--xscreensaver" ]];then #help use xscreensaver to lock the screen
+		bModeXscreensaver=true
 	elif [[ "$1" == "--forcelightweight" || "$1" == "-f" ]];then #help force a lightweight screensaver to be set, even if screen was manually locked (only for xscreensaver)
 		bForceLightWeight=true
-	elif [[ "$1" == "--gnome" ]];then #help use gnome-screensaver-command to lock the screen
-		bGnomeMode=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
 		bDPMSon=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -51,16 +57,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
+nModeCount=0
+if $bModeUnity;then ((nModeCount++))&&:;fi
+if $bModeGnome;then ((nModeCount++))&&:;fi
+if $bModeXscreensaver;then ((nModeCount++))&&:;fi
+if((nModeCount>0));then
+	echoc -p "only one mode can be active..."
+	exit 1
+fi
 
-function FUNCscreensaverStatus() {
-	if $bGnomeMode;then
-		gnome-screensaver-command --query
-	else
-		xscreensaver-command -time&&:
-	fi
-	return 0
-}
+SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
 nLightweightHackId=1
 bWasLockedByThisScript=false
@@ -70,24 +76,18 @@ while true;do
 	
 	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
 	
-	#if echo "$strXscreensaverStatus" |grep "screen locked since";then
-	if $bGnomeMode;then
-		# this one is not prompty and may fail...
-		if FUNCscreensaverStatus |grep "The screensaver is active";then
-			bIsLocked=true
-		fi
-	else
-		if FUNCscreensaverStatus |grep "screen locked since";then
-			bIsLocked=true
-		fi
+	if gnome-screensaver-command --query |grep "The screensaver is active";then
+		# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
+		bIsLocked=true
 	fi
-	
-	if $bIsLocked;then
-		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
-		bHackIdChecked=false #just to reset the value as screen is unlocked
+	if xscreensaver-command -time |grep "screen locked since";then
+		bIsLocked=true
 	fi
 	
 	if ! $bIsLocked;then
+		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
+		bHackIdChecked=false #just to reset the value as screen is unlocked
+		
 		bOk=true
 	
 		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bOk=false;fi
@@ -106,16 +106,19 @@ while true;do
 		if $bOk;then
 			#if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 			nScreensaverRet=0
-			if $bGnomeMode;then
+			if $bModeUnity;then
+				qdbus com.canonical.Unity /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
+				nScreensaverRet=$?
+			elif $bModeGnome;then
 				gnome-screensaver-command --lock&&:
 				nScreensaverRet=$?
-			else
-				echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+			elif $bModeXscreensaver;then
+				echoc -x "xscreensaver-command -select $nLightweightHackId"&&: #lock may fail, but will be retried; -select may lock also depending on user xscreensaver-demo configuration; -select is good as the lightweight one is promptly chosen, in case user has an opengl one by default..
 				nScreensaverRet=$?
 			fi
 			
-			if((nScreensaverRet==0));then #lock may fail, but will be retried; -select may lock also depending on user xscreensaver-demo configuration; -select is good as the lightweight one is promptly chosen, in case user has an opengl one by default..
-				if ! $bGnomeMode;then
+			if((nScreensaverRet==0));then
+				if $bModeXscreensaver;then
 					echoc -x "xscreensaver-command -lock"&&: #to help on really locking if -select didnt
 					bHackIdChecked=false
 				fi
@@ -133,10 +136,10 @@ while true;do
 		fi
 		
 		if $bWasLockedByThisScript || $bForceLightWeight;then
-			if ! $bGnomeMode;then
+			if $bModeXscreensaver;then
 				if ! $bHackIdChecked;then
 					#nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
-					nCurrentHackId="`FUNCscreensaverStatus |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+					nCurrentHackId="`xscreensaver-command -time |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
 					if((nCurrentHackId!=nLightweightHackId));then
 						echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
 					else
