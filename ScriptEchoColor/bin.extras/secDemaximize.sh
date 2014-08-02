@@ -130,62 +130,61 @@ then
 	exit 1
 fi
 
+alias ContAftErrA="SECFUNCechoErrA \"code='\`sed -n \"\${LINENO}p\" \"$0\"\`';\";continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
+
 strLastSkipped=""
 declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
 while true; do 
-	windowId="`xdotool getactivewindow`";
-	windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`"&&:
-
-	bOk=true
-
-	# check empty window name
-	if [[ -z "$windowName" ]];then
-		bOk=false
+	sleep 0.25;
+	if SECFUNCdelay daemonHold --checkorinit 5;then
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
+
+	if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
+	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then ContAftErrA;fi
 
 	# SKIP check
-	if $bOk;then
-		for checkName in ${aWindowListToSkip[@]};do
-			#if [[ "$checkName" == "$windowName" ]];then
-			if((`expr match "$windowName" "$checkName"`>0));then
-				bOk=false
-				if [[ "$strLastSkipped" != "$windowName" ]];then
-					echo "INFO: Skipped: $windowName"
-					strLastSkipped="$windowName"
-				fi
-				break
+	bContinue=false
+	for checkName in ${aWindowListToSkip[@]};do
+		#if [[ "$checkName" == "$windowName" ]];then
+		if((`expr match "$windowName" "$checkName"`>0));then
+			bContinue=true
+			if [[ "$strLastSkipped" != "$windowName" ]];then
+				echo "INFO: Skipped: $windowName"
+				strLastSkipped="$windowName"
 			fi
-		done
-	fi
+			break
+		fi
+	done
+	if $bContinue;then continue;fi # is NOT an error...
 	
 	# Do it
-	if $bOk;then
-		bPseudoMaximized=false
-		if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
-			bPseudoMaximized=true
-		fi
+	bPseudoMaximized=false
+	if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
+		bPseudoMaximized=true
+	fi
+	
+	if FUNCisMaximized $windowId;then
+		# demaximize
+		codeGeomMax="`FUNCwindowGeom $windowId`"
+		wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
+		# wait new geometry be effectively applied
+		while [[ "$codeGeomMax" == "`FUNCwindowGeom $windowId`" ]];do
+			#echo "wait..."
+			sleep 0.1
+		done
 		
-		if FUNCisMaximized $windowId;then
-			# demaximize
-			codeGeomMax="`FUNCwindowGeom $windowId`"
-			wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
-			# wait new geometry be effectively applied
-			while [[ "$codeGeomMax" == "`FUNCwindowGeom $windowId`" ]];do
-				#echo "wait..."
-				sleep 0.1
-			done
-			
-			#xwininfo -wm -id $windowId
+		#xwininfo -wm -id $windowId
 #			while xwininfo -wm -id $windowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";do
 #				echo "wait..."
 #				sleep 0.1
 #			done
-			#sleep 1
-			
-			# in case user clicked directly on maximize button
-			#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
-			if [[ -z "${aWindowGeomBkp[$windowId]-}" ]];then
+		#sleep 1
+		
+		# in case user clicked directly on maximize button
+		#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
+		if [[ -z "${aWindowGeomBkp[$windowId]-}" ]];then
 #				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
 #				while true;do
 #					codeGeomTmp="`FUNCwindowGeom $windowId`"
@@ -194,81 +193,74 @@ while true; do
 #						break
 #					fi
 #				done
-				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-				echo "Safe backup: ${aWindowGeomBkp[$windowId]}"
-				#xwininfo -id $windowId #@@@R
-			fi
-			
-			if $bPseudoMaximized;then
-				eval "${aWindowGeomBkp[$windowId]}" #restore variables
-				xdotool windowsize $windowId $nWindowWidth $nWindowHeight;
-				xdotool windowmove $windowId $((nWindowX-nRestoreFixXpos)) $((nWindowY-nRestoreFixYpos));
-				
-				aWindowPseudoMaximizedGeomBkp[$windowId]=""
-				
-				echo "Restored non-maximized size and position: $windowName"
-			else
-				# pseudo-mazimized
-				xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;
-				xdotool windowmove $windowId $nXpos $nYpos;
-				
-				#xdotool getwindowname $windowId
-				aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-				
-				echo "Pseudo Maximized: $windowName"
-			fi
-		else
-			#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
-			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
-			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
-			if $bPseudoMaximized;then
-				eval "${aWindowPseudoMaximizedGeomBkp[$windowId]}"
-				nPMGWindowX=$nWindowX
-				nPMGWindowY=$nWindowY
-				nPMGWindowWidth=$nWindowWidth
-				nPMGWindowHeight=$nWindowHeight
-			fi
-			eval `FUNCwindowGeom $windowId`
-			
-			# backup size and pos if NOT pseudo-maximized
-			#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
-			#FUNCdebugShowVars nWindowWidth nWindowHeight nPMGWindowWidth nPMGWindowHeight
-			if	! $bPseudoMaximized || 
-					((nWindowWidth<nPMGWindowWidth)) ||
-					((nWindowHeight<nPMGWindowHeight));
-			then
-				#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
-				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-				aWindowPseudoMaximizedGeomBkp[$windowId]=""
-			fi
+			aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			echo "Safe backup: ${aWindowGeomBkp[$windowId]}"
+			#xwininfo -id $windowId #@@@R
+		fi
 		
-			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
-				bFixWindowPos=false
-				if(( nWindowY < nYposMinReadPos ));then
+		if $bPseudoMaximized;then
+			eval "${aWindowGeomBkp[$windowId]}" #restore variables
+			if ! xdotool windowsize $windowId $nWindowWidth $nWindowHeight;then ContAftErrA;fi
+			if ! xdotool windowmove $windowId $((nWindowX-nRestoreFixXpos)) $((nWindowY-nRestoreFixYpos));then ContAftErrA;fi
+			
+			aWindowPseudoMaximizedGeomBkp[$windowId]=""
+			
+			echo "Restored non-maximized size and position: $windowName"
+		else
+			# pseudo-mazimized
+			if ! xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;then ContAftErrA;fi
+			if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
+			
+			#xdotool getwindowname $windowId
+			aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			
+			echo "Pseudo Maximized: $windowName"
+		fi
+	else
+		#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
+		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
+		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
+		if $bPseudoMaximized;then
+			eval "${aWindowPseudoMaximizedGeomBkp[$windowId]}"
+			nPMGWindowX=$nWindowX
+			nPMGWindowY=$nWindowY
+			nPMGWindowWidth=$nWindowWidth
+			nPMGWindowHeight=$nWindowHeight
+		fi
+		eval `FUNCwindowGeom $windowId`
+		
+		# backup size and pos if NOT pseudo-maximized
+		#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
+		#FUNCdebugShowVars nWindowWidth nWindowHeight nPMGWindowWidth nPMGWindowHeight
+		if	! $bPseudoMaximized || 
+				((nWindowWidth<nPMGWindowWidth)) ||
+				((nWindowHeight<nPMGWindowHeight));
+		then
+			#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
+			aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			aWindowPseudoMaximizedGeomBkp[$windowId]=""
+		fi
+	
+		#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
+			bFixWindowPos=false
+			if(( nWindowY < nYposMinReadPos ));then
+				bFixWindowPos=true
+			fi
+			if(( nWindowX < nScreenWidth ));then
+				if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
 					bFixWindowPos=true
 				fi
-				if(( nWindowX < nScreenWidth ));then
-					if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
-						bFixWindowPos=true
-					fi
+			fi
+			if(( nWindowY < nScreenHeight ));then
+				if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
+					bFixWindowPos=true
 				fi
-				if(( nWindowY < nScreenHeight ));then
-					if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
-						bFixWindowPos=true
-					fi
-				fi
-				if $bFixWindowPos;then
-					xdotool windowmove $windowId $nXpos $nYpos;
-					echo "Fixing (placement): $windowName"
-				fi
-			#fi
-		fi;
-	fi
-	
-	if SECFUNCdelay daemonHold --checkorinit 5;then
-		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
-	fi
-	
-	sleep 0.25;
+			fi
+			if $bFixWindowPos;then
+				if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
+				echo "Fixing (placement): $windowName"
+			fi
+		#fi
+	fi;
 done
 

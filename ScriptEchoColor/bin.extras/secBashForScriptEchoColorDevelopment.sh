@@ -198,6 +198,10 @@ function SECFUNCaddToRcFile() {
 		echo ' Unbound vars allowed at terminal' >>/dev/stderr
 	fi
 	
+	echo
+	echo " SECstrTmpFolderLog='$SECstrTmpFolderLog'"
+	echo
+	
 	if $SECDEVbCdDevPath;then
 		echo " cd '$SECinstallPath'" >>/dev/stderr
 		cd "$SECinstallPath"
