@@ -313,7 +313,7 @@ nRet=0;if (
 );then :; # ':' is a dummy "do nothing" example!
 else nRet=$?;fi
 if((nRet!=0));then
-	FUNClog Err "RUN failed, nRet='$nRet'"
+	FUNClog Err "nRet='$nRet'"
 fi
 if $bStay;then
 	FUNClog Sne "Should not have exited..."
