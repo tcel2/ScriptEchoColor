@@ -69,6 +69,10 @@ elif((nModeCount>1));then
 	exit 1
 fi
 
+if $bModeGnome;then
+	echoc --alert "Bug: at development time 'gnome-screensaver-command --query' has reported being active while it was not..."
+fi
+
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
 strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
@@ -86,12 +90,14 @@ while true;do
 	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
 		bIsLocked=true
 	fi
-	if ! $bIsLocked && gnome-screensaver-command --query |grep "The screensaver is active";then
-		# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
+	if ! $bIsLocked && xscreensaver-command -time |grep -q "screen locked since";then
 		bIsLocked=true
 	fi
-	if ! $bIsLocked && xscreensaver-command -time |grep "screen locked since";then
-		bIsLocked=true
+	if $bModeGnome;then #gnome is bugged, so only check if its option was actually chosen
+		if ! $bIsLocked && gnome-screensaver-command --query |grep -q "The screensaver is active";then
+			# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
+			bIsLocked=true
+		fi
 	fi
 	
 	if ! $bIsLocked;then
