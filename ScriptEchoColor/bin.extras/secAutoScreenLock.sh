@@ -154,9 +154,11 @@ while true;do
 		
 		if $bWasLockedByThisScript || $bForceLightWeight;then
 			if $bModeXscreensaver;then
+				echo "bHackIdChecked=$bHackIdChecked;"
 				if ! $bHackIdChecked;then
 					#nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
 					nCurrentHackId="`xscreensaver-command -time |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
+					echo "nCurrentHackId=$nCurrentHackId;nLightweightHackId=$nLightweightHackId;"
 					if((nCurrentHackId!=nLightweightHackId));then
 						echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
 					else
