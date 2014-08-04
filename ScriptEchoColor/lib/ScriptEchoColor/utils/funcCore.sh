@@ -617,14 +617,14 @@ function SECFUNCechoErr() { #help echo error messages
 			shift
 			lbLogOnly=true
 		else
-			echo "[`SECFUNCdtTimeForLogMessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
+			echo " [`SECFUNCdtTimeForLogMessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
 			return 1
 		fi
 		shift
 	done
 	
 	###### main code
-	local l_output="[`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
+	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
 	if ! $lbLogOnly;then
 		if $SEC_MsgColored;then
 			echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
@@ -836,7 +836,7 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 		else
 			lstrText="$@"
 		fi
-		local l_output="[`SECFUNCdtTimeForLogMessages`]SECDEBUG: ${strFuncStack}${lstrCaller}${strFuncInOut}$lstrText"
+		local l_output=" [`SECFUNCdtTimeForLogMessages`]SECDEBUG: ${strFuncStack}${lstrCaller}${strFuncInOut}$lstrText"
 		if $SEC_MsgColored;then
 			echo -e " \E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
@@ -892,7 +892,7 @@ function SECFUNCechoWarn() { #help
 	done
 	
 	###### main code
-	local l_output="[`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
+	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
 		echo -e " \E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -932,7 +932,7 @@ function SECFUNCechoBugtrack() { #help
 	done
 	
 	###### main code
-	local l_output="[`SECFUNCdtTimeForLogMessages`]SECBUGTRACK: ${lstrCaller}$@"
+	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECBUGTRACK: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
 	else
@@ -1012,12 +1012,15 @@ function SECFUNCisShellInteractive() {
 
 function SECFUNCcheckActivateRunLog() {
 	local lbRestoreDefaults=false
+	local lbInheritParentLog=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCcheckActivateRunLog_help
 			SECFUNCshowHelp $FUNCNAME
 			return
 		elif [[ "$1" == "--restoredefaultoutputs" ]];then #SECFUNCcheckActivateRunLog_help restore default outputs to stdout and stderr
 			lbRestoreDefaults=true
+		elif [[ "$1" == "--inheritparent" || "$1" == "-i" ]];then #SECFUNCcheckActivateRunLog_help force inherit parent log
+			lbInheritParentLog=true
 		elif [[ "$1" == "--" ]];then #SECFUNCcheckActivateRunLog_help params after this are ignored as being these options
 			shift
 			break
@@ -1028,7 +1031,7 @@ function SECFUNCcheckActivateRunLog() {
 		shift
 	done
 	
-	if $lbRestoreDefaults;then
+	if $SECbRunLogDisable || $lbRestoreDefaults;then
 #		exec 1>/dev/stdout
 #		exec 2>/dev/stderr
 		exec 1>&3 2>&4 #restore
@@ -1039,7 +1042,7 @@ function SECFUNCcheckActivateRunLog() {
 	
 #	if ! ${SECstrRunLogFile+false};then # it will always be initialized...
 #		#if already initialized
-		if $SECbRunLogParentInherited;then # will be inherited
+		if $SECbRunLogParentInherited || $lbInheritParentLog;then # will be inherited
 			# parent issued `tee` will keep handling the log
 			return 0
 #		else # if NOT inherited, will be reinitialized!
@@ -1056,7 +1059,7 @@ function SECFUNCcheckActivateRunLog() {
 		#echo "SECbRunLog=$SECbRunLog"
 		if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
 	#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
-			echo "SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
+			echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
 		#	exec 1>"$SECstrRunLogFile"
 		#	exec 2>"$SECstrRunLogFile"
 			exec 3>&1 4>&2 #backup
@@ -1086,6 +1089,9 @@ export SECbRunLogParentInherited
 export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
 : ${SECstrRunLogFile:="$SECstrRunLogFileDefault"}
 export SECstrRunLogFile
+
+: ${SECbRunLogDisable:=false}
+export SECbRunLogDisable
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 

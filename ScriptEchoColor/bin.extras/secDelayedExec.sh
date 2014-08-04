@@ -302,16 +302,10 @@ FUNClog RUN
 SECFUNCdelay RUN --init
 # also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 # nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-strRunLogFile="$SECstrRunLogFile" #all SEC environment will be cleared
-#nRet=0;if (SECFUNCcleanEnvironment;"$@" 2>&1 >>"$strRunLogFile");then : ;else nRet=$?;fi
-nRet=0;if (
-	SECFUNCcleanEnvironment;
-	#exec 2>&1;exec  >>"$strRunLogFile"; #did not work
-	#exec 1>&2;exec 2>>"$strRunLogFile"; #did not work
-	exec 1>>"$strRunLogFile";exec 2>>"$strRunLogFile"; #worked! :/
+( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+	SECFUNCcleanEnvironment; #all SEC environment will be cleared
 	"$@";
-);then :; # ':' is a dummy "do nothing" example!
-else nRet=$?;fi
+)&&:;nRet=$?
 if((nRet!=0));then
 	FUNClog Err "nRet='$nRet'"
 fi

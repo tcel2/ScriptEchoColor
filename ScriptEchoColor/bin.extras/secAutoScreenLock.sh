@@ -158,11 +158,15 @@ while true;do
 				if ! $bHackIdChecked;then
 					#nCurrentHackId="`echo "$strXscreensaverStatus" |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
 					nCurrentHackId="`xscreensaver-command -time |sed -r 's".*\(hack #([[:digit:]]*)\)$"\1"'`"
-					echo "nCurrentHackId=$nCurrentHackId;nLightweightHackId=$nLightweightHackId;"
-					if((nCurrentHackId!=nLightweightHackId));then
-						echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+					if SECFUNCisNumber -nd "$nCurrentHackId";then
+						echo "nCurrentHackId='$nCurrentHackId';nLightweightHackId='$nLightweightHackId';"
+						if((nCurrentHackId!=nLightweightHackId));then
+							echoc -x "xscreensaver-command -select $nLightweightHackId"&&:
+						else
+							bHackIdChecked=true
+						fi
 					else
-						bHackIdChecked=true
+						SEC_WARN=true SECFUNCechoWarnA "invalid number, waiting xscreensaver init properly: nCurrentHackId='$nCurrentHackId';"
 					fi
 				fi
 			fi

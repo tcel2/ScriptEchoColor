@@ -28,11 +28,11 @@ if ! type -P secinit >/dev/null;then
 fi
 
 export SECDEVbRunLog=false #if 'true' will restore at user session at the end
-if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or this script will freeze
+if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or this script will freeze when `bash` is run at the end
 	SECDEVbRunLog=$SECbRunLog
 fi
 
-eval `secinit --nolog` #TODO --nolog otherwise this script will freeze, why?
+eval `secinit --nolog`
 
 export SECDEVstrSelfName="`basename "$0"`"
 echo "Self: $0" >>/dev/stderr
@@ -50,6 +50,7 @@ function SECDEVFUNCoptions() {
 		unset SECDEVstrProjectPath
 		unset SECDEVbCdDevPath
 		unset SECDEVbUnboundErr
+		unset SECDEVastrCmdTmp
 		SECDEVFUNCoptions #will now run just setting the defaults! yey!
 	elif [[ -n "${1-}" ]];then
 		echoc -p "invalid option '$1'"
@@ -61,6 +62,7 @@ function SECDEVFUNCoptions() {
 		: ${SECDEVstrProjectPath:=""};export SECDEVstrProjectPath
 		: ${SECDEVbCdDevPath:=false};export SECDEVbCdDevPath
 		: ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
+		if ${SECDEVastrCmdTmp+false};then SECDEVastrCmdTmp=();fi;export SECDEVastrCmdTmp
 	fi
 };export -f SECDEVFUNCoptions
 SECDEVFUNCoptions
@@ -122,18 +124,14 @@ if $SECDEVbFullDebug;then
 	#set -x
 fi
 
-## custom first command by user like found at SECFUNCparamsToEval
-#export SECDEVstrCmdTmp=""
-#for strParam in "$@";do
-#	SECDEVstrCmdTmp+="'$strParam' "
-#done
-
 # custom first command by user
-export SECDEVstrCmdTmp="" #good in case of child shell
-if [[ -n "${1-}" ]];then
-	SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
-	#echo " SECDEVstrCmdTmp='$SECDEVstrCmdTmp'" >>/dev/stderr
-fi
+SECDEVastrCmdTmp=("$@")
+##TODO will work better if it become an array...
+#export SECDEVstrCmdTmp="" #good in case of child shell
+#if [[ -n "${1-}" ]];then
+#	SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
+#	#echo " SECDEVstrCmdTmp='$SECDEVstrCmdTmp'" >>/dev/stderr
+#fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -158,22 +156,11 @@ function SECFUNCaddToRcFile() {
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
 	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
 	
-#	export PATH="$SECDEVstrProjectPath/bin:$SECDEVstrProjectPath/bin.extras:$PATH";
-#	echo " PATH='$PATH'" >>/dev/stderr
-#	local lastrAddToPath=(
-#		"$SECDEVstrProjectPath/bin"
-#		"$SECDEVstrProjectPath/bin.extras"
-#	)
-#	local lstrAddToPath
-#	for lstrAddToPath in ${lastrAddToPath[@]};do
-#		if ! echo "$PATH" |grep -q "${lstrAddToPath}:";then #as will be added at beginning, must end with ':'
-#			export PATH="$lstrAddToPath:$PATH";
-#		fi
-#	done
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
 	echo " PATH='$PATH'" >>/dev/stderr
 	
+	###################################### TWICE ###########################################
 	if $SECDEVbExecTwice;then #this grants all is updated
 		echo
 		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
@@ -183,13 +170,23 @@ function SECFUNCaddToRcFile() {
 		$SECDEVstrSelfName #all options are already in exported variables
 		exit #must exit to not execute the options twice, only once above.
 	fi
+	###################################### TWICE EXIT ###########################################
+	
+	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
+	if $SECDEVbRunLog;then
+		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
+	fi
 	
 	# must be after PATH setup
 	if $SECDEVbSecInit;then
-		echo ' eval `secinit --force`' >>/dev/stderr
-		eval `secinit --force`;
+		local lstrInitCmd="secinit --force"
+		echoc --info " $lstrInitCmd" >>/dev/stderr
+		eval `$lstrInitCmd`;
+	else
+		SECFUNCcheckActivateRunLog
+		SECFUNCarraysRestore
 	fi
-	
+
 	# must come after secinit
 	if $SECDEVbUnboundErr;then
 		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
@@ -208,15 +205,17 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# user custom initial command
-	if [[ -n "${SECDEVstrCmdTmp}" ]];then
-		echo " EXEC: ${SECDEVstrCmdTmp}" >>/dev/stderr
-		eval "${SECDEVstrCmdTmp}";
+	if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
+		( astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
+			SECbRunLog=true SECFUNCcheckActivateRunLog #TODO SECbRunLog should be true if it was before running this script...
+			if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
+			echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
+			"${astrCmdTmp[@]}";
+		)&&:;nRet=$?
+		if((nRet!=0));then
+			SEC_WARN=true SECFUNCechoWarnA "cmd='${SECDEVastrCmdTmp[@]}';nRet='$nRet';"
+		fi
 	fi
-	
-	if $SECDEVbRunLog;then
-		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
-	fi
-	
 	if $SECDEVbExitAfterUserCmd;then
 		echo " Exiting..." >>/dev/stderr
 		sleep 1
@@ -231,6 +230,7 @@ function SECFUNCaddToRcFile() {
 };export -f SECFUNCaddToRcFile
 
 #history -a
+SECFUNCarraysExport
 bash --rcfile <(echo 'SECFUNCaddToRcFile;')
 
 

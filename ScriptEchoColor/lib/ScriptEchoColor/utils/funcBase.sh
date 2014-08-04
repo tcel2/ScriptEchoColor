@@ -1160,12 +1160,17 @@ function SECFUNCcleanEnvironment() { #help clean environment from everything rel
 	done
 	
 	local lstrCmdUnset="`set |egrep "^_?SEC" |sed -r 's"^([[:alnum:]_]*)[ =].*"unset \1"'`"
-	local lstrCmdUnalias="unalias `alias |egrep "^alias _?SEC" |sed -r 's"^alias (_?SEC[[:alnum:]_]*)=.*"\1"' |tr "\n" " "`"
+	local lstrCmdUnalias="`alias |egrep "^alias _?SEC" |sed -r 's"^alias (_?SEC[[:alnum:]_]*)=.*"\1"' |tr "\n" " "`"
+	if [[ -n "$lstrCmdUnalias" ]];then
+		lstrCmdUnalias="unalias $lstrCmdUnalias"
+	fi
 	if $lbJustList;then
 		(echo "$lstrCmdUnset" && echo "$lstrCmdUnalias") |sort
 	else
 		$lstrCmdUnset
-		$lstrCmdUnalias
+		if [[ -n "$lstrCmdUnalias" ]];then
+			$lstrCmdUnalias
+		fi
 	fi
 }
 

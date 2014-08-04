@@ -143,6 +143,7 @@ else
 	fi
 	if $bRunLogDisable;then
 		echo 'export SECbRunLog=false;'
+		echo 'export SECbRunLogDisable=true;'
 	fi
 fi
 
