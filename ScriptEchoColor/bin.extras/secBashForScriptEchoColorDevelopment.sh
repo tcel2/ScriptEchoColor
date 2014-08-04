@@ -126,12 +126,6 @@ fi
 
 # custom first command by user
 SECDEVastrCmdTmp=("$@")
-##TODO will work better if it become an array...
-#export SECDEVstrCmdTmp="" #good in case of child shell
-#if [[ -n "${1-}" ]];then
-#	SECDEVstrCmdTmp="`eval \`secinit --base\` >>/dev/stderr; SECFUNCparamsToEval "$@"`"
-#	#echo " SECDEVstrCmdTmp='$SECDEVstrCmdTmp'" >>/dev/stderr
-#fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -172,21 +166,16 @@ function SECFUNCaddToRcFile() {
 	fi
 	###################################### TWICE EXIT ###########################################
 	
-	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
-	if $SECDEVbRunLog;then
-		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
-	fi
-	
 	# must be after PATH setup
 	if $SECDEVbSecInit;then
 		local lstrInitCmd="secinit --force"
-		echoc --info " $lstrInitCmd" >>/dev/stderr
+		echoc --info " $lstrInitCmd"
 		eval `$lstrInitCmd`;
 	else
 		SECFUNCcheckActivateRunLog
 		SECFUNCarraysRestore
 	fi
-
+	
 	# must come after secinit
 	if $SECDEVbUnboundErr;then
 		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
@@ -216,6 +205,12 @@ function SECFUNCaddToRcFile() {
 			SEC_WARN=true SECFUNCechoWarnA "cmd='${SECDEVastrCmdTmp[@]}';nRet='$nRet';"
 		fi
 	fi
+	
+	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
+	if $SECDEVbRunLog;then
+		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
+	fi
+	
 	if $SECDEVbExitAfterUserCmd;then
 		echo " Exiting..." >>/dev/stderr
 		sleep 1
