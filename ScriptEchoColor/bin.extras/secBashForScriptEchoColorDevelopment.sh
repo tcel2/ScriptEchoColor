@@ -196,7 +196,7 @@ function SECFUNCaddToRcFile() {
 	# user custom initial command
 	if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 		( astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
-			SECbRunLog=true SECFUNCcheckActivateRunLog #TODO SECbRunLog should be true if it was before running this script...
+			SECbRunLog=true SECFUNCcheckActivateRunLog #force log!
 			if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
 			echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
 			"${astrCmdTmp[@]}";
