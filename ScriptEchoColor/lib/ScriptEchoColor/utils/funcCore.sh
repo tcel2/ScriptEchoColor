@@ -1095,8 +1095,7 @@ export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log
 : ${SECstrRunLogFile:="$SECstrRunLogFileDefault"}
 export SECstrRunLogFile
 
-: ${SECbRunLogDisable:=false}
-export SECbRunLogDisable
+: ${SECbRunLogDisable:=false} #DO NOT EXPORT THIS ONE as subshells may have trouble to start logging... #TODO review this...
 
 : ${SECbRunLogEnabled:=false}
 export SECbRunLogEnabled

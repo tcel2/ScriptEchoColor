@@ -51,6 +51,7 @@ function SECDEVFUNCoptions() {
 		unset SECDEVbCdDevPath
 		unset SECDEVbUnboundErr
 		unset SECDEVastrCmdTmp
+		unset SECDEVbHasCmdTmp
 		SECDEVFUNCoptions #will now run just setting the defaults! yey!
 	elif [[ -n "${1-}" ]];then
 		echoc -p "invalid option '$1'"
@@ -63,6 +64,7 @@ function SECDEVFUNCoptions() {
 		: ${SECDEVbCdDevPath:=false};export SECDEVbCdDevPath
 		: ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
 		if ${SECDEVastrCmdTmp+false};then SECDEVastrCmdTmp=();fi;export SECDEVastrCmdTmp
+		: ${SECDEVbHasCmdTmp:=false};export SECDEVbHasCmdTmp
 	fi
 };export -f SECDEVFUNCoptions
 SECDEVFUNCoptions
@@ -126,6 +128,9 @@ fi
 
 # custom first command by user
 SECDEVastrCmdTmp=("$@")
+if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
+	SECDEVbHasCmdTmp=true
+fi
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -154,7 +159,7 @@ function SECFUNCaddToRcFile() {
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
 	echo " PATH='$PATH'" >>/dev/stderr
 	
-	###################################### TWICE ###########################################
+	###################################### TWICE MODE ###########################################
 	if $SECDEVbExecTwice;then #this grants all is updated
 		echo
 		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
@@ -164,24 +169,21 @@ function SECFUNCaddToRcFile() {
 		$SECDEVstrSelfName #all options are already in exported variables
 		exit #must exit to not execute the options twice, only once above.
 	fi
-	###################################### TWICE EXIT ###########################################
+	###################################### TWICE MODE - EXIT ###########################################
 	
-	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
-	if $SECDEVbRunLog;then
-		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
-	fi
-	
-	# must be after PATH setup
+	# must be after PATH setup !!!
 	if $SECDEVbSecInit;then
 		local lstrInitCmd="secinit --force"
 		echoc --info " $lstrInitCmd"
 		eval `$lstrInitCmd`;
-	else
-		SECFUNCcheckActivateRunLog
-		SECFUNCarraysRestore
+	fi
+
+	# Must be after secinit!!!
+	if $SECDEVbRunLog;then
+		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
 	fi
 	
-	# must come after secinit
+	# must come after secinit !!!
 	if $SECDEVbUnboundErr;then
 		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
 	else
@@ -199,16 +201,25 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	# user custom initial command
-	if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
-		( astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
-			SECbRunLog=true SECFUNCcheckActivateRunLog #force log!
-			if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
-			echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
-			"${astrCmdTmp[@]}";
-		)&&:;nRet=$?
-		if((nRet!=0));then
-			SEC_WARN=true SECFUNCechoWarnA "cmd='${SECDEVastrCmdTmp[@]}';nRet='$nRet';"
-		fi
+	if $SECDEVbHasCmdTmp;then
+#		eval `secinit --force` # mainly to restore the exported arrays and initialize the log
+		#SECFUNCarraysRestore
+		#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
+#		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
+			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
+			( #eval `secinit --force`;
+				eval `secinit --force` # mainly to restore the exported arrays and initialize the log
+				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
+				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
+				#SECFUNCcheckActivateRunLog; #force log!
+				if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
+				echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
+				"${astrCmdTmp[@]}";
+			)&&:;nRet=$?
+			if((nRet!=0));then
+				SEC_WARN=true SECFUNCechoWarnA "cmd='${SECDEVastrCmdTmp[@]}';nRet='$nRet';"
+			fi
+#		fi
 	fi
 	
 	if $SECDEVbExitAfterUserCmd;then
