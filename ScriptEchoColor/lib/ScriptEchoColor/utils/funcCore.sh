@@ -627,7 +627,7 @@ function SECFUNCechoErr() { #help echo error messages
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
 	if ! $lbLogOnly;then
 		if $SEC_MsgColored;then
-			echo -e " \E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
+			echo -e "\E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
 		else
 			echo "${l_output}" >>/dev/stderr
 		fi
@@ -838,7 +838,7 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 		fi
 		local l_output=" [`SECFUNCdtTimeForLogMessages`]SECDEBUG: ${strFuncStack}${lstrCaller}${strFuncInOut}$lstrText"
 		if $SEC_MsgColored;then
-			echo -e " \E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
+			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
 		else
 			echo "${l_output}" >>/dev/stderr
 		fi
@@ -894,7 +894,7 @@ function SECFUNCechoWarn() { #help
 	###### main code
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
-		echo -e " \E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
+		echo -e "\E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
 	else
 		echo "${l_output}" >>/dev/stderr
 	fi
@@ -1034,7 +1034,10 @@ function SECFUNCcheckActivateRunLog() {
 	if $SECbRunLogDisable || $lbRestoreDefaults;then
 #		exec 1>/dev/stdout
 #		exec 2>/dev/stderr
-		exec 1>&3 2>&4 #restore
+		if $SECbRunLogEnabled;then
+			exec 1>&3 2>&4 #restore (if not yet enabled it would redirect to nothing and bug out)
+			SECbRunLogEnabled=false
+		fi
 		return 0
 	fi
 	
@@ -1065,6 +1068,8 @@ function SECFUNCcheckActivateRunLog() {
 			exec 3>&1 4>&2 #backup
 			exec > >(tee "$SECstrRunLogFile")
 			exec 2>&1
+			
+			SECbRunLogEnabled=true
 		fi
 #	fi
 }
@@ -1092,6 +1097,9 @@ export SECstrRunLogFile
 
 : ${SECbRunLogDisable:=false}
 export SECbRunLogDisable
+
+: ${SECbRunLogEnabled:=false}
+export SECbRunLogEnabled
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 

@@ -166,6 +166,11 @@ function SECFUNCaddToRcFile() {
 	fi
 	###################################### TWICE EXIT ###########################################
 	
+	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
+	if $SECDEVbRunLog;then
+		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
+	fi
+	
 	# must be after PATH setup
 	if $SECDEVbSecInit;then
 		local lstrInitCmd="secinit --force"
@@ -204,11 +209,6 @@ function SECFUNCaddToRcFile() {
 		if((nRet!=0));then
 			SEC_WARN=true SECFUNCechoWarnA "cmd='${SECDEVastrCmdTmp[@]}';nRet='$nRet';"
 		fi
-	fi
-	
-	#echo "SECDEVbRunLog=$SECDEVbRunLog;SECbRunLog=$SECbRunLog;"
-	if $SECDEVbRunLog;then
-		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
 	fi
 	
 	if $SECDEVbExitAfterUserCmd;then
