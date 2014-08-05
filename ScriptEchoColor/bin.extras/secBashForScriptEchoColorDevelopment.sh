@@ -34,7 +34,7 @@ fi
 
 eval `secinit --nolog`
 
-export SECDEVstrSelfName="`basename "$0"`"
+export SECDEVstrSelfName="`readlink -f "$0"`";SECDEVstrSelfName="`basename "$SECDEVstrSelfName"`"
 echo "Self: $0" >>/dev/stderr
 strFileCfg="$HOME/.${SECDEVstrSelfName}.cfg"
 
