@@ -208,9 +208,10 @@ function SECFUNCaddToRcFile() {
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 			( #eval `secinit --force`;
+				SECbRunLog=true #force log!
 				eval `secinit --force` # mainly to restore the exported arrays and initialize the log
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
-				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
+#				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
 				if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
 				echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
