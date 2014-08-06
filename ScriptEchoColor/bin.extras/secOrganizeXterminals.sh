@@ -87,10 +87,11 @@ function FUNCwindowList() {
 	local lnSystemPidMax=`cat /proc/sys/kernel/pid_max`
 	local listWindowIdsSorted=()
 	for windowId in ${listWindowIds[@]};do
-		local windowPid=`xdotool getwindowpid $windowId`
+		local windowPid="`xdotool getwindowpid $windowId`"&&:
 		if [[ -n "$windowPid" ]] && ! ps -o command -p $windowPid |grep -q "#skipCascade";then
-			local elapsedPidTime=`ps --no-headers -o etimes -p $windowPid`
-			local lnWindowPidFixedSize=`printf "%0${#lnSystemPidMax}d" ${windowPid}`
+			local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
+			local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
+			# sort like in the newests are the last ones
 			local lnIndex="${elapsedPidTime}${lnWindowPidFixedSize}"
 			listWindowIdsSorted[lnIndex]="$windowId" 
 		fi
