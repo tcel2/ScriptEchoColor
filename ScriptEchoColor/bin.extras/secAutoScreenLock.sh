@@ -123,7 +123,8 @@ while true;do
 			#if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 			nScreensaverRet=0
 			if $bModeUnity;then
-				qdbus com.canonical.Unity /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
+#				qdbus com.canonical.Unity /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
+				qdbus com.canonical.Unity.Launcher /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
 				nScreensaverRet=$?
 			elif $bModeGnome;then
 				gnome-screensaver-command --lock&&:
