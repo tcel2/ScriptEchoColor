@@ -69,7 +69,8 @@ SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECast
 function _SECFUNClogMsg() { #<logfile> <params become message>
 	local lstrLogFile="$1"
 	shift
-	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
+	#echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$lstrLogFile"
+	echo " `date "+%Y%m%d+%H%M%S.%N"`;p$$;bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID;$0;`ps --no-headers -o cmd -p $$`;$@;" >>"$lstrLogFile"
 }
 function _SECFUNCbugTrackExec() {
 	#(echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;$@;" && "$@" 2>&1) >>"$SECstrBugTrackLogFile"
@@ -82,11 +83,15 @@ function _SECFUNCcriticalForceExit() {
 	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
 	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
-	while true;do
-		#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-		read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
-		sleep 1
-	done
+	if test -t 0;then
+		while true;do
+			#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
+			read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
+			sleep 1
+		done
+	fi
+	
+	exit 1
 }
 
 function SECFUNCgetUserNameOrId(){ #help outputs username (prefered) or userid
@@ -991,7 +996,12 @@ function SECFUNCaddToString() { #help <lstrVariableId> <lstrSeparator> <lstrWhat
 	fi
 }
 
-function SECFUNCisShellInteractive() {
+function SECFUNCisShellInteractive() { #--force shell to be interactive or exit
+	local lbForce=false
+	if [[ "${1-}" == "--force" ]];then
+		lbForce=true
+		shift
+	fi
 #	if [[ "`tty`" == "not a tty" ]];then
 #		return 1
 #	fi
@@ -1006,6 +1016,9 @@ function SECFUNCisShellInteractive() {
 		return 0
 	else
 		SECFUNCechoDbgA "shell is NOT interactive"
+		if $lbForce;then
+			_SECFUNCcriticalForceExit
+		fi
 		return 1
 	fi
 }

@@ -34,6 +34,7 @@ bVarChildDB=true
 bForceReload=false
 bExportFunctions=true
 bInheritParentPidLogFile=false
+bInteractiveRequired=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
@@ -92,6 +93,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bRunLogDisable=true
 	elif [[ "$1" == "--ilog" ]];then #help inherit parent log config
 		bInheritParentPidLogFile=true
+	elif [[ "$1" == "--interactive" || "$1" == "-i" ]];then #help requires shell to be interactive or will fail
+		bInteractiveRequired=true
 	elif [[ "$1" == "--novarchilddb" || "$1" == "--nochild" ]];then #help "is not a child" makes the script calling this option to do NOT inherit its parent pid shared environment variables DB, only works if vars lib is present
 		bVarChildDB=false
 	elif [[ "$1" == "--nomaintenancedaemon" ]];then #help do not check and auto load the maintenance daemon
@@ -148,21 +151,35 @@ else
 fi
 
 #echo "${SECnPidInitLibBase-},${SECnPidInitLibMisc-},${SECnPidInitLibVars-},$$,$PPID" >>/dev/stderr
+bFastExit=false
 if $bFast;then 
-	if ! $bForceReload && [[ "${SECnPidInitLibFast-}" == "$PPID" ]];then exit;fi
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh\";"
+	if ! $bForceReload && [[ "${SECnPidInitLibFast-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh\";";
+	fi
 elif $bCore;then 
-	if ! $bForceReload && [[ "${SECnPidInitLibCore-}" == "$PPID" ]];then exit;fi
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh\";"
+	if ! $bForceReload && [[ "${SECnPidInitLibCore-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh\";";
+	fi
 elif $bBase;then
-	if ! $bForceReload && [[ "${SECnPidInitLibBase-}" == "$PPID" ]];then exit;fi
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh\";" #it imports funcCore.sh
+	if ! $bForceReload && [[ "${SECnPidInitLibBase-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh\";" #it imports funcCore.sh
+	fi
 elif $bMisc;then
-	if ! $bForceReload && [[ "${SECnPidInitLibMisc-}" == "$PPID" ]];then exit;fi
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh\";" #it imports funcBase.sh
+	if ! $bForceReload && [[ "${SECnPidInitLibMisc-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh\";" #it imports funcBase.sh
+	fi
 elif $bVars;then
-	if ! $bForceReload && [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then exit;fi
-	echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
+	if ! $bForceReload && [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
+	fi
+fi
+
+if $bInteractiveRequired;then #this check must happen before fast exit
+	echo 'SECFUNCisShellInteractive --force;'
+fi
+
+if $bFastExit;then
+	exit
 fi
 
 # export function before running any function!
