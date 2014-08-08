@@ -677,8 +677,9 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
     
     exit 0
   elif [[ "$1" == "--help" ]]; then #help show help info
-    echo "can be used at startup applications as: $0 --returnX0"
-    echo "usage: options runCommand"
+		echo "Lets you open a new X session. It is light weight: no effects but still optionally window managed with JWM. Very usefull to run 3D intensive applications and games with stability and in a non obstrusive way."
+    echo "Can be used at startup applications as: $0 --returnX0"
+    echo "Usage: options runCommand"
     
     # this sed only cleans lines that have extended options with "--" prefixed
     #sedCleanHelpLine='s"\(.*\"\)\(--.*\)\".*#opt" \2\t"' #helpskip

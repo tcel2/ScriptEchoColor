@@ -22,8 +22,6 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#help lower texture sizes til a max of (default) 1024x1024 (change with --maxsize)
-
 ############## FUNCTIONS #######################################################
 bForceProcessLastBatch=false
 function FUNCexitError() {
@@ -39,7 +37,7 @@ function FUNCexitError() {
 
 function FUNCcheckMissing () {
 	if [[ -z "$1" ]] || [[ "${1:0:1}" == "-" ]]; then
-		echoc -p -- "--$2 missing value"
+		echoc -p -- "$2 missing value"
 		exit 1
 	fi
 }
@@ -86,8 +84,7 @@ EOF
 		echoc -p "fail to write gimp script at $l_where"
 		exit 1
 	fi
-}
-export -f FUNCcreateGimpScript #to work with find -exec
+};export -f FUNCcreateGimpScript #to work with find -exec
 
 function FUNCcreateGimpScriptEverywhere () {
 	find $HOME -type d -name ".gimp-*" -exec bash -c 'FUNCcreateGimpScript "{}"' \; 2>/dev/null
@@ -107,8 +104,8 @@ function FUNCbkpFileName() {
 # if bOptRecursive is not set, initialize them all, it will be already set when this script is called by find command.
 bOnce=false
 if [[ ! -n ${bOptRecursive+dummy} ]]; then
-	echoc -c
 	eval `secinit`
+#	echoc -c
 	
 	SECvarOptWriteAlways=false
 	SECFUNCvarSet --default beginAt=`date +"%s"`
@@ -139,49 +136,89 @@ fi
 bOptRecursive=false # can only be set if there is a cmdline option for it...
 
 ############### OPTIONS ########################################################
-while true; do
-	if [[ "${1:0:2}" == "--" ]];then
-		opt="${1:2}"
-		if [[ "$opt" == "help" ]]; then #opt show this help
-			grep "#help" $0 |grep -v "#skip"
-			
-			sedCleanHelp='s".*\$opt.*==.*\"\(.*\)\".*#opt \(.*\)"\t--\1\t\2"' #skip
-			grep "#opt" $0 |grep -v "#skip" |sed "$sedCleanHelp"
-			
-			exit 0
-		elif [[ "$opt" == "recursive" ]]; then #opt <extension> recursively find and modifies all files with the given extension
-			bOptRecursive=true;
-			shift
-			FUNCcheckMissing "$1" "$opt"
-			strExtension="$1"
-		elif [[ "$opt" == "maxsize" ]]; then #opt <size> max width or height to resize if greater
-			shift
-			FUNCcheckMissing "$1" "$opt"
-			maxSize="$1"
-		elif [[ "$opt" == "halfsize" ]]; then #opt resize to half in w and h
-			bHalfsize=true
-		elif [[ "$opt" == "batch" ]]; then #opt <ammount> execute in a batch of ammount (may work faster)
-			bBatch=true
-			shift
-			FUNCcheckMissing "$1" "$opt"
-			batchAmmount=$1
-		elif [[ "$opt" == "allowlayers" ]]; then #opt multiple layers still does not work with the simple script-fu? to try anyway, use this option.
-			allowlayers=true
-		elif [[ "$opt" == "exclude" ]]; then #opt <pattern> exclude files matching pattern, can have more than one, ex.: "*tmp*.txt"
-			shift 
-			FUNCcheckMissing "$1" "$opt"
-			strExclude="$strExclude -not -name \"$1\" "
-		elif [[ "$opt" == "reportonly" ]]; then #opt will just report what files can be worked with chosen options
-			bReportOnly=true
-		else
-			echoc -p "invalid option $1"
-			exit 1
-		fi
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	opt="$1"
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "Lower texture sizes til a max of (default) 1024x1024 (change with --maxsize)."
+		SECFUNCshowHelp --colorize "It will resize all texture that gimp supports like .dds, .tga, .jpg, .gif etc, but mainly used in 3D applications or 3D games, so your low mem gfx card can run it!"
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--recursive" ]]; then #help <extension> recursively find and modifies all files with the given extension
+		bOptRecursive=true;
 		shift
-		continue
+		FUNCcheckMissing "${1-}" "$opt"
+		strExtension="$1"
+	elif [[ "$1" == "--maxsize" ]]; then #help <size> max width or height to resize if greater
+		shift
+		FUNCcheckMissing "${1-}" "$opt"
+		maxSize="$1"
+	elif [[ "$1" == "--halfsize" ]]; then #help resize to half in w and h
+		bHalfsize=true
+	elif [[ "$1" == "--batch" ]]; then #help <ammount> execute in a batch of ammount (may work faster)
+		bBatch=true
+		shift
+		FUNCcheckMissing "${1-}" "$opt"
+		batchAmmount=$1
+	elif [[ "$1" == "--allowlayers" ]]; then #help multiple layers still does not work with the simple script-fu? to try anyway, use this option.
+		allowlayers=true
+	elif [[ "$1" == "--exclude" ]]; then #help <pattern> exclude files matching pattern, can have more than one, ex.: "*tmp*.txt"
+		shift 
+		FUNCcheckMissing "${1-}" "$opt"
+		strExclude="$strExclude -not -name \"$1\" "
+	elif [[ "$1" == "--reportonly" ]]; then #help will just report what files can be worked with chosen options
+		bReportOnly=true
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
 	fi
-	break #filename at tail param
+	shift
 done
+#while true; do
+#	if [[ "${1:0:2}" == "--" ]];then
+#		opt="${1:2}"
+#		if [[ "$opt" == "help" ]]; then #opt show this help
+#			grep "#help" $0 |grep -v "#skip"
+#			
+#			sedCleanHelp='s".*\$opt.*==.*\"\(.*\)\".*#opt \(.*\)"\t--\1\t\2"' #skip
+#			grep "#opt" $0 |grep -v "#skip" |sed "$sedCleanHelp"
+#			
+#			exit 0
+#		elif [[ "$opt" == "recursive" ]]; then #opt <extension> recursively find and modifies all files with the given extension
+#			bOptRecursive=true;
+#			shift
+#			FUNCcheckMissing "$1" "$opt"
+#			strExtension="$1"
+#		elif [[ "$opt" == "maxsize" ]]; then #opt <size> max width or height to resize if greater
+#			shift
+#			FUNCcheckMissing "$1" "$opt"
+#			maxSize="$1"
+#		elif [[ "$opt" == "halfsize" ]]; then #opt resize to half in w and h
+#			bHalfsize=true
+#		elif [[ "$opt" == "batch" ]]; then #opt <ammount> execute in a batch of ammount (may work faster)
+#			bBatch=true
+#			shift
+#			FUNCcheckMissing "$1" "$opt"
+#			batchAmmount=$1
+#		elif [[ "$opt" == "allowlayers" ]]; then #opt multiple layers still does not work with the simple script-fu? to try anyway, use this option.
+#			allowlayers=true
+#		elif [[ "$opt" == "exclude" ]]; then #opt <pattern> exclude files matching pattern, can have more than one, ex.: "*tmp*.txt"
+#			shift 
+#			FUNCcheckMissing "$1" "$opt"
+#			strExclude="$strExclude -not -name \"$1\" "
+#		elif [[ "$opt" == "reportonly" ]]; then #opt will just report what files can be worked with chosen options
+#			bReportOnly=true
+#		else
+#			echoc -p "invalid option $1"
+#			exit 1
+#		fi
+#		shift
+#		continue
+#	fi
+#	break #filename at tail param
+#done
 
 if $bOnce; then
 	SECFUNCvarWriteDB

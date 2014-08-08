@@ -131,6 +131,7 @@ function FUNCtask {
       local execCmdAtTerm=`FUNClastTermId $l_newestSession`
       if((execCmdAtTerm>=0));then
         echoerr "new term: cmd=$l_cmd,title=$l_strTitle,session=$l_newestSession,termId=$execCmdAtTerm."
+				sleep $nSleep
         qdbus org.kde.yakuake /yakuake/sessions runCommandInTerminal $execCmdAtTerm "$l_cmd" >>/dev/stderr
       else
         echoerr "ERROR: invalid terminal..."
@@ -139,22 +140,42 @@ function FUNCtask {
   done
 }
 
+#wait for yakuake to start
+nSleep=0
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+	  #grep "\"--" $0 |grep -v grep
+		SECFUNCshowHelp --colorize "Uses qdbus to open new sessions and terminals at Yakuake."
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--checkAndRun" ]]; then #help check if yakuake is running before running the command at it
+		while ! qdbus org.kde.yakuake 2>&1 >/dev/null; do
+		  sleep 1
+		done
+		sleep 3
+		qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
+		exit 0
+	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help nSleep (seconds) before running
+		shift
+		nSleep="${1-}"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
+if ! SECFUNCisNumber -dn $nSleep;then
+	echoc -p invalid "nSleep='$nSleep'"
+	exit 1
+fi
+
 params="$@"
 
-#wait for yakuake to start
-if [[ "$1" == "--help" ]]; then
-  grep "\"--" $0 |grep -v grep
-  exit 0
-elif [[ "$1" == "--checkAndRun" ]]; then
-  while ! qdbus org.kde.yakuake 2>&1 >/dev/null; do
-    sleep 1
-  done
-  sleep 3
-  qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
-  exit 0
-#elif [[ -n "$1" ]]; then
-#  if [[ "${1:0:1}" == "-" ]]; then
-elif [[ -n "$params" ]]; then
+if [[ -n "$params" ]]; then
   if [[ "${params:0:1}" == "-" ]]; then
     echo "ERROR: invalid option $1..."
     read -n 1
@@ -170,7 +191,6 @@ elif [[ -n "$params" ]]; then
     #fi
   fi
 fi
-
 
 echoerr "Running at Yakuake!"
 

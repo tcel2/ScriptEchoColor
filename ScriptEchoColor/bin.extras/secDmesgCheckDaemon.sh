@@ -24,6 +24,26 @@
 
 eval `secinit`
 
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		#grep "#help" "`type -P $0`" |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
+		SECFUNCshowHelp --colorize "Read dmesg output, and check for problems like usb pendrive not connected with high speed etc.; and popup alerts so you can fix! "
+		SECFUNCcfgRead;echo "Add checks to '$SECcfgFileName'"
+		echo "You can test this way: echo 'dmesg message go here' |sudo -k tee /dev/kmsg"
+		SECFUNCshowHelp
+		exit
+#	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
+#		echo "#your code goes here"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register
 
@@ -58,9 +78,6 @@ if [[ ! -f "$SECcfgFileName" ]]; then
 
 fi
 
-echo "Add checks to '$SECcfgFileName'"
-grep "#help" "`type -P $0`" |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
-echo "You can test this way: echo 'dmesg message go here' |sudo -k tee /dev/kmsg"
 echoc -x "cat '$SECcfgFileName'"
 
 function FUNCdmesg() {

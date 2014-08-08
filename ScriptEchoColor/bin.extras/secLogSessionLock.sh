@@ -22,6 +22,27 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+eval `secinit`
+
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "Supported screensavers: gnome."
+		SECFUNCshowHelp --colorize "Calculate how much time your screensaver has been active."
+		#TODO calc how much time it was inactive and sum for a day, also check for mouse/keyboard activity, and statistics too for cpu/gpu usage, temperatures and music players (too much?)"
+		SECFUNCshowHelp
+		exit
+#	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
+#		echo "#your code goes here"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
 logFile="."`basename $0`".log"
 
 nGlobalDelay=0
