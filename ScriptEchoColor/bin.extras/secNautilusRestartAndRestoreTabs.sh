@@ -55,6 +55,8 @@ function FUNCaddTab() {
 	local lstrOpenLocation="$1"
 	
 	if [[ ! -d "$lstrOpenLocation" ]];then
+		SECFUNCexec --echo ls -ld "$lstrOpenLocation"
+		SECFUNCexec --echo stat -c %F "$lstrOpenLocation"
 		echoc -p "invalid location '$lstrOpenLocation'"
 		return 1
 	fi
@@ -78,18 +80,26 @@ function FUNCaddTab() {
 	xdotool key Return 2>/dev/null;sleep $lnSafeDelay
 }
 
-sedUrlDecoder='s % \\\\x g'
-astrOpenLocations=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
+sedUrlDecoder='s"%"\\x"g'
 
+astrOpenLocations=()
 bJustAddTab=false
 if [[ -n "${astrNewTabs[0]-}" ]];then
 	bJustAddTab=true
-	astrOpenLocations=()
 	for strNewTab in "${astrNewTabs[@]}";do
 		astrOpenLocations+=("$strNewTab")
 		#FUNCaddTab "$strNewTab"
 	done
 	#exit 0
+else
+	astrOpenLocationsTmp=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
+	for strOpenLocation in "${astrOpenLocationsTmp[@]}"; do 
+		astrOpenLocations+=("`echo "$strOpenLocation" \
+			|sed -r 's@^file://(.*)@\1@' \
+			|sed "$sedUrlDecoder" \
+			|sed 's;.*;"&";' \
+			|xargs printf`")
+	done
 fi
 
 varset --show astrOpenLocations
@@ -117,11 +127,11 @@ if((${#astrOpenLocations[@]}>0));then
 #		strOpenLocation=`echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@'`
 #		strOpenLocation=`echo "$strOpenLocation" |sed "$sedUrlDecoder"`
 #		strOpenLocation=`echo "$strOpenLocation" |xargs printf`
-		strOpenLocation=`echo "$strOpenLocation" \
-			|sed -r 's@^file://(.*)@\1@' \
-			|sed "$sedUrlDecoder" \
-			|sed 's;.*;"&";' \
-			|xargs printf`
+#		strOpenLocation=`echo "$strOpenLocation" \
+#			|sed -r 's@^file://(.*)@\1@' \
+#			|sed "$sedUrlDecoder" \
+#			|sed 's;.*;"&";' \
+#			|xargs printf`
 		
 		strSkipAddTab=""
 		if $bFirst;then
@@ -129,7 +139,8 @@ if((${#astrOpenLocations[@]}>0));then
 			bFirst=false
 		fi
 		
-		FUNCaddTab $strSkipAddTab "$strOpenLocation"
+		#echo "$strOpenLocation"
+		FUNCaddTab $strSkipAddTab "$strOpenLocation"&&:
 		
 #		if $bFirst;then
 #			bFirst=false
