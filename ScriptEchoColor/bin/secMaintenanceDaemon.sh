@@ -65,6 +65,7 @@ bErrorsMonitor=false
 bLogsList=false
 bShowErrors=false
 bListPids=false
+bShowCriticalErrors=false
 #bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -89,12 +90,14 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	elif [[ "$1" == "--pidmon" ]];then #help pids using SEC, monitor
 		bPidsMonitor=true
 		fMonitorDelay=30
-	elif [[ "$1" == "--errmon" ]];then #help errors monitor
+	elif [[ "$1" == "--errmon" ]];then #help easy to read errors list
 		bErrorsMonitor=true
 	elif [[ "$1" == "--pidlist" ]];then #help list pids that are detected as using sec functions
 		bListPids=true
 	elif [[ "$1" == "--errors" ]];then #help show all errors (not only last ones)
 		bShowErrors=true
+	elif [[ "$1" == "--criticals" ]];then #help show all critical errors
+		bShowCriticalErrors=true
 	elif [[ "$1" == "--loglist" ]];then #help list all log files for running pids
 		bLogsList=true
 	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
@@ -227,11 +230,18 @@ elif $bPidsMonitor;then
 		echoc -w -t $fMonitorDelay
 	done
 	exit
+elif $bShowCriticalErrors;then
+	#`less` requires log to be deactivated
+	SECFUNCcheckActivateRunLog --restoredefaultoutputs
+	while ! echoc -x "less '$SECstrFileCriticalErrorLog'"&&:;do
+		echoc -w -t 60 "No critical errors on log."
+	done
+	exit
 elif $bShowErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
 	while ! echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:;do
-		echoc -w -t 60 "waiting some error log to happen"
+		echoc -w -t 60 "No errors on log."
 	done
 	exit
 elif $bErrorsMonitor;then

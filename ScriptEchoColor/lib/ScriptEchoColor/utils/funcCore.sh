@@ -79,10 +79,12 @@ function _SECFUNCbugTrackExec() {
 	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
 	"$@" 2>>"$lstrBugTrackLogFile"
 }
+: ${SECstrFileCriticalErrorLog:="/tmp/.SEC.CriticalMsgs.`id -un`.log"}
+export SECstrFileCriticalErrorLog
 function _SECFUNCcriticalForceExit() {
 	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
-	_SECFUNClogMsg "/tmp/.SEC.CriticalMsgs.`id -un`.log" "$lstrCriticalMsg"
+	_SECFUNClogMsg "$SECstrFileCriticalErrorLog" "$lstrCriticalMsg"
 	if test -t 0;then
 		while true;do
 			#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
