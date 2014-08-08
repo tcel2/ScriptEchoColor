@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
-strFile="${astrFiles[0]}"
+#strFile="${astrFiles[0]}"
 
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
@@ -39,10 +39,15 @@ function FUNCrenameSymlink() {
 			echoc -w -t 60
 		else
 			zenity --info --text "Symlink '$lstrFile' points to missing file '$strNewSymlinkTarget'"
+			echoc -w
 		fi
 	fi
 };export -f FUNCrenameSymlink
 
 cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
-xterm -e "bash -i -c \"FUNCrenameSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
+for strFile in "${astrFiles[@]}";do 
+	if ! xterm -e "bash -i -c \"FUNCrenameSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
+		break;
+	fi
+done
 
