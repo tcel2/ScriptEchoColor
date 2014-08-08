@@ -235,7 +235,14 @@ elif $bShowErrors;then
 	done
 	exit
 elif $bErrorsMonitor;then
-	tail -F "${SEC_TmpFolder}/.SEC.Error.log"
+	#tail -F "${SEC_TmpFolder}/.SEC.Error.log"
+	nLineCount=0
+	while true;do
+		nLineCountCurrent=$(cat "${SEC_TmpFolder}/.SEC.Error.log" |wc -l)
+		tail -n $((nLineCountCurrent-nLineCount)) "${SEC_TmpFolder}/.SEC.Error.log" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
+		nLineCount=$nLineCountCurrent
+		echoc -w "SECERROR Log, `SECFUNCdtFmt --pretty`"
+	done
 	exit
 elif $bLogsList;then
 #	bRunningPidsOnly=true
