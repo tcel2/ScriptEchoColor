@@ -75,8 +75,10 @@ fi
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
+strDBusUnityDestination="com.canonical.Unity.Launcher"
+strDBusUnityObjPath="/com/canonical/Unity/Session"
 strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
-gdbus monitor -e -d com.canonical.Unity -o /com/canonical/Unity/Session >"$strUnityLog"&
+gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath" >"$strUnityLog"&
 
 nLightweightHackId=1
 bWasLockedByThisScript=false
@@ -113,7 +115,7 @@ while true;do
 			|grep $DISPLAY \
 			|sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bOk=false;fi
 	#	if xscreensaver-command -time |grep "screen locked since";then bOk=false;fi
-		if ! ((nRunningAtVirtualTerminal!=nActiveVirtualTerminal));then bOk=false;fi
+		if((nRunningAtVirtualTerminal==nActiveVirtualTerminal));then bOk=false;fi
 	
 		echo "nActiveVirtualTerminal=$nActiveVirtualTerminal;"
 		echo "nRunningAtVirtualTerminal=$nRunningAtVirtualTerminal;"
@@ -123,8 +125,8 @@ while true;do
 			#if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 			nScreensaverRet=0
 			if $bModeUnity;then
-#				qdbus com.canonical.Unity /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
-				qdbus com.canonical.Unity.Launcher /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
+#				qdbus com.canonical.Unity "$strDBusUnityObjPath" com.canonical.Unity.Session.Lock&&:
+				qdbus "$strDBusUnityDestination" "$strDBusUnityObjPath" com.canonical.Unity.Session.Lock&&:
 				nScreensaverRet=$?
 			elif $bModeGnome;then
 				gnome-screensaver-command --lock&&:
