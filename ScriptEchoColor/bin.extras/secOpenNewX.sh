@@ -425,10 +425,19 @@ function FUNCscript() {
 		local ldelay=10
 		local lbStopped=false
 		SECONDS=0
+		local lbOverrideContinueRunning=false
 		while true;do
 			SECFUNCvarReadDB
 			#if openNewX.sh --script isScreenLocked;then
+			local lbStopOnScreenLock=false
 			if FUNCisScreenLockRunning;then
+				lbStopOnScreenLock=true
+			fi
+			if $lbOverrideContinueRunning;then
+				lbStopOnScreenLock=false
+			fi
+			
+			if $lbStopOnScreenLock;then
 				if ! $lbStopped;then
 					echoc --say "stopping"
 				fi
@@ -447,13 +456,29 @@ function FUNCscript() {
 			  ldelay=10
 			fi
 			
-			if ! ps -p $lnGamePid >/dev/null 2>&1;then
+#			if ! ps -p $lnGamePid >/dev/null 2>&1;then
+			if [[ ! -d "/proc/$lnGamePid" ]];then
 				echoc -w -t 3 "pid $lnGamePid stopped running, exiting..."
 				break
 			fi
 			
 			echo -e "exit if game exits...(${SECONDS}s)\r"
-			sleep $ldelay
+			
+#			sleep $ldelay
+			if $lbOverrideContinueRunning;then
+				if ! $lbStopped;then
+					if echoc -t $ldelay -q "disable override that makes it continue running?";then
+						lbOverrideContinueRunning=false
+					fi
+				fi
+			else
+				if $lbStopped;then
+					if echoc -t $ldelay -q "override and continue running?";then
+						lbOverrideContinueRunning=true
+					fi
+				fi
+			fi
+			
 		done
 	else
 		echoc -p "invalid script '$lscriptName'"
