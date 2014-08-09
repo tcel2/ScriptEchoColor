@@ -934,7 +934,7 @@ FUNCread() {
 	if read "$@";then
 		return 0
 	else
-		return $?
+		return $? # Exit Status for `read` command: The return code is zero, unless end-of-file is encountered, read times out (in which case it's greater than 128), a variable assignment error occurs, or an invalid file descriptor is supplied as the argument to -u.
 	fi
 }
 
@@ -974,7 +974,7 @@ if [[   -f "$strUserCfgFile" ]]; then
    
     # Ask user to do the import
     _hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-    FUNCread -n 1 strResp;echo >>/dev/stderr; #`echo` to append a new line as read wont do that after we type a key
+    FUNCread -n 1 strResp&&:;echo >>/dev/stderr; #`echo` to append a new line as read wont do that after we type a key
     if [[ "$strResp" != "y" ]]; then
       _hi "Creating '$strUserCfgFile' with default values."
       strUserCfgFilePreviousVersion=""
@@ -2877,7 +2877,7 @@ if $bWaitAKey; then #WAIT A KEY MODE
   FUNCdoTheEcho
   #eval `secinit --core` #for SECFUNCisShellInteractive
   if SECFUNCisShellInteractive;then
-  	FUNCread -s -n 1 $strNWaitTime -p "" # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
+  	FUNCread -s -n 1 $strNWaitTime -p ""&&: # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
  	else
  		sleep $nWaitTime #if not interactive, and -t wasnt specified, it will sleep for 0s as no key can be pressed...
   fi
@@ -2900,9 +2900,9 @@ elif $bStringQuestion; then
       strLogOption=" -l \"$strUnformattedFileNameLog\" "
     fi
     eval $strSelfName -n $strLogOption "\"${strColorAddYesNoQuestion}Type your answer: \"" $stderr
-    FUNCread strResp
+    FUNCread strResp&&:
   elif ! $bHideStringQuestion; then
-    FUNCread strResp
+    FUNCread strResp&&:
   fi
   
   if ! $bKeepPosition; then
@@ -2952,7 +2952,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
       elif [[ $asciicode == '\133\103' ]]; then # Right key
         FUNCWalkEQM +1
       else # eliminates other escaped keys
-		    FUNCread -s -t 1 -p ""
+		    FUNCread -s -t 1 -p ""&&:
       fi
       FUNCdoTheEcho GoToBeginOfLine
     else

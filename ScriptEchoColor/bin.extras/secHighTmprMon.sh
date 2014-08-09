@@ -168,7 +168,8 @@ function FUNCsleepCalcDelay() {
 
 function FUNCsleep() {
 	# `sleep` does not work with ctrl+c trap properly...
-	read -s -t "$1" -p ""
+	read -s -t "$1" -p ""&&:
+	return 0
 };export -f FUNCsleep
 
 function FUNCinfoSleep() {
