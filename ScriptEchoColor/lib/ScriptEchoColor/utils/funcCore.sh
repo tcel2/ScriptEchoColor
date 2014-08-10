@@ -56,7 +56,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	while((lnPid>0));do
 		lstrErrorTrap+="pid[$lnPidIndex]='$lnPid';"
 		lstrErrorTrap+="CMD[$lnPidIndex]='`ps --no-header -p $lnPid -o cmd&&:`';"
-		lnPid="`grep PPid /proc/$lnPid/status |cut -f2`"
+		lnPid="`grep PPid /proc/$lnPid/status |cut -f2&&:`"
 		((lnPidIndex++))&&:
 	done
 	
