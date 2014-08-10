@@ -64,7 +64,7 @@ varset bDoAllGroups=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echoc --info "Parser for xml exported from app @rToDo List@b for @rAndroid@b."
-		echoc --info "At @khttps://play.google.com/store/apps/details?id=net.sf.swatwork.android.todo@b."
+		echoc --info "At @{y}https://play.google.com/store/apps/details?id=net.sf.swatwork.android.todo@b."
 		echoc --alert "Group names begginning with '-' will be ignored."
 		SECFUNCshowHelp
 		
