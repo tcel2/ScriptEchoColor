@@ -42,7 +42,8 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	local lstrBashSourceListTrap="${lastrBashSource[@]}";
 	
 	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
-	lstrErrorTrap+="SECERROR(trap):"
+	lstrErrorTrap+="SECERROR(trap);"
+	lstrErrorTrap+="SECstrRunLogFile='$SECstrRunLogFile';"
 	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"

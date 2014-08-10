@@ -37,6 +37,7 @@ Status:
 [beta]	secUpdateRemoteBackupFiles.sh
 [alpha]	secVisualMacro.sh
 [beta]	secXtermDetached.sh
+[beta]	sec.Bluetooth.SendFile.NautilusScript.sh
 [beta]	sec.EditSymlink.NautilusScript.sh
 [beta]	sec.OpenLocationOnYakuake.NautilusScript.sh
 [beta]	sec.OpenMidnightCommanderOnYakuake.NautilusScript.sh

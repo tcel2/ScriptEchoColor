@@ -29,8 +29,13 @@ eval `secinit`
 declare -A astrDeviceList=()
 strDeviceIdLastChosen=""
 bUseLastChosenDevice=false
+astrFileToPushList=()
 
 ######################### FUNCTIONS
+
+function FUNCbluetoothChannel () {
+	sdptool browse "$1" |egrep "Service Name: (OBEX |)Object Push" -A 20 |grep "Channel: "|head -n 1 |tr -d ' ' |cut -d: -f2
+}
 
 function FUNCrescan() {
 	astrDeviceList=()
@@ -41,7 +46,8 @@ function FUNCrescan() {
 		exit 1
 	fi
 
-	bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
+	#bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
+	IFS=$'\n' read -d '' -r -a astrDevices < <(echo "$strDevices")
 	for strDevice in "${astrDevices[@]}";do 
 		astrDeviceList["`echo "$strDevice" |cut -f2`"]="`echo "$strDevice" |cut -f3`"
 	done
@@ -52,12 +58,60 @@ function FUNCrescan() {
 }
 
 ####################### MAIN
+bNautilusMode=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "<astrFileToPushList>... Send files thru bluetooth."
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--nautilus" ]];then #internal use, no user help..., enables the nautilus mode.
+		bNautilusMode=true
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+astrFileToPushList+=("$@")
+
+declare -p NAUTILUS_SCRIPT_SELECTED_FILE_PATHS&&:
+#echo "NAUTILUS_SCRIPT_SELECTED_FILE_PATHS=${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}"
+#xterm
+
+if $bNautilusMode;then
+#	eval astrNautilusSelectedFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
+	#bkpIFS="$IFS";IFS=$'\n';readarray astrNautilusSelectedFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS");IFS="$bkpIFS";
+	IFS=$'\n' read -d '' -r -a astrNautilusSelectedFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&: #TODO 'returned 1' but worked; is the EOF error?
+	#declare -p astrNautilusSelectedFiles
+	astrFileToPushList+=("${astrNautilusSelectedFiles[@]}")
+	#declare -p astrFileToPushList
+else
+	# Check for Nautilus Mode
+	if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+		#eval astrNautilusSelectedFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
+		xterm -e "\"$0\" --nautilus" #"${astrNautilusSelectedFiles[@]}"
+		exit 0
+	fi
+fi
+
+echoc --info "Will work with files:"
+for strFileToPush in "${astrFileToPushList[@]}";do
+	echo "File: '$strFileToPush' type='`stat -c %F "$strFileToPush"`'"
+	if [[ ! -f "$strFileToPush" ]];then
+		echoc -w -t 60 -p "invalid strFileToPush='$strFileToPush'"
+		exit 1
+	fi
+done
+
 SECFUNCcfgReadDB
 
 echoc -x "cat \"$SECcfgFileName\""&&:
 
 if [[ -n "$strDeviceIdLastChosen" ]];then
-	if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]}'";then
+	if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
 		bUseLastChosenDevice=true
 	fi
 fi
@@ -85,19 +139,40 @@ if ! $bUseLastChosenDevice;then
 	strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
 		--text="Select one Bluetooth device." \
 		--column="Index" --column="ID" --column="Name" \
-		"${astrZenityValues[@]}")
+		"${astrZenityValues[@]}")&&:
 
 	if [[ -n "$strDeviceId" ]];then
 		SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"
 	fi
 fi
 
-echoc --info "strDeviceIdLastChosen='$strDeviceIdLastChosen' Device Name='${astrDeviceList[$strDeviceIdLastChosen]}'"
+echoc --info "strDeviceIdLastChosen='$strDeviceIdLastChosen' Device Name='${astrDeviceList[$strDeviceIdLastChosen]-}'"
 
+nBluetoothChannel="`FUNCbluetoothChannel "$strDeviceIdLastChosen"`"&&:
+if ! SECFUNCisNumber -dn "$nBluetoothChannel";then
+	SECFUNCechoErrA "failed to acquire nBluetoothChannel='$nBluetoothChannel'"
+	exit 1
+fi
 
+#for strFileToPush in "${astrFileToPushList[@]}";do
+#	if [[ ! -f "$strFileToPush" ]];then
+#		echoc -w -t 60 -p "invalid strFileToPush='$strFileToPush'"
+#		exit 1
+#	else
+#		SECFUNCexec -c --echo \
+#			obexftp --nopath --noconn \
+#				--uuid none \
+#				--bluetooth "$strDeviceIdLastChosen" \
+#				--channel "$nBluetoothChannel" \
+#				--put "$strFileToPush"
+#	fi
+#fi
+SECFUNCexec -c --echo \
+	obexftp --nopath --noconn \
+		--uuid none \
+		--bluetooth "$strDeviceIdLastChosen" \
+		--channel "$nBluetoothChannel" \
+		--put "${astrFileToPushList[@]}"
 
-
-
-
-
+echoc -w -t 60
 
