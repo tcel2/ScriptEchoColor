@@ -113,7 +113,7 @@ if $bStoreConfiguration;then
 fi
 
 if ! $bHasOptions;then
-	SECFUNCcfgRead
+	SECFUNCcfgReadDB
 	echoc -x "cat \"$SECcfgFileName\""
 	echoc --info "automatic config options loaded!"
 	if ! echoc -t 3 -q "proceed?@Dy";then

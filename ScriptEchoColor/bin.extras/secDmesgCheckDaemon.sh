@@ -28,7 +28,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#grep "#help" "`type -P $0`" |grep -v "#skip" |sed 's"function \([[:alnum:]]*\).*#help\(.*\)"\t\1\t\2"'
 		SECFUNCshowHelp --colorize "Read dmesg output, and check for problems like usb pendrive not connected with high speed etc.; and popup alerts so you can fix! "
-		SECFUNCcfgRead;echo "Add checks to '$SECcfgFileName'"
+		SECFUNCcfgReadDB;echo "Add checks to '$SECcfgFileName'"
 		echo "You can test this way: echo 'dmesg message go here' |sudo -k tee /dev/kmsg"
 		SECFUNCshowHelp
 		exit
@@ -55,7 +55,7 @@ bAskExit=false
 strDmesgTail="(test)"
 clr_eol=`tput el` # terminfo clr_eol, constant to clear the line b4 echo
 
-SECFUNCcfgRead
+SECFUNCcfgReadDB
 if [[ ! -f "$SECcfgFileName" ]]; then
 	check001=("usb .*: not running at top speed; connect to a high speed hub" "Reconnect USB device (pendrive?), it is running at low speed..." "Some USB could be faster?")
 	check002=("hub .* unable to enumerate USB device on port" "Reconnect USB device (pendrive?)..." "USB connection failed")
@@ -149,7 +149,7 @@ while true; do
   
   FUNCupdateLastId  # updates as soon as possible, after vars have been used on log above and b4 dialogs...
   
-  SECFUNCcfgRead
+  SECFUNCcfgReadDB
   
   nCheckId=1
   while true;do

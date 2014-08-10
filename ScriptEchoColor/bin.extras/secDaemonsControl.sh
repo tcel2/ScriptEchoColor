@@ -40,8 +40,8 @@ export SEC_SAYVOL=20
 
 #declare -p aDaemonsPid
 #declare -p bHoldScripts
-#type SECFUNCcfgRead
-SECFUNCcfgRead
+#type SECFUNCcfgReadDB
+SECFUNCcfgReadDB
 #declare -p aDaemonsPid
 #declare -p bHoldScripts
 if [[ -z "${bHoldScripts-}" ]];then
@@ -61,7 +61,7 @@ varset --default strCallerName=""
 #################### FUNCTIONS
 function FUNClist() {
 	SECFUNCdbgFuncInA;
-	SECFUNCcfgRead
+	SECFUNCcfgReadDB
 	SECFUNCdrawLine "Daemons List at `SECFUNCdtFmt --pretty`:"
 	echo -e "Index\tPid\tName"
 	nCount=0
@@ -189,7 +189,7 @@ elif $bCheckHold;then
 				break
 			fi
 		
-			SECFUNCcfgRead
+			SECFUNCcfgReadDB
 		done
 		
 		echo

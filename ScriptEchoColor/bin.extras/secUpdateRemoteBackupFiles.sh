@@ -59,7 +59,7 @@ varset --default bInterruptAsk=false
 ############### USER CFG
 
 export pathBackupsToRemote=""
-SECFUNCcfgRead
+SECFUNCcfgReadDB
 echo $SECcfgFileName
 
 ############### OPTIONS

@@ -25,7 +25,7 @@
 eval `secinit --ilog` # --ilog as this script may be called very often
 selfName="`basename "$0"`"
 
-SECFUNCcfgRead
+SECFUNCcfgReadDB
 
 FUNCworkVar() {
 	#echo ">>$1"
@@ -41,7 +41,7 @@ FUNCworkVar() {
 FUNCreadDBloop() {
 	while true; do
 		#TODO should remove variables of inactive PIDs...
-		SECFUNCcfgRead
+		SECFUNCcfgReadDB
 		#echo $SECcfgFileName
 		SECFUNCdrawLine " RemoteInfo: `date +"%Y/%m/%d-%H:%M:%S.%N"`"
 		

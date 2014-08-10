@@ -361,7 +361,7 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[c
 	#echo "$lpath/${SECcfgFileName}.cfg"
 	#echo "$SECcfgFileName"
 }
-function SECFUNCcfgRead() { #help read the cfg file and set all its env vars at current env
+function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars at current env
 	SECFUNCdbgFuncInA;
 	#echo oi;eval `cat tst.db`;return
 	if [[ -z "$SECcfgFileName" ]];then
@@ -475,7 +475,7 @@ function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon e
 		# IMPORTANT: subshell to protect parent envinronment variable SECcfgFileName
 		local bHoldScripts=false
 		SECFUNCcfgFileName secDaemonsControl.sh
-		SECFUNCcfgRead
+		SECFUNCcfgReadDB
 		#echo "$SECcfgFileName";cat "$SECcfgFileName";echo "bHoldScripts=$bHoldScripts"
 		if $bHoldScripts;then
 			secDaemonsControl.sh --checkhold #will cause recursion if this function is called on that command...
