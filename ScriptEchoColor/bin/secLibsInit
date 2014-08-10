@@ -204,6 +204,6 @@ if $bMaintenanceDaemon;then
 	fi
 fi
 
-# DO NOT use `SECFUNCcfgRead` here, associative arrays will be messed up if not initialized BEFORE this.
-#echo 'SECFUNCcfgRead;' # the file will only be generated on its first write
+# DO NOT use `SECFUNCcfgReadDB` here, associative arrays will be messed up if not initialized BEFORE this.
+#echo 'SECFUNCcfgReadDB;' # the file will only be generated on its first write
 
