@@ -203,27 +203,33 @@ function FUNCtmprAverage() {
 
 function FUNCchildLimCpuFastLoop() {
 	eval `secinit`
-	SECFUNCvarWaitRegister pidToLimit
-	SECFUNCvarWaitRegister fSigStopDelay
-	SECFUNCvarWaitRegister fSigRunDelay
+	#SECFUNCvarWaitRegister pidToLimit
+#	SECFUNCvarWaitRegister fSigStopDelay
+#	SECFUNCvarWaitRegister fSigRunDelay
+	SECFUNCvarWaitValue --report --not pidToLimit ""
+	SECFUNCvarWaitValue --report --not fSigStopDelay ""
+	SECFUNCvarWaitValue --report --not fSigRunDelay ""
 	
 	SECFUNCdelay ${FUNCNAME}_maintenance --init
 	while true; do
-		if((`SECFUNCdelay ${FUNCNAME}_maintenance --getsec`>=1));then
+		if SECFUNCdelay ${FUNCNAME}_maintenance --checkorinit1 1;then
 			#SECFUNCvarSet DEBUG_${FUNCNAME} "\$\$=$$ PPID=$PPID pidToLimit=$pidToLimit BASHPID=$BASHPID"
-			if ! ps -p $$ >/dev/null 2>&1; then break; fi
-			if ! ps -p $PPID >/dev/null 2>&1; then break; fi
-			if ! ps -p $pidToLimit >/dev/null 2>&1; then break; fi
+#			if ! ps -p $$ >/dev/null 2>&1; then break; fi
+#			if ! ps -p $PPID >/dev/null 2>&1; then break; fi
+#			if ! ps -p $pidToLimit >/dev/null 2>&1; then break; fi
+			if [[ ! -d "/proc/$$"          ]]; then break; fi
+			if [[ ! -d "/proc/$PPID"       ]]; then break; fi
+			if [[ ! -d "/proc/$pidToLimit" ]]; then break; fi
 			SECFUNCvarReadDB
-			SECFUNCdelay ${FUNCNAME}_maintenance --init
+#			SECFUNCdelay ${FUNCNAME}_maintenance --init
 		fi
 		
 		if [[ "$fSigStopDelay" != "0.0" ]];then
-			kill -SIGSTOP $pidToLimit
+			kill -SIGSTOP $pidToLimit&&:
 			FUNCsleep $fSigStopDelay
 		fi
 		if [[ "$fSigRunDelay" != "0.0" ]];then
-			kill -SIGCONT $pidToLimit
+			kill -SIGCONT $pidToLimit&&:
 			FUNCsleep $fSigRunDelay
 		fi
 	done

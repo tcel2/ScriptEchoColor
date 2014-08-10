@@ -44,11 +44,21 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
 	lstrErrorTrap+="SECERROR(trap):"
 	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
-	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"
 	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap});"
-	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd`';"
+
+#	lstrErrorTrap+="pid='$$';PPID='$PPID';"
+#	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd&&:`';"
+#	lstrErrorTrap+="ppidCommand='`ps --no-header -p $PPID -o cmd&&:`';"
+	local lnPid=$$
+	local lnPidIndex=0
+	while((lnPid>0));do
+		lstrErrorTrap+="pid[$lnPidIndex]='$lnPid';"
+		lstrErrorTrap+="CMD[$lnPidIndex]='`ps --no-header -p $lnPid -o cmd&&:`';"
+		lnPid="`grep PPid /proc/$lnPid/status |cut -f2`"
+		((lnPidIndex++))&&:
+	done
 	
 	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
 	 	# if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...

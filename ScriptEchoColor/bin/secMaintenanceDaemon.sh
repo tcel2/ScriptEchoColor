@@ -195,6 +195,7 @@ function FUNClistSecPids() {
 #	fi
 #	exit
 #elif $bKillDaemon;then
+strFileErrorLog="${SEC_TmpFolder}/.SEC.Error.log"
 if $bKillDaemon;then
 	FUNCkillDaemon
 	exit
@@ -240,16 +241,18 @@ elif $bShowCriticalErrors;then
 elif $bShowErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
-	while ! echoc -x "less '${SEC_TmpFolder}/.SEC.Error.log'"&&:;do
+	while ! echoc -x "less '$strFileErrorLog'"&&:;do
 		echoc -w -t 60 "No errors on log."
 	done
 	exit
 elif $bErrorsMonitor;then
-	#tail -F "${SEC_TmpFolder}/.SEC.Error.log"
+	#tail -F "$strFileErrorLog"
+	echoc --info "strFileErrorLog='$strFileErrorLog'"
 	nLineCount=0
 	while true;do
-		nLineCountCurrent=$(cat "${SEC_TmpFolder}/.SEC.Error.log" |wc -l)
-		tail -n $((nLineCountCurrent-nLineCount)) "${SEC_TmpFolder}/.SEC.Error.log" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
+		nLineCountCurrent=$(cat "$strFileErrorLog" |wc -l)
+		#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
+		tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e "s'(\(trap\))'`echo -e "\E[31m"`\1`echo -e "\E[0m"`'" -e 's";";\n\t"g' -e 's".*"&\n"'
 		nLineCount=$nLineCountCurrent
 		echoc -w "SECERROR Log, `SECFUNCdtFmt --pretty`"
 	done
