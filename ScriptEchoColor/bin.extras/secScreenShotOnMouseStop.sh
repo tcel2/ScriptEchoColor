@@ -49,7 +49,7 @@ echoc -x "scrot '$strFile'"
 ls -l "$strFile"
 
 echoc --info --say "screenshot taken"
-echoc -x "shotwell '$strFile'"
+echoc -x "eog '$strFile'"
 
 if echoc -q "delete it?";then
 	echoc -x "trash '$strFile'"
