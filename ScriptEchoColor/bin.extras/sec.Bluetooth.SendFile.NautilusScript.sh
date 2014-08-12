@@ -48,9 +48,18 @@ function FUNCrescan() {
 
 	#bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
 	IFS=$'\n' read -d '' -r -a astrDevices < <(echo "$strDevices")
-	for strDevice in "${astrDevices[@]}";do 
-		astrDeviceList["`echo "$strDevice" |cut -f2`"]="`echo "$strDevice" |cut -f3`"
+	echo "astrDevices[@]=(${astrDevices[@]-})" >>/dev/stderr
+	for strDevice in "${astrDevices[@]-}";do 
+		if [[ -n "$strDevice" ]];then
+			echo "strDevice='$strDevice'" >>/dev/stderr
+			astrDeviceList["`echo "$strDevice" |cut -f2`"]="`echo "$strDevice" |cut -f3`"
+		fi
 	done
+	
+	if((${#astrDeviceList[@]}==0));then
+		echoc -p "no bluetooth devices found..."
+		return 1
+	fi
 
 	SECFUNCcfgWriteVar astrDeviceList
 
@@ -121,12 +130,20 @@ if ! $bUseLastChosenDevice;then
 	if ! $bRescan && [[ -z "${astrDeviceList[@]-}" ]];then
 		bRescan=true
 	fi
-	if ! $bRescan && echoc -q "re-scan bluetooth devices?";then
+	if ! $bRescan && echoc -q -t 3 "re-scan bluetooth devices?";then
 		bRescan=true
 	fi
 
 	if $bRescan;then
-		FUNCrescan
+		while true;do
+			if FUNCrescan;then
+				break;
+			fi
+			
+			if ! echoc -q "no devices found, re-scan bluetooth devices?";then
+				exit
+			fi
+		done
 	fi
 
 	astrZenityValues=()
