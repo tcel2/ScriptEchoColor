@@ -22,32 +22,38 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
-#strFile="${astrFiles[0]}"
+eval `secinit`
+
+#eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
+IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
+strFile="${astrFiles[0]}"
 
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
-function FUNCrenameSymlink() {
+function FUNCretargetSymlink() {
 	local lstrFile="${1-}"
 	if [[ ! -L "$lstrFile" ]];then
 		zenity --info --text "File is not a symlink: '$lstrFile'"
 	else
-		strNewSymlinkTarget="`basename "$(readlink "$lstrFile")"`"
-		if [[ -a "`dirname "$lstrFile"`/$strNewSymlinkTarget" ]];then
-			echoc -x "rm -v '$lstrFile'"
-			echoc -x "ln -sv '$strNewSymlinkTarget' '$lstrFile'"
-			echoc -w -t 60
+		local lstrTarget="`readlink -f "$lstrFile"`"
+#		if [[ "${lstrTarget:0:1}" != "/" ]];then
+#			lstrTarget="`pwd`/$lstrTarget"
+#		fi
+		local lstrNewSymlink="`zenity \
+			--title "$SECstrScriptSelfName" \
+			--file-selection \
+			--filename=\"$lstrTarget\"`"
+		#local lstrNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
+		if [[ -a "$lstrNewSymlink" ]];then
+			#echoc -x "rm -v '$lstrFile'"
+			echoc -x "ln -vsf '$lstrNewSymlink' '$lstrFile'"
 		else
-			zenity --info --text "Symlink '$lstrFile' points to missing file '$strNewSymlinkTarget'"
-			echoc -w
+			echoc -p "invalid symlink target '$lstrNewSymlink'"
 		fi
+		echoc -w -t 60
 	fi
-};export -f FUNCrenameSymlink
+};export -f FUNCretargetSymlink
 
 cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
-for strFile in "${astrFiles[@]}";do 
-	if ! xterm -e "bash -i -c \"FUNCrenameSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
-		break;
-	fi
-done
+xterm -e "bash -i -c \"FUNCretargetSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
 
