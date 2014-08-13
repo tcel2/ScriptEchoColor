@@ -1095,6 +1095,10 @@ function SECFUNCcheckActivateRunLog() {
 			exec > >(tee "$SECstrRunLogFile")
 			exec 2>&1
 			
+			local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse "/"`"
+			mkdir -p "$lstrLogTreeFolder"
+			ln -sf "$SECstrRunLogFile" "$lstrLogTreeFolder/`basename "$SECstrRunLogFile"`"
+			
 			SECbRunLogEnabled=true
 		fi
 #	fi
