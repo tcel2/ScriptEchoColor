@@ -48,13 +48,20 @@ function FUNCmakeRelativeSymlink() {
 	else
 #		echoc --alert "TODO: this functionality is still limited to symlinks pointing to files at the same directory!!! "
 		local lstrFullTarget="`readlink -f "$lstrFile"`"
+		echo "lstrFullTarget='$lstrFullTarget'"
 #		if [[ "${lstrFullTarget:0:1}" != "/" ]];then
 #			echoc --info "Skipping: already relative symlink '$lstrFile' points to '$lstrFullTarget'."
 #			return 0
 #		fi
-		local lstrDirname="`dirname "$lstrFile"`"
+		local lstrDirname="`dirname "$lstrFullTarget"`" #the path can be symlinked, the lstrFullTarget will work ok when matching for lstrDirname removal
+		echo "lstrDirname='$lstrDirname'"
 #		local lstrNewSymlinkTarget="`basename "$lstrFullTarget"`"
-		local lstrNewSymlinkTarget="./${lstrFullTarget#$lstrDirname}"
+#		local lstrNewSymlinkTarget="./${lstrFullTarget#$lstrDirname}"
+		local lstrNewSymlinkTarget="${lstrFullTarget#$lstrDirname}"
+		while [[ "${lstrNewSymlinkTarget:0:1}" == "/" ]];do
+			lstrNewSymlinkTarget="${lstrNewSymlinkTarget:1}"
+		done
+		echo "lstrNewSymlinkTarget='$lstrNewSymlinkTarget'"
 #		if [[ -a "`dirname "$lstrFile"`/$lstrNewSymlinkTarget" ]];then
 		if [[ -a "$lstrDirname/$lstrNewSymlinkTarget" ]];then
 			#echoc -x "rm -v '$lstrFile'"
