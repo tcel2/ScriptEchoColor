@@ -262,7 +262,7 @@ if [[ -n "$strBluetoothAddress" ]];then
 		fi
 		
 		varset --show nBluetoothChannel="`FUNCbluetoothChannel "$strBluetoothAddress"`"
-		obexftp --nopath --noconn --uuid none --bluetooth "$strBluetoothAddress" --channel "$nBluetoothChannel" --put "$strFileOuputHTML"
+		obexftp --nopath --noconn --uuid none --bluetooth "$strBluetoothAddress" --channel "$nBluetoothChannel" --put "$strFileOuputHTML"&&:
 		nRet=$?
 		
 	done
