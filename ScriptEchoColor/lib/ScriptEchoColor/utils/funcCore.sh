@@ -1036,6 +1036,65 @@ function SECFUNCisShellInteractive() { #--force shell to be interactive or exit
 	fi
 }
 
+function SECFUNCppidList() { #help [separator] between pids
+	local lbReverse=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
+			SECFUNCshowHelp $FUNCNAME
+			return
+		elif [[ "$1" == "--reverse" || "$1" == "-r" ]];then #SECFUNCppidList_help show in reverse order
+			lbReverse=true
+		elif [[ "$1" == "--" ]];then #SECFUNCppidList_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+
+  local lstrSeparator="${1- }" #space is default
+  shift
+  
+  local lstrPidList=""
+  local pidList=()
+  local ppid=$$;
+  while((ppid>=1));do 
+    #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
+    ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
+    #pidList=(${pidList[*]} $ppid)
+    pidList+=($ppid)
+    
+#    if [[ -n "$lstrPidList" ]];then # after 1st
+#		  if [[ -n "$lstrSeparator" ]];then
+#		  	lstrPidList+="$lstrSeparator"
+#		  fi
+#		fi    
+    if [[ -n "$lstrPidList" ]];then # after 1st
+			if $lbReverse;then
+				lstrPidList="${ppid}${lstrSeparator}${lstrPidList}"
+			else
+				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}"
+			fi
+    else
+    	lstrPidList="$ppid"
+		fi
+		
+    #echo $ppid; 
+    if((ppid==1));then break; fi; 
+  done
+  
+#  local output="${pidList[*]}"
+#  if [[ -n "$lstrSeparator" ]];then
+#    local sedChangeSeparator='s" "'"$lstrSeparator"'"g'
+#    output=`echo "$output" |sed "$sedChangeSeparator"`
+#  fi
+  
+  #echo "$output"
+  echo -e "$lstrPidList"
+}
+
 function SECFUNCcheckActivateRunLog() {
 	local lbRestoreDefaults=false
 	local lbInheritParentLog=false
