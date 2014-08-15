@@ -1,8 +1,14 @@
+#d15 m08 y2014
+	#put this at your .bashrc to log every script output at $SECstrTmpFolderLog
+	export SECbRunLog=true 
+	
+	#look for most important errors with this, look for "(trap)" 
+	secMaintenanceDaemon.sh --errmon
 
-as of 29/07/2014
-	secDelayedExec.sh was:
+#as of d29 m07 y2014
+	#secDelayedExec.sh was:
 		secDelayedExec.sh <sleepInSeconds> <command>
-	now is
+	#now is
 		secDelayedExec.sh -s <sleepInSeconds> <command>
 
 
