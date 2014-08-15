@@ -31,7 +31,7 @@ bForceLightWeight=false
 bModeUnity=false
 bModeGnome=false
 bModeXscreensaver=false
-bDPMSon=false
+bDPMSmonitorOn=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
@@ -46,7 +46,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--forcelightweight" || "$1" == "-f" ]];then #help force a lightweight screensaver to be set, even if screen was manually locked (only for xscreensaver)
 		bForceLightWeight=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
-		bDPMSon=true
+		bDPMSmonitorOn=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -150,9 +150,11 @@ while true;do
 	fi
 	
 	if $bIsLocked;then
-		if $bDPMSon;then
+		if $bDPMSmonitorOn;then
 			#echoc -x "xset dpms force on" #this would activate energy saving and turn off monitor?
-			echoc -x "xset -dpms" #this prevents energy saving (turn off) from working!
+			if ! xset -q |grep -q "DPMS is Disabled";then
+				echoc -x "xset -dpms" #this prevents energy saving (turn off) from working!
+			fi
 		fi
 		
 		if $bWasLockedByThisScript || $bForceLightWeight;then
