@@ -1039,51 +1039,6 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCvalidateId() { #help Id can only be alphanumeric or underscore ex.: for functions and variables name.
-	local lstrCaller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
-			shift
-			lstrCaller="${1}(): "
-		fi
-		shift
-	done
-	
-	if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
-		SECFUNCechoErrA "${lstrCaller}invalid id '$1', only allowed alphanumeric and underscores."
-		return 1
-	fi
-	return 0
-}
-function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheId"`"
-	local lstrCaller=""
-	local lbJustFix=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
-			SECFUNCshowHelp --nosort
-			return
-		elif [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
-			shift
-			lstrCaller="${1}(): "
-		elif [[ "$1" == "--justfix" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user
-			lbJustFix=true
-		else
-			SECFUNCechoErrA "invalid option $1"
-			return 1
-		fi
-		shift
-	done
-	
-	if ! $lbJustFix;then
-		# just to inform invalid id to user be able to set it properly if wanted
-		SECFUNCvalidateId --caller "$lstrCaller" "$1"
-	fi
-	
-	# replaces all non-alphanumeric and non underscore with underscore
-	#echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
-	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
-}
-
 function SECFUNCfixCorruptFile() { #help usually after a blackout?
 	local lstrDataFile="${1-}"
 	

@@ -1036,14 +1036,62 @@ function SECFUNCisShellInteractive() { #--force shell to be interactive or exit
 	fi
 }
 
+function SECFUNCvalidateId() { #help Id can only be alphanumeric or underscore ex.: for functions and variables name.
+	local lstrCaller=""
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+		if [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
+			shift
+			lstrCaller="${1}(): "
+		fi
+		shift
+	done
+	
+	if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
+		SECFUNCechoErrA "${lstrCaller}invalid id '$1', only allowed alphanumeric and underscores."
+		return 1
+	fi
+	return 0
+}
+function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheId"`"
+	local lstrCaller=""
+	local lbJustFix=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
+			SECFUNCshowHelp --nosort
+			return
+		elif [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
+			shift
+			lstrCaller="${1}(): "
+		elif [[ "$1" == "--justfix" || "$1" == "-f" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user
+			lbJustFix=true
+		else
+			SECFUNCechoErrA "invalid option $1"
+			return 1
+		fi
+		shift
+	done
+	
+	if ! $lbJustFix;then
+		# just to inform invalid id to user be able to set it properly if wanted
+		SECFUNCvalidateId --caller "$lstrCaller" "$1"
+	fi
+	
+	# replaces all non-alphanumeric and non underscore with underscore
+	#echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
+	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
+}
+
 function SECFUNCppidList() { #help [separator] between pids
 	local lbReverse=false
+	local lbComm=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
 			SECFUNCshowHelp $FUNCNAME
 			return
 		elif [[ "$1" == "--reverse" || "$1" == "-r" ]];then #SECFUNCppidList_help show in reverse order
 			lbReverse=true
+		elif [[ "$1" == "--comm" || "$1" == "-c" ]];then #SECFUNCppidList_help add the short comm to pid
+			lbComm=true
 		elif [[ "$1" == "--" ]];then #SECFUNCppidList_help params after this are ignored as being these options
 			shift
 			break
@@ -1070,15 +1118,20 @@ function SECFUNCppidList() { #help [separator] between pids
 #		  if [[ -n "$lstrSeparator" ]];then
 #		  	lstrPidList+="$lstrSeparator"
 #		  fi
-#		fi    
+#		fi
+		strComm=""    
+		if $lbComm;then
+			strComm="_`cat "/proc/$ppid/comm"`"
+			strComm="`SECFUNCfixId -f "$strComm"`"
+		fi
     if [[ -n "$lstrPidList" ]];then # after 1st
 			if $lbReverse;then
-				lstrPidList="${ppid}${lstrSeparator}${lstrPidList}"
+				lstrPidList="${ppid}${strComm}${lstrSeparator}${lstrPidList}"
 			else
-				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}"
+				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}${strComm}"
 			fi
     else
-    	lstrPidList="$ppid"
+    	lstrPidList="${ppid}${strComm}"
 		fi
 		
     #echo $ppid; 
@@ -1154,7 +1207,7 @@ function SECFUNCcheckActivateRunLog() {
 			exec > >(tee "$SECstrRunLogFile")
 			exec 2>&1
 			
-			local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse "/"`"
+			local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse --comm "/"`"
 			mkdir -p "$lstrLogTreeFolder"
 			ln -sf "$SECstrRunLogFile" "$lstrLogTreeFolder/`basename "$SECstrRunLogFile"`"
 			
