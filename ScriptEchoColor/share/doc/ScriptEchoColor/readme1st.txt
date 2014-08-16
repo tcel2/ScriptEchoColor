@@ -1,5 +1,5 @@
 #d15 m08 y2014
-	#put this at your .bashrc to log every script output at $SECstrTmpFolderLog
+	#put this at your .bashrc to log every script output at $SECstrTmpFolderLog, in a log tree of pids
 	export SECbRunLog=true 
 	
 	#look for most important errors with this, look for "(trap)" 
