@@ -1195,25 +1195,52 @@ function SECFUNCcheckActivateRunLog() {
 #	fi
 	
 #	if $lbReinitialize;then
-		SECstrRunLogFile="$SECstrRunLogFileDefault" #ensure it is properly set to current script
 
 		#echo "SECbRunLog=$SECbRunLog"
-		if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
-	#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
-			echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
-		#	exec 1>"$SECstrRunLogFile"
-		#	exec 2>"$SECstrRunLogFile"
-			exec 3>&1 4>&2 #backup
-			exec > >(tee "$SECstrRunLogFile")
-			exec 2>&1
-			
-			if $SECbRunLogTree;then
-				local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse --comm "/"`"
-				mkdir -p "$lstrLogTreeFolder"
-				ln -sf "$SECstrRunLogFile" "$lstrLogTreeFolder/`basename "$SECstrRunLogFile"`"
+		local lstrRunLogPipe="`readlink /proc/$$/fd/1`"
+		
+		local lbSetToDisabled=false
+		if ! $lbSetToDisabled && [[ "$lstrRunLogPipe" != "$SECstrRunLogPipe" ]];then
+			lbSetToDisabled=true
+		fi
+		if ! $lbSetToDisabled && [[ ! -d "/proc/$SECnRunLogTeePid" ]];then
+			lbSetToDisabled=true
+		fi
+		if $lbSetToDisabled;then
+			SECbRunLogEnabled=false
+			SECnRunLogTeePid=0
+			SECstrRunLogPipe=""
+		fi
+		
+		if $SECbRunLogEnabled;then
+			if [[ -d "/proc/$SECnRunLogTeePid" ]];then
+				if [[ "$SECstrRunLogFile" != "$SECstrRunLogFileDefault" ]];then
+					ln -s "$SECstrRunLogFile" "$SECstrRunLogFileDefault"
+				fi
 			fi
+		else
+			SECstrRunLogFile="$SECstrRunLogFileDefault" #ensure it is properly set to current script
 			
-			SECbRunLogEnabled=true
+			if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
+		#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
+				echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
+			#	exec 1>"$SECstrRunLogFile"
+			#	exec 2>"$SECstrRunLogFile"
+				exec 3>&1 4>&2 #backup
+				exec > >(tee "$SECstrRunLogFile")
+				exec 2>&1
+				
+				SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`"
+				SECstrRunLogPipe="`readlink /proc/$$/fd/1`" #Must be updated because it was redirected.
+			
+				if $SECbRunLogTree;then
+					local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse --comm "/"`"
+					mkdir -p "$lstrLogTreeFolder"
+					ln -sf "$SECstrRunLogFile" "$lstrLogTreeFolder/`basename "$SECstrRunLogFile"`"
+				fi
+			
+				SECbRunLogEnabled=true
+			fi
 		fi
 #	fi
 }
@@ -1235,7 +1262,7 @@ export SECbRunLog
 : ${SECbRunLogParentInherited:=false}
 export SECbRunLogParentInherited
 
-export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log"
+export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log" #this is named based on current script name; but the log may be happening already from its parent...
 : ${SECstrRunLogFile:="$SECstrRunLogFileDefault"}
 export SECstrRunLogFile
 
@@ -1243,6 +1270,12 @@ export SECstrRunLogFile
 
 : ${SECbRunLogEnabled:=false}
 export SECbRunLogEnabled
+
+: ${SECstrRunLogPipe:=}
+export SECstrRunLogPipe
+
+: ${SECnRunLogTeePid:=0}
+export SECnRunLogTeePid
 
 : ${SECbRunLogTree:=true}
 export SECbRunLogTree
