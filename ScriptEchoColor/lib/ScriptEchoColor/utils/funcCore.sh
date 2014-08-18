@@ -1233,7 +1233,7 @@ function SECFUNCcheckActivateRunLog() {
 				SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`"
 				SECstrRunLogPipe="`readlink /proc/$$/fd/1`" #Must be updated because it was redirected.
 			
-				if $SECbRunLogTree;then
+				if $SECbRunLogPidTree;then
 					local lstrLogTreeFolder="$SECstrTmpFolderLog/PidTree/`SECFUNCppidList --reverse --comm "/"`"
 					mkdir -p "$lstrLogTreeFolder"
 					ln -sf "$SECstrRunLogFile" "$lstrLogTreeFolder/`basename "$SECstrRunLogFile"`"
@@ -1277,8 +1277,8 @@ export SECstrRunLogPipe
 : ${SECnRunLogTeePid:=0}
 export SECnRunLogTeePid
 
-: ${SECbRunLogTree:=true}
-export SECbRunLogTree
+: ${SECbRunLogPidTree:=true}
+export SECbRunLogPidTree
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 
