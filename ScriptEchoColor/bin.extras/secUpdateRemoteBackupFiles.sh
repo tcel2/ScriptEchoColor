@@ -47,6 +47,7 @@ sedEscapeQuotes='s;([^\])";\1\\";g' #ABSOLUTELY NO FILES should have quotes on i
 addFileHist="$HOME/.`basename $0`.addFilesHistory.log"
 fileGitIgnoreList="$HOME/.`basename $0`.gitIgnore"
 sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
+strUserScriptCfgPath="${SECstrUserHomeConfigPath}/${SECstrScriptSelfName}"
 
 #
 #if [[ "$bSkipNautilusCheckNow" != "true" ]]; then
@@ -445,7 +446,20 @@ fi
 #exit
 
 strSkipGitFilesPrefix="$HOME/.git/"
-if $bLsNot;then
+if $bUseUnison;then 
+	# create all directories
+	find "${pathBackupsToRemote}/" -type d \
+		|sed -r "s'^${pathBackupsToRemote}/'${strUserScriptCfgPath}/Home'" \
+		|while read strPath;do 
+			if ! mkdir -vp "$strPath";then exit 1;fi;
+		done
+	# create all symlinks
+	find "${pathBackupsToRemote}/" -type f \
+		|sed -r "s'^${pathBackupsToRemote}/''" \
+		|while read strFile;do
+			if ! ln -vsf "${HOME}/${strFile}" "${strUserScriptCfgPath}/Home/${strFile}";then break;fi;
+		done
+elif $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
 	mv -vf "$addFileHist" "${addFileHist}.old"
@@ -540,12 +554,12 @@ elif $bAddFilesMode; then
 		mkdir -vp "`dirname "$strAbsFileTarget"`"
 		cp -vp "$strFile" "$strAbsFileTarget"
 		
-		if $bUseUnison;then
-			# create a symlink #TODO to be used with unison #TODO code its removal
-			strSymlinkToUnison="$SECstrUserHomeConfigPath/$SECstrScriptSelfName/Home/$strRelativeFile"
-			mkdir -vp "`dirname "$strSymlinkToUnison"`"
-			ln -vsf "$strFile" "$strSymlinkToUnison"
-		fi
+#		if $bUseUnison;then
+#			# create a symlink #TODO to be used with unison #TODO code its removal
+#			strSymlinkToUnison="$strUserScriptCfgPath/Home/$strRelativeFile"
+#			mkdir -vp "`dirname "$strSymlinkToUnison"`"
+#			ln -vsf "$strFile" "$strSymlinkToUnison"
+#		fi
 		
 		# history of added files
 		if ! grep -q "$strFile" "$addFileHist"; then
