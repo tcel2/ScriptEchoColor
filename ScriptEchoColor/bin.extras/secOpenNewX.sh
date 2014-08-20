@@ -466,7 +466,10 @@ function FUNCscript() {
 			
 #			sleep $ldelay
 			if $lbOverrideContinueRunning;then
-				if ! $lbStopped;then
+				if $lbStopped;then
+					echo "sleep $ldelay"
+					sleep $ldelay
+				else
 					if echoc -t $ldelay -q "disable override that makes it continue running?";then
 						lbOverrideContinueRunning=false
 					fi
@@ -476,6 +479,9 @@ function FUNCscript() {
 					if echoc -t $ldelay -q "override and continue running?";then
 						lbOverrideContinueRunning=true
 					fi
+				else
+					echo "sleep $ldelay"
+					sleep $ldelay
 				fi
 			fi
 			
