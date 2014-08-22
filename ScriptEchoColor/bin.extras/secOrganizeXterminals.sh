@@ -73,7 +73,7 @@ function FUNCwindowList() {
 	local listWindowIdsSorted=()
 	for windowId in ${listWindowIds[@]-};do
 		local windowPid="`xdotool getwindowpid $windowId`"&&:
-		if [[ -n "$windowPid" ]] && ! ps -o command -p $windowPid |grep -q "#skipCascade";then
+		if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipCascade";then
 			local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
 			local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
 			# sort like in the newests are the last ones
@@ -83,9 +83,10 @@ function FUNCwindowList() {
 	done
 	
 	#`tac` will make newest windows be ordered at last slots on screen
-	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]}" |tr ' ' '\n' |tac`)
+	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]-}" |tr ' ' '\n' |tac`)
 	
-	echo "${listWindowIdsSorted[@]}"
+	#echo "listWindowIdsSorted[@]=(${listWindowIdsSorted[@]-})" >>/dev/stderr
+	echo "${listWindowIdsSorted[@]-}" #this output will be captured
 	
 	return 0
 }
