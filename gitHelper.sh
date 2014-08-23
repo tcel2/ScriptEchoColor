@@ -56,15 +56,24 @@ while true;do
 		|grep "$strLastCommitBeforeInstall" -A 1 -B $nNewestCommitsLimit --color=always \
 		|column -c $nTerminalWidth
 	
-	echoc -Q "git@O\
-_commitWithGitGui/\
-_diffLastTagFromMaster/\
-diff_installedFromMaster/\
-diffToBeP_ushed/\
-_pushTagsToRemote/\
-_nautilusAtDevPath/\
-_terminalAtDevPath/\
-_browseWithGitk"&&:
+#	echoc -Q "git@O\
+#_commitWithGitGui/\
+#_diffLastTagFromMaster/\
+#diff_installedFromMaster/\
+#diffToBeP_ushed/\
+#_pushTagsToRemote/\
+#_nautilusAtDevPath/\
+#_terminalAtDevPath/\
+#_browseWithGitk"&&:
+	echoc -Q "git@O\n\
+_commit with 'git gui'/\n\
+_diff last tag from master/\n\
+diff _installed from master/\n\
+diff to be p_ushed/\n\
+_push tags to remote/\n\
+_nautilus at dev path/\n\
+_terminal at dev path/\n\
+_browse with gitk"&&:
 	case "`secascii $?`" in 
 		b) echoc -x "gitk"&&: ;; 
 		c) echoc -x "git gui"&&: ;; 
