@@ -60,23 +60,25 @@ while true;do
 _commitWithGitGui/\
 _diffLastTagFromMaster/\
 diff_installedFromMaster/\
+diffToBeP_ushed/\
 _pushTagsToRemote/\
 _nautilusAtDevPath/\
 _terminalAtDevPath/\
 _browseWithGitk"&&:
 	case "`secascii $?`" in 
-		c) echoc -x "git gui"&&: ;; 
 		b) echoc -x "gitk"&&: ;; 
-		p) echoc -x "git push --tags"&&: ;;
-		n) echoc -x "nautilus ./"&&: ;;
-		t) echoc -x "gnome-terminal"&&: ;;
+		c) echoc -x "git gui"&&: ;; 
+		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
 		i)	if [[ -z "$strSECInstalledVersion" ]];then
 					echoc --alert "package scriptechocolor is not installed."
 				else
 					echoc -x "git difftool -d \"HEAD\@{$strLastCommitBeforeInstall}..master\""&&:
 				fi
 			;;
-		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
+		n) echoc -x "nautilus ./"&&: ;;
+		p) echoc -x "git push --tags"&&: ;;
+		t) echoc -x "gnome-terminal"&&: ;;
+		u) git difftool -d origin/master&&: ;;
 	esac
 	
 done
