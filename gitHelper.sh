@@ -26,14 +26,54 @@ eval `secinit -i`
 
 SECFUNCuniqueLock --daemonwait
 
+strDevPath="`basename "$0"`";strDevPath="`readlink -f "$strDevPath"`";strDevPath="`dirname "$strDevPath"`"
+#echo "(`pwd`)($strDevPath)"
+if [[ "$strDevPath" != "`pwd`" ]];then
+	pwd
+	echoc --alert "invalid run path, should be where '$0' is."
+	cd "$strDevPath"
+	pwd
+fi
+
+strSECInstalledVersion="`dpkg -p scriptechocolor |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
+strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
+
 while true;do
 	echoc --info "Git helper (hit ctrl+c to exit)"
-	echoc -Q "git@O_commitWithGitGui/_diffLastTagFromMaster/_pushTagsToRemote/_browseWithGitk"&&:
+	
+	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}'"
+	
+	#|sed -r "s'.* ([[:digit:]-]* [[:digit:]:]*) .*'\1'" |tr -d ':-' |tr ' ' '-' \
+	strCommits="`git log --full-history --date=iso |grep Date |sed -r "s@.* ([[:digit:]-]*) ([[:digit:]:]*) .*@\1 \2@"`"
+	strLastCommitBeforeInstall="`(echo "$strCommits";echo "$strSECInstalledVersionFormatted") |sort -r |grep "$strSECInstalledVersionFormatted" -A 1 |tail -n 1`"
+#	nMaxShownCommits=20
+#	echoc --info "last $nMaxShownCommits commits:"
+	echoc --info "last commits (highlited the one previous to install):"
+#	echo "$strCommits" |sed "s@.*@'&'@" |head -n $nMaxShownCommits |column
+	echo "$strCommits" |sed "s@.*@'&'@" |grep "$strLastCommitBeforeInstall" -A 1 -B 1000 --color=always
+	
+	echoc -Q "git@O\
+_commitWithGitGui/\
+_diffLastTagFromMaster/\
+diff_installedFromMaster/\
+_pushTagsToRemote/\
+_nautilusAtDevPath/\
+_terminalAtDevPath/\
+_browseWithGitk"&&:
 	case "`secascii $?`" in 
-		c) echoc -x "git gui";; 
-		b) echoc -x "gitk";; 
-		p) echoc -x "git push --tags";;
-		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\"";;
+		c) echoc -x "git gui"&&: ;; 
+		b) echoc -x "gitk"&&: ;; 
+		p) echoc -x "git push --tags"&&: ;;
+		n) echoc -x "nautilus ./"&&: ;;
+		t) echoc -x "gnome-terminal"&&: ;;
+		i)	if [[ -z "$strSECInstalledVersion" ]];then
+					echoc --alert "package scriptechocolor is not installed."
+				else
+					echoc -x "git difftool -d \"HEAD@@{$strLastCommitBeforeInstall}..master\""&&:
+				fi
+			;;
+		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
 	esac
+	
 done
 
