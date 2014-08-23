@@ -157,28 +157,33 @@ while true;do
 			bResetTimer=false
 			bKeepAwake=false
 
+			strLsCmd="ls -lR"
+			strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
+			
+			function FUNCkillLostLs () { #mainly useful at developing time where this script is exited several times...
+				pgrep -fx "$strLsCmd $strDeviceMountedPath" \
+					|while read nLsPid;do 
+						nLsPPid="`ps --no-headers -o ppid -p $nLsPid`"&&:
+						if((nLsPPid==$$));then
+							continue
+						fi
+						
+						strLsStat="`ps --no-headers -o stat -p $nLsPid`"&&:
+						if [[ "$strLsStat" == "T" ]];then
+							echoc -x "kill -SIGKILL $nLsPid #@{b}killing lost ls pid"
+						fi
+					done
+			}
+			FUNCkillLostLs
+
 			if pgrep unison >/dev/null;then
 				echoc --info "$strDev timer reset, 'unison' is running (also keep storage active)"
 				ps --no-headers -p `pgrep unison`
-				strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
-				
-				function FUNCkillLostLs () { #TODO still untested
-					pgrep -fx "ls -lR $strDeviceMountedPath" \
-						|while read nLsPid;do 
-							if((`ps --no-headers -o ppid -p $nLsPid`==$$));then
-								continue
-							fi
-							strLsStat="`ps --no-headers -o stat -p $nLsPid`"
-							if [[ "$strLsStat" == "T" ]];then
-								echoc -x "kill $nLsPid #@{b}killing old pid"
-							fi
-						done
-				}
-				#FUNCkillLostLs #TODO enable this?
 
 				# trick to keep awake by quickly using ls, this shall force io status changes
 				if [[ ! -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
-					ls -lR "$strDeviceMountedPath" >/dev/null 2>&1 &
+					#ls -lR "$strDeviceMountedPath" >/dev/null 2>&1 &
+					$strLsCmd $strDeviceMountedPath >/dev/null 2>&1 &
 					anPidKeepAwake["$strDev"]=$!
 				fi
 				kill -SIGCONT ${anPidKeepAwake[$strDev]}&&:
@@ -211,8 +216,9 @@ while true;do
 			echo "$strDev inactive for ${nInactiveFor}s, Status '${strStatus[nIndex]}'"
 			
 			if((`SECFUNCdelay "Device${nIndex}" --getsec`>nWaitSecondsToUnmount));then
-				echoc -x "umount '$strDev'"
-				SECFUNCdelay "Device${nIndex}" --init #initialize umounted time
+				if echoc -x "umount '$strDev'"&&: ;then
+					SECFUNCdelay "Device${nIndex}" --init #initialize umounted time
+				fi
 			fi
 		
 			strStatusPrevious[nIndex]="${strStatus[nIndex]}"
