@@ -96,41 +96,50 @@ if $bList;then
 	fi
 fi
 
-astrDev=()
-for strDevTemp in "${astrDevTemp[@]-}";do
-	# fix path
-	if [[ "$strDevTemp" == /* ]];then
-		if [[ "`dirname "$strDevTemp"`" != "$strDevIdsPath" ]];then
-			echoc -p "invalid '$strDevTemp', must be at '$strDevIdsPath'"
-			exit 1
-		fi
-	else
-		strDevTemp="$strDevIdsPath/$strDevTemp"
-	fi
+function FUNCupdateDevList() {
+	declare -ag astrDev=()
 	
-	if $bRetry;then
-		while [[ ! -a "$strDevTemp" ]];do
-			echoc -w -t 60 "waiting device '$strDevTemp' become available"
-		done
-	fi
-	
-	# add to array
-	if [[ -L "$strDevTemp" ]];then
-		if [[ "$strDevTemp" == *-part? ]];then
-			astrDev+=("`readlink -f "$strDevTemp"`")
+	for strDevTemp in "${astrDevTemp[@]-}";do
+		# fix path
+		if [[ "$strDevTemp" == /* ]];then
+			if [[ "`dirname "$strDevTemp"`" != "$strDevIdsPath" ]];then
+				echoc -p "invalid '$strDevTemp', must be at '$strDevIdsPath'"
+				exit 1
+			fi
 		else
-			# add partitions to array in case it is base device
-			for strDevTemp2 in `ls -1 "${strDevTemp}-part"*`;do
-				astrDev+=("`readlink -f "$strDevTemp2"`")
+			strDevTemp="$strDevIdsPath/$strDevTemp"
+		fi
+	
+		if $bRetry;then
+			while [[ ! -a "$strDevTemp" ]];do
+				echoc -w -t 60 "waiting device '$strDevTemp' become available"
 			done
 		fi
-	else
-		echoc -p "invalid device id '$strDevTemp'"
-		exit 1
-	fi
-done
-
-echoc --info "Devices: ${astrDev[@]}"
+	
+		# add to array
+		if [[ -L "$strDevTemp" ]];then
+			if [[ "$strDevTemp" == *-part? ]];then
+				astrDev+=("`readlink -f "$strDevTemp"`")
+			else
+				# add partitions to array in case it is base device
+				for strDevTemp2 in `ls -1 "${strDevTemp}-part"*`;do
+					astrDev+=("`readlink -f "$strDevTemp2"`")
+				done
+			fi
+		else
+			echoc -p "invalid device id '$strDevTemp'"
+			exit 1
+		fi
+	done
+	
+	echoc --info "Devices: ${astrDev[@]}"
+	
+	for nIndex in ${!astrDev[@]};do
+		echoc --info "Init timer for: ${astrDev[nIndex]}"
+		SECFUNCdelay "Device${nIndex}" --init
+	done
+}
+FUNCupdateDevList
 
 SECFUNCuniqueLock --daemonwait
 
@@ -138,11 +147,6 @@ varset --allowuser --show nCheckDelay=60
 varset --allowuser --show nWaitSecondsToUnmount=300 #5min
 
 #astrDev=(`ls "$strDevBase"?`)
-
-for nIndex in ${!astrDev[@]};do
-	echoc --info "Init timer for: ${astrDev[nIndex]}"
-	SECFUNCdelay "Device${nIndex}" --init
-done
 
 nPidKeepAwake=0
 while true;do
@@ -164,9 +168,11 @@ while true;do
 			strStatus[nIndex]=$(iostat -d $strDev |sed "/^$/d" |tail -n 1 |sed -r "s'[[:blank:]]+' 'g" |cut -d" " -f 5,6)
 			
 			bResetTimer=false
+			
 			if [[ "${strStatusPrevious[nIndex]-}" != "${strStatus[nIndex]}" ]];then
 				bResetTimer=true
 			fi
+			
 			if pgrep unison >/dev/null;then
 				echoc --info "$strDev timer reset, 'unison' is running (also keep storage active)"
 				ps --no-headers -p `pgrep unison`
@@ -177,13 +183,18 @@ while true;do
 					ls -lR "$strDeviceMountedPath" >/dev/null 2>&1 &
 					nPidKeepAwake=$!
 				fi
-				kill -SIGCONT $nPidKeepAwake
+				kill -SIGCONT $nPidKeepAwake&&:
 				sleep 0.01
-				kill -SIGSTOP $nPidKeepAwake
-				ps --no-headers -o pid,cmd -p $nPidKeepAwake
+				kill -SIGSTOP $nPidKeepAwake&&:
+				ps --no-headers -o pid,cmd -p $nPidKeepAwake&&:
 				
 				bResetTimer=true
+			else
+				if [[ -d "/proc/$nPidKeepAwake" ]];then
+					kill -SIGKILL $nPidKeepAwake&&:
+				fi
 			fi
+			
 			if $bResetTimer;then
 				SECFUNCdelay "Device${nIndex}" --init
 			fi
@@ -201,6 +212,9 @@ while true;do
 		fi
 	done
 	
-	echoc -w -t $nCheckDelay
+	#echoc -w -t $nCheckDelay
+	if echoc -q -t $nCheckDelay "update devices list?";then
+		FUNCupdateDevList
+	fi
 done
 
