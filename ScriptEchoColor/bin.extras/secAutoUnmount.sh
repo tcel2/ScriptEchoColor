@@ -52,7 +52,7 @@ bList=false
 bRetry=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "To let a backup storage go safely sleep, its base id must be supplied (the one that doesnt ends with '-part?')."
+		SECFUNCshowHelp --colorize "To let a backup storage go safely sleep, its base id must be supplied (the one that doesnt ends with '-part?'). Also detects unison and keeps devices awake."
 		SECFUNCshowHelp --colorize "<deviceId1> [deviceId2] ..."
 		SECFUNCshowHelp
 		exit
@@ -148,58 +148,67 @@ varset --allowuser --show nWaitSecondsToUnmount=300 #5min
 
 #astrDev=(`ls "$strDevBase"?`)
 
-nPidKeepAwake=0
+declare -A anPidKeepAwake
 while true;do
 	for nIndex in ${!astrDev[@]};do
 		strDev="${astrDev[nIndex]}"
 		
 		if mount |grep -q "^$strDev";then
-#			strStatus[nIndex]=$(
-#				(iostat -d $strDev \
-#					|sed "/^$/d" \
-#					|tail -n 1 \
-#				 && \
-#				 iostat -d $strDev -x \
-#				 	|sed "/^$/d" \
-#				 	|tail -n 1) \
-#				|tr "\n" " " \
-#				|sed -r "s'[[:blank:]]+' 'g"
-#			)
-			strStatus[nIndex]=$(iostat -d $strDev |sed "/^$/d" |tail -n 1 |sed -r "s'[[:blank:]]+' 'g" |cut -d" " -f 5,6)
-			
 			bResetTimer=false
-			
-			if [[ "${strStatusPrevious[nIndex]-}" != "${strStatus[nIndex]}" ]];then
-				bResetTimer=true
-			fi
-			
+			bKeepAwake=false
+
 			if pgrep unison >/dev/null;then
 				echoc --info "$strDev timer reset, 'unison' is running (also keep storage active)"
 				ps --no-headers -p `pgrep unison`
 				strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
 				
-				# keep awake trick by quickly using ls
-				if [[ ! -d "/proc/$nPidKeepAwake" ]];then
+				function FUNCkillLostLs () { #TODO still untested
+					pgrep -fx "ls -lR $strDeviceMountedPath" \
+						|while read nLsPid;do 
+							if((`ps --no-headers -o ppid -p $nLsPid`==$$));then
+								continue
+							fi
+							strLsStat="`ps --no-headers -o stat -p $nLsPid`"
+							if [[ "$strLsStat" == "T" ]];then
+								echoc -x "kill $nLsPid #@{b}killing old pid"
+							fi
+						done
+				}
+				#FUNCkillLostLs #TODO enable this?
+
+				# trick to keep awake by quickly using ls, this shall force io status changes
+				if [[ ! -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
 					ls -lR "$strDeviceMountedPath" >/dev/null 2>&1 &
-					nPidKeepAwake=$!
+					anPidKeepAwake["$strDev"]=$!
 				fi
-				kill -SIGCONT $nPidKeepAwake&&:
+				kill -SIGCONT ${anPidKeepAwake[$strDev]}&&:
 				sleep 0.01
-				kill -SIGSTOP $nPidKeepAwake&&:
-				ps --no-headers -o pid,cmd -p $nPidKeepAwake&&:
+				kill -SIGSTOP ${anPidKeepAwake[$strDev]}&&:
+				ps --no-headers -o pid,tty,time,cmd -p ${anPidKeepAwake[$strDev]}&&:
 				
-				bResetTimer=true
+				# do not use bResetTimer=true here, ls work should provide enough status changes to make it work...
+				bKeepAwake=true
 			else
-				if [[ -d "/proc/$nPidKeepAwake" ]];then
-					kill -SIGKILL $nPidKeepAwake&&:
+				if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
+					kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
 				fi
+			fi
+			
+			strStatus[nIndex]=$(iostat -d $strDev |sed "/^$/d" |tail -n 1 |sed -r "s'[[:blank:]]+' 'g" |cut -d" " -f 5,6)
+			
+			if [[ "${strStatusPrevious[nIndex]-}" != "${strStatus[nIndex]}" ]];then
+				bResetTimer=true
 			fi
 			
 			if $bResetTimer;then
 				SECFUNCdelay "Device${nIndex}" --init
 			fi
-
-			echo "$strDev inactive for `SECFUNCdelay "Device${nIndex}" --getsec`s, Status '${strStatus[nIndex]}'"
+			
+			nInactiveFor="`SECFUNCdelay "Device${nIndex}" --getsec`"
+			if $bKeepAwake && ! $bResetTimer && (( nInactiveFor>(nWaitSecondsToUnmount/2) ));then
+				echoc --alert "unable to keep strDev='$strDev' awake..."
+			fi
+			echo "$strDev inactive for ${nInactiveFor}s, Status '${strStatus[nIndex]}'"
 			
 			if((`SECFUNCdelay "Device${nIndex}" --getsec`>nWaitSecondsToUnmount));then
 				echoc -x "umount '$strDev'"
