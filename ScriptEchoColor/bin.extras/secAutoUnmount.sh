@@ -144,6 +144,7 @@ for nIndex in ${!astrDev[@]};do
 	SECFUNCdelay "Device${nIndex}" --init
 done
 
+nPidKeepAwake=0
 while true;do
 	for nIndex in ${!astrDev[@]};do
 		strDev="${astrDev[nIndex]}"
@@ -170,7 +171,17 @@ while true;do
 				echoc --info "$strDev timer reset, 'unison' is running (also keep storage active)"
 				ps --no-headers -p `pgrep unison`
 				strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
-				ls -l "$strDeviceMountedPath" >/dev/null #TODO does this help keep storage active?
+				
+				# keep awake trick by quickly using ls
+				if [[ ! -d "/proc/$nPidKeepAwake" ]];then
+					ls -lR "$strDeviceMountedPath" >/dev/null 2>&1 &
+					nPidKeepAwake=$!
+				fi
+				kill -SIGCONT $nPidKeepAwake
+				sleep 0.01
+				kill -SIGSTOP $nPidKeepAwake
+				ps --no-headers -o pid,cmd -p $nPidKeepAwake
+				
 				bResetTimer=true
 			fi
 			if $bResetTimer;then
