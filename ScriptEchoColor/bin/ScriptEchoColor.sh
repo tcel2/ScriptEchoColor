@@ -2041,11 +2041,6 @@ FUNCformatColor(){
 		charPrev="$char"
 		char="${strString:nCount:1}"
 		
-		if $lbEscapeToken;then
-			lbEscapeToken=false
-			continue
-		fi
-		
 		if $bIgnore;then # bIgnore=true is set by '@--'
 			if [[ "${strString:nCount:3}" == '@++' ]];then
 				if [[ "$charPrev" == '@' ]];then
@@ -2062,9 +2057,17 @@ FUNCformatColor(){
 			continue
 		fi
 		
+		if $lbEscapeToken;then
+			lbEscapeToken=false
+			continue
+		fi
+		
 		if ! $bCMDIn; then
 			if [[ "$char" == '\' ]] && [[ "${strString:nCount+1:1}" == "@" ]];then
 				strStringOK+="@"
+				if $bExecuteAsCommandLine || $bParentEnvironmentChangeEchoHelper;then
+					strCommandLine+="@"
+				fi
 				lbEscapeToken=true
 				continue
 			fi
@@ -2119,7 +2122,7 @@ FUNCformatColor(){
 	#      strUnformatted="$strUnformatted$charGfxTrans"
 				if $bExecuteAsCommandLine || $bParentEnvironmentChangeEchoHelper; then #for performance
 	##		    strCommandLine="$strCommandLine$charEscape$charGfxTrans" 
-					strCommandLine="$strCommandLine$charGfxTrans" 
+					strCommandLine+="$charGfxTrans" 
 				fi
 			fi
 		else
