@@ -50,7 +50,12 @@ while true;do
 #	echoc --info "last $nMaxShownCommits commits:"
 	echoc --info "last commits (highlited the one previous to install):"
 #	echo "$strCommits" |sed "s@.*@'&'@" |head -n $nMaxShownCommits |column
-	echo "$strCommits" |sed "s@.*@'&'@" |grep "$strLastCommitBeforeInstall" -A 1 -B 1000 --color=always
+	nNewestCommitsLimit=1000 #just an "absurd?" number to make it easier to code...
+	nTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`"
+	echo "$strCommits" \
+		|sed "s@.*@'&'@" \
+		|grep "$strLastCommitBeforeInstall" -A 1 -B $nNewestCommitsLimit --color=always \
+		|column -c $nTerminalWidth
 	
 	echoc -Q "git@O\
 _commitWithGitGui/\
