@@ -36,7 +36,7 @@ if [[ "$strDevPath" != "`pwd`" ]];then
 fi
 
 while true;do
-	echoc --info "Git helper (hit ctrl+c to exit)"
+	#echoc --info "Git helper (hit ctrl+c to exit)"
 
 	strSECInstalledVersion="`dpkg -p scriptechocolor |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
 	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
@@ -65,15 +65,15 @@ while true;do
 #_nautilusAtDevPath/\
 #_terminalAtDevPath/\
 #_browseWithGitk"&&:
-	echoc -Q "git@O\n\
-_commit with 'git gui'/\n\
-_diff last tag from master/\n\
-diff _installed from master/\n\
-diff to be p_ushed/\n\
-_push tags to remote/\n\
-_nautilus at dev path/\n\
-_terminal at dev path/\n\
-_browse with gitk"&&:
+	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
+\t_commit with 'git gui'/\n\
+\t_diff last tag from master/\n\
+\tdiff _installed from master/\n\
+\tdiff to be p_ushed/\n\
+\t_push tags to remote/\n\
+\t_nautilus at dev path/\n\
+\t_terminal at dev path/\n\
+\t_browse with gitk"&&:
 	case "`secascii $?`" in 
 		b) echoc -x "gitk"&&: ;; 
 		c) echoc -x "git gui"&&: ;; 
