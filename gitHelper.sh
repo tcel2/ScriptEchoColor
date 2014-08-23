@@ -35,12 +35,11 @@ if [[ "$strDevPath" != "`pwd`" ]];then
 	pwd
 fi
 
-strSECInstalledVersion="`dpkg -p scriptechocolor |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
-strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
-
 while true;do
 	echoc --info "Git helper (hit ctrl+c to exit)"
-	
+
+	strSECInstalledVersion="`dpkg -p scriptechocolor |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
+	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
 	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}'"
 	
 	#|sed -r "s'.* ([[:digit:]-]* [[:digit:]:]*) .*'\1'" |tr -d ':-' |tr ' ' '-' \
@@ -74,7 +73,7 @@ _browseWithGitk"&&:
 		i)	if [[ -z "$strSECInstalledVersion" ]];then
 					echoc --alert "package scriptechocolor is not installed."
 				else
-					echoc -x "git difftool -d \"HEAD@@{$strLastCommitBeforeInstall}..master\""&&:
+					echoc -x "git difftool -d \"HEAD\@{$strLastCommitBeforeInstall}..master\""&&:
 				fi
 			;;
 		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
