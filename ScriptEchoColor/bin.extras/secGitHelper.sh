@@ -24,13 +24,11 @@
 
 eval `secinit -i`
 
-SECFUNCuniqueLock --daemonwait
-
 strDpkgPackage=""
 strDevPath=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "This script only works properly with package 'Version-Revision' in the format 'YYYYMMDD-HHMMSS'"
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--package" || "$1" == "-p" ]];then #help package name to be queried with dpkg
@@ -77,6 +75,7 @@ echoc -x "pwd"
 #	pwd
 #fi
 
+SECFUNCuniqueLock --daemonwait
 while true;do
 	#echoc --info "Git helper (hit ctrl+c to exit)"
 
