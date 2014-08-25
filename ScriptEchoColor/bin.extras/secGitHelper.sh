@@ -26,21 +26,65 @@ eval `secinit -i`
 
 SECFUNCuniqueLock --daemonwait
 
-strDevPath="`basename "$0"`";strDevPath="`readlink -f "$strDevPath"`";strDevPath="`dirname "$strDevPath"`"
-#echo "(`pwd`)($strDevPath)"
-if [[ "$strDevPath" != "`pwd`" ]];then
-	pwd
-	echoc --alert "invalid run path, should be where '$0' is."
-	cd "$strDevPath"
-	pwd
+strDpkgPackage=""
+strDevPath=""
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--package" || "$1" == "-p" ]];then #help package name to be queried with dpkg
+		shift
+		strDpkgPackage="${1-}"
+	elif [[ "$1" == "--devpath" || "$1" == "-d" ]];then #help development path where .git directory can be found into
+		shift
+		strDevPath="${1-}"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
+if [[ ! -d "$strDevPath" ]];then
+	echoc -p "invalid strDevPath='$strDevPath'"
+	exit 1
 fi
+strDevPath="`readlink -f "$strDevPath"`"
+if [[ ! -d "$strDevPath/.git" ]];then
+	echoc -p "missing .git at strDevPath='$strDevPath'"
+	exit 1
+fi
+ls -ld "$strDevPath/.git"
+
+if ! dpkg -p "$strDpkgPackage";then
+	echoc -p "invalid strDpkgPackage='$strDpkgPackage'"
+	exit 1
+fi
+
+cd "$strDevPath"
+echoc -x "pwd"
+
+#strDevPath="`basename "$0"`";strDevPath="`readlink -f "$strDevPath"`";strDevPath="`dirname "$strDevPath"`"
+##echo "(`pwd`)($strDevPath)"
+#if [[ "$strDevPath" != "`pwd`" ]];then
+#	pwd
+#	echoc --alert "invalid run path, should be where '$0' is."
+#	cd "$strDevPath"
+#	pwd
+#fi
 
 while true;do
 	#echoc --info "Git helper (hit ctrl+c to exit)"
 
-	strSECInstalledVersion="`dpkg -p scriptechocolor |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
+	strSECInstalledVersion="`dpkg -p "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
 	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
-	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}'"
+	echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
+	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}';"
+	echoc "strDevPath='@y$strDevPath';"
 	
 	#|sed -r "s'.* ([[:digit:]-]* [[:digit:]:]*) .*'\1'" |tr -d ':-' |tr ' ' '-' \
 	strCommits="`git log --full-history --date=iso |grep Date |sed -r "s@.* ([[:digit:]-]*) ([[:digit:]:]*) .*@\1 \2@"`"
