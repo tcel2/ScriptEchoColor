@@ -192,7 +192,7 @@ while true;do
 		fi
 	fi
 	
-	if $bMovieCheck;then 
+	if ! $bIsLocked && $bMovieCheck;then 
 		nActiveWindowId=-1
 		strActiveWindowName=""
 		bSimulateActivity=false
