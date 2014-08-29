@@ -32,6 +32,7 @@ bModeUnity=false
 bModeGnome=false
 bModeXscreensaver=false
 bDPMSmonitorOn=false
+bMovieCheck=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
@@ -47,6 +48,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bForceLightWeight=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
 		bDPMSmonitorOn=true
+	elif [[ "$1" == "--moviecheck" || "$1" == "-m" ]];then #help check if you are watching a movie in fullscreen and prevent screensaver from being activated
+		bMovieCheck=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -177,6 +180,52 @@ while true;do
 			fi
 		else
 			echo "Screen locked manually."
+		fi
+	fi
+	
+	if $bMovieCheck;then 
+#		for((nMovieCheck=0;nMovieCheck<=1;nMovieCheck++));do
+#			if ! SECFUNCdelay bMovieCheck --checkorinit1 60;then # check once each 60s
+#				break
+#			fi
+#			
+#		done
+		bMovieCheckOk=true
+		
+		if $bMovieCheckOk && ! SECFUNCdelay bMovieCheck --checkorinit1 60;then # check once each 60s
+			bMovieCheckOk=false
+		fi
+		
+		nActiveWindowId=-1
+		if $bMovieCheckOk && ! nActiveWindowId="`xdotool getactivewindow`";then
+			bMovieCheckOk=false
+		fi
+		echo "nActiveWindowId='$nActiveWindowId'"
+		
+		if $bMovieCheckOk && ! xprop -id $nActiveWindowId |grep "_NET_WM_STATE_FULLSCREEN";then
+			bMovieCheckOk=false
+		fi
+		
+		strActiveWindowName=""
+		if $bMovieCheckOk && ! strActiveWindowName="`xdotool getwindowname $nActiveWindowId`";then
+			SEC_WARN=true SECFUNCechoWarn "unable to get strActiveWindowName for nActiveWindowId='$nActiveWindowId'"
+			bMovieCheckOk=false
+		fi
+		echo "strActiveWindowName='$strActiveWindowName'"
+
+		bSimulateActivity=false
+		if $bMovieCheckOk;then
+	  	if pgrep netflix-desktop;then
+				if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
+					bSimulateActivity=true
+				fi
+			fi
+		fi
+		
+		if $bSimulateActivity;then
+			if pgrep xscreensaver;then
+				xscreensaver-command -deactivate
+			fi
 		fi
 	fi
 	
