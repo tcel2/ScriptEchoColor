@@ -1085,6 +1085,9 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 function SECFUNCppidList() { #help [separator] between pids
 	local lbReverse=false
 	local lbComm=false
+	local lnPid=$$
+  local lstrSeparator=" "
+  local lnPidCheck=0
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
 			SECFUNCshowHelp $FUNCNAME
@@ -1093,6 +1096,15 @@ function SECFUNCppidList() { #help [separator] between pids
 			lbReverse=true
 		elif [[ "$1" == "--comm" || "$1" == "-c" ]];then #SECFUNCppidList_help add the short comm to pid
 			lbComm=true
+		elif [[ "$1" == "--pid" || "$1" == "-p" ]];then #SECFUNCppidList_help <lnPid> use it as reference for the list
+			shift
+			lnPid=${1-}
+		elif [[ "$1" == "--checkpid" ]];then #SECFUNCppidList_help <lnPidCheck> check if it is on the ppid list
+			shift
+			lnPidCheck=${1-}
+		elif [[ "$1" == "--separator" || "$1" == "-s" ]];then #SECFUNCppidList_help <lstrSeparator> use it as reference for the list
+			shift
+		  lstrSeparator="${1-}"
 		elif [[ "$1" == "--" ]];then #SECFUNCppidList_help params after this are ignored as being these options
 			shift
 			break
@@ -1103,15 +1115,36 @@ function SECFUNCppidList() { #help [separator] between pids
 		shift
 	done
 
-  local lstrSeparator="${1- }" #space is default
+	if [[ -n "${1-}" ]];then
+	  lstrSeparator="$1"
+	fi
   shift
+  
+  if [[ "$lnPidCheck" != "0" ]];then
+  	if ! SECFUNCisNumber -dn "$lnPidCheck";then
+			SECFUNCechoErrA "invalid lnPidCheck='$lnPidCheck'"
+			return 1
+  	fi
+  fi
+  
+  if ! SECFUNCisNumber -dn "$lnPid";then
+		SECFUNCechoErrA "invalid lnPid='$lnPid'"
+		return 1
+  fi
   
   local lstrPidList=""
   local pidList=()
-  local ppid=$$;
+  local ppid=$lnPid;
   while((ppid>=1));do 
     #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
     ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
+    
+    if((lnPidCheck>0));then
+    	if((ppid==lnPidCheck));then
+    		return 0
+    	fi
+    fi
+    
     #pidList=(${pidList[*]} $ppid)
     pidList+=($ppid)
     
@@ -1146,7 +1179,13 @@ function SECFUNCppidList() { #help [separator] between pids
 #  fi
   
   #echo "$output"
-  echo -e "$lstrPidList"
+  if((lnPidCheck>0));then
+  	return 1; # reached here because did not match any ppid
+  else
+	  echo -e "$lstrPidList"
+	fi
+  
+  return 0
 }
 
 function SECFUNCcheckActivateRunLog() {

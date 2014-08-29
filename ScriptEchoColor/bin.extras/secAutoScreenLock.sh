@@ -231,11 +231,11 @@ while true;do
 			echo "strActiveWindowCmd='$strActiveWindowCmd'"
 			
 			# check what player 
-			if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
-				if pgrep netflix-desktop;then
+			if [[ "$strActiveWindowCmd" =~ "firefox ".*"www.netflix.com" ]];then # Netflix Desktop
+				if SECFUNCppidList --pid "$nActiveWindowPid" --checkpid "`pgrep netflix-desktop`";then
 					bSimulateActivity=true
 				fi
-			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then
+			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then # Chromium Flash player
 				bSimulateActivity=true
 			else
 				echoc --info "Maximized window not identified."
