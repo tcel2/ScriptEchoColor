@@ -33,6 +33,7 @@ bModeGnome=false
 bModeXscreensaver=false
 bDPMSmonitorOn=false
 bMovieCheck=false
+nMovieCheckDelay=60
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
@@ -48,7 +49,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bForceLightWeight=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
 		bDPMSmonitorOn=true
-	elif [[ "$1" == "--moviecheck" || "$1" == "-m" ]];then #help check if you are watching a movie in fullscreen and prevent screensaver from being activated
+	elif [[ "$1" == "--moviecheck" || "$1" == "-m" ]];then #help <nMovieCheckDelay> check if you are watching a movie in fullscreen and prevent screensaver from being activated
+		shift
+		nMovieCheckDelay="${1-}"
+		
 		bMovieCheck=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
@@ -59,6 +63,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if ! SECFUNCisNumber -dn $nMovieCheckDelay || ((nMovieCheckDelay==0));then
+	echoc -p "invalid nMovieCheckDelay='$nMovieCheckDelay'"
+	exit 1
+fi
 
 nModeCount=0
 if $bModeUnity;then ((nModeCount++))&&:;fi
@@ -184,49 +193,41 @@ while true;do
 	fi
 	
 	if $bMovieCheck;then 
-#		for((nMovieCheck=0;nMovieCheck<=1;nMovieCheck++));do
-#			if ! SECFUNCdelay bMovieCheck --checkorinit1 60;then # check once each 60s
-#				break
-#			fi
-#			
-#		done
-		bMovieCheckOk=true
-		
-		if $bMovieCheckOk && ! SECFUNCdelay bMovieCheck --checkorinit1 60;then # check once each 60s
-			bMovieCheckOk=false
-		fi
-		
 		nActiveWindowId=-1
-		if $bMovieCheckOk && ! nActiveWindowId="`xdotool getactivewindow`";then
-			bMovieCheckOk=false
-		fi
-		echo "nActiveWindowId='$nActiveWindowId'"
-		
-		if $bMovieCheckOk && ! xprop -id $nActiveWindowId |grep "_NET_WM_STATE_FULLSCREEN";then
-			bMovieCheckOk=false
-		fi
-		
 		strActiveWindowName=""
-		if $bMovieCheckOk && ! strActiveWindowName="`xdotool getwindowname $nActiveWindowId`";then
-			SEC_WARN=true SECFUNCechoWarn "unable to get strActiveWindowName for nActiveWindowId='$nActiveWindowId'"
-			bMovieCheckOk=false
-		fi
-		echo "strActiveWindowName='$strActiveWindowName'"
-
 		bSimulateActivity=false
-		if $bMovieCheckOk;then
-	  	if pgrep netflix-desktop;then
+		for((nMovieCheck=0;nMovieCheck<=1;nMovieCheck++));do
+			if ! SECFUNCdelay bMovieCheck --checkorinit1 $nMovieCheckDelay;then
+				break
+			fi
+			
+			if ! nActiveWindowId="`xdotool getactivewindow`";then
+				break;
+			fi
+			echo "nActiveWindowId='$nActiveWindowId'"
+			
+			if ! xprop -id $nActiveWindowId |grep "_NET_WM_STATE_FULLSCREEN";then
+				break;
+			fi
+
+			if ! strActiveWindowName="`xdotool getwindowname $nActiveWindowId`";then
+				SEC_WARN=true SECFUNCechoWarn "unable to get strActiveWindowName for nActiveWindowId='$nActiveWindowId'"
+				break;
+			fi
+			echo "strActiveWindowName='$strActiveWindowName'"
+			
+			if pgrep netflix-desktop;then
 				if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
 					bSimulateActivity=true
 				fi
 			fi
-		fi
 		
-		if $bSimulateActivity;then
-			if pgrep xscreensaver;then
-				xscreensaver-command -deactivate
+			if $bSimulateActivity;then
+				if pgrep xscreensaver;then
+					xscreensaver-command -deactivate
+				fi
 			fi
-		fi
+		done
 	fi
 	
 	echoc -w -t 10
