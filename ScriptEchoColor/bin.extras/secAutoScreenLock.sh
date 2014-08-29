@@ -196,7 +196,7 @@ while true;do
 		nActiveWindowId=-1
 		strActiveWindowName=""
 		bSimulateActivity=false
-		for((nMovieCheck=0;nMovieCheck<=1;nMovieCheck++));do
+		for((nMovieCheck=0;nMovieCheck<1;nMovieCheck++));do #fake loop just to use break functionality
 			if ! SECFUNCdelay bMovieCheck --checkorinit1 $nMovieCheckDelay;then
 				break
 			fi
@@ -216,16 +216,38 @@ while true;do
 			fi
 			echo "strActiveWindowName='$strActiveWindowName'"
 			
-			if pgrep netflix-desktop;then
-				if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
+			if ! nActiveWindowPid="`xdotool getwindowpid $nActiveWindowId`";then
+				SEC_WARN=true SECFUNCechoWarn "unable to get nActiveWindowPid for nActiveWindowId='$nActiveWindowId'"
+				break;
+			fi
+			echo "nActiveWindowPid='$nActiveWindowPid'"
+			
+			nActiveWindowPPid="`ps --no-headers -o ppid -p $nActiveWindowPid`"
+			echo "nActiveWindowPPid='$nActiveWindowPPid'"
+			
+			strActiveWindowCmd="`ps --no-headers -o cmd -p $nActiveWindowPid`"
+			
+			# check what player 
+			if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
+				if pgrep netflix-desktop;then
 					bSimulateActivity=true
 				fi
+			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then
+				bSimulateActivity=true
+			else
+				echoc --info "Maximized window not identified."
 			fi
-		
+			
 			if $bSimulateActivity;then
 				if pgrep xscreensaver;then
 					xscreensaver-command -deactivate
 				fi
+			else
+				SEC_WARN=true SECFUNCechoWarnA "extra info to debug below..."
+#				echoc -x "xprop -id $nActiveWindowId"
+#				echoc -x "xwininfo -id $nActiveWindowId"
+				echoc -x "ps --no-headers -p $nActiveWindowPid"
+				echoc -x "ps --no-headers -p $nActiveWindowPPid"
 			fi
 		done
 	fi
