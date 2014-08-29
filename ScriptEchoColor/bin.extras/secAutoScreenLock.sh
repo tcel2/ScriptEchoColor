@@ -209,7 +209,9 @@ while true;do
 			if ! xprop -id $nActiveWindowId |grep "_NET_WM_STATE_FULLSCREEN";then
 				break;
 			fi
-
+			
+			################### FULLSCREEN WINDOW CHECK GRANTED FROM HERE
+			
 			if ! strActiveWindowName="`xdotool getwindowname $nActiveWindowId`";then
 				SEC_WARN=true SECFUNCechoWarn "unable to get strActiveWindowName for nActiveWindowId='$nActiveWindowId'"
 				break;
@@ -226,6 +228,7 @@ while true;do
 			echo "nActiveWindowPPid='$nActiveWindowPPid'"
 			
 			strActiveWindowCmd="`ps --no-headers -o cmd -p $nActiveWindowPid`"
+			echo "strActiveWindowCmd='$strActiveWindowCmd'"
 			
 			# check what player 
 			if [[ "$strActiveWindowName" == "Netflix - Mozilla Firefox" ]];then
