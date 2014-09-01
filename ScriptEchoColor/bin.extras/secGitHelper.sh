@@ -77,6 +77,16 @@ echoc -x "pwd"
 
 SECFUNCuniqueLock --daemonwait
 while true;do
+	### ASK WHAT TO DO ###
+#	echoc -Q "git@O\
+#_commitWithGitGui/\
+#_diffLastTagFromMaster/\
+#diff_installedFromMaster/\
+#diffToBeP_ushed/\
+#_pushTagsToRemote/\
+#_nautilusAtDevPath/\
+#_terminalAtDevPath/\
+#_browseWithGitk"&&:
 	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
 \t_commit with 'git gui'/\n\
 \t_diff last tag from master/\n\
@@ -87,9 +97,10 @@ while true;do
 \t_terminal at dev path/\n\
 \t_browse with gitk"&&:
 	nRetValue=$?
-
+	
+	### UPDATE CONTROL DATA AND SHOW INFORMATION ###
+	
 	#echoc --info "Git helper (hit ctrl+c to exit)"
-
 	strSECInstalledVersion="`dpkg -p "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
 	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
 	echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
@@ -110,15 +121,7 @@ while true;do
 		|grep "$strLastCommitBeforeInstall" -A 1 -B $nNewestCommitsLimit --color=always \
 		|column -c $nTerminalWidth
 	
-#	echoc -Q "git@O\
-#_commitWithGitGui/\
-#_diffLastTagFromMaster/\
-#diff_installedFromMaster/\
-#diffToBeP_ushed/\
-#_pushTagsToRemote/\
-#_nautilusAtDevPath/\
-#_terminalAtDevPath/\
-#_browseWithGitk"&&:
+	### EXEC USER OPTION ###
 	case "`secascii $nRetValue`" in 
 		b) echoc -x "gitk"&&: ;; 
 		c) echoc -x "git gui"&&: ;; 
