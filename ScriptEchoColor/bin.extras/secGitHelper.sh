@@ -77,6 +77,17 @@ echoc -x "pwd"
 
 SECFUNCuniqueLock --daemonwait
 while true;do
+	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
+\t_commit with 'git gui'/\n\
+\t_diff last tag from master/\n\
+\tdiff _installed from master/\n\
+\tdiff to be p_ushed/\n\
+\t_push tags to remote/\n\
+\t_nautilus at dev path/\n\
+\t_terminal at dev path/\n\
+\t_browse with gitk"&&:
+	nRetValue=$?
+
 	#echoc --info "Git helper (hit ctrl+c to exit)"
 
 	strSECInstalledVersion="`dpkg -p "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
@@ -108,16 +119,7 @@ while true;do
 #_nautilusAtDevPath/\
 #_terminalAtDevPath/\
 #_browseWithGitk"&&:
-	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
-\t_commit with 'git gui'/\n\
-\t_diff last tag from master/\n\
-\tdiff _installed from master/\n\
-\tdiff to be p_ushed/\n\
-\t_push tags to remote/\n\
-\t_nautilus at dev path/\n\
-\t_terminal at dev path/\n\
-\t_browse with gitk"&&:
-	case "`secascii $?`" in 
+	case "`secascii $nRetValue`" in 
 		b) echoc -x "gitk"&&: ;; 
 		c) echoc -x "git gui"&&: ;; 
 		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
