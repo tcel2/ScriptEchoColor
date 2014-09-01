@@ -1511,16 +1511,17 @@ if $bOptHelpExtended; then
 		echo '    @Dy: at end, sets the "y" option as the default one, even on space/enter press'
 		echo
 		echo " -Q Extended Question Mode:"
-		echo "    @O: begins ending string part with answer options"
-		echo "    _: set next char to be the option key"
+		echo "    These tokens are at the end of the string."
+		echo "    @O: put after this the option words"
+		echo "    _: the character after this is considered as an option key"
 		echo '    "@@O" and "__" expands to "@O" and "_"'
-		echo "    @D: optional and after @O, begins ending string part"
-		echo "        with default answer character"
+		echo "    @D: the character after this will be the default key"
+		echo "     it is optional and must be at the very end of the string"
 		echo '    Use this command `secascii $?` just after '"$strSelfName call"
 		echo "    Options must be unique (do not repeat keys)"
 		echo "    OBS.: Invalid keys will return 0 (true) in oposition to normal options that return non 0 (false)"'!!!'
 		echo "    example:"
-		echo "    $strSelfName "'-Q "question@O_one/_two/answer__t_hree"; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
+		echo "    $strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
 		echo
 		echo " -S Question mode where you can type a string"
 		echo "    @D: begins ending string part with default answer string"
@@ -1668,7 +1669,7 @@ if $bOptHelpExtended; then
 		echo "  +p = restore only backup position (last sucessfully configured position)"
 		echo "  -- = begin ignoring all formatting"
 		echo "  ++ = (must be used this way: '@++') end ignoring all formatting"
-		echo "  @ = out of {} will result in \"@\""
+		echo "  @@ or \@ expands to '@', skipping color formatting functionality"
 		echo "  /... = extended format mode (instead of 'o' type /bold etc...)"
 		echo "         must come after short format mode, or alone @{go/underline/BLUE}"
 		echo "         see also $optHelpListExtdFmt"
@@ -1678,7 +1679,7 @@ if $bOptHelpExtended; then
 		echo "  $str"; echo "         "`eval "$str"`
 		str="$strSelfName \"ABC @{ogBu}DEF@-a GHI\""
 		echo "  $str"; echo "         "`eval "$str"`
-		str="$strSelfName \"ABC @@ DEF\""
+		str="$strSelfName \"ABC @@ \@ DEF\""
 		echo "  $str"; echo "         "`eval "$str"`
 		str="$strSelfName \"@GA @{ro}B @uC @-tD @-fE @-bF\""
 		echo "  $str"; echo "         "`eval "$str"`
