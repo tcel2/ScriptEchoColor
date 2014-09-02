@@ -142,6 +142,7 @@ function FUNCkillDaemon() {
 		
 		FUNCcheckDaemonStarted&&: # to update nPidDaemon
 	fi
+	return 0
 }
 
 function FUNClocksList(){
@@ -340,8 +341,8 @@ while true;do
 						strFileReal="`readlink "$lstrLockFileIntermediary"`"
 						if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
 							echo " `SECFUNCdtFmt --pretty` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
-							if SECFUNCfileLock --pid $nPid --unlock "$strFileReal";then
-								SECFUNCechoWarnA "unable to remove file lock for '$strFileReal'"
+							if ! SECFUNCfileLock --pid $nPid --unlock "$strFileReal";then
+								SECFUNCechoWarnA "unable to unlock lstrLockFileIntermediary='$lstrLockFileIntermediary', strFileReal='$strFileReal'"
 							fi
 						fi
 					else
