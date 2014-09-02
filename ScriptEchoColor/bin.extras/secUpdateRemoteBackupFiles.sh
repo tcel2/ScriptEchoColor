@@ -84,7 +84,7 @@ varset --default --show bUseAsBackup=true # use RBF as backup, so if real files 
 varset --default --show --allowuser bBackgroundWork=false
 varset --default --show bAutoGit=false
 varset --default --show bUseUnison=false
-varset --default --show nBackgroundSleep=1
+varset --default --show --allowuser nBackgroundSleep=1
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
@@ -354,6 +354,7 @@ function FUNCcopy() {
 		if $bBackgroundWork;then
 			#read -s -n 1 -t 1 -p "" 
 			#sleep $nBackgroundSleep&&:
+			echo #just to not overwrite the previous line that had no \n
 			if echoc -q -t $nBackgroundSleep "go fast (no background work) once?";then
 				bGoFastOnce=true
 			fi
@@ -362,7 +363,7 @@ function FUNCcopy() {
 	
 	# Progress report
 	#echo -en "\r$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`,`basename "$strFile"`\r"
-	SECFUNCdrawLine --stay --left "$nFilesCount,delay=`SECFUNCdelay $FUNCNAME`/`SECFUNCdelay ListOfFuncCopy`,`basename "$strFile"`" " "
+	SECFUNCdrawLine --stay --left "$nFilesCount/$nFilesTot,delay=`SECFUNCdelay $FUNCNAME`/`SECFUNCdelay ListOfFuncCopy`,`basename "$strFile"`" " "
 	
 	SECFUNCdbgFuncOutA
 };export -f FUNCcopy
@@ -615,14 +616,26 @@ elif $bLookForChanges;then
 #			-and \( -not -xtype d \) |sed -r "s'.*'FUNCcopy $bDoIt \"&\";'"`
 #		#echo $strCmdFuncCopyList;
 #		eval $strCmdFuncCopyList
-		find ./ \( -not -name "." -not -name ".." \) \
-			-and \( -not -path "./.git/*" \) \
-			-and \( -type f -or -type l \) \
-			-and \( -not -type d \) \
-			-and \( -not -xtype d \) \
-			|while read strFileBTR;do
-				FUNCcopy $bDoIt "$strFileBTR";
-			done
+#		find ./ \( -not -name "." -not -name ".." \) \
+#			-and \( -not -path "./.git/*" \) \
+#			-and \( -type f -or -type l \) \
+#			-and \( -not -type d \) \
+#			-and \( -not -xtype d \) \
+#			|while read strFileBTR;do
+#				FUNCcopy $bDoIt "$strFileBTR";
+#			done
+		IFS=$'\n' read -d '' -r -a astrFullFilesList < <( \
+			find ./ \( -not -name "." -not -name ".." \) \
+				-and \( -not -path "./.git/*" \) \
+				-and \( -type f -or -type l \) \
+				-and \( -not -type d \) \
+				-and \( -not -xtype d \) \
+		)&&: #TODO it works but returns 1, why?
+		nFilesTot="${#astrFullFilesList[@]}"
+		#echo "#astrFullFilesList[@]=${#astrFullFilesList[@]}" >>/dev/stderr
+		for strFileBTR in "${astrFullFilesList[@]}";do
+			FUNCcopy $bDoIt "$strFileBTR";
+		done
 		
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
