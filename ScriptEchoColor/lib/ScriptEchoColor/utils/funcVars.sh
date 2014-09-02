@@ -394,7 +394,7 @@ function SECFUNCvarUnset() { #help <var> unregister the variable so it will not 
 	pSECFUNCvarRegister --unregister $1
 }
 
-function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>
+function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImportant: Once a variable is set with this function, always set it with this function, because the DB is read before each set and a previously set value may overwrite the current one, if it was not set with this function. Problem ex.: varset A=10;A=20;varset B=1;echo $A
 	SECFUNCdbgFuncInA;
 	#SECFUNCvarReadDB
 	
@@ -477,7 +477,9 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>
 		fi
 	fi
 	
-	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #TODO test: to read DB is useful to keep current environment updated with changes made by other threads?
+	SECFUNCvarReadDB --skip $l_varPlDoUsThVaNaPl #TODO test: to read DB is useful to keep current environment updated with changes made by other threads? 
+	#TODO may be reading the DB should also be made uniquely (one thread per time)? may be not required, as to set the variable is already uniquely done and it reads the DB;
+	#TODO this fails (A=20 is overwritten by A=10): varset A=10;A=20;varset B=1; #find a workaround or not?
 	
 	local lbUserAllowed=false
 	if $lbCheckIfUserCanSet;then

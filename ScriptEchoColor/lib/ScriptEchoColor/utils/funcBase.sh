@@ -71,8 +71,8 @@ function SECFUNCarraysExport() { #help export all arrays
 		FUNCNAME 
 		lastrArraysToSkip 
 		lastrArrays
-		SECastrFunctionStack 
-	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand, at least now only export arrays already marked to be exported what may suffice...
+		SECastrFunctionStack #TODO explain why this must be skipped...
+	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand, at least now it only exports arrays already marked to be exported what may suffice...
 	export SECcmdExportedAssociativeArrays=""
 	for lstrArrayName in ${lastrArrays[@]};do
 		local lbSkip=false

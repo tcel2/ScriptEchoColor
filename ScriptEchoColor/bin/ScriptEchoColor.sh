@@ -132,6 +132,7 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 #	eval `secinit --core`
 #fi
 eval `secinit --fast` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
+#set |grep "^SECastr" >>/dev/stderr
 
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then

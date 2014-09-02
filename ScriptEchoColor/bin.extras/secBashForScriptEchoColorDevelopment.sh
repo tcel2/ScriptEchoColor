@@ -238,6 +238,7 @@ function SECFUNCaddToRcFile() {
 
 #history -a
 SECFUNCarraysExport
+#set |grep "^SEC_EX"
 bash --rcfile <(echo 'SECFUNCaddToRcFile;')
 
 

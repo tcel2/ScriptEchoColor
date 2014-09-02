@@ -135,18 +135,18 @@ function SECFUNCgetUserName(){ #help this is not an atomic function.
 	echo "$lstrUserName"
 }
 
-function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
-	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
-	if ${!1+false};then 
-		declare -a -g ${1}='()';
-	else
-		local lstrCheck="`declare -p "$1" 2>/dev/null`";
-		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
-			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
-			_SECFUNCcriticalForceExit
-		fi
-	fi
-}
+#function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
+#	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
+#	if ${!1+false};then 
+#		declare -a -x -g ${1}='()';
+#	else
+#		local lstrCheck="`declare -p "$1" 2>/dev/null`";
+#		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
+#			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+#			_SECFUNCcriticalForceExit
+#		fi
+#	fi
+#}
 
 if [[ -z "${SECstrTmpFolderBase-}" ]];then
 	export SECstrTmpFolderBase="/dev/shm"
@@ -182,18 +182,7 @@ fi
 
 export SECstrFileMessageToggle="$SEC_TmpFolder/.SEC.MessageToggle"
 
-#if ${SECastrBashDebugFunctionIds+false};then 
-#	SECastrBashDebugFunctionIds=(); #help if array has items, wont reach here, tho if it has NO items, it will be re-initialized to what it was: an empty array (will remain the same). If any item of the array is "+all", all functions will match.
-#else
-#	_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds
-##	_SECastrBashDebugFunctionIds_Check="`declare -p SECastrBashDebugFunctionIds 2>/dev/null`";
-##	if [[ "${_SECastrBashDebugFunctionIds_Check:0:10}" != 'declare -a' ]];then
-##		echo "SECastrBashDebugFunctionIds='$SECastrBashDebugFunctionIds' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
-##		_SECFUNCcriticalForceExit
-##	fi
-#fi
-_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds
-export SECastrBashDebugFunctionIds
+#_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds # If any item of the array is "+all", all functions will match.
 
 export SECnFixDate="$((3600*3))" #to fix from: "31/12/1969 21:00:00.000000000" when used with `date -d` command
 
@@ -201,13 +190,7 @@ export SECstrFileErrorLog="$SEC_TmpFolder/.SEC.Error.log"
 
 export SECstrExportedArrayPrefix="SEC_EXPORTED_ARRAY_"
 
-#if ${SECastrFunctionStack+false};then 
-#	SECastrFunctionStack=();
-#else
-#	_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
-#fi
-#export SECastrFunctionStack=() 
-_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
+#_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
 
 #export _SECbugFixDate="0" #seems to be working now...
 
@@ -292,7 +275,7 @@ function SECFUNCarraySize() { #help usefull to prevent unbound variable error me
 
 : ${SECstrBashSourceFiles:=}
 export SECstrBashSourceFiles
-_SECFUNCcheckIfIsArrayAndInit SECastrBashSourceFilesPrevious
+#_SECFUNCcheckIfIsArrayAndInit SECastrBashSourceFilesPrevious
 
 : ${SECbBashSourceFilesShow:=false}
 export SECbBashSourceFilesShow
@@ -802,11 +785,18 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	local lnLength=0
 	local lstrLastFuncId=""
 	function SECFUNCechoDbg_updateStackVars(){
+#		SECFUNCppidList --comm "\n" >>/dev/stderr 2>&1
+#		echo "$$,$PPID" >>/dev/stderr
+#		(set |grep "^SECastr";) >>/dev/stderr 2>&1
+#		set |grep SECinstallPath >>/dev/stderr 2>&1
+#		declare -p SECastrFunctionStack >>/dev/stderr 2>&1
+#		if ${SECastrFunctionStack+false};then
+#			SECastrFunctionStack=()
+#		fi
 		lnLength="${#SECastrFunctionStack[@]}"
 		if((lnLength>0));then
 			lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
 		fi
-		#echo "SECastrBashDebugFunctionIds=(${SECastrBashDebugFunctionIds[@]})" >>/dev/stderr
 	}
 	SECFUNCechoDbg_updateStackVars
 	strFuncInOut=""
@@ -860,6 +850,8 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	
 	function SECFUNCechoDbg_isOnTheList(){
 		local lstrFuncToCheck="${1-}"
+		#declare -p SECastrBashDebugFunctionIds >>/dev/stderr
+		#set |grep "^SEC" >>/dev/stderr
 		if((${#SECastrBashDebugFunctionIds[@]}>0));then
 			local lnIndex
 			for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
@@ -882,25 +874,6 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 		lbBashDebug=true
 	fi
 	
-#	local lbBashDebug=false
-#	if((${#SECastrBashDebugFunctionIds[@]}>0));then
-#		local lnIndex
-#		for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
-#			local strBashDebugFunctionId="${SECastrBashDebugFunctionIds[lnIndex]}"
-#			if [[ "$SEClstrFuncCaller" == "$strBashDebugFunctionId" ]] ||
-#			   [[ "$lstrLastFuncId" == "$strBashDebugFunctionId" ]];then
-#				lbBashDebug=true
-#				break
-#			fi
-#		done
-#	fi
-
-#	if $lbBashDebug;then
-#		if $lbFuncOut;then
-#			set +x #stop log
-#		fi
-#	fi
-
 	local lbDebug=true
 	
 	if [[ "$SEC_DEBUG" != "true" ]];then

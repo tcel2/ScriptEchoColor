@@ -108,6 +108,11 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	
 	local lsedMd5sumOnly='s"([[:alnum:]]*) .*"\1"'
 	local lmd5sum="`echo "$lfile" |md5sum |sed -r "$lsedMd5sumOnly"`"
+	if [[ -z "$lmd5sum" ]];then
+		#TODO I have no idea how this could happen but it happened... try to simulate again?
+		SECFUNCechoErrA "lmd5sum='$lmd5sum'"
+		SECFUNCdbgFuncOutA;return 1
+	fi
 	local lfileLock="$SEC_TmpFolder/.SEC.FileLock.$lmd5sum.lock"	
 	local lfileLockPid="${lfileLock}.$lnPid"	
 	

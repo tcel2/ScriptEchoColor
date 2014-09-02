@@ -125,6 +125,7 @@ function FUNCcheckDaemonStarted() {
 		rm "$strDaemonPidFile" 2>/dev/null
 		#rm "$strDaemonLogFile" 2>/dev/null
 		nPidDaemon="-1"
+#		echo ">>>ABC" >>/dev/stderr
 		return 1
 	fi
 }
@@ -296,7 +297,7 @@ FUNCvalidateDaemon "after writting pid"
 ln -sf "$strDaemonPidFile" "$strSymlinkToDaemonPidFile"
 
 nPidDaemon=$$
-echo "ScriptEchoColor Maintenance Daemon started, nPidDaemon='$nPidDaemon'." >>/dev/stderr
+echo "ScriptEchoColor Maintenance Daemon started, nPidDaemon='$nPidDaemon', PPID='$PPID', strDaemonLogFile='$strDaemonLogFile'." >>/dev/stderr
 
 exec 2>>"$strDaemonLogFile"
 exec 1>&2
@@ -327,7 +328,11 @@ while true;do
 	##########################################################################
 	strCheckId="LockFilesOfDeadPids"
 	#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
-		SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
+		#echo ">>>A" >>/dev/stderr
+		IFS=$'\n' read -d '' -r -a astrFileLockList < <(SECFUNCfileLock --list)&&:
+		#echo ">>>B" >>/dev/stderr
+		#SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
+		for lstrLockFileIntermediary in "${astrFileLockList[@]}";do
 				#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 				nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
 				if [[ ! -d "/proc/$nPid" ]];then
@@ -335,7 +340,9 @@ while true;do
 						strFileReal="`readlink "$lstrLockFileIntermediary"`"
 						if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
 							echo " `SECFUNCdtFmt --pretty` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
-							SECFUNCfileLock --pid $nPid --unlock "$strFileReal"
+							if SECFUNCfileLock --pid $nPid --unlock "$strFileReal";then
+								SECFUNCechoWarnA "unable to remove file lock for '$strFileReal'"
+							fi
 						fi
 					else
 						if [[ -f "$lstrLockFileIntermediary" ]];then

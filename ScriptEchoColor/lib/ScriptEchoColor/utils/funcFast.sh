@@ -66,7 +66,7 @@ SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="undefined" #TODO I could
 export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceIdDefault}]-undefined}(),L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
 
 alias SECFUNCechoErrA="SECbBashSourceFilesForceShowOnce=true;SECFUNCechoErr --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
-alias SECFUNCechoDbgA="if ! \$SEC_DEBUGX;then set +x;fi;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+alias SECFUNCechoDbgA="if ! \$SEC_DEBUGX;then set +x;fi;SECFUNCechoDbg --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" " # this alias to the function can let it receive new parameters...
 alias SECFUNCechoWarnA="SECFUNCechoWarn --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCechoBugtrackA="SECFUNCechoBugtrack --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
 alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
@@ -81,7 +81,24 @@ alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 # SECFUNCtrapErr defined at Core 
 #trap 'SECnRetTrap=$?;if ! SECFUNCtrapErr "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >>/dev/stderr;exit 1;fi' ERR
-trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >>/dev/stderr;exit 1;fi' ERR
+trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR(trap):Exiting..." >>/dev/stderr;exit 1;fi' ERR
+
+function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
+	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
+	if ${!1+false};then 
+		declare -a -x -g ${1}='()';
+	else
+		local lstrCheck="`declare -p "$1" 2>/dev/null`";
+		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
+			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+			_SECFUNCcriticalForceExit
+		fi
+	fi
+}
+
+_SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds # If any item of the array is "+all", all functions will match.
+_SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
+_SECFUNCcheckIfIsArrayAndInit SECastrBashSourceFilesPrevious
 
 function SECFUNCarraysRestore() { #help restore all exported arrays
 	if ${SECbHasExportedArrays+false};then #to speedup execution where no array has been exported

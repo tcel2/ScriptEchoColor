@@ -22,11 +22,13 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-function FUNCtrap() {
+function FUNCtrap() { #TODO this trap isnt working... even outside the function... why!??!
 	trap 'echo "(ctrl+c pressed, exiting...)";exit 2' INT
+	#trap 'echo "ctrl+c pressed...";varset bInterruptAsk=true;' INT
 	#TODO `find` exits if ctrl+c is pressed, why? #trap 'echo "ctrl+c pressed...";varset bInterruptAsk=true;' INT
 };export -f FUNCtrap
 FUNCtrap
+
 #echo "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
 #echo "SECstrScriptSelfName=$SECstrScriptSelfName"
 eval `secinit`;
@@ -82,6 +84,7 @@ varset --default --show bUseAsBackup=true # use RBF as backup, so if real files 
 varset --default --show --allowuser bBackgroundWork=false
 varset --default --show bAutoGit=false
 varset --default --show bUseUnison=false
+varset --default --show nBackgroundSleep=1
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
@@ -109,6 +112,11 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--confirmalways" ]]; then #help will always accept to update the changes on the first check loop, is automatically set with --daemon option
 		bConfirmAlways=true
 	elif [[ "$1" == "--background" ]]; then #help between each copy will be added a delay
+		varset --show bBackgroundWork=true
+	elif [[ "$1" == "--backgroundsleep" ]]; then #help <nBackgroundSleep> the time, in seconds, to sleep when in background mode; this implies --background 
+		shift
+		varset --show nBackgroundSleep="${1-}"
+		
 		varset --show bBackgroundWork=true
 	elif [[ "$1" == "--autogit" ]]; then #help all files at Remote Backup Folder will be versioned (with history)
 		varset --show bAutoGit=true
@@ -158,6 +166,11 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	
 	shift
 done
+
+if ! SECFUNCisNumber -dn $nBackgroundSleep;then
+	echoc -p "invalid nBackgroundSleep='$nBackgroundSleep'"
+	exit 1
+fi
 
 if [[ -z "$pathBackupsToRemote" ]];then
 	echoc -p "required setup with option: --setbkpfolder"
@@ -340,7 +353,10 @@ function FUNCcopy() {
 	if ! $bGoFastOnce;then
 		if $bBackgroundWork;then
 			#read -s -n 1 -t 1 -p "" 
-			sleep 1
+			#sleep $nBackgroundSleep&&:
+			if echoc -q -t $nBackgroundSleep "go fast (no background work) once?";then
+				bGoFastOnce=true
+			fi
 		fi
 	fi
 	
@@ -415,13 +431,14 @@ if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
 	#secDaemonsControl.sh --register
 	
-	strBkgWrkopt=""
-	if $bCmpData;then
-		strBkgWrkopt="--background"
-	fi
+#	strBkgWrkopt=""
+#	if $bCmpData;then
+#		strBkgWrkopt="--background"
+#	fi
 	
 	while true; do
-		nice -n 19 $0 --lookforchanges --confirmalways $strBkgWrkopt
+#		nice -n 19 $0 --lookforchanges --confirmalways $strBkgWrkopt
+		nice -n 19 $0 --lookforchanges --confirmalways 
 		echoc -w -t 5 "daemons sleep too..."
 		
 		#if SECFUNCdelay daemonHold --checkorinit 5;then
