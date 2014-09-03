@@ -26,6 +26,7 @@ eval `secinit -i`
 
 strDpkgPackage=""
 strDevPath=""
+strChangesFile=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script only works properly with package 'Version-Revision' in the format 'YYYYMMDD-HHMMSS'"
@@ -37,6 +38,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--devpath" || "$1" == "-d" ]];then #help development path where .git directory can be found into
 		shift
 		strDevPath="${1-}"
+	elif [[ "$1" == "--changes" || "$1" == "-d" ]];then #help <strChangesFile> set the changes log file
+		shift
+		strChangesFile="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -75,6 +79,16 @@ echoc -x "pwd"
 #	pwd
 #fi
 
+if [[ -n "$strChangesFile" ]];then
+	echo -n >>"$strChangesFile"
+	if [[ ! -f "$strChangesFile" ]];then
+		echoc -p "unable to create strChangesFile='$strChangesFile'"
+		exit 1
+	fi
+	strChangesFile="`readlink -f "$strChangesFile"`"
+	echo "strChangesFile='$strChangesFile'"
+fi
+
 SECFUNCuniqueLock --daemonwait
 while true;do
 	### ASK WHAT TO DO ###
@@ -90,6 +104,7 @@ while true;do
 	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
 \t_commit with 'git gui'/\n\
 \t_diff last tag from master/\n\
+\t_generate changes log file/\n\
 \tdiff _installed from master/\n\
 \tdiff to be p_ushed/\n\
 \t_push tags to remote/\n\
@@ -126,6 +141,14 @@ while true;do
 		b) echoc -x "gitk"&&: ;; 
 		c) echoc -x "git gui"&&: ;; 
 		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
+		g) git log --full-history --date=iso \
+			|egrep -v "^$|^commit |^Author: |^    [.]" \
+			|grep "^    " -B 1 \
+			|grep -v "^--" >"$strChangesFile";
+			if echoc -q "view changes file '$strChangesFile'?";then
+				echoc -x "gedit '$strChangesFile'"
+			fi
+			;;
 		i)	if [[ -z "$strSECInstalledVersion" ]];then
 					echoc --alert "package scriptechocolor is not installed."
 				else

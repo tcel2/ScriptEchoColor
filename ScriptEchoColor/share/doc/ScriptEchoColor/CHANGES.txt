@@ -1,0 +1,144 @@
+Date:   2014-08-28 22:15:19 -0300
+    option to check if movie is playing to keep screen active
+Date:   2014-08-23 02:18:19 -0300
+    finally @ can be escaped as expected \@ ...
+Date:   2014-08-17 01:19:03 -0300
+    fix dup log
+Date:   2014-08-10 20:04:05 -0300
+    sec.Bluetooth.SendFile.NautilusScript.sh
+Date:   2014-08-04 20:47:40 -0300
+    undo dev script
+Date:   2014-07-31 21:56:05 -0300
+    better log control
+Date:   2014-07-29 16:12:17 -0300
+    show cmds at error log
+Date:   2014-07-27 21:26:44 -0300
+    return 0
+Date:   2014-07-27 19:17:50 -0300
+    NautilusScripts and bug fixes
+Date:   2014-07-26 21:16:34 -0300
+    created Fast lib to init aliases and "exported arrays"
+Date:   2014-07-26 17:19:10 -0300
+    better trap ERR
+Date:   2014-07-26 00:37:08 -0300
+    fixed drawline with format/formatted chars; improved dev script
+Date:   2014-07-25 22:04:30 -0300
+    better trap ERR
+Date:   2014-07-25 18:40:17 -0300
+    improved log and some code refactoring
+Date:   2014-07-25 04:42:22 -0300
+    still protecting non interactive script executions with tty
+Date:   2014-07-25 02:23:21 -0300
+    improved error handling with trap ERR
+Date:   2014-07-24 23:14:26 -0300
+    better identifing source file at debug
+Date:   2014-07-23 18:32:04 -0300
+    improved SECFUNCexec with logging quota and detached child
+Date:   2014-07-23 06:55:04 -0300
+    secDelayedExec improved self detection
+Date:   2014-07-23 04:07:59 -0300
+    funcCore.sh, opt to force load libs, full dynamic help, unique run check with secDelayedExec, improved SECFUNCdelay SECFUNCdtFmt prettier about zeroes, autoUnmount better device check
+Date:   2014-07-06 14:24:13 -0300
+    new extra: screenshot on mouse stop
+Date:   2014-07-06 02:10:11 -0300
+    better check var ids and value
+Date:   2014-07-04 02:08:18 -0300
+    db shrinker
+Date:   2014-07-03 23:13:20 -0300
+    now ScriptEchoColor is 9x faster
+Date:   2014-06-23 00:42:41 -0300
+    bugtrack
+Date:   2014-06-21 22:40:16 -0300
+    added functionality to remove files from RBF if they are missing at home
+Date:   2014-06-21 15:21:31 -0300
+    clean exits after mozrepl
+Date:   2014-06-21 02:31:36 -0300
+    fixed lyrics search
+Date:   2014-06-20 02:45:41 -0300
+    auto downloads lyrics for banshee
+Date:   2014-06-17 21:16:38 -0300
+    + secExecControl.sh
+Date:   2014-06-17 19:05:48 -0300
+    fix uniquelock release and lock removal for inexistant file
+Date:   2014-06-17 04:06:36 -0300
+    workaround to corrupt cfg files after blackout
+Date:   2014-06-17 03:00:52 -0300
+    fix sed to get pid from filename
+Date:   2014-06-17 02:53:37 -0300
+    bug fix at SECFUNCuniqueLock -> SECFUNCfileLock --islocked
+Date:   2014-06-16 20:12:28 -0300
+    removed useless/broken/buggy/incomplete echoc -l -L log options, and SEC_LOG_* recognized env vars...
+Date:   2014-06-12 16:50:19 -0300
+    sec debug messages now show each function delay
+Date:   2014-06-11 22:40:36 -0300
+    improved file lock system
+Date:   2014-06-10 04:01:58 -0300
+    faster
+Date:   2014-06-10 03:00:17 -0300
+    faster!
+Date:   2014-06-10 01:40:04 -0300
+    removed unecessary validation lock, now validation happens with lock attempt
+Date:   2014-06-09 17:32:15 -0300
+    no more dbg msg file on echoc
+Date:   2014-06-08 18:06:22 -0300
+    prompt command updated
+Date:   2014-06-08 01:45:30 -0300
+    >>/dev/stderr is better than >/dev/stderr for logs..
+Date:   2014-06-06 01:13:39 -0300
+    structural changes
+Date:   2014-06-04 18:48:46 -0300
+    ok now?
+Date:   2014-06-04 17:03:45 -0300
+    ok?
+Date:   2014-06-04 10:26:45 -0300
+    centralized lock control (slow?)
+Date:   2014-06-04 04:56:09 -0300
+    more checks to prevent concurrent calls removing the symlink
+Date:   2014-06-03 21:41:35 -0300
+    recode SECFUNCdelay and fix SECFUNCfileLock
+Date:   2014-05-21 00:07:30 -0300
+    added script to help with showing banshee lyrics
+Date:   2014-05-15 22:45:45 -0300
+    warns if child script is using same db file of parent in case this is another script filename
+Date:   2014-05-01 16:39:12 -0300
+    delayed cleaning of tmp files = less load
+Date:   2014-05-01 14:36:07 -0300
+    fix find 'file not found' errs, db filenames now based on canonical and not symlinked exec name
+Date:   2014-04-12 21:25:32 -0300
+    fixing symlink upload to git
+Date:   2014-04-12 21:21:04 -0300
+    fixing symlink upload to git
+Date:   2014-04-12 21:15:44 -0300
+    fixing symlink upload to git
+Date:   2014-03-27 20:05:09 -0300
+    new names
+Date:   2014-02-19 06:00:25 -0300
+    bigger changes by removing: secargget, secargset, secargclr, seclockfile; now using functions from funcMisc and funcVars
+Date:   2014-02-04 13:30:30 -0300
+    enforced `set -u` to strengthen code
+Date:   2013-11-02 14:11:45 -0300
+    added missing script
+Date:   2013-09-21 19:35:38 -0300
+    multithreaded scripting with synchronization on shared environment variables
+Date:   2013-09-21 19:34:50 -0300
+    multithreaded scripting with synchronization on shared environment variables
+Date:   2013-09-21 19:33:39 -0300
+    multithreaded scripting with synchronization on shared environment variables
+Date:   2013-09-19 21:48:37 -0300
+    'echoc --libs-init' is now 'secLibsInit.sh'
+Date:   2013-09-15 18:11:18 -0300
+    allows ignorable pids
+Date:   2013-09-15 18:08:22 -0300
+    exports arrays now
+Date:   2013-09-15 05:36:03 -0300
+    limit cpu usage by temperature for process
+Date:   2013-09-14 22:18:30 -0300
+    cache at home
+Date:   2013-09-14 17:57:33 -0300
+    say stack now has cache to use less cpu for identical speeches
+Date:   2013-07-25 03:06:22 -0300
+    added --reset to say stack
+Date:   2013-07-25 02:31:04 -0300
+    no nohup msg
+Date:   2013-07-25 02:18:27 -0300
+    Initial commit
