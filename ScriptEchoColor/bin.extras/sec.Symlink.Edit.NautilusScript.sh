@@ -39,9 +39,14 @@ function FUNCretargetSymlink() {
 #		if [[ "${lstrTarget:0:1}" != "/" ]];then
 #			lstrTarget="`pwd`/$lstrTarget"
 #		fi
+		strOptDirectory=""
+		if [[ -d "$lstrTarget" ]];then
+			strOptDirectory="--directory"
+		fi
 		local lstrNewSymlink="`zenity \
 			--title "$SECstrScriptSelfName" \
 			--file-selection \
+			$strOptDirectory \
 			--filename=\"$lstrTarget\"`"
 		#local lstrNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
 		if [[ -a "$lstrNewSymlink" ]];then
