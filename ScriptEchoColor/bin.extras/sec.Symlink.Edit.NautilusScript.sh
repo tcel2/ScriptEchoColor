@@ -40,8 +40,10 @@ function FUNCretargetSymlink() {
 #			lstrTarget="`pwd`/$lstrTarget"
 #		fi
 		strOptDirectory=""
+		strOptLnDir=""
 		if [[ -d "$lstrTarget" ]];then
 			strOptDirectory="--directory"
+			strOptLnDir="-T"
 		fi
 		local lstrNewSymlink="`zenity \
 			--title "$SECstrScriptSelfName" \
@@ -51,7 +53,7 @@ function FUNCretargetSymlink() {
 		#local lstrNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
 		if [[ -a "$lstrNewSymlink" ]];then
 			#echoc -x "rm -v '$lstrFile'"
-			echoc -x "ln -vsf '$lstrNewSymlink' '$lstrFile'"
+			echoc -x "ln -vsf $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
 		else
 			echoc -p "invalid symlink target '$lstrNewSymlink'"
 		fi
