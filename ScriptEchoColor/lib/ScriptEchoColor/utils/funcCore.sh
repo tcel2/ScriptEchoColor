@@ -1098,7 +1098,7 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 	local lbJustFix=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
-			SECFUNCshowHelp --nosort
+			SECFUNCshowHelp --nosort $FUNCNAME
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
 			shift
@@ -1329,6 +1329,8 @@ export SECbScriptSelfNameChanged=false
 if SECFUNCscriptSelfNameCheckAndSet;then
 	SECbScriptSelfNameChanged=true
 fi
+
+export SECstrUserScriptCfgPath="${SECstrUserHomeConfigPath}/${SECstrScriptSelfName}"
 
 export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"

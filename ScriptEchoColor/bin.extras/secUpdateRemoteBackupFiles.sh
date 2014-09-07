@@ -49,7 +49,7 @@ sedEscapeQuotes='s;([^\])";\1\\";g' #ABSOLUTELY NO FILES should have quotes on i
 addFileHist="$HOME/.`basename $0`.addFilesHistory.log"
 fileGitIgnoreList="$HOME/.`basename $0`.gitIgnore"
 sedUrlDecoder='s % \\\\x g' #example: strPath=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
-strUserScriptCfgPath="${SECstrUserHomeConfigPath}/${SECstrScriptSelfName}"
+#strUserScriptCfgPath="${SECstrUserHomeConfigPath}/${SECstrScriptSelfName}"
 
 #
 #if [[ "$bSkipNautilusCheckNow" != "true" ]]; then
@@ -465,18 +465,43 @@ fi
 
 strSkipGitFilesPrefix="$HOME/.git/"
 if $bUseUnison;then 
+	echoc -w "recreating directory structure of old method into new one"
 	# create all directories
 	find "${pathBackupsToRemote}/" -type d \
-		|sed -r "s'^${pathBackupsToRemote}/'${strUserScriptCfgPath}/Home'" \
+		|sed -r "s'^${pathBackupsToRemote}/'${SECstrUserScriptCfgPath}/Home/'" \
 		|while read strPath;do 
 			if ! mkdir -vp "$strPath";then exit 1;fi;
 		done
-	# create all symlinks
-	find "${pathBackupsToRemote}/" -type f \
-		|sed -r "s'^${pathBackupsToRemote}/''" \
-		|while read strFile;do
-			if ! ln -vsf "${HOME}/${strFile}" "${strUserScriptCfgPath}/Home/${strFile}";then break;fi;
-		done
+	
+	echoc -w "creating symlinks to all real files for new method"
+#	find "${pathBackupsToRemote}/" -type f \
+#		|sed -r "s'^${pathBackupsToRemote}/''" \
+#		|while read strFile;do
+	astrMissingTargetList=()
+	IFS=$'\n' read -d '' -r -a astrFilesAtBTR < <(\
+		find "${pathBackupsToRemote}/" -type f \
+			|sed -r "s'^${pathBackupsToRemote}/''" )&&: #TODO returns 1 but works, why?
+	for strFileAtBTR in "${astrFilesAtBTR[@]}";do
+		if [[ ! -f "${HOME}/${strFileAtBTR}" ]];then
+			astrMissingTargetList+=("${HOME}/${strFileAtBTR}")
+		else
+			if [[ ! -L "${SECstrUserScriptCfgPath}/Home/${strFileAtBTR}" ]];then
+				if ! ln -vsfT "${HOME}/${strFileAtBTR}" "${SECstrUserScriptCfgPath}/Home/${strFileAtBTR}"&&:;then
+	#					echo "ERROR: '$nRet'"
+					echo "OldMethodFile: '${pathBackupsToRemote}/$strFileAtBTR'"
+					echo "strFileAtBTR='$strFileAtBTR'"
+					echo "TARGET: '${HOME}/${strFileAtBTR}'"
+					echo "HARDLINKFILE: '${SECstrUserScriptCfgPath}/Home/${strFileAtBTR}'"
+					break;
+				fi
+			fi
+		fi
+	done
+	
+	echoc --info "List of missing target/real files:"
+	for strMissingTarget in "${astrMissingTargetList[@]}";do
+		echo " '$strMissingTarget'"
+	done
 elif $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
