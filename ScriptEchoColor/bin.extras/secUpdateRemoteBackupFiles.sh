@@ -502,6 +502,21 @@ if $bUseUnison;then
 	for strMissingTarget in "${astrMissingTargetList[@]}";do
 		echo " '$strMissingTarget'"
 	done
+	
+	echoc --info "running unison"
+	unison \
+		"$SECstrUserScriptCfgPath/Home" \
+		"${pathBackupsToRemote}/" \
+		-links false \
+		-fastcheck true \
+		-times -retry 2 \
+		-follow "Regex .*" \
+		-force "$SECstrUserScriptCfgPath/Home" \
+		-nodeletion "$SECstrUserScriptCfgPath/Home" \
+		-nodeletion "${pathBackupsToRemote}/" \
+		-batch \
+		-ui text&&: #TODO return 1 but works, why? because there were skipped files?
+
 elif $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
