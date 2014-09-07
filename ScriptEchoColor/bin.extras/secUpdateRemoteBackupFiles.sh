@@ -83,7 +83,7 @@ fileToIgnoreOnGitAdd=""
 varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
 varset --default --show --allowuser bBackgroundWork=false
 varset --default --show bAutoGit=false
-varset --default --show bUseUnison=false
+varset --default --show bUseUnison=true
 varset --default --show --allowuser nBackgroundSleep=1
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
@@ -123,8 +123,6 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
 		shift
 		fileToIgnoreOnGitAdd="$1"
-	elif [[ "$1" == "--unison" ]];then #help synchronize with unison #TODO INCOMPLETE, IN DEVELOPMENT
-		varset --show bUseUnison=true
 	elif [[ "$1" == "--autosync" ]]; then #help will automatically copy the changes without asking
 		varset --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #help will list what files, of current folder recursively, are at Remote Backup Folder!
@@ -390,6 +388,24 @@ function FUNCzenitySelectAndAddFiles() {
 	eval $0 --skipnautilus --addfiles $lstrFilesToAdd
 };export -f FUNCzenitySelectAndAddFiles
 
+function FUNCunison(){
+	echoc --info "running unison"
+	unison \
+		"$SECstrUserScriptCfgPath/Home" \
+		"${pathBackupsToRemote}/" \
+		-links false \
+		-fastcheck true \
+		-times -retry 2 \
+		-follow "Regex .*" \
+		-force "$SECstrUserScriptCfgPath/Home" \
+		-nodeletion "$SECstrUserScriptCfgPath/Home" \
+		-nodeletion "${pathBackupsToRemote}/" \
+		-batch \
+		-ui text&&: #TODO return 1 but works, why? because there were skipped files?
+		
+	return 0
+};export -f FUNCunison
+
 function FUNClsNot() { #synchronize like
 	function FUNCfileCheck() {
 		#eval `secinit --base`
@@ -463,8 +479,9 @@ fi
 #echoc -w "test"
 #exit
 
-strSkipGitFilesPrefix="$HOME/.git/"
-if $bUseUnison;then 
+if [[ ! -d "$SECstrUserScriptCfgPath/Home" ]];then
+	echoc --alert "new sync method uses unison, migration (from old method) is required"
+	
 	echoc -w "recreating directory structure of old method into new one"
 	# create all directories
 	find "${pathBackupsToRemote}/" -type d \
@@ -503,21 +520,11 @@ if $bUseUnison;then
 		echo " '$strMissingTarget'"
 	done
 	
-	echoc --info "running unison"
-	unison \
-		"$SECstrUserScriptCfgPath/Home" \
-		"${pathBackupsToRemote}/" \
-		-links false \
-		-fastcheck true \
-		-times -retry 2 \
-		-follow "Regex .*" \
-		-force "$SECstrUserScriptCfgPath/Home" \
-		-nodeletion "$SECstrUserScriptCfgPath/Home" \
-		-nodeletion "${pathBackupsToRemote}/" \
-		-batch \
-		-ui text&&: #TODO return 1 but works, why? because there were skipped files?
+	FUNCunison
+fi
 
-elif $bLsNot;then
+strSkipGitFilesPrefix="$HOME/.git/"
+if $bLsNot;then
 	FUNClsNot
 elif $bRecreateHistory;then
 	mv -vf "$addFileHist" "${addFileHist}.old"
@@ -612,13 +619,6 @@ elif $bAddFilesMode; then
 		mkdir -vp "`dirname "$strAbsFileTarget"`"
 		cp -vp "$strFile" "$strAbsFileTarget"
 		
-#		if $bUseUnison;then
-#			# create a symlink #TODO to be used with unison #TODO code its removal
-#			strSymlinkToUnison="$strUserScriptCfgPath/Home/$strRelativeFile"
-#			mkdir -vp "`dirname "$strSymlinkToUnison"`"
-#			ln -vsf "$strFile" "$strSymlinkToUnison"
-#		fi
-		
 		# history of added files
 		if ! grep -q "$strFile" "$addFileHist"; then
 			echo "$strFile" >>"$addFileHist"
@@ -664,18 +664,22 @@ elif $bLookForChanges;then
 #			|while read strFileBTR;do
 #				FUNCcopy $bDoIt "$strFileBTR";
 #			done
-		IFS=$'\n' read -d '' -r -a astrFullFilesList < <( \
-			find ./ \( -not -name "." -not -name ".." \) \
-				-and \( -not -path "./.git/*" \) \
-				-and \( -type f -or -type l \) \
-				-and \( -not -type d \) \
-				-and \( -not -xtype d \) \
-		)&&: #TODO it works but returns 1, why?
-		nFilesTot="${#astrFullFilesList[@]}"
-		#echo "#astrFullFilesList[@]=${#astrFullFilesList[@]}" >>/dev/stderr
-		for strFileBTR in "${astrFullFilesList[@]}";do
-			FUNCcopy $bDoIt "$strFileBTR";
-		done
+		if $bUseUnison;then
+			FUNCunison
+		else
+			IFS=$'\n' read -d '' -r -a astrFullFilesList < <( \
+				find ./ \( -not -name "." -not -name ".." \) \
+					-and \( -not -path "./.git/*" \) \
+					-and \( -type f -or -type l \) \
+					-and \( -not -type d \) \
+					-and \( -not -xtype d \) \
+			)&&: #TODO it works but returns 1, why?
+			nFilesTot="${#astrFullFilesList[@]}"
+			#echo "#astrFullFilesList[@]=${#astrFullFilesList[@]}" >>/dev/stderr
+			for strFileBTR in "${astrFullFilesList[@]}";do
+				FUNCcopy $bDoIt "$strFileBTR";
+			done
+		fi
 		
 		#echo "bAutoGit=$bAutoGit "
 		if $bAutoGit;then
