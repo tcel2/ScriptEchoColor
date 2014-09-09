@@ -1128,6 +1128,7 @@ function SECFUNCppidList() { #help [separator] between pids
 	local lnPid=$$
   local lstrSeparator=" "
   local lnPidCheck=0
+  local lbAddSelf=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
 			SECFUNCshowHelp $FUNCNAME
@@ -1139,6 +1140,8 @@ function SECFUNCppidList() { #help [separator] between pids
 		elif [[ "$1" == "--pid" || "$1" == "-p" ]];then #SECFUNCppidList_help <lnPid> use it as reference for the list
 			shift
 			lnPid=${1-}
+		elif [[ "$1" == "--addself" ]];then #SECFUNCppidList_help include self pid on the list, not only parents
+			lbAddSelf=true
 		elif [[ "$1" == "--checkpid" ]];then #SECFUNCppidList_help <lnPidCheck> check if it is on the ppid list
 			shift
 			lnPidCheck=${1-}
@@ -1175,9 +1178,20 @@ function SECFUNCppidList() { #help [separator] between pids
   local lstrPidList=""
   local pidList=()
   local ppid=$lnPid;
+  local lbFirstLoopCheck=true
   while((ppid>=1));do 
     #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
-    ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
+    local lbGetParentPid=true
+    if $lbFirstLoopCheck;then
+    	if $lbAddSelf;then
+    		lbGetParentPid=false
+    	fi
+    	lbFirstLoopCheck=false
+    fi
+    if $lbGetParentPid;then
+    	# get parent pid
+	    ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
+   	fi
     
     if((lnPidCheck>0));then
     	if((ppid==lnPidCheck));then

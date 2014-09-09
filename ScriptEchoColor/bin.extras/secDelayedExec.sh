@@ -35,7 +35,7 @@ echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
 
 varset bCheckPoint=false
 bWaitCheckPoint=false
-nDelayAtLoops=1
+nDelayAtLoops=3
 bCheckPointDaemon=false
 bCheckIfAlreadyRunning=true
 nSleepFor=0
