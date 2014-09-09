@@ -123,6 +123,11 @@ function FUNCorganize() {
 	###### AUTO SETUP
 	#@@@R FUNCwindowList
 	aWindowList=(`FUNCwindowList`)
+	if((`SECFUNCarraySize aWindowList`==0));then
+		echoc --alert "$FUNCNAME: aWindowList is empty"
+		return
+	fi
+	
 	#@@@R for asdfasdf in ${aWindowList[@]};do echo "<$asdfasdf>";done;echo "<${aWindowList[@]}>";exit #@@@R
 	windowCount=${#aWindowList[@]}
 	#if(( (windowCount%2)==1 ));then
