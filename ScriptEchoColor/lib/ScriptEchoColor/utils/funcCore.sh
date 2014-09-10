@@ -246,7 +246,7 @@ export SECnLockRetryDelay
 ###################### INTERNAL VARIABLES are set by functions ########
 : ${SECcfgFileName:=} #do NOT export, each script must know its cfg file properly; a script calling another could mess that other cfg filename if it is exported...
 
-: ${SECnPidDaemon:=0}
+: ${SECnPidDaemon:=0} #set at SECFUNCuniqueLock
 export SECnPidDaemon
 
 : ${SECbDaemonWasAlreadyRunning:=false}

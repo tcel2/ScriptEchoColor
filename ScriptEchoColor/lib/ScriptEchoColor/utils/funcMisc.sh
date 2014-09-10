@@ -181,12 +181,13 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	local lbWaitDaemon=false
 	local lbOnlyCheckIfDaemonIsRunning=false
 	local lbListAndCleanUniqueFiles=false
+	local lbGetDaemonPid=false
 	
 	#local lstrId="`basename "$0"`"
 	local lstrCanonicalFileName="`readlink -f "$0"`"
 	local lstrId="`basename "$lstrCanonicalFileName"`"
 	
-	SECnPidDaemon=0
+#	declare -g SECnPidDaemon=0
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -219,6 +220,8 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			lbWaitDaemon=true
 		elif [[ "$1" == "--isdaemonrunning" ]];then #SECFUNCuniqueLock_help check if daemon is running
 			lbOnlyCheckIfDaemonIsRunning=true
+		elif [[ "$1" == "--getdaemonpid" ]];then #SECFUNCuniqueLock_help output the value of SECnPidDaemon, 0 if daemon is not running
+			lbGetDaemonPid=true
 		elif [[ "$1" == "--listclean" ]];then #SECFUNCuniqueLock_help list unique files, and clean invalid ones (of dead pids)
 			lbListAndCleanUniqueFiles=true
 		else
@@ -306,7 +309,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	if $lbOnlyCheckIfDaemonIsRunning;then
 		SECFUNCdbgFuncOutA;return 0
 	fi
-		
+	
 	function SECFUNCuniqueLock_release() {
 		SECFUNCfileLock --unlock "$l_runUniqueFile"
 		rm "$l_runUniqueFile";
@@ -320,21 +323,34 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	
 	local lnLockPid=`SECFUNCfileLock --islocked "$l_runUniqueFile"` #lock will be validated and released here
 	if [[ -n "$lnLockPid" ]];then
+		SECnPidDaemon="$lnLockPid"
 		if(($l_pid==$lnLockPid));then
 			SECFUNCechoWarnA "redundant lock '$lstrId' request..."
+			if ! ${lbQuiet:?};then
+				echo "$SECnPidDaemon"
+			fi
 			SECFUNCdbgFuncOutA;return 0
 		else
 			if ! ${lbQuiet:?};then
-				echo "$lnLockPid"
+				echo "$SECnPidDaemon"
 			fi
 			SECFUNCdbgFuncOutA;return 1
 		fi
 	else
 		if SECFUNCfileLock --nowait "$l_runUniqueFile";then
 			echo $l_pid >"$l_runUniqueFile"
+			SECnPidDaemon="$l_pid"
+			if ! ${lbQuiet:?};then
+				echo "$SECnPidDaemon"
+			fi
 		else
 			SECFUNCdbgFuncOutA;return 1 #TODO: check if concurrent attempts can make it fail? so pass failure to caller...
 		fi
+	fi
+
+	if $lbGetDaemonPid;then
+		echo "$SECnPidDaemon"
+		SECFUNCdbgFuncOutA;return 0
 	fi
 	
 	SECFUNCdbgFuncOutA;
