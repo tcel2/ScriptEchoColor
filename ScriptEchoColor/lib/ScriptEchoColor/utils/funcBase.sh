@@ -800,7 +800,7 @@ function SECFUNCbcPrettyCalc() { #help
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			return 0
 		elif [[ "$1" == "--cmp" ]];then #SECFUNCbcPrettyCalc_help output comparison result as "true" or "false"
 			bCmpMode=true
 		elif [[ "$1" == "--cmpquiet" ]];then #SECFUNCbcPrettyCalc_help return comparison as execution value for $? where 0=true 1=false

@@ -999,7 +999,10 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only one variable v
 	
 	l_bSkip=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-		if [[ "$1" == "--skip" ]];then #to skip reading only the specified variable
+		if [[ "$1" == "--help" ]];then #SECFUNCvarReadDB_help show this help
+			SECFUNCshowHelp ${FUNCNAME}
+			return 0
+		elif [[ "$1" == "--skip" ]];then #SECFUNCvarReadDB_help to skip reading only the optionally specified variable 'varName'
 			l_bSkip=true
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr

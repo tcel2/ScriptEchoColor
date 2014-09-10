@@ -182,12 +182,14 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	local lbOnlyCheckIfDaemonIsRunning=false
 	local lbListAndCleanUniqueFiles=false
 	local lbGetDaemonPid=false
+	local lbGetUniqueFile=false
+	local lbSetDBtoDaemonOnly=false
 	
 	#local lstrId="`basename "$0"`"
 	local lstrCanonicalFileName="`readlink -f "$0"`"
 	local lstrId="`basename "$lstrCanonicalFileName"`"
 	
-#	declare -g SECnPidDaemon=0
+#	declare -g SECnDaemonPid=0
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCuniqueLock_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -199,7 +201,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <id> set the lock id, if not set, the 'id' defaults to `basename $0`
 			shift
 			lstrId="$1"
-		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock
+		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock, mainly to acquire (default) and --release the lock
 			shift
 			l_pid=$1
 			#if ! ps -p $l_pid >/dev/null 2>&1;then
@@ -213,15 +215,19 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 		elif [[ "$1" == "--daemon" ]];then
 			SECFUNCechoErrA "deprecated option, use '--setdbtodaemon' instead"
 			_SECFUNCcriticalForceExit
-		elif [[ "$1" == "--setdbtodaemon" ]];then #SECFUNCuniqueLock_help Auto set the DB to the daemon DB if it is already running, or create a new DB; Also sets this variable: SECbDaemonWasAlreadyRunning.
+		elif [[ "$1" == "--setdbtodaemon" ]];then #SECFUNCuniqueLock_help auto set the DB to the daemon DB if it is already running, or create a new DB and become the daemon; Also sets this variable: SECbDaemonWasAlreadyRunning.
 			lbDaemon=true
+		elif [[ "$1" == "--setdbtodaemononly" ]];then #SECFUNCuniqueLock_help like --setdbtodaemon, but return 1 (false) in case daemon is NOT already running, and do NOT become the daemon.
+			lbSetDBtoDaemonOnly=true
 		elif [[ "$1" == "--daemonwait" || "$1" == "--waitbecomedaemon" ]];then #SECFUNCuniqueLock_help will wait for the other daemon to exit, and then will become the daemon
 			lbDaemon=true
 			lbWaitDaemon=true
 		elif [[ "$1" == "--isdaemonrunning" ]];then #SECFUNCuniqueLock_help check if daemon is running
 			lbOnlyCheckIfDaemonIsRunning=true
-		elif [[ "$1" == "--getdaemonpid" ]];then #SECFUNCuniqueLock_help output the value of SECnPidDaemon, 0 if daemon is not running
+		elif [[ "$1" == "--getdaemonpid" ]];then #SECFUNCuniqueLock_help output the value of SECnDaemonPid, 0 if daemon is not running
 			lbGetDaemonPid=true
+		elif [[ "$1" == "--getuniquefile" ]];then #SECFUNCuniqueLock_help output the unique full path filename where the daemon pid can be stored (even if that file does not exist yet)
+			lbGetUniqueFile=true
 		elif [[ "$1" == "--listclean" ]];then #SECFUNCuniqueLock_help list unique files, and clean invalid ones (of dead pids)
 			lbListAndCleanUniqueFiles=true
 		else
@@ -236,32 +242,91 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 #		SECFUNCdbgFuncOutA;return 1
 #	fi
 	
+	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$lstrId"
+	if $lbGetUniqueFile;then
+		echo "$l_runUniqueFile"
+		SECFUNCdbgFuncOutA;return 0
+	fi
+	
+	if $lbOnlyCheckIfDaemonIsRunning;then
+		if [[ -f "$l_runUniqueFile" ]];then
+			SECFUNCdbgFuncOutA;return 0
+		else
+			SECFUNCdbgFuncOutA;return 1
+		fi
+	fi
+	
+#	function SECFUNCuniqueLock_setDbToOtherThatIsDaemon(){
+#		#SECnDaemonPid="`SECFUNCuniqueLock --id "$lstrId"`"
+#		if [[ -f "$l_runUniqueFile" ]];then
+#			local lnDaemonPidCheck="`cat "$l_runUniqueFile" 2>/dev/null &&:`"
+#			if SECFUNCisNumber -dn "$lnDaemonPidCheck";then
+#				if [[ -d "/proc/$lnDaemonPidCheck" ]];then
+#					SECnDaemonPid=$lnDaemonPidCheck
+#					SECFUNCvarSetDB $SECnDaemonPid #allows intercommunication between proccesses started from different parents
+#					return 0
+#				fi
+#			fi
+#		fi
+#		
+#		return 1
+#	}
+	
+	if $lbSetDBtoDaemonOnly;then
+		if [[ -f "$l_runUniqueFile" ]];then
+			local lnDaemonPidCheck="`cat "$l_runUniqueFile" 2>/dev/null &&:`"
+			if SECFUNCisNumber -dn "$lnDaemonPidCheck";then
+				if [[ -d "/proc/$lnDaemonPidCheck" ]];then
+					SECnDaemonPid=$lnDaemonPidCheck
+					SECFUNCvarSetDB $SECnDaemonPid
+					SECFUNCdbgFuncOutA;return 0
+				fi
+			fi
+		fi
+		
+		SECFUNCdbgFuncOutA;return 1
+	fi
+	
 	if ${lbDaemon:?};then #will call this self function, beware..
 		SECONDS=0
+		local lbBecameDaemon=false
 		while true;do
-			#set -x
 			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO EXPLAIN WHY?!
-			local lnRunningDaemonPid=0
 			if SECFUNCuniqueLock --quiet --id "$lstrId"; then
 				SECFUNCvarSetDB -f
-				SECnPidDaemon=$l_pid # ONLY after the lock has been acquired!
+				SECnDaemonPid=$$ # ONLY after the lock has been acquired!
 			else
-				#echo ">>>$SECvarFile,$lstrId,`SECFUNCuniqueLock --id "$lstrId"`"
-				#set -x
-				lnRunningDaemonPid="`SECFUNCuniqueLock --id "$lstrId"`"
-				SECFUNCvarSetDB $lnRunningDaemonPid #allows intercommunication between proccesses started from different parents
-				#set +x
-				#echo ">>>$SECvarFile"
-				SECbDaemonWasAlreadyRunning=true
+				#SECFUNCuniqueLock_setDbToOtherThatIsDaemon
+				if ! SECnDaemonPid="`SECFUNCuniqueLock --id "$lstrId"`";then
+					SECFUNCvarSetDB $SECnDaemonPid # set DB to other that is daemon
+					SECbDaemonWasAlreadyRunning=true
+				fi
 			fi
-			#set +x
 			
+			if((SECnDaemonPid==$$));then
+				lbBecameDaemon=true
+			fi
+			
+#			if SECFUNCuniqueLock_setDbToOtherThatIsDaemon;then
+#				SECbDaemonWasAlreadyRunning=true
+#			else
+#				if SECFUNCuniqueLock --quiet --id "$lstrId"; then
+#					SECFUNCvarSetDB -f # make DB file be real (prevent it being a symlink)
+#					SECnDaemonPid=$l_pid # ONLY after the lock has been acquired!
+#				else
+#					SECbDaemonWasAlreadyRunning=true
+#				fi				
+#			fi
+		
 			if ${lbWaitDaemon:?};then
-				if $SECbDaemonWasAlreadyRunning;then
-					echo -ne "$FUNCNAME: Wait other ($lnRunningDaemonPid) Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
-					sleep 1 #keep trying to become the daemon
+				if $lbBecameDaemon;then
+					break;
 				else
-					break #has become the daemon, breaks loop..
+#				if $SECbDaemonWasAlreadyRunning;then
+					echo -ne "$FUNCNAME: Wait other ($SECnDaemonPid) Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
+					sleep 1 #keep trying to become the daemon
+#				else
+#					break #has become the daemon, breaks loop..
 				fi
 			else
 				break; #always break, because DB is always set (child or master)
@@ -291,23 +356,18 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 		SECFUNCdbgFuncOutA;return 0
 	fi
 	
-	#local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$l_pid.$lstrId"
-	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$lstrId"
+	# if the pid stored in the unique file has died, it will be removed, but not at this point; to avoid unnecessarily spending cpu time. #TODO where this comment really fits?
+	
+	############################################################
+	################## CREATE THE UNIQUE FILE! #################
+	############################################################
 	#local l_lockFile="${l_runUniqueFile}.lock"
 	if [[ ! -f "$l_runUniqueFile" ]];then
-		if $lbOnlyCheckIfDaemonIsRunning;then
-			# if the pid stored in the unique file has died, it will be removed, but not at this point; to avoid unnecessarily spending cpu time.
-			SECFUNCdbgFuncOutA;return 1
-		fi
-		
 		local lstrQuickLock="${l_runUniqueFile}.ToCreateRealFile.lock"
 		if ln -s "$l_runUniqueFile" "$lstrQuickLock";then
 			echo $l_pid >"$l_runUniqueFile"
 			rm "$lstrQuickLock" #after all is done
 		fi
-	fi
-	if $lbOnlyCheckIfDaemonIsRunning;then
-		SECFUNCdbgFuncOutA;return 0
 	fi
 	
 	function SECFUNCuniqueLock_release() {
@@ -323,25 +383,25 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	
 	local lnLockPid=`SECFUNCfileLock --islocked "$l_runUniqueFile"` #lock will be validated and released here
 	if [[ -n "$lnLockPid" ]];then
-		SECnPidDaemon="$lnLockPid"
+		SECnDaemonPid="$lnLockPid"
 		if(($l_pid==$lnLockPid));then
 			SECFUNCechoWarnA "redundant lock '$lstrId' request..."
 			if ! ${lbQuiet:?};then
-				echo "$SECnPidDaemon"
+				echo "$SECnDaemonPid"
 			fi
 			SECFUNCdbgFuncOutA;return 0
 		else
 			if ! ${lbQuiet:?};then
-				echo "$SECnPidDaemon"
+				echo "$SECnDaemonPid"
 			fi
 			SECFUNCdbgFuncOutA;return 1
 		fi
 	else
 		if SECFUNCfileLock --nowait "$l_runUniqueFile";then
 			echo $l_pid >"$l_runUniqueFile"
-			SECnPidDaemon="$l_pid"
+			SECnDaemonPid="$l_pid"
 			if ! ${lbQuiet:?};then
-				echo "$SECnPidDaemon"
+				echo "$SECnDaemonPid"
 			fi
 		else
 			SECFUNCdbgFuncOutA;return 1 #TODO: check if concurrent attempts can make it fail? so pass failure to caller...
@@ -349,11 +409,11 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	fi
 
 	if $lbGetDaemonPid;then
-		echo "$SECnPidDaemon"
+		echo "$SECnDaemonPid"
 		SECFUNCdbgFuncOutA;return 0
 	fi
 	
-	SECFUNCdbgFuncOutA;
+	SECFUNCdbgFuncOutA;return 0
 }
 
 function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`

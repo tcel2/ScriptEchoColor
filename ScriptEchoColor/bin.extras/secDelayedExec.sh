@@ -35,7 +35,7 @@ echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
 
 varset bCheckPoint=false
 bWaitCheckPoint=false
-nDelayAtLoops=3
+nDelayAtLoops=1
 bCheckPointDaemon=false
 bCheckIfAlreadyRunning=true
 nSleepFor=0
@@ -248,16 +248,49 @@ FUNClog ini
 #fi
 if $bWaitCheckPoint;then
 	SECFUNCdelay bWaitCheckPoint --init
+	nPidDaemon=0
+	strFileUnique="`SECFUNCuniqueLock --getuniquefile`"
 	while true;do
 		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
-		if SECFUNCuniqueLock --isdaemonrunning;then
-			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
+
+#		if SECFUNCuniqueLock --isdaemonrunning;then
+#			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
+#			if $bCheckPoint;then
+#				break
+#			fi
+#		fi
+		
+		if [[ ! -f "$strFileUnique" ]];then #TODO after the daemon exited, another script pid (not daemon one) was considered as being daemon, but how?
+			nPidDaemon=0
+		fi
+		
+		if [[ -d "/proc/$nPidDaemon" ]];then
+			SECFUNCvarReadDB bCheckPoint
 			if $bCheckPoint;then
 				break
+			else
+				sleep 3 #this extra sleep is to lower the cpu usage when several scripts are running this same check at once
+			fi
+		else
+			nPidDaemon=0 # this helps (but is not 100% garanteed) on preventing other process that could have get the same pid
+			if SECFUNCuniqueLock --isdaemonrunning;then
+#				SECFUNCuniqueLock --setdbtodaemon # if daemon was NOT running, this would become the daemon
+#				if $SECbDaemonWasAlreadyRunning;then
+#					nPidDaemon="$SECnDaemonPid"
+#				else
+#					nPidDaemon=0
+#				fi
+				if SECFUNCuniqueLock --setdbtodaemononly;then
+					nPidDaemon="$SECnDaemonPid"
+				fi
+			else
+				sleep 3 #this extra sleep is to lower the cpu usage when several scripts are running this same check at once
 			fi
 		fi
+		
 		sleep $nDelayAtLoops
 	done
+	
 	echo
 fi
 

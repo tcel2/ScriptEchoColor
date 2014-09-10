@@ -82,7 +82,7 @@ function FUNClist() {
 function FUNCregisterOneDaemon() {
 	SECFUNCdbgFuncInA;
 	#strPPidId=`ps --no-headers -p $PPID -o comm`
-	nPidDaemon=$SECnPidDaemon
+	nPidDaemon=$SECnDaemonPid
 	if((nPidDaemon==0));then
 		nPidDaemon=$PPID
 	fi
