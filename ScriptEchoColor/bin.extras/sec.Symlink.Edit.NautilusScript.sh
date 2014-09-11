@@ -32,19 +32,29 @@ strFile="${astrFiles[0]}"
 
 function FUNCretargetSymlink() {
 	local lstrFile="${1-}"
+	echo "lstrFile='$lstrFile'"
 	if [[ ! -L "$lstrFile" ]];then
 		zenity --info --text "File is not a symlink: '$lstrFile'"
 	else
 		local lstrTarget="`readlink -f "$lstrFile"`"
+		echo "lstrTarget='$lstrTarget'"
 #		if [[ "${lstrTarget:0:1}" != "/" ]];then
 #			lstrTarget="`pwd`/$lstrTarget"
 #		fi
+		bForceDirectory=false
+		if [[ ! -a "$lstrTarget" ]];then
+			if echoc -q "missing lstrTarget='$lstrTarget', is directory?";then
+				bForceDirectory=true
+			fi
+		fi
 		strOptDirectory=""
 		strOptLnDir=""
-		if [[ -d "$lstrTarget" ]];then
+		if $bForceDirectory || [[ -d "$lstrTarget" ]];then
 			strOptDirectory="--directory"
 			strOptLnDir="-T"
+			echo "Symlinking to directory."
 		fi
+		
 		local lstrNewSymlink="`zenity \
 			--title "$SECstrScriptSelfName" \
 			--file-selection \
@@ -53,7 +63,7 @@ function FUNCretargetSymlink() {
 		#local lstrNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
 		if [[ -a "$lstrNewSymlink" ]];then
 			#echoc -x "rm -v '$lstrFile'"
-			echoc -x "ln -vsf $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
+			echoc -x "ln -vsfT $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
 		else
 			echoc -p "invalid symlink target '$lstrNewSymlink'"
 		fi

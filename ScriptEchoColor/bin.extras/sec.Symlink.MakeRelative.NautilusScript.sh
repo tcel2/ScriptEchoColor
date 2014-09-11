@@ -65,7 +65,7 @@ function FUNCmakeRelativeSymlink() {
 #		if [[ -a "`dirname "$lstrFile"`/$lstrNewSymlinkTarget" ]];then
 		if [[ -a "$lstrDirname/$lstrNewSymlinkTarget" ]];then
 			#echoc -x "rm -v '$lstrFile'"
-			if ! echoc -x "ln -vsf '$lstrNewSymlinkTarget' '$lstrFile'";then
+			if ! echoc -x "ln -vsfT '$lstrNewSymlinkTarget' '$lstrFile'";then
 				return 1
 			fi
 		else
