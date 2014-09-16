@@ -11,4 +11,4 @@
 	#now is
 		secDelayedExec.sh -s <sleepInSeconds> <command>
 
-
+# Main tip: Strong coding means a script that you can trust. It is ensured by `set -u` and `trap ERR`. It forces you to protect your code better, preventing bad and even hard to track surprises later on.
