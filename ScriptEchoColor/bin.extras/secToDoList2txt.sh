@@ -127,7 +127,10 @@ if [[ -z "$strFile" ]];then
 		strLinksTo="`readlink "$strDiskByUUIDpath/$strSDCardUUID"`"
 		strDeviceName="`basename "$strLinksTo"`"
 		strDevice="/dev/$strDeviceName"
-		strMountMICROSD="`mount |grep "^${strDevice} "`"
+		echo "strDevice='$strDevice'"
+		while ! strMountMICROSD="`mount |grep "^${strDevice} "`";do
+			echoc -w "you need to mount strDevice='$strDevice'"
+		done
 		strPathMICROSD="`echo "$strMountMICROSD" |cut -d' ' -f3`"
 		strFileMICROSD="`find "$strPathMICROSD" -maxdepth 1 -name "ToDoList_*.xml" |sort |tail -n 1`"
 		
