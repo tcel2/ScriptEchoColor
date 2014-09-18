@@ -80,6 +80,7 @@ bLsMissHist=false
 bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
+bForceMigrationToUnisonMode=false
 varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
 varset --default --show --allowuser bBackgroundWork=false
 varset --default --show bAutoGit=false
@@ -138,6 +139,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		shift
 		pathBackupsToRemote="$1"
 		SECFUNCcfgWriteVar pathBackupsToRemote
+	elif [[ "$1" == "--forcemigrationtounisonmode" ]]; then #help revalidates the list of RBF files to sync with the symlinks at control dir
+		bForceMigrationToUnisonMode=true
 	elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; if <var> is "help", list SEC vars allowed to be set by user.
 		shift
 		strSecVarId="${1-}"
@@ -479,10 +482,18 @@ fi
 #echoc -w "test"
 #exit
 
-if [[ ! -d "$SECstrUserScriptCfgPath/Home" ]];then
-	echoc --alert "new sync method uses unison, migration (from old method) is required"
+if [[ ! -d "$SECstrUserScriptCfgPath/Home" ]] || $bForceMigrationToUnisonMode;then
+
+	nSleepStep=600
+	if $bForceMigrationToUnisonMode;then
+		nSleepStep=0.1
+	fi
+
+	if ! $bForceMigrationToUnisonMode;then
+		echoc --alert "new sync method uses unison, migration (from old method) is required"
+	fi
 	
-	echoc -w "recreating directory structure of old method into new one"
+	echoc -w -t $nSleepStep "recreating directory structure of old method into new one"
 	# create all directories
 	find "${pathBackupsToRemote}/" -type d \
 		|sed -r "s'^${pathBackupsToRemote}/'${SECstrUserScriptCfgPath}/Home/'" \
@@ -490,7 +501,7 @@ if [[ ! -d "$SECstrUserScriptCfgPath/Home" ]];then
 			if ! mkdir -vp "$strPath";then exit 1;fi;
 		done
 	
-	echoc -w "creating symlinks to all real files for new method"
+	echoc -w -t $nSleepStep "creating symlinks to all real files for new method"
 #	find "${pathBackupsToRemote}/" -type f \
 #		|sed -r "s'^${pathBackupsToRemote}/''" \
 #		|while read strFile;do
@@ -515,12 +526,14 @@ if [[ ! -d "$SECstrUserScriptCfgPath/Home" ]];then
 		fi
 	done
 	
-	echoc --info "List of missing target/real files:"
-	for strMissingTarget in "${astrMissingTargetList[@]}";do
-		echo " '$strMissingTarget'"
-	done
+	if ! $bForceMigrationToUnisonMode;then
+		echoc --info "List of missing target/real files:"
+		for strMissingTarget in "${astrMissingTargetList[@]}";do
+			echo " '$strMissingTarget'"
+		done
 	
-	FUNCunison
+		FUNCunison
+	fi
 fi
 
 strSkipGitFilesPrefix="$HOME/.git/"
@@ -618,6 +631,7 @@ elif $bAddFilesMode; then
 		strAbsFileTarget="${pathBackupsToRemote}/$strRelativeFile"
 		mkdir -vp "`dirname "$strAbsFileTarget"`"
 		cp -vp "$strFile" "$strAbsFileTarget"
+		$0 --forcemigrationtounisonmode
 		
 		# history of added files
 		if ! grep -q "$strFile" "$addFileHist"; then

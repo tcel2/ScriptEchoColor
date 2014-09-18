@@ -1522,7 +1522,7 @@ if $bOptHelpExtended; then
 		echo "    Options must be unique (do not repeat keys)"
 		echo "    OBS.: Invalid keys will return 0 (true) in oposition to normal options that return non 0 (false)"'!!!'
 		echo "    example:"
-		echo "    $strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
+		echo "    $strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"&&:; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
 		echo
 		echo " -S Question mode where you can type a string"
 		echo "    @D: begins ending string part with default answer string"
