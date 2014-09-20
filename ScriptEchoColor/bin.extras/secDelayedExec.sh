@@ -43,6 +43,7 @@ bListAlreadyRunningAndNew=false
 bListIniCommands=false
 bStay=false
 bListWaiting=false
+bCheckPointDaemonHold=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -58,6 +59,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		shift
 		strCustomCommand="${1-}"
 		bCheckPointDaemon=true
+	elif [[ "$1" == "--checkpointdaemonhold" ]];then #help like --checkpointdaemon, but will prompt user before releasing the scripts
+		shift
+		strCustomCommand="${1-}"
+		bCheckPointDaemon=true
+		bCheckPointDaemonHold=true
 	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nSleepFor, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--nounique" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
@@ -178,6 +184,14 @@ if $bCheckPointDaemon;then
 		if ! $bCheckPoint;then
 			echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
 			if bash -c "$strCustomCommand";then
+				if $bCheckPointDaemonHold;then
+					echoc --say "run?"
+					while true;do
+						if zenity --question --title "$SECstrScriptSelfName" --text "allow waiting instances to be run?";then
+							break;
+						fi
+					done
+				fi
 				varset bCheckPoint=true
 				echo "Check Point reached at `date "+%Y%m%d+%H%M%S.%N"`"
 				echo "'waiting commands' will only run if this one remain active!!! "

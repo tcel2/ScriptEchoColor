@@ -24,9 +24,47 @@
 
 eval `secinit`
 
-cd "$HOME/Pictures";echoc -x "pwd"
-
+bParamsAreScrotOptions=false
 nTimeLimit=3
+bKeepAlways=false
+bShowAfter=true
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "Take screenshot after mouse stops moving for nTimeLimit='$nTimeLimit'."
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "--time" || "$1" == "-t" ]];then #help set wait delay in seconds for mouse be kept without moving
+		shift
+		nTimeLimit="${1-}"
+	elif [[ "$1" == "--keep" ]];then #help do not ask to delete screenshot
+		bKeepAlways=true
+	elif [[ "$1" == "--noshow" ]];then #help do not show the screenshot after taken
+		bShowAfter=false
+	elif [[ "$1" == "--" ]];then #help params after this are scrot options
+		bParamsAreScrotOptions=true
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
+if ! SECFUNCisNumber -dn $nTimeLimit;then
+	echoc -p "invalid nTimeLimit='$nTimeLimit'"
+	exit 1
+fi
+
+astrScrotOptions=()
+if $bParamsAreScrotOptions;then
+	astrScrotOptions=("$@")	
+	echoc --info "astrScrotOptions[\@]=(${astrScrotOptions[@]})"
+fi
+
+strSaveTo="$HOME/Pictures"
+cd "$strSaveTo";echoc -x "pwd"
+
 echoc --info "stop moving the mouse for $nTimeLimit seconds and the screenshot will be taken"
 SECFUNCdelay strMouseStatus --init
 while true;do
@@ -43,15 +81,20 @@ while true;do
 	sleep 0.5
 done
 
-strFile="ScreenShot-`SECFUNCdtFmt --filename`.png"
-echoc -x "scrot '$strFile'"
+strFile="$strSaveTo/ScreenShot-`SECFUNCdtFmt --filename`.png"
+echoc --say "screenshot now"
+SECFUNCexec -c --echo scrot "${astrScrotOptions[@]-}" "$strFile"
 
-ls -l "$strFile"
+echoc -x "ls -l \"$strFile\""
 
 echoc --info --say "screenshot taken"
-echoc -x "eog '$strFile'"
+if $bShowAfter;then
+	echoc -x "eog '$strFile'"
+fi
 
-if echoc -q "delete it?";then
-	echoc -x "trash '$strFile'"
+if ! $bKeepAlways;then
+	if echoc -q "delete it?";then
+		echoc -x "trash '$strFile'"
+	fi
 fi
 
