@@ -28,6 +28,7 @@ bUp=false
 bDown=false
 fStep=0.25
 bReset=false
+bRandom=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "up or down gamma"
