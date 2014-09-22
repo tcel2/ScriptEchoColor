@@ -42,6 +42,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		fStep="${1-}"
 	elif [[ "$1" == "--reset" ]];then #help gamma 1.0
 		bReset=true
+	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax] random gamma fade, fun effect
+		shift&&:
+		nRgfStep="${1-}"
+		shift&&:
+		nRgfDelay="${1-}"
+		shift&&:
+		nRgfMin="${1-}"
+		shift&&:
+		nRgfMax="${1-}"
+		
+		bRandom=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -49,12 +60,122 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
-	shift
+	shift&&:
 done
 
 if $bReset;then
 	xgamma -gamma 1
-	exit
+	exit 0
+elif $bRandom;then
+	if $SECbRunLog;then
+		echoc --alert "INT trap (to reset gamma to 1.0) wont work with SECbRunLog=true"
+	fi
+	trap '{ echo "(ctrl+c pressed, exiting...)";xgamma -gamma 1; exit 1; }' INT
+
+	# params
+	bReport=true
+	
+	###################################
+	if ! SECFUNCisNumber -dn "$nRgfStep"; then
+		echo "invalid nRgfStep='$nRgfStep'"
+		nRgfStep=1 #DEF step between gama changes
+	fi
+	if ! SECFUNCisNumber -n "$nRgfDelay"; then
+		echo "invalid nRgfDelay='$nRgfDelay'"
+		nRgfDelay=0.1 #DEF gamma update delay, float seconds ex.: 0.2
+	fi
+	if ! SECFUNCisNumber -dn "$nRgfMin"; then
+		echo "invalid nRgfMin='$nRgfMin'"
+		nRgfMin=80 #DEF min gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma, limit = 0.100 (10/100=0.1)
+	fi
+	if ! SECFUNCisNumber -dn "$nRgfMax"; then
+		echo "invalid nRgfMax='$nRgfMax'"
+		nRgfMax=170 #DEF max gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma
+	fi
+
+	# internal variables
+	nR=100
+	nG=100
+	nB=100
+	nRto=$nR
+	nGto=$nG
+	nBto=$nB
+	nMinLimit=10
+
+	FUNCto() {
+		n=$1
+		nTo=$2
+		#if((n==nTo));then
+		if(( n>=(nTo-nRgfStep) && n<=(nTo+nRgfStep) ));then
+		  ((nDelta=nRgfMax-nRgfMin))
+		  nRandom=$RANDOM
+		  nRandom=`echo "$nRandom%$nDelta" |bc`
+	#@@@r    nAdjust=`echo "$nRandom%$nRgfStep"  |bc` #this grants nTo will always be reachable thru nRgfStep stepping!
+	#@@@r    nRandom=$((nRandom-nAdjust))
+	#@@@!!!bash-bug:    ((nRandon+=nRgfMin))
+	#@@@!!!bash-bug:    ((nRandon=nRandom+nRgfMin))
+		  nRandom=$((nRandom+nRgfMin))
+		  if((nRandom<nRgfMin||nRandom>nRgfMax));then echo "BUG: out of min/max range $nRandom" >/dev/stderr; fi
+	#@@@r    if((nRandom<nRgfMin)); then nRandom=$nRgfMin; fi 
+		  nTo=$nRandom
+		  if((nTo<nMinLimit));then
+		    nTo=$nMinLimit
+		  fi
+		fi
+		echo $nTo
+	}
+
+	FUNCwalk() {
+		n=$1
+		nTo=$2
+		if((n<nTo));then
+		  n=$((n+nRgfStep))
+		elif((n>nTo));then
+		  n=$((n-nRgfStep))
+		fi
+		echo $n
+	}
+
+	FUNCtoFloat() {
+		n=$1
+		if((n<nMinLimit||n>1000));then echo "BUG: out of xgamma range $n" >/dev/stderr; fi
+		echo "scale=2;$1/100" |bc
+	}
+
+	FUNCupDown() {
+		n=$1
+		nTo=$2
+		if((n<nTo));then
+		  echo "^"
+		else
+		  echo "v"
+		fi
+	}
+
+	while true; do
+		nRto=`FUNCto $nR $nRto`
+		nGto=`FUNCto $nG $nGto`
+		nBto=`FUNCto $nB $nBto`
+		
+		nR=`FUNCwalk $nR $nRto`
+		nG=`FUNCwalk $nG $nGto`
+		nB=`FUNCwalk $nB $nBto`
+		
+		xgamma -quiet -rgamma `FUNCtoFloat $nR`
+		xgamma -quiet -ggamma `FUNCtoFloat $nG`
+		xgamma -quiet -bgamma `FUNCtoFloat $nB`
+		
+		sleep $nRgfDelay
+		
+		#report
+		printf "RGB; current:`FUNCupDown $nR $nRto`%03d,\
+	`FUNCupDown $nG $nGto`%03d,\
+	`FUNCupDown $nB $nBto`%03d;\
+	 to:%03d,%03d,%03d\r" $nR $nG $nB $nRto $nGto $nBto
+
+	done	
+	
+	exit 0
 fi
 
 if ! SECFUNCisNumber -n "${fStep}";then
