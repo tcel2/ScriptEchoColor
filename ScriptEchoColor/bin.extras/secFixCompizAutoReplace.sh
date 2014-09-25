@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
+#trap 'echo "(ctrl+c hit)";bAskReplaceKill=true;' INT
 #trap 'FUNCaskCompizReplaceOrKill' INT #this crashes bash while read is active
 
 ################# init 
@@ -31,7 +31,7 @@ eval `secinit`
 SECFUNCuniqueLock --daemonwait
 secDaemonsControl.sh --register
 
-bAskReplaceKill=false
+#bAskReplaceKill=false
 selfName=`basename "$0"`
 
 ################## functions
@@ -42,7 +42,7 @@ function FUNCcompizReplace() {
 	#xtermDetached.sh compiz --replace
 	
 	# no xterm to avoid log increasing cpu usage
-	compiz --replace >"$SEC_TmpFolder/SEC.$selfName.compiz.$$.log" 2>&1&
+	compiz --replace >"$SEC_TmpFolder/SEC.$selfName.compiz.$$.log" 2>&1 & disown
 };export -f FUNCcompizReplace
 
 function FUNCaskCompizReplaceOrKill() {
@@ -60,29 +60,32 @@ function FUNCechoErr() {
 function FUNCwait() {
 	#echoc -w -t 1 "$@" #too much cpu usage
 	#echo -n "$@";read -s -t 2 -p "hit ctrl+c for options";echo
-	echo -n "$@";echoc --info "hit ctrl+c for options"
-	for((i=0;i<10;i++));do
-		#if ! sleep 1; then break; fi #this breaks compiz also if you hit ctrl+c
-		read -n 1 -t 1
-		if $bAskReplaceKill;then
-			break;
-		fi
-	done
+	
+#	echo -n "$@";echoc --info "hit ctrl+c for options"
+#	for((i=0;i<10;i++));do
+#		#if ! sleep 1; then break; fi #this breaks compiz also if you hit ctrl+c
+#		read -n 1 -t 1
+#		if $bAskReplaceKill;then
+#			break;
+#		fi
+#	done
+	
 #	echo -n "$@";read -s -n 1 -t 10 -p "options (y/...)?" resp;echo 
 #	if [[ "$resp" == "y" ]];then
 #		bAskReplaceKill=true
 #	fi
 	
-	if $bAskReplaceKill;then
+#	if $bAskReplaceKill;then
 		FUNCaskCompizReplaceOrKill
 		bAskReplaceKill=false
-	fi
+#	fi
 }
 
 function FUNCisCompizRunning() {
 	#if ps -A -o command |grep -q -x compiz; then
 	FUNCechoErr "check if compiz is running..."
-	if qdbus |grep -q org.freedesktop.compiz; then
+	#if qdbus |grep -q org.freedesktop.compiz; then
+	if qdbus |grep -q com.canonical.Unity; then
 		return 0
 	fi
 	return 1
@@ -239,7 +242,7 @@ while true; do
 				break;
 			else
 				FUNCechoErr "waiting for compiz to startup..."
-				((count++))
+				((count++))&&:
 				if((count>waitLimit));then
 					FUNCechoErr "seems to have not started yet after ${waitLimit}s, trying again..."
 					break
