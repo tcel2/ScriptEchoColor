@@ -728,7 +728,7 @@ function SECFUNCexec() { #help
 		  #"$@" 2>/dev/null 1>/dev/null;lnReturnValue=$?
 		  "$@" >/dev/null 2>&1;lnReturnValue=$?
   	else
-  		"$@"
+  		"$@";lnReturnValue=$?
   	fi
   fi
 	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
