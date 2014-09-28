@@ -1,3 +1,7 @@
+Date:   2014-09-28 01:09:37 -0300
+    secAutoScreenLock.sh --holdtoggle
+Date:   2014-09-27 16:33:21 -0300
+    SECFUNCexec fix return value
 Date:   2014-09-25 16:58:19 -0300
     secFixCompizAutoReplace.sh: updated compiz is running detection to com.canonical.Unity
 Date:   2014-09-21 23:58:02 -0300
