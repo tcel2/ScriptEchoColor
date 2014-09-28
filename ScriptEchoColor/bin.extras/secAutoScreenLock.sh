@@ -272,7 +272,10 @@ while true;do
 	fi
 	
 	if $bHoldExecution || echoc -q -t 10 "hold execution?";then
-		echoc --alert -w "HOLDING EXECUTION"
+		varset --show bHoldExecution=true
+		if echoc -q "HOLDING EXECUTION, release?";then
+			varset --show bHoldExecution=false
+		fi
 	fi
 done
 
