@@ -124,11 +124,15 @@ fi
 ################ CHOOSE FILE
 if [[ -z "$strFile" ]];then
 	if [[ -n "$strSDCardUUID" ]];then
-		strLinksTo="`readlink "$strDiskByUUIDpath/$strSDCardUUID"`"
+		while ! strLinksTo="`readlink "$strDiskByUUIDpath/$strSDCardUUID"`";do
+			echoc --alert "waiting sdcard be connected and available strSDCardUUID='$strSDCardUUID'"
+			sleep 3
+		done
 		strDeviceName="`basename "$strLinksTo"`"
 		strDevice="/dev/$strDeviceName"
 		echo "strDevice='$strDevice'"
 		while ! strMountMICROSD="`mount |grep "^${strDevice} "`";do
+			tree -if /dev/disk/by-label/ |egrep "/${strDeviceName}$"
 			echoc -w "you need to mount strDevice='$strDevice'"
 		done
 		strPathMICROSD="`echo "$strMountMICROSD" |cut -d' ' -f3`"
