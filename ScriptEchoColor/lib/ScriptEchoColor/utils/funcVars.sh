@@ -350,7 +350,7 @@ function SECFUNCvarShowDbg() { #help only show var and value if SEC_DEBUG is set
   fi
 }
 
-function SECFUNCvarToggle() { #help <varId> only works with variable that has "boolean" value
+function SECFUNCvarToggle() { #help <varId> only works with variable that has "boolean" value\n\tWill also write the changed variable to BD.
 	local lbShow=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]]; then #SECFUNCvarToggle_help

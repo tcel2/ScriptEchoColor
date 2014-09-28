@@ -34,6 +34,7 @@ bModeXscreensaver=false
 bDPMSmonitorOn=false
 bMovieCheck=false
 nMovieCheckDelay=60
+bHoldToggle=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
@@ -49,6 +50,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bForceLightWeight=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
 		bDPMSmonitorOn=true
+	elif [[ "$1" == "--holdtoggle" ]];then #help command a running daemon to toggle holding execution
+		bHoldToggle=true
 	elif [[ "$1" == "--moviecheck" || "$1" == "-m" ]];then #help <nMovieCheckDelay> check if you are watching a movie in fullscreen and prevent screensaver from being activated
 		shift
 		nMovieCheckDelay="${1-}"
@@ -63,6 +66,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+bHoldExecution=false
+if $bHoldToggle;then
+	if ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;then
+		echoc -p "daemon is not running."
+		exit 1
+	fi
+	echo "SECvarFile='$SECvarFile'"
+	SECFUNCvarToggle --show bHoldExecution
+	exit 0
+fi
 
 if ! SECFUNCisNumber -dn $nMovieCheckDelay || ((nMovieCheckDelay==0));then
 	echoc -p "invalid nMovieCheckDelay='$nMovieCheckDelay'"
@@ -96,6 +110,8 @@ nLightweightHackId=1
 bWasLockedByThisScript=false
 bHackIdChecked=false
 while true;do
+	SECFUNCvarReadDB
+	
 	bIsLocked=false
 	
 	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
@@ -255,6 +271,8 @@ while true;do
 		done
 	fi
 	
-	echoc -w -t 10
+	if $bHoldExecution || echoc -q -t 10 "hold execution?";then
+		echoc --alert -w "HOLDING EXECUTION"
+	fi
 done
 

@@ -1064,7 +1064,7 @@ function SECFUNCseparateInWords() { #help <string> ex.: 'abcDefHgi_jkl' becomes 
 	fi
 }
 
-function SECFUNCdelay() { #help The first parameter can optionally be a string identifying a custom delay like:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;
+function SECFUNCdelay() { #help The first parameter can optionally be a string identifying a custom delay:\n\tSECFUNCdelay [delayId] --init;\n\tex.:\n\tSECFUNCdelay main --init;\n\tSECFUNCdelay test --init;\n\tSECFUNCdelay $FUNCNAME --init;
 	declare -g -A _dtSECFUNCdelayArray
 	
 	local bIndexSetByUser=false
@@ -1101,6 +1101,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	local lbCheckOrInit=false
 	local l_b1stIsTrueOnCheckOrInit=false
 	local lbGetPrettyFull=false
+	#TODO create an automatic init option that works with ex --getpretty, so a function can be called by a loop and still retain control over its initialization inside of it.
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
 			SECFUNCshowHelp ${FUNCNAME}
