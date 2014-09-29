@@ -954,7 +954,8 @@ xscreensaver -display :1&
 if $bScreenSaverOnlyLockByHand;then
 	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
 else
-	xterm -geometry 1x1 -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
+	# interactive window, do not shrink..
+	xterm -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
 fi
 #xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 

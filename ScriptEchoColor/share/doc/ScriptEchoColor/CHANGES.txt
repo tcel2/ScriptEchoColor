@@ -1,3 +1,5 @@
+Date:   2014-09-28 17:59:30 -0300
+    secToDoList2txt.sh: another check for mounted sdcard
 Date:   2014-09-28 01:09:37 -0300
     secAutoScreenLock.sh --holdtoggle
 Date:   2014-09-27 16:33:21 -0300
