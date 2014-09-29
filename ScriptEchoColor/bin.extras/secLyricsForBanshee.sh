@@ -332,10 +332,17 @@ while true; do
 							bOpenOnce=false
 						else
 #							if echoc -t $nSleepDelay -q "open evince (lyrics pdf viewer) now?";then
-							if echoc -t 60 -q "open evince (lyrics pdf viewer) now?";then
-								bOpenNow=true
-								bSlept=true
-							fi
+#							if echoc -t 60 -q "open evince (lyrics pdf viewer) now?";then
+#								bOpenNow=true
+#								bSlept=true
+#							fi
+							echoc -Q "Lyrics@O_view/_edit"&&:;case "`secascii $?`" in 
+								v)echo "viewing..."
+									bOpenNow=true
+									bSlept=true
+									;; 
+								e)gedit "$strLyricsFile";; 
+							esac
 						fi
 						if $bOpenNow;then
 							evince "${strFileLyricsTmp}.pdf" 2>/dev/null &
