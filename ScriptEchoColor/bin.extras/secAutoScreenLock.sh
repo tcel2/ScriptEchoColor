@@ -253,6 +253,8 @@ while true;do
 				fi
 			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then # Chromium Flash player
 				bSimulateActivity=true
+			elif [[ "$strActiveWindowCmd" =~ ^"/usr/bin/vlc " ]];then # VLC
+				bSimulateActivity=true
 			else
 				echoc --info "Maximized window not identified."
 			fi
