@@ -1339,6 +1339,15 @@ function SECFUNCcheckActivateRunLog() {
 #	fi
 }
 
+function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this function, and so before any prompt that happens after this function, will be consumed here.
+	while true;do
+		read -n 1 -t 0.1&&:
+		if(($?==142));then #142 is: no key was pressed
+			break;
+		fi;
+	done
+}
+
 export SECbScriptSelfNameChanged=false
 if SECFUNCscriptSelfNameCheckAndSet;then
 	SECbScriptSelfNameChanged=true
