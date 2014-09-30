@@ -1,3 +1,7 @@
+Date:   2014-09-29 22:40:36 -0300
+    secAutoScreenLock.sh: added VLC support
+Date:   2014-09-29 20:01:18 -0300
+    secLyricsForBanshee.sh: helps on editing lyrics
 Date:   2014-09-28 22:53:12 -0300
     secOpenNewX.sh: secAutoScreenLock.sh being interactive now is not shrinked
 Date:   2014-09-28 17:59:30 -0300
