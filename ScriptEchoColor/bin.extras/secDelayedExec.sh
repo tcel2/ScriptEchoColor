@@ -201,11 +201,17 @@ if $bCheckPointDaemon;then
 		sleep $nDelayAtLoops
 	done
 	
+	strIdShowDelay="ShowDelay"
+	SECFUNCdelay "$strIdShowDelay" --init
 	while true;do
-		if FUNCcheckIfWaitCmdsHaveRun;then
-			break;
+		if SECFUNCdelay "WaitCmds" --checkorinit1 60;then
+			if FUNCcheckIfWaitCmdsHaveRun;then
+				break;
+			fi
+			echoc --info "waiting all commands be actually RUN"
 		fi
-		echoc -w -t 60 "waiting all commands be actually RUN"
+		sleep 3 #1s is too much cpu usage
+		echo "waiting for: `SECFUNCdelay "$strIdShowDelay" --get`s"
 	done
 	
 	exit 0
