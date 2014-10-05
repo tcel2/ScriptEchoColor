@@ -40,7 +40,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echo "Initialize environment variables sharing between bash scripts."
 		echo 'use like: eval `'`basename $0`'`'
 		echo
-		eval `secinit --core`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
+		eval `secinit`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
 		exit
 	elif [[ "$1" == "--help-fast" ]];then #help help for fast lib
@@ -64,7 +64,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		exit
 	elif [[ "$1" == "--help-summary" ]];then #help summary of functions on all libs
-		eval `secinit --core`
+		eval `secinit`
 		#sedOnlyFunctions="s'^.*/func(.*)[.]sh:function (SECFUNC[[:alnum:]_]*).*'\1:\2'"
 		#"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func"*".sh" \
 		#sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*#help (.*)'\1\t\2'"
