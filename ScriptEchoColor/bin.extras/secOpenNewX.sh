@@ -226,13 +226,25 @@ function FUNCkeepGamma() { # some games reset the gamma on each restart
 };export -f FUNCkeepGamma
 
 function FUNCcicleGamma() {
+	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
+	
+	eval `secinit --log` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	echo "0=$0"
+	echo "PATH='$PATH'"
+	echo "$FUNCNAME" #@@@R to help on debug
+	
 	SECFUNCdbgFuncInA;
 	#set -x
 	local nDirection=$1 #1 or -1
 	
-	ls -l $SECvarFile
+	#@@@R to help on debug
+	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
+	ls -l $SECvarFile #@@@R to help on debug
+	echo "pid=$$,PPID=$PPID" #@@@R to help on debug
+	SECFUNCppidList --comm -s "\n" -r #@@@R to help on debug
+	
 	SECFUNCvarSet --show --default fGamma 1.0
-	SECFUNCvarGet pidOpenNewX
+	echo "pidOpenNewX=`SECFUNCvarGet pidOpenNewX`"
 	#SECFUNCvarGet fGamma
 	
 #	local lockFileGamma="/tmp/openNewX.gamma.lock"
@@ -291,10 +303,13 @@ function FUNCcicleGamma() {
 	echoc --say "gamma $fGamma" #must say before releasing the lock!
 	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
 	#set +x
+	echoc -w -t 60 #@@@R to help on debug
 	SECFUNCdbgFuncOutA;
 };export -f FUNCcicleGamma
 
 function FUNCnvidiaCicle() {
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	
 	SECFUNCdbgFuncInA;
 	local nDirection=$1 # 1 or -1
 	
