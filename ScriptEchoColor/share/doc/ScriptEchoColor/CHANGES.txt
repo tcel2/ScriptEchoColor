@@ -1,3 +1,5 @@
+Date:   2014-10-04 21:15:44 -0300
+    fixed: secLibsInit --help-summary
 Date:   2014-10-01 20:02:57 -0300
     secDelayedExec.sh: shows delay time while waiting all checkpoint scripts be run
 Date:   2014-09-30 17:42:22 -0300
