@@ -214,7 +214,7 @@ function FUNCclearCache() {
 #	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileReal"
 #}
 
-strCicleGammaId="OpenNewX_CicleGammaDaemon"
+export strCicleGammaId="OpenNewX_CicleGammaDaemon"
 function FUNCkeepGamma() { # some games reset the gamma on each restart
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	
