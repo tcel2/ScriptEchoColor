@@ -214,8 +214,11 @@ function FUNCclearCache() {
 #	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileReal"
 #}
 
+strCicleGammaId="OpenNewX_CicleGammaDaemon"
 function FUNCkeepGamma() { # some games reset the gamma on each restart
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	
+	SECFUNCuniqueLock --id "$strCicleGammaId" --daemonwait
 	
 	while true; do
 		SECFUNCvarReadDB
@@ -233,6 +236,11 @@ function FUNCcicleGamma() {
 	echo "PATH='$PATH'"
 	echo "$FUNCNAME" #@@@R to help on debug
 	
+	while ! SECFUNCuniqueLock --id "$strCicleGammaId" --setdbtodaemononly;do
+		echoc -p "waiting strCicleGammaId='$strCicleGammaId'"
+		sleep 3
+	done
+			
 	SECFUNCdbgFuncInA;
 	#set -x
 	local nDirection=$1 #1 or -1
