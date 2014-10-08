@@ -134,22 +134,23 @@ while true;do
 		bWasLockedByThisScript=false #just to reset the value as screen is unlocked
 		bHackIdChecked=false #just to reset the value as screen is unlocked
 		
-		bOk=true
+		bAllowScreenLock=true
 	
-		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bOk=false;fi
-		if ! anXorgPidList=(`pgrep Xorg`);then bOk=false;fi
+		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bAllowScreenLock=false;fi
+		if ! anXorgPidList=(`pgrep Xorg`);then bAllowScreenLock=false;fi
 		if ! nRunningAtVirtualTerminal="`\
 			ps --no-headers -o tty,cmd -p ${anXorgPidList[@]} \
 			|grep $DISPLAY \
-			|sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bOk=false;fi
-	#	if xscreensaver-command -time |grep "screen locked since";then bOk=false;fi
-		if((nRunningAtVirtualTerminal==nActiveVirtualTerminal));then bOk=false;fi
+			|sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bAllowScreenLock=false;fi
+	#	if xscreensaver-command -time |grep "screen locked since";then bAllowScreenLock=false;fi
+		if((nRunningAtVirtualTerminal==nActiveVirtualTerminal));then bAllowScreenLock=false;fi
+		if $bHoldExecution;then bAllowScreenLock=false;fi
 	
 		echo "nActiveVirtualTerminal=$nActiveVirtualTerminal;"
 		echo "nRunningAtVirtualTerminal=$nRunningAtVirtualTerminal;"
 		echo "anXorgPidList[@]=(${anXorgPidList[@]})"
 	
-		if $bOk;then
+		if $bAllowScreenLock;then
 			#if echoc -x "xscreensaver-command -lock";then #lock may fail, so will be retried
 			nScreensaverRet=0
 			if $bModeUnity;then
@@ -275,7 +276,7 @@ while true;do
 	
 	if $bHoldExecution || echoc -q -t 10 "hold execution?";then
 		varset --show bHoldExecution=true
-		if echoc -q "HOLDING EXECUTION, release?";then
+		if echoc -q -t 10 "HOLDING EXECUTION, release?";then
 			varset --show bHoldExecution=false
 		fi
 	fi
