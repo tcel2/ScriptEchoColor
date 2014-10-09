@@ -27,6 +27,7 @@ eval `secinit`
 # initializations and functions
 
 bValidateOnly=false
+bCheckInternet=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
@@ -40,6 +41,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echoc --info "\t$SECstrScriptSelfName disable 120 enable"
 		SECFUNCshowHelp --nosort
 		exit
+	elif [[ "$1" == "--checkinternet" || "$1" == "-c" ]];then #help check if internet is active return 0, or inactive return 1
+		bCheckInternet=true
 	elif [[ "$1" == "--validateonly" || "$1" == "-v" ]];then #help just validate the params and exit without executing them.
 		bValidateOnly=true
 	else
@@ -48,6 +51,20 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+function FUNCcheckInternet() {
+  if ip route ls |grep --color=always "192.168.0." >/dev/null;then
+  	return 0
+  fi
+  return 1
+}
+
+if $bCheckInternet;then
+	if FUNCcheckInternet;then
+		exit 0
+	fi
+	exit 1
+fi
 
 # Main code
 SECFUNCuniqueLock --daemonwait
@@ -72,10 +89,18 @@ function FUNCexecParam() {
 	
 	if [[ "$lstrParam" == "enable" ]];then
 		if $lbValidateOnly;then echo "ok '$lstrParam'"; return;fi
-		echoc -x "nmcli nm enable true"
+		if FUNCcheckInternet;then
+			echo "internet already enabled."
+		else
+			echoc -x "nmcli nm enable true"
+		fi
 	elif [[ "$lstrParam" == "disable" ]];then
 		if $lbValidateOnly;then echo "ok '$lstrParam'"; return;fi
-		echoc -x "nmcli nm enable false"
+		if FUNCcheckInternet;then
+			echoc -x "nmcli nm enable false"
+		else
+			echo "internet already disabled."
+		fi
 	elif SECFUNCisNumber -dn "$lstrParam";then
 		if $lbValidateOnly;then echo "ok '$lstrParam'"; return;fi
 		if [[ "`tty`" != "not a tty" ]];then
