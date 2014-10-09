@@ -50,6 +50,7 @@ eval `secinit`
 #bByUuid=false
 bList=false
 bRetry=false
+bStillActiveWarn=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "To let a backup storage go safely sleep, its base id must be supplied (the one that doesnt ends with '-part?'). Also detects unison and keeps devices awake."
@@ -68,6 +69,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bList=true
 	elif [[ "$1" == "--retry" ]];then #help device may not be ready so keep trying
 		bRetry=true
+	elif [[ "$1" == "--nostillactivewarn" ]];then #help disable audible warning for backup storage being kept active for too long
+		bStillActiveWarn=false
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -190,6 +193,13 @@ while true;do
 				sleep 0.01
 				kill -SIGSTOP ${anPidKeepAwake[$strDev]}&&:
 				ps --no-headers -o pid,tty,time,cmd -p ${anPidKeepAwake[$strDev]}&&:
+				
+				if $bStillActiveWarn;then
+					if SECFUNCdelay --checkorinit $((15*60));then
+						echoc --info --say "Backup storage still active."
+						echoc --alert "Attention, backup storage may heat up."
+					fi
+				fi
 				
 				# do not use bResetTimer=true here, ls work should provide enough status changes to make it work...
 				bKeepAwake=true

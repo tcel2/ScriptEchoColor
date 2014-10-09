@@ -1108,7 +1108,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			return
 		elif [[ "$1" == "--1stistrue" ]];then #SECFUNCdelay_help to use with --checkorinit that makes 1st run return true
 			l_b1stIsTrueOnCheckOrInit=true
-		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <delayLimit> will check if delay is above or equal specified at delayLimit;\n\t\twill then return true and re-init the delay variable;\n\t\totherwise return false
+		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <delayLimit> will check if delay (in seconds, can be float) is above or equal specified at delayLimit;\n\t\twill then return true and re-init the delay variable;\n\t\totherwise return false
 			shift
 			local nCheckDelayAt=${1-}
 			
