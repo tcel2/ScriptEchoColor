@@ -551,6 +551,10 @@ function FUNCmanageCPUFrequency() {
 		_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
 	fi
 	
+	if [[ "${astrGovernors[0]}" == "$strCPUFreqGovernorToSet" ]];then
+		(export SEC_SAYVOL=100;echoc --say "C P U $strCPUFreqGovernorToSet")
+	fi
+
 	strCPUGovernorLast="$strCPUFreqGovernorToSet"
 }
 function _FUNCmanageCPUFrequencyGradative() { #help -1 or +1 to increase or decrease governor frequency mode
