@@ -32,26 +32,35 @@ eval `secinit`
 
 ############### PARAMS
 
-SECFUNCvarSet --default basePosX=0
-SECFUNCvarSet --default basePosY=0
+#SECFUNCvarSet --default basePosX=0
+#SECFUNCvarSet --default basePosY=0
 bDaemon=false
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-	if [[ "$1" == "--daemon" ]]; then
+nViewPortX=0
+nViewPortY=0
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "append '#skipOrganize' to commands like: xterm -e \"ls #skipOrganize\", so such terminals wont be organized!"
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "--daemon" ]]; then #help keep running in a loop
 		bDaemon=true
-	elif [[ "$1" == "--viewport" ]]; then
+	elif [[ "$1" == "--viewport" ]]; then #help <nViewPortX> <nViewPortY> what compiz viewport to place terminals?
 		shift
-		if [[ -z "$1" ]]; then echoc -p "missing base position [$1]."; exit 1; fi
-		SECFUNCvarSet --show basePosX=`echo "$1" |sed -r 's"([[:digit:]]*)x.*"\1"'`
-		SECFUNCvarSet --show basePosY=`echo "$1" |sed -r 's"[[:digit:]]*x([[:digit:]]*)"\1"'`
-	elif [[ "$1" == "--help" ]]; then
-		echo "options: [--viewport <basePosX>x<basePosY>] [--daemon]"
-		echo "ex.: $0 --viewport 1024x0 #so windows are placed at 2nd viewport/face on unity/compiz"
-		echo "append '#skipCascade' to commands like: xterm -e \"ls #skipCascade\", so such terminals wont be cascaded!"
+		nViewPortX="${1-}"
+		shift
+		nViewPortY="${1-}"
+#		if [[ -z "$1" ]]; then echoc -p "missing base position [$1]."; exit 1; fi
+#		SECFUNCvarSet --show basePosX=`echo "$1" |sed -r 's"([[:digit:]]*)x.*"\1"'`
+#		SECFUNCvarSet --show basePosY=`echo "$1" |sed -r 's"[[:digit:]]*x([[:digit:]]*)"\1"'`
+	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
+		echo "#your code goes here"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
-	
 	shift
 done
 
@@ -59,7 +68,7 @@ done
 
 function FUNCpidList() {
 	#ps -A -o pid,comm |grep "xterm\|rxvt" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
-	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|rxvt\)" |grep -v "#skipCascade" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
+	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|rxvt\)" |grep -v "#skipOrganize" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
 }
 
 function FUNCwindowList() {
@@ -73,7 +82,7 @@ function FUNCwindowList() {
 	local listWindowIdsSorted=()
 	for windowId in ${listWindowIds[@]-};do
 		local windowPid="`xdotool getwindowpid $windowId`"&&:
-		if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipCascade";then
+		if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
 			local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
 			local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
 			# sort like in the newests are the last ones
@@ -92,6 +101,14 @@ function FUNCwindowList() {
 }
 
 ###################### MAIN CODE
+if ! SECFUNCisNumber -dn "$nViewPortX";then
+	echoc -p "invalid nViewPortX='$nViewPortX'"
+	exit 1
+fi
+if ! SECFUNCisNumber -dn "$nViewPortY";then
+	echoc -p "invalid nViewPortY='$nViewPortY'"
+	exit 1
+fi
 
 if $bDaemon;then
 #	if SECFUNCuniqueLock; then
@@ -109,13 +126,51 @@ fi
 maxRows=5
 maxCols=4
 
-#@@@TODO make these variables automatic someday..
+nScreenWidth=-1
+nScreenHeight=-1
+nScreenWidthWork=-1
+nScreenHeightWork=-1
 screenStatusBarHeight=25
-screenWidth=1024
-screenHeight=768
+function FUNCupdateScreenGeometryData(){
+	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
+	declare -g nScreenWidth="${anGeom[0]}"
+	declare -g nScreenHeight="${anGeom[1]}"
+	echo "nScreenWidth='$nScreenWidth'"
+	echo "nScreenHeight='$nScreenHeight'"
+
+	nScreenWidthWork=$nScreenWidth
+	nScreenHeightWork=$((nScreenHeight-screenStatusBarHeight)) #workable area
+	echo "nScreenWidthWork='$nScreenWidthWork'"
+	echo "nScreenHeightWork='$nScreenHeightWork'"
+}
+FUNCupdateScreenGeometryData
+
+anViewportGeom=(`wmctrl -d |gawk '{printf $4}' |tr 'x' ' '`)
+nViewPortMaxX=$(( (${anViewportGeom[0]}/nScreenWidth ) -1 )) #index begin on 0
+nViewPortMaxY=$(( (${anViewportGeom[1]}/nScreenHeight) -1 )) #index begin on 0
+#if((basePosX>=${anViewportGeom[0]}));then
+if((nViewPortX>nViewPortMaxX));then
+	#SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' makes basePosX='$basePosX' beyond anViewportGeom[0]='${anViewportGeom[0]}', so terminals wouldnt be visible; fixing it."
+	SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' would put terminals beyond anViewportGeom[0]='${anViewportGeom[0]}'; fixing it."
+	nViewPortX=$nViewPortMaxX
+fi
+#if((basePosY>=${anViewportGeom[1]}));then
+if((nViewPortY>nViewPortMaxY));then
+	#SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' makes basePosY='$basePosY' beyond anViewportGeom[1]='${anViewportGeom[1]}', so terminals wouldnt be visible; fixing it."
+	SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' would put terminals beyond anViewportGeom[1]='${anViewportGeom[1]}'; fixing it."
+	nViewPortY=$nViewPortMaxY
+fi
+echo "nViewPortX='$nViewPortX'"
+echo "nViewPortY='$nViewPortY'"
+
+basePosX=$((nViewPortX*nScreenWidth))
+basePosY=$((nViewPortY*nScreenHeight))
+echo "basePosX='$basePosX'"
+echo "basePosY='$basePosY'"
+
+#@@@TODO make these variables automatic someday..
 windowTitleHeight=25
 windowBorderSize=5 #2 #5
-screenHeight=$((screenHeight-screenStatusBarHeight)) #workable area
 
 ############## DAEMON LOOP
 
@@ -149,11 +204,11 @@ function FUNCorganize() {
 		windowCountAdd=$((columns-(windowCount%columns))) #this is usefull to last row remain on current viewport with empty slots
 	fi
 
-	windowWidth=$(( (screenWidth/columns)-windowBorderSize ))
-	windowHeight=$(( screenHeight/((windowCount+windowCountAdd)/columns) ))
+	windowWidth=$(( (nScreenWidthWork/columns)-windowBorderSize ))
+	windowHeight=$(( nScreenHeightWork/((windowCount+windowCountAdd)/columns) ))
 	windowHeight=$((windowHeight-windowTitleHeight-(windowBorderSize*2)))
-#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( screenHeight/((windowCount+windowCountAdd)/columns) ))";SEC_DEBUG=false
-#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( $screenHeight/(($windowCount+$windowCountAdd)/$columns) ))";SEC_DEBUG=false
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( nScreenHeightWork/((windowCount+windowCountAdd)/columns) ))";SEC_DEBUG=false
+#	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(( $nScreenHeightWork/(($windowCount+$windowCountAdd)/$columns) ))";SEC_DEBUG=false
 #	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$((windowHeight-windowTitleHeight-(windowBorderSize*2)))";SEC_DEBUG=false
 #	SEC_DEBUG=true;SECFUNCechoDbgA "windowHeight=\$(($windowHeight-$windowTitleHeight-($windowBorderSize*2)))";SEC_DEBUG=false
 
@@ -169,7 +224,7 @@ function FUNCorganize() {
 	
 		echo "windowId=$windowId"
 	
-		# skipCascade
+		# skipOrganize
 		nWindowPid="`xdotool getwindowpid $windowId`"&&:
 		#echo "nWindowPid='$nWindowPid'"
 		if [[ -z "$nWindowPid" ]];then
@@ -180,7 +235,7 @@ function FUNCorganize() {
 		if [[ -z "$xtermCmd" ]];then
 			continue
 		fi
-		if echo "$xtermCmd" |grep -q "#skipCascade";then
+		if echo "$xtermCmd" |grep -q "#skipOrganize";then
 			echo "skipping $windowId cmd: $xtermCmd"
 			((countSkips++))&&:
 			continue
@@ -233,6 +288,8 @@ strPidListPrevious=""
 if $bDaemon; then
 	echoc -x "renice -n 19 -p $$"
 	while true; do 
+		FUNCupdateScreenGeometryData
+		
 		strPidList=`FUNCpidList`
 		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
 			strPidListPrevious="$strPidList"

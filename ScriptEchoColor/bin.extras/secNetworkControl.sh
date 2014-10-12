@@ -28,6 +28,7 @@ eval `secinit`
 
 bValidateOnly=false
 bCheckInternet=false
+bListNetworkFiles=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
@@ -45,6 +46,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckInternet=true
 	elif [[ "$1" == "--validateonly" || "$1" == "-v" ]];then #help just validate the params and exit without executing them.
 		bValidateOnly=true
+	elif [[ "$1" == "--listnetworkfiles" || "$1" == "-l" ]];then #help lsof -i
+		bListNetworkFiles=true
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
@@ -64,6 +67,9 @@ if $bCheckInternet;then
 		exit 0
 	fi
 	exit 1
+elif $bListNetworkFiles;then
+	lsof -i
+	exit 0
 fi
 
 # Main code

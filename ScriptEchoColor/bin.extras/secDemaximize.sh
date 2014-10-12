@@ -40,16 +40,28 @@ aWindowListToSkip=(
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register
 
-eval `xrandr |grep '*' |sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"nScreenWidth=\1;nScreenHeight=\2;"'`
-varset --show nScreenWidth=$nScreenWidth # to ease find code
-varset --show nScreenHeight=$nScreenHeight # to ease find code
-varset --show nPseudoMaxWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
-varset --show nPseudoMaxHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
-varset --show nXpos=1 #help X top left position to place the demaximized window
-varset --show nYpos=25 #help Y top left position to place the demaximized window
-varset --show nRestoreFixXpos=5 #help restoring to non maximized window X displacement fix...
-varset --show nRestoreFixYpos=27 #help restoring to non maximized window Y displacement fix...
-varset --show nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
+nScreenWidth=-1
+nScreenHeight=-1
+nPseudoMaxWidth=-1
+nPseudoMaxHeight=-1
+function FUNCupdateScreenGeometryData(){
+#	eval `xrandr \
+#		|grep '*' \
+#		|sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"\
+#			declare -g nScreenWidth=\1;\
+#			declare -g nScreenHeight=\2;"'`
+	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
+	declare -g nScreenWidth="${anGeom[0]}"
+	declare -g nScreenHeight="${anGeom[1]}"
+	nPseudoMaxWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
+	nPseudoMaxHeight=$((nScreenHeight-70)) #help height to resize the demaximized window
+}
+FUNCupdateScreenGeometryData
+nXpos=1 #help X top left position to place the demaximized window
+nYpos=25 #help Y top left position to place the demaximized window
+nRestoreFixXpos=5 #help restoring to non maximized window X displacement fix...
+nRestoreFixYpos=27 #help restoring to non maximized window Y displacement fix...
+nYposMinReadPos=52 #help Y minimum top position of non maximized window that shall be read by xwininfo, it is/seems messy I know...
 
 #selfName=`basename "$0"`
 strLogFile="$SEC_TmpFolder/SEC.$SECstrScriptSelfName.log"
@@ -127,14 +139,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-if	! FUNCvalidateNumber nPseudoMaxWidth		||
-		! FUNCvalidateNumber nPseudoMaxHeight	||
-		! FUNCvalidateNumber nXpos		||
-		! FUNCvalidateNumber nYpos		||
-		! FUNCvalidateNumber nYposMinReadPos ;
-then
-	exit 1
-fi
+function FUNCvalidateAll() {
+	if	! FUNCvalidateNumber nPseudoMaxWidth		||
+			! FUNCvalidateNumber nPseudoMaxHeight	||
+			! FUNCvalidateNumber nXpos		||
+			! FUNCvalidateNumber nYpos		||
+			! FUNCvalidateNumber nYposMinReadPos ;
+	then
+		exit 1 #there already has a problem message
+	fi
+}
+FUNCvalidateAll
 
 #alias ContAftErrA="SECFUNCechoErrA \"code='\`sed -n \"\${LINENO}p\" \"$0\"\`';\";continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
 alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?\" >>/dev/stderr;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
@@ -142,8 +157,15 @@ alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?\" >>/dev/stderr;co
 strLastSkipped=""
 declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
+SECFUNCdelay RefreshData --init
 while true; do 
 	sleep 0.25;
+	
+	if SECFUNCdelay RefreshData --checkorinit1 10;then
+		FUNCupdateScreenGeometryData
+		FUNCvalidateAll
+	fi
+	
 	if SECFUNCdelay daemonHold --checkorinit 5;then
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
