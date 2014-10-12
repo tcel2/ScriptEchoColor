@@ -131,6 +131,10 @@ nScreenHeight=-1
 nScreenWidthWork=-1
 nScreenHeightWork=-1
 screenStatusBarHeight=25
+#@@@TODO make these variables automatic someday..
+windowTitleHeight=25
+windowBorderSize=5 #2 #5
+
 function FUNCupdateScreenGeometryData(){
 	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
 	declare -g nScreenWidth="${anGeom[0]}"
@@ -142,35 +146,31 @@ function FUNCupdateScreenGeometryData(){
 	nScreenHeightWork=$((nScreenHeight-screenStatusBarHeight)) #workable area
 	echo "nScreenWidthWork='$nScreenWidthWork'"
 	echo "nScreenHeightWork='$nScreenHeightWork'"
+	
+	anViewportGeom=(`wmctrl -d |gawk '{printf $4}' |tr 'x' ' '`)
+	nViewPortMaxX=$(( (${anViewportGeom[0]}/nScreenWidth ) -1 )) #index begin on 0
+	nViewPortMaxY=$(( (${anViewportGeom[1]}/nScreenHeight) -1 )) #index begin on 0
+	#if((basePosX>=${anViewportGeom[0]}));then
+	if((nViewPortX>nViewPortMaxX));then
+		#SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' makes basePosX='$basePosX' beyond anViewportGeom[0]='${anViewportGeom[0]}', so terminals wouldnt be visible; fixing it."
+		SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' would put terminals beyond anViewportGeom[0]='${anViewportGeom[0]}'; fixing it."
+		nViewPortX=$nViewPortMaxX
+	fi
+	#if((basePosY>=${anViewportGeom[1]}));then
+	if((nViewPortY>nViewPortMaxY));then
+		#SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' makes basePosY='$basePosY' beyond anViewportGeom[1]='${anViewportGeom[1]}', so terminals wouldnt be visible; fixing it."
+		SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' would put terminals beyond anViewportGeom[1]='${anViewportGeom[1]}'; fixing it."
+		nViewPortY=$nViewPortMaxY
+	fi
+	echo "nViewPortX='$nViewPortX'"
+	echo "nViewPortY='$nViewPortY'"
+
+	basePosX=$((nViewPortX*nScreenWidth))
+	basePosY=$((nViewPortY*nScreenHeight))
+	echo "basePosX='$basePosX'"
+	echo "basePosY='$basePosY'"
 }
 FUNCupdateScreenGeometryData
-
-anViewportGeom=(`wmctrl -d |gawk '{printf $4}' |tr 'x' ' '`)
-nViewPortMaxX=$(( (${anViewportGeom[0]}/nScreenWidth ) -1 )) #index begin on 0
-nViewPortMaxY=$(( (${anViewportGeom[1]}/nScreenHeight) -1 )) #index begin on 0
-#if((basePosX>=${anViewportGeom[0]}));then
-if((nViewPortX>nViewPortMaxX));then
-	#SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' makes basePosX='$basePosX' beyond anViewportGeom[0]='${anViewportGeom[0]}', so terminals wouldnt be visible; fixing it."
-	SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' would put terminals beyond anViewportGeom[0]='${anViewportGeom[0]}'; fixing it."
-	nViewPortX=$nViewPortMaxX
-fi
-#if((basePosY>=${anViewportGeom[1]}));then
-if((nViewPortY>nViewPortMaxY));then
-	#SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' makes basePosY='$basePosY' beyond anViewportGeom[1]='${anViewportGeom[1]}', so terminals wouldnt be visible; fixing it."
-	SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' would put terminals beyond anViewportGeom[1]='${anViewportGeom[1]}'; fixing it."
-	nViewPortY=$nViewPortMaxY
-fi
-echo "nViewPortX='$nViewPortX'"
-echo "nViewPortY='$nViewPortY'"
-
-basePosX=$((nViewPortX*nScreenWidth))
-basePosY=$((nViewPortY*nScreenHeight))
-echo "basePosX='$basePosX'"
-echo "basePosY='$basePosY'"
-
-#@@@TODO make these variables automatic someday..
-windowTitleHeight=25
-windowBorderSize=5 #2 #5
 
 ############## DAEMON LOOP
 
