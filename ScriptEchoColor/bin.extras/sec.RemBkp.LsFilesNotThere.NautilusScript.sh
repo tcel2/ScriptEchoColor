@@ -40,9 +40,5 @@ function FUNCdoIt() {
 	echoc -w -t 60
 };export -f FUNCdoIt
 
-#strExec="FUNCdoIt #skipCascade"
-#xterm -e "$strExec"
-#xtermDetached.sh "$strExec"
 bash -i -c "xtermDetached.sh --skipcascade FUNCdoIt"
-#echoc -w
 

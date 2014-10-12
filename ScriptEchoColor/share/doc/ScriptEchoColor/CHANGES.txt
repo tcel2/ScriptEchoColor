@@ -1,3 +1,5 @@
+Date:   2014-10-12 19:39:03 -0300
+    secHighTmprMon.sh: now lowers cpu frequency to help lowering its temperature
 Date:   2014-10-12 14:08:59 -0300
     secOrganizeXterminals.sh: changed: --viewport <nViewPortX> <nViewPortY>, also dynamically adapts to screen geometry changes;
     secDemaximize.sh: dynamically adapts to screen geometry changes;

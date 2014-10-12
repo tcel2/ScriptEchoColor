@@ -29,7 +29,6 @@
 #done
 #echoc --info "nautilus params: $@"
 
-#xterm -e "updateUbuntuOneFiles.sh #skipCascade"
 function FUNCdoIt() {
 	secUpdateRemoteBackupFiles.sh #has builtin support to work with nautilus!
 #	echoc -w 

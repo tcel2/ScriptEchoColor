@@ -125,7 +125,7 @@ fi
 
 strSkipCascade=""
 if $bSkipCascade;then
-	strSkipCascade=" #skipCascade"
+	strSkipCascade=" #skipOrganize"
 fi
 
 strKillSkip=""
