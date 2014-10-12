@@ -174,7 +174,7 @@ elif $bList;then
 elif $bCheckHold;then
 	FUNCregisterOneDaemon
 	if $bHoldScripts;then
-		echoc --info "$strSelfName: script on hold (hit: 'y' to run once; 'r' to release all)..."
+		echoc --info "$strSelfName: script on hold [`SECFUNCdtFmt --pretty`] (hit: 'y' to run once; 'r' to release all)..."
 		
 		SECONDS=0
 		while $bHoldScripts;do
@@ -193,7 +193,7 @@ elif $bCheckHold;then
 		done
 		
 		echo
-		echoc --info "$strSelfName: script continues..."
+		echoc --info "$strSelfName: script continues [`SECFUNCdtFmt --pretty`]..."
 	fi
 elif $bHoldAll;then
 	echoc --info "daemon scripts will hold execution"

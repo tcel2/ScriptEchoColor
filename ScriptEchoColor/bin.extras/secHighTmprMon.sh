@@ -340,7 +340,7 @@ function FUNClimitCpu() {
 			
 			if $bForceStop;then
 				SECFUNCdelay minWaitToCoolCPU --init
-				echoc --say "going to wait at least $nMinWaitToCoolCPU seconds to C.P.U. cool down"
+				(export SEC_SAYVOL=100;echoc --say "going to wait at least $nMinWaitToCoolCPU seconds to C.P.U. cool down")
 			fi
 		fi
 		
@@ -438,6 +438,16 @@ function FUNCdaemon() {
 			fi
 		fi
 		
+		if((tmprCurrent<=(tmprLimit-15)));then
+			FUNCmanageCPUFrequency ondemand
+		else
+			if((tmprCurrent>=(tmprLimit-5)));then
+				FUNCmanageCPUFrequency powersave
+			elif((tmprCurrent>=(tmprLimit-10)));then
+				FUNCmanageCPUFrequency conservative
+			fi
+		fi
+		
 		if((tmprCurrent>=tmprLimit));then
 			FUNClistTopPids 3
 			if((${#aHighPercPidList[@]}==0));then
@@ -456,7 +466,7 @@ function FUNCdaemon() {
 			
 				#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
 				echoc --say "$tmprCurrent"
-				echoc --say "high temperature, stopping some processes..."
+				(export SEC_SAYVOL=100;echoc --say "high temperature, stopping some processes...")
 		
 				count=0
 				SECFUNCdelay timeToCoolDown --init
@@ -508,11 +518,88 @@ function FUNCcheckIfDaemonRunningOrExit() {
 	fi
 }
 
+anCPUList=(`lscpu -p |grep -v "^#"|cut -d, -f1`)
+strCPUGovernorLast=""
+function FUNCmanageCPUFrequency() {
+	strCPUFreqGovernorToSet="${1-}"
+	if [[ "$strCPUFreqGovernorToSet" == "$strCPUGovernorLast" ]];then
+		return 0
+	fi
+	
+	astrGovernors=(
+		"powersave"
+		"conservative"
+		"ondemand"
+		"performance" #TODO check if unnecessarily spends too much power?
+	)
+	
+	bFound=false
+	for strGovernor in "${astrGovernors[@]}";do
+		if [[ "$strGovernor" == "$strCPUFreqGovernorToSet" ]];then
+			for nCPU in "${anCPUList[@]}";do
+				cpufreq-selector -c $nCPU -g $strGovernor
+			done
+			bFound=true
+			break
+		fi
+	done
+	
+	cpufreq-info -o
+	
+	if ! $bFound;then
+		SECFUNCechoErrA "invalid strCPUFreqGovernorToSet='$strCPUFreqGovernorToSet'"
+		_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+	fi
+	
+	strCPUGovernorLast="$strCPUFreqGovernorToSet"
+}
+function _FUNCmanageCPUFrequencyGradative() { #help -1 or +1 to increase or decrease governor frequency mode
+	anCPUList=(`lscpu -p |grep -v "^#"|cut -d, -f1`)
+	strCPUFreqGovernorCurrent="`cpufreq-info -o |tail -n 1 |tr -d ' '|tr '-' ' ' |gawk '{printf $3}'`"
+	astrGovernors=(
+		"powersave"
+		"conservative"
+		"ondemand"
+		"performance" #TODO check if unnecessarily spends too much power?
+	)
+	
+	nGovIndexCurrent=0 #if it is "userspace" will just be set to first now...
+	for strGovernor in "${astrGovernors[@]}";do
+		if [[ "$strGovernor" == "$strCPUFreqGovernorCurrent" ]];then
+			break
+		fi
+		$((nGovIndexCurrent++))&&:
+	done
+	
+	if [[ "${1-}" == "-1" ]];then
+		$((nGovIndexCurrent--))&&:
+	elif [[ "${1-}" == "+1" ]];then
+		$((nGovIndexCurrent++))&&:
+	else
+		SECFUNCechoErrA "invalid option ${1-}"
+		_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+	fi
+	
+	if((nGovIndexCurrent<0));then
+		nGovIndexCurrent=0
+	elif(( nGovIndexCurrent > ${#astrGivernors[@]} ));then
+		nGovIndexCurrent=$(( ${#astrGivernors[@]}-1 ))&&:
+	fi
+	
+	strGovernor=${astrGivernors[nGovIndexCurrent]}
+	for nCPU in "${anCPUList}";do
+		cpufreq-selector -c $nCPU -g $strGovernor
+	done
+	
+	cpufreq-info -o
+}
+
 ################## options
-SECFUNCvarSet --default isLoweringTemperature=false
+varset --default isLoweringTemperature=false
 varset --default --allowuser bJustStopPid=false
 varset --default --allowuser bDoLowFpsLimiting=false
 varset --default --allowuser bOverrideForceStopNow=false
+varset --default --allowuser bControlCpuFrequency=true
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	b2ndIsParam=false
@@ -534,18 +621,25 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		elif [[ "$1" == "--debugfaketmpr" ]];then #help <FakeTemperature> set a fake temperature for debug purposes. Set FakeTemperature to "off" to disable it and use real temperature again.
 			FUNCcheckIfDaemonRunningOrExit
 			shift
-			if [[ "$1" == "off" ]];then
+			if [[ "${1-}" == "off" ]];then
 				SECFUNCvarSet bDebugFakeTmpr=false
 				exit
 			fi
 		
-			if [[ -z "$1" ]];then
-				echoc -p "missing fake temperature parameter"
+#			if [[ -z "${1-}" ]];then
+#				echoc -p "missing fake temperature parameter"
+#				exit 1
+#			fi
+			if ! SECFUNCisNumber -dn "${1-}";then
+				echoc -p "invalid fake temperature parameter '${1-}'"
 				exit 1
 			fi
+			
 			SECFUNCvarSet bDebugFakeTmpr=true
 			SECFUNCvarSet tmprCurrentFake $1
 			exit
+		elif [[ "$1" == "--nocpufreq" ]];then #help disables cpufreq managing
+			bControlCpuFrequency=false
 		elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; put 'help' in place of <var> to see what vars can be changed
 			FUNCcheckIfDaemonRunningOrExit
 			shift
