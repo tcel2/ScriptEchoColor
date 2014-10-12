@@ -1,3 +1,7 @@
+Date:   2014-10-12 14:08:59 -0300
+    secOrganizeXterminals.sh: changed: --viewport <nViewPortX> <nViewPortY>, also dynamically adapts to screen geometry changes;
+    secDemaximize.sh: dynamically adapts to screen geometry changes;
+    secNetworkControl.sh --listnetworkfiles;
 Date:   2014-10-09 15:39:30 -0300
     secAutoUnmount.sh: spoken warn about backup storage being kept active for too long; secAutoUnmount.sh --nostillactivewarn
 Date:   2014-10-09 14:43:09 -0300
