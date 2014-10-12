@@ -139,7 +139,8 @@ while true;do
 	### EXEC USER OPTION ###
 	case "`secascii $nRetValue`" in 
 		b) echoc -x "gitk"&&: ;; 
-		c) echoc -x "git gui"&&: ;; 
+		c)	echoc --alert "SOURCEFORGE PassWord may be asked...";
+				echoc -x "git gui"&&: ;; 
 		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
 		g) git log --full-history --date=iso \
 			|egrep -v "^$|^commit |^Author: |^    [.]" \
@@ -156,7 +157,8 @@ while true;do
 				fi
 			;;
 		n) echoc -x "nautilus ./"&&: ;;
-		p) echoc -x "git push --tags"&&: ;;
+		p)	echoc --alert "SOURCEFORGE PassWord may be asked...";
+				echoc -x "git push --tags"&&: ;;
 		t) echoc -x "gnome-terminal"&&: ;;
 		u) git difftool -d origin/master&&: ;;
 	esac
