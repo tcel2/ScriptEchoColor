@@ -346,7 +346,11 @@ if $bCheckIfAlreadyRunning;then
 		bKillOther=false
 		if SECFUNCisShellInteractive;then
 			if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is already running?";then
-				bKillOther=true
+				if [[ -d "/proc/$nPidOther" ]];then
+					bKillOther=true
+				else
+					echoc --info "no nPidOther='$nPidOther'"
+				fi
 			fi
 		else
 			if zenity --question --title "$SECstrScriptSelfName" --text "$strFullSelfCmd\n\nnPidSelf=$$; kill the nPidOther='$nPidOther' that is already running?";then
@@ -355,8 +359,19 @@ if $bCheckIfAlreadyRunning;then
 		fi
 		if $bKillOther;then
 			#echoc -x "kill -SIGKILL $nPidOther"
-			echoc -x "pstree -l -p $nPidOther"
-			echoc -x "kill -SIGKILL `pstree -l -p $nPidOther |grep "([[:digit:]]*)" -o |tr -d '()'`"
+			echoc -x "pstree -l -p $nPidOther"&&:
+			anPidList=(`SECFUNCppidList --pid $nPidOther --child --addself`)
+			for nPid in "${anPidList[@]}";do
+				if [[ -d "/proc/$nPid" ]];then
+					echoc -x "kill -SIGTERM $nPid"&&:
+				fi
+			done
+			sleep 1
+			for nPid in "${anPidList[@]}";do
+				if [[ -d "/proc/$nPid" ]];then
+					echoc -x "kill -SIGKILL $nPid"&&:
+				fi
+			done
 			break
 		fi
 	done

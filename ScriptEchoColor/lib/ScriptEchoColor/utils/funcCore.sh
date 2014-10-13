@@ -1178,6 +1178,11 @@ function SECFUNCppidList() { #help [separator] between pids
 		return 1
   fi
   
+  if [[ ! -d "/proc/$lnPid" ]];then
+		SECFUNCechoErrA "no lnPid='$lnPid'"
+		return 1
+  fi
+  
 	local anPidList=()
   if $lbChildList;then
   	anPidList=(`pstree -l -p $lnPid |grep "([[:digit:]]*)" -o |tr -d '()'`)
