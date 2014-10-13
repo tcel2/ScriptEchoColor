@@ -354,7 +354,9 @@ if $bCheckIfAlreadyRunning;then
 			fi
 		fi
 		if $bKillOther;then
-			echoc -x "kill -SIGKILL $nPidOther"
+			#echoc -x "kill -SIGKILL $nPidOther"
+			echoc -x "pstree -l -p $nPidOther"
+			echoc -x "kill -SIGKILL `pstree -l -p $nPidOther |grep "([[:digit:]]*)" -o |tr -d '()'`"
 			break
 		fi
 	done

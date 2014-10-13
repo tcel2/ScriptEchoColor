@@ -1129,6 +1129,7 @@ function SECFUNCppidList() { #help [separator] between pids
   local lstrSeparator=" "
   local lnPidCheck=0
   local lbAddSelf=false
+  local lbChildList=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
 			SECFUNCshowHelp $FUNCNAME
@@ -1137,10 +1138,12 @@ function SECFUNCppidList() { #help [separator] between pids
 			lbReverse=true
 		elif [[ "$1" == "--comm" || "$1" == "-c" ]];then #SECFUNCppidList_help add the short comm to pid
 			lbComm=true
+		elif [[ "$1" == "--child" ]];then #SECFUNCppidList_help instead of parent list, shows a list of child of child of... pids.
+			lbChildList=true
 		elif [[ "$1" == "--pid" || "$1" == "-p" ]];then #SECFUNCppidList_help <lnPid> use it as reference for the list
 			shift
 			lnPid=${1-}
-		elif [[ "$1" == "--addself" ]];then #SECFUNCppidList_help include self pid on the list, not only parents
+		elif [[ "$1" == "--addself" || "$1" == "-a" ]];then #SECFUNCppidList_help include self pid on the list, not only parents
 			lbAddSelf=true
 		elif [[ "$1" == "--checkpid" ]];then #SECFUNCppidList_help <lnPidCheck> check if it is on the ppid list
 			shift
@@ -1175,58 +1178,101 @@ function SECFUNCppidList() { #help [separator] between pids
 		return 1
   fi
   
-  local lstrPidList=""
-  local pidList=()
-  local ppid=$lnPid;
-  local lbFirstLoopCheck=true
-  while((ppid>=1));do 
-    #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
-    local lbGetParentPid=true
-    if $lbFirstLoopCheck;then
-    	if $lbAddSelf;then
-    		lbGetParentPid=false
-    	fi
-    	lbFirstLoopCheck=false
-    fi
-    if $lbGetParentPid;then
-    	# get parent pid
-	    ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
-   	fi
-    
-    if((lnPidCheck>0));then
-    	if((ppid==lnPidCheck));then
-    		return 0
-    	fi
-    fi
-    
-    #pidList=(${pidList[*]} $ppid)
-    pidList+=($ppid)
-    
-#    if [[ -n "$lstrPidList" ]];then # after 1st
-#		  if [[ -n "$lstrSeparator" ]];then
-#		  	lstrPidList+="$lstrSeparator"
-#		  fi
-#		fi
+	local anPidList=()
+  if $lbChildList;then
+  	anPidList=(`pstree -l -p $lnPid |grep "([[:digit:]]*)" -o |tr -d '()'`)
+		if ! $lbAddSelf;then
+			unset anPidList[0] #loop on anPidList[@] will skip the unset item
+		fi
+  else #parent pid list
+		if $lbAddSelf;then
+			anPidList+=($lnPid)
+		fi
+		local lnPPid=$lnPid;
+		while((lnPPid>1));do 
+			# get parent pid
+			lnPPid="`grep PPid /proc/$lnPPid/status |cut -f2&&:`"
+			anPidList+=($lnPPid)
+		done
+	fi
+	
+	local lnPidCurrent=-1
+	local lstrPidList=""
+	for lnPidCurrent in "${anPidList[@]}";do
+	  if((lnPidCheck>0));then
+	  	if((lnPidCurrent==lnPidCheck));then
+	  		return 0
+	  	fi
+	  fi
+	  
 		strComm=""    
 		if $lbComm;then
-			strComm="_`cat "/proc/$ppid/comm"`"
+			strComm="_`cat "/proc/$lnPidCurrent/comm"`"
 			strComm="`SECFUNCfixId -f "$strComm"`"
 		fi
-    if [[ -n "$lstrPidList" ]];then # after 1st
+	  if [[ -n "$lstrPidList" ]];then # after 1st
 			if $lbReverse;then
-				lstrPidList="${ppid}${strComm}${lstrSeparator}${lstrPidList}"
+				lstrPidList="${lnPidCurrent}${strComm}${lstrSeparator}${lstrPidList}"
 			else
-				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}${strComm}"
+				lstrPidList="${lstrPidList}${lstrSeparator}${lnPidCurrent}${strComm}"
 			fi
-    else
-    	lstrPidList="${ppid}${strComm}"
+	  else
+	  	lstrPidList="${lnPidCurrent}${strComm}"
 		fi
+	done
 		
-    #echo $ppid; 
-    if((ppid==1));then break; fi; 
-  done
+#	local lstrPidList=""
+#	local anPidList=()
+#	local ppid=$lnPid;
+#	local lbFirstLoopCheck=true
+#	while((ppid>=1));do 
+#	  #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
+#	  local lbGetParentPid=true
+#	  if $lbFirstLoopCheck;then
+#	  	if $lbAddSelf;then
+#	  		lbGetParentPid=false
+#	  	fi
+#	  	lbFirstLoopCheck=false
+#	  fi
+#	  if $lbGetParentPid;then
+#	  	# get parent pid
+#		  ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
+#	 	fi
+#	  
+#	  if((lnPidCheck>0));then
+#	  	if((ppid==lnPidCheck));then
+#	  		return 0
+#	  	fi
+#	  fi
+#	  
+#	  #anPidList=(${anPidList[*]} $ppid)
+#	  anPidList+=($ppid)
+#	  
+##    if [[ -n "$lstrPidList" ]];then # after 1st
+##		  if [[ -n "$lstrSeparator" ]];then
+##		  	lstrPidList+="$lstrSeparator"
+##		  fi
+##		fi
+#		strComm=""    
+#		if $lbComm;then
+#			strComm="_`cat "/proc/$ppid/comm"`"
+#			strComm="`SECFUNCfixId -f "$strComm"`"
+#		fi
+#	  if [[ -n "$lstrPidList" ]];then # after 1st
+#			if $lbReverse;then
+#				lstrPidList="${ppid}${strComm}${lstrSeparator}${lstrPidList}"
+#			else
+#				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}${strComm}"
+#			fi
+#	  else
+#	  	lstrPidList="${ppid}${strComm}"
+#		fi
+#	
+#	  #echo $ppid; 
+#	  if((ppid==1));then break; fi; 
+#	done
   
-#  local output="${pidList[*]}"
+#  local output="${anPidList[*]}"
 #  if [[ -n "$lstrSeparator" ]];then
 #    local sedChangeSeparator='s" "'"$lstrSeparator"'"g'
 #    output=`echo "$output" |sed "$sedChangeSeparator"`
