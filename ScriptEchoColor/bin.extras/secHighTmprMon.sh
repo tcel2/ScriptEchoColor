@@ -507,7 +507,7 @@ function FUNCdaemon() {
 		
 		# prime numbers ftw!
 		local lnDaemonSleep=`FUNCsleepCalcDelay`
-		FUNCinfoSleep $lnDaemonSleep "tmpr=$tmprCurrent; max=$maxTemperature; limit=$tmprLimit; sleep=${lnDaemonSleep}s"
+		FUNCinfoSleep $lnDaemonSleep "tmpr=$tmprCurrent; max=$maxTemperature($tmprLimit); sleep=${lnDaemonSleep}s; $strCPUGovernorLast"
 		
 		prevTemperature=$tmprCurrent
 	done
