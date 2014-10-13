@@ -343,7 +343,17 @@ if $bCheckIfAlreadyRunning;then
 		FUNClog wrn "$strItIsAlreadyRunning nPidSelf=$$ nPidOther=$nPidOther"
 		#sleep 60
 		#if echoc -q -t 60 "skip check if already running?";then
-		if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is already running?";then
+		bKillOther=false
+		if SECFUNCisShellInteractive;then
+			if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is already running?";then
+				bKillOther=true
+			fi
+		else
+			if zenity --question --title "$SECstrScriptSelfName" --text "$strFullSelfCmd\n\nnPidSelf=$$; kill the nPidOther='$nPidOther' that is already running?";then
+				bKillOther=true
+			fi
+		fi
+		if $bKillOther;then
 			echoc -x "kill -SIGKILL $nPidOther"
 			break
 		fi
