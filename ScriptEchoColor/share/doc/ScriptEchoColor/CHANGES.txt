@@ -1,3 +1,5 @@
+Date:   2014-10-13 00:12:01 -0300
+    secDelayedExec.sh: zenity dialog when shell isnt interactive
 Date:   2014-10-12 23:45:00 -0300
     secHighTmprMon.sh: bugfix: stops again high cpu usage pids
 Date:   2014-10-12 19:39:03 -0300
