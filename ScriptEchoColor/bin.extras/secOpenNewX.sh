@@ -40,6 +40,7 @@ fi
 execX1="X :1"
 grepX1="X :1"
 selfName=`basename "$0"`
+strOptXtermGeom="100x1" #"1x1" causes problems with ps and others, making everything hard to be readable
 #execX1="startx -- :1"
 #grepX1="/usr/bin/X :1 [-]auth /tmp/serverauth[.].*"
 
@@ -957,12 +958,12 @@ if $useJWM; then
   FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
 fi
 
-xterm -geometry 1x1 -display :1 -e "FUNCkeepGamma; #kill=skip"&
+xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
+xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
 
 #initializes the cicle of configurations!
 if $bInitNvidia;then
@@ -971,16 +972,16 @@ fi
 
 sleep 2 #TODO improve with qdbus waiting for jwm? 
 #SECFUNCvarShow bUseXscreensaver #@@@r
-#xterm -geometry 1x1 -display :1 -e "bash -ic \"FUNCCHILDScreenSaver; #kill=skip\""&
-#xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
+#xterm -geometry $strOptXtermGeom -display :1 -e "bash -ic \"FUNCCHILDScreenSaver; #kill=skip\""&
+#xterm -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
 xscreensaver -display :1&
 if $bScreenSaverOnlyLockByHand;then
-	xterm -geometry 1x1 -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
+	xterm -bg darkgreen -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
 else
 	# interactive window, do not shrink..
-	xterm -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
+	xterm -bg darkgreen -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
 fi
-#xterm -geometry 1x1 -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
+#xterm -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 
@@ -1036,7 +1037,7 @@ fi
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-#xterm -geometry 1x1 -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
+#xterm -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
 
 #while FUNCisX1running; do
 while ps -p $pidX1 >/dev/null 2>&1; do
