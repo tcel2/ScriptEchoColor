@@ -131,8 +131,8 @@ function FUNChighPercPidList() {
 			aHighPercPidList+=(${aPercPid[i+1]})
 		fi
 	done
-	SECFUNCechoDbgA "aHighPercPidList=(${aHighPercPidList[@]})"
-	#echo ${aHighPercPidList[*]}
+	SECFUNCechoDbgA "aHighPercPidList=(${aHighPercPidList[@]-})"
+	#echo ${aHighPercPidList[*]-}
 }
 
 function FUNClistTopPids() {
@@ -438,17 +438,19 @@ function FUNCdaemon() {
 			fi
 		fi
 		
-		if((tmprCurrent<=(tmprLimit-15)));then
-			FUNCmanageCPUFrequency ondemand
+		if((tmprCurrent<=(tmprLimit-30)));then
+			FUNCmanageCPUFrequency ondemand&&:
 		else
-			if((tmprCurrent>=(tmprLimit-5)));then
-				FUNCmanageCPUFrequency powersave
-			elif((tmprCurrent>=(tmprLimit-10)));then
-				FUNCmanageCPUFrequency conservative
+			if((tmprCurrent>=(tmprLimit-10)));then
+				FUNCmanageCPUFrequency powersave&&:
+			elif((tmprCurrent>=(tmprLimit-20)));then
+				FUNCmanageCPUFrequency conservative&&:
 			fi
 		fi
 		
+		#FUNChighPercPidList
 		if((tmprCurrent>=tmprLimit));then
+			FUNChighPercPidList
 			FUNClistTopPids 3
 			if((${#aHighPercPidList[@]}==0));then
 				echoc --say --alert "WARNING no high C.P.U. processes to stop! "
@@ -460,7 +462,7 @@ function FUNCdaemon() {
 				#pidHCUCmdName=`ps -p $pidHighCPUusage -o comm |head -n 2 |tail -n 1`
 				#echoc -x "ps -p $pidHighCPUusage -o pcpu,pid,ppid,stat,state,nice,user,comm |tail -n 1"
 		
-				FUNChighPercPidList
+				#FUNChighPercPidList
 				#echoc -x "kill -SIGSTOP $pidHighCPUusage"
 				echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
 			
@@ -537,7 +539,14 @@ function FUNCmanageCPUFrequency() {
 	for strGovernor in "${astrGovernors[@]}";do
 		if [[ "$strGovernor" == "$strCPUFreqGovernorToSet" ]];then
 			for nCPU in "${anCPUList[@]}";do
-				cpufreq-selector -c $nCPU -g $strGovernor
+				#TODO amazingly it doesnt return error value? #while ! cpufreq-selector -c $nCPU -g $strGovernor;do
+				#while [[ "`cpufreq-selector -c $nCPU -g $strGovernor 2>&1`" ==	"Error calling SetGovernor: Caller is not authorized" ]];do
+				if [[ "`cpufreq-selector -c $nCPU -g $strGovernor 2>&1`" ==	"Error calling SetGovernor: Caller is not authorized" ]];then
+					#TODO check if seems to fail when the temperature is too high?
+					echoc -p "failed for nCPU='$nCPU' strGovernor='$strGovernor'"
+					#sleep 0.5
+					return 1
+				fi
 			done
 			bFound=true
 			break
@@ -551,11 +560,18 @@ function FUNCmanageCPUFrequency() {
 		_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
 	fi
 	
-	if [[ "${astrGovernors[0]}" == "$strCPUFreqGovernorToSet" ]];then
-		(export SEC_SAYVOL=100;echoc --say "C P U $strCPUFreqGovernorToSet")
+#	if [[ "${astrGovernors[0]}" == "$strCPUFreqGovernorToSet" ]];then
+#		if [[ "$strCPUFreqGovernorToSet" != "$strCPUGovernorLast" ]];then
+#			(export SEC_SAYVOL=100;echoc --say "C P U $strCPUFreqGovernorToSet")
+#		fi
+#	fi
+	
+	strCPUFreqGovernorCurrent="`cpufreq-info -o |tail -n 1 |tr -d ' '|tr '-' ' ' |gawk '{printf $3}'`"
+	if [[ "$strCPUFreqGovernorCurrent" == "$strCPUFreqGovernorToSet" ]];then
+		strCPUGovernorLast="$strCPUFreqGovernorToSet"
+	else
+		echoc -p "failed to set strCPUFreqGovernorToSet='$strCPUFreqGovernorToSet'"
 	fi
-
-	strCPUGovernorLast="$strCPUFreqGovernorToSet"
 }
 function _FUNCmanageCPUFrequencyGradative() { #help -1 or +1 to increase or decrease governor frequency mode
 	anCPUList=(`lscpu -p |grep -v "^#"|cut -d, -f1`)
@@ -714,9 +730,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			FUNCdaemon
 			exit
 		elif [[ "$1" == "--help" ]];then #help
-			echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time."
+			echo "This app monitors the temperature and stop applications that are using too much cpu to let the temperature go down! And start them again after some time. Also it changes the cpu frequency to cool down."
 			echo "It is limited to the current user processes."
-			echo "pre-alpha, later on it should monitor all temperatures etc etc.."
+			echo "TODO: monitor all temperatures as only cpu temperature is monitored for now.."
 			#echo "PARAMS: tmprLimit minPercCPU"
 			echo
 			echo "Options:"
