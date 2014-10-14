@@ -1,3 +1,8 @@
+Date:   2014-10-14 14:54:12 -0300
+    SECFUNCparamsToEval --noquotes;
+    SECFUNCexec --justecho, --justechonoquotes;
+    secFuncPromptCommand.sh: now changes terminal background color on sudo if possible;
+    secHighTmprMon.sh: better user help about cpufreq steps usage and setup on system;
 Date:   2014-10-14 00:14:22 -0300
     secHighTmprMon.sh --cpufreqsteps
 Date:   2014-10-13 19:38:24 -0300
