@@ -1,3 +1,5 @@
+Date:   2014-10-14 00:14:22 -0300
+    secHighTmprMon.sh --cpufreqsteps
 Date:   2014-10-13 19:38:24 -0300
     secOpenNewX.sh: better helper xterms visibility
 Date:   2014-10-13 16:47:27 -0300
