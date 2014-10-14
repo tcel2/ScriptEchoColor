@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
+: ${SECstrXtermBgBkp:="black"}
 function SECFUNCcheckIfSudoIsActive() { #help 
 	# this would update the timestamp and so the timeout, therefore it is useless...
 	#nPts=`ps --no-headers -p $$ |sed -r 's".*pts/([0-9]*).*"\1"'`; now=`date +"%s"`; echo "remaining $((now-`sudo stat -c '%Y' /var/lib/sudo/\`SECFUNCgetUserName\`/$nPts`))s"
@@ -31,6 +33,14 @@ function SECFUNCcheckIfSudoIsActive() { #help
 		#echo -ne "\E[0m\E[93m\E[41m\E[1m\E[5m SUDO \E[0m"; 
 		echo -n "\E[0m\E[93m\E[41m\E[1m\E[5m SUDO \E[0m"; 
 		echo #without newline, the terminal seems to bugout with lines that are too big... discomment this if you find any problems...
+		#SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
+		xtermcontrol --bg darkred
+	else
+#		if [[ -n "$SECstrXtermBgBkp" ]];then
+		#if [[ "$SECstrXtermBgBkp" != "`xtermcontrol --get-bg 2>/dev/null`" ]];then
+		xtermcontrol --bg "$SECstrXtermBgBkp"
+		#fi
+#		fi
 	fi; 
 }
 

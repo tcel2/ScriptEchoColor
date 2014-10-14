@@ -506,11 +506,29 @@ function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 #}
 
 function SECFUNCparamsToEval() { #help 
+	local lbNoQuotes=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #SECFUNCparamsToEval_help
+			SECFUNCshowHelp --nosort $FUNCNAME
+			return
+		elif [[ "$1" == "--noquotes" ]];then #SECFUNCparamsToEval_help escape spaces and use no quotes
+			lbNoQuotes=true
+		else
+			SECFUNCechoErrA "invalid option '$1' lstrCaller='$lstrCaller'"
+			return 1
+		fi
+		shift
+	done
+
 	local lstrToExec=""
 	for lstrParam in "$@";do
-		#lstrToExec+="'${lstrParam}' "
-		#lstrToExec+="\"`echo "${lstrParam}" |sed -r 's;";\\\\";g'`\" "
-		lstrToExec+="\"`sed -r 's;";\\\\";g' <<< "${lstrParam}"`\" "
+		if $lbNoQuotes;then
+			lstrToExec+="`sed -r 's; ;\\\\ ;g' <<< "${lstrParam}"` "
+		else
+			#lstrToExec+="'${lstrParam}' "
+			#lstrToExec+="\"`echo "${lstrParam}" |sed -r 's;";\\\\";g'`\" "
+			lstrToExec+="\"`sed -r 's;";\\\\";g' <<< "${lstrParam}"`\" "
+		fi
 	done
 	
   echo "$lstrToExec"
@@ -550,6 +568,8 @@ function SECFUNCexec() { #help
 	local bShowElapsed=false
 	local bWaitKey=false
 	local bExecEcho=false
+	local bJustEcho=false
+	local bJustEchoNoQuotes=false
 	local lbLog=false;
 	local lbLogTmp=false;
 	local lbLogCustom=false;
@@ -587,8 +607,12 @@ function SECFUNCexec() { #help
 			bWaitKey=true
 		elif [[ "$1" == "--elapsed" ]];then #SECFUNCexec_help quiet, ommit command output to stdout and
 			bShowElapsed=true;
-		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed
+		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed, output goes to /dev/stderr
 			bExecEcho=true;
+		elif [[ "$1" == "--justecho" ]];then #SECFUNCexec_help wont execute, will just echo what would be executed without any format to be easily reused as command anywhere; this output goes to /dev/stdout
+			bJustEcho=true;
+		elif [[ "$1" == "--justechonoquotes" ]];then #SECFUNCexec_help like --justecho but will not use quotes
+			bJustEchoNoQuotes=true;
 		elif [[ "$1" == "--log" ]];then #SECFUNCexec_help create a log file (prevent interactivity)
 			lbLog=true;
 		elif [[ "$1" == "--logtmp" ]];then #SECFUNCexec_help create a temporary log file that is erased on reboot (prevent interactivity)
@@ -705,6 +729,15 @@ function SECFUNCexec() { #help
 	
 	if $bWaitKey;then
 		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
+	fi
+	
+	if $bJustEcho;then
+		echo "$strExec"
+		return 0
+	fi
+	if $bJustEchoNoQuotes;then
+		echo "`SECFUNCparamsToEval --noquotes "$@"`"
+		return 0
 	fi
 	
 	local lnReturnValue=0

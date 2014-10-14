@@ -535,7 +535,36 @@ nTmprDiffFromLimitToMaxCpuFreq=30
 nCpuTmprStepToChangeFreq=$((nTmprDiffFromLimitToMaxCpuFreq/nCpuFreqStepsTotal))
 echo "nCpuTmprStepToChangeFreq='$nCpuTmprStepToChangeFreq'"
 nCpuFreqStepLast=-1
+bSudoersList=false
+bSudoersAdvised=false
+strExecutableCpuFreqSet="`which cpufreq-set`"
 function FUNCmanageCPUFrequencyBySteps() {
+	if ! $bSudoersAdvised;then
+		if ! sudo -n uptime 2>/dev/null 1>/dev/null;then #check if running with no sudo privileges
+			echoc --info "It is helpful if you add these commands to your sudoers! "
+			echoc --info "Review AND Understand all these commands BEFORE doing it!!! "
+			echoc --alert "If you do NOT understand what these commands do, do not do it! "
+			echoc --info "If you think this could be done in a better way, tell me, thanks! "
+			bSudoersAdvised=true
+			FUNCmanageCPUFrequencyBySteps --sudoerslist
+		fi
+	fi
+	
+	if [[ "${1-}" == "--sudoerslist" ]];then
+		bSudoersList=true
+		nTmprCurrentBkp=$nTmprCurrent
+		
+		for((nCpuFreqStepCheck=0; nCpuFreqStepCheck < nCpuFreqStepsTotal; nCpuFreqStepCheck++));do
+			local lnTmprStepCheck=$(( (nCpuFreqStepCheck+1)*nCpuTmprStepToChangeFreq ))
+			nTmprCurrent=$(( tmprLimit-lnTmprStepCheck+1 ));
+			FUNCmanageCPUFrequencyBySteps
+		done
+		
+		nTmprCurrent=$nTmprCurrentBkp
+		bSudoersList=false
+		return 0
+	fi
+	
 	local nCpuFreqStepToSet=0
 	#echo "nTmprCurrent='$nTmprCurrent'"
 	
@@ -552,22 +581,32 @@ function FUNCmanageCPUFrequencyBySteps() {
 	
 	#echo "nCpuFreqStepToSet='$nCpuFreqStepToSet'"
 	
-	if((nCpuFreqStepLast==nCpuFreqStepToSet));then
-		return 0
+	if ! $bSudoersList;then
+		if((nCpuFreqStepLast==nCpuFreqStepToSet));then
+			return 0
+		fi
 	fi
 	
+	local lstrOptEcho="--echo"
+	local lstrSudoOrSudoers="sudo"
+	if $bSudoersList;then
+		lstrOptEcho="--justechonoquotes"
+		lstrSudoOrSudoers="$USER ALL=NOPASSWD:"
+	fi
 	for nCPU in "${anCPUList[@]}";do
 		if((nCpuFreqStepToSet==0));then
-			SECFUNCexec -c --echo sudo cpufreq-set --cpu $nCPU --governor ondemand
+			SECFUNCexec -c $lstrOptEcho $lstrSudoOrSudoers $strExecutableCpuFreqSet --cpu $nCPU --governor ondemand
 		else
-			SECFUNCexec -c --echo sudo cpufreq-set --cpu $nCPU --freq ${astrCpuFreqSteps[$nCpuFreqStepToSet]}
+			SECFUNCexec -c $lstrOptEcho $lstrSudoOrSudoers $strExecutableCpuFreqSet --cpu $nCPU --freq ${astrCpuFreqSteps[$nCpuFreqStepToSet]}
 		fi
 	done
 	
-	cpufreq-info |egrep "analyzing CPU|current CPU frequency is " |gawk '{strLine=$0; getline; print strLine $0;}' |gawk '{print $3 $8 $9}'
+	if ! $bSudoersList;then
+		cpufreq-info |egrep "analyzing CPU|current CPU frequency is " |gawk '{strLine=$0; getline; print strLine $0;}' |gawk '{print $3 $8 $9}'
 	
-	nCpuFreqStepLast=$nCpuFreqStepToSet
-	strCPUFreqGovernorCurrent="`cpufreq-info -o |tail -n 1 |tr -d ' '|tr '-' ' ' |gawk '{printf $3}'`"
+		nCpuFreqStepLast=$nCpuFreqStepToSet
+		strCPUFreqGovernorCurrent="`cpufreq-info -o |tail -n 1 |tr -d ' '|tr '-' ' ' |gawk '{printf $3}'`"
+	fi
 }
 
 anCPUList=(`lscpu -p |grep -v "^#"|cut -d, -f1`)
