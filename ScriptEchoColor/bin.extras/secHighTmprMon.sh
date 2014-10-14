@@ -45,6 +45,7 @@ bFUNCinterruptAsk=false
 trap 'FUNCinterruptAsk' INT
 
 ############### CONFIG
+export nTmprCurrent=0
 export tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
 export minPercCPU=30
 
@@ -144,22 +145,22 @@ function FUNCsleepCalcDelay() {
 	local lnSleep=29
 	
 	# prime numbers ftw!
-	if(( tmprCurrent > (tmprLimit-50) ));then
+	if(( nTmprCurrent > (tmprLimit-50) ));then
 		lnSleep=19
 	fi
-	if(( tmprCurrent > (tmprLimit-40) ));then
+	if(( nTmprCurrent > (tmprLimit-40) ));then
 		lnSleep=13
 	fi
-	if(( tmprCurrent > (tmprLimit-30) ));then
+	if(( nTmprCurrent > (tmprLimit-30) ));then
 		lnSleep=7
 	fi
-	if(( tmprCurrent > (tmprLimit-20) ));then
+	if(( nTmprCurrent > (tmprLimit-20) ));then
 		lnSleep=3
 	fi
-	if(( tmprCurrent > (tmprLimit-10) ));then
+	if(( nTmprCurrent > (tmprLimit-10) ));then
 		lnSleep=1
 	fi
-	if(( tmprCurrent > (tmprLimit-5) ));then
+	if(( nTmprCurrent > (tmprLimit-5) ));then
 		lnSleep=0.5
 	fi
 	
@@ -197,8 +198,8 @@ function FUNCtmprAverage() {
 }
 
 #function FUNCmonTmpr() {
-#	#tmprCurrent=`sensors |sed -nr "$sedTemperature"`
-#	tmprCurrent=`FUNCtmprAverage 1`
+#	#nTmprCurrent=`sensors |sed -nr "$sedTemperature"`
+#	nTmprCurrent=`FUNCtmprAverage 1`
 #};export -f FUNCmonTmpr
 
 function FUNCchildLimCpuFastLoop() {
@@ -283,34 +284,34 @@ function FUNClimitCpu() {
 		
 		#echo "DEBUG: tmprCurrentFake=$tmprCurrentFake"
 		if $bDebugFakeTmpr;then
-			tmprCurrent=$tmprCurrentFake
+			nTmprCurrent=$tmprCurrentFake
 		else
 			if $bForceStop || $bJustLimit;then
-				tmprCurrent=`FUNCtmprAverage 15`
+				nTmprCurrent=`FUNCtmprAverage 15`
 			else
-				tmprCurrent=`FUNCtmprAverage 3`
+				nTmprCurrent=`FUNCtmprAverage 3`
 			fi
 		fi
 		
 		if((`SECFUNCdelay showTmpr --getsec`>=3));then
 			if $bForceStop;then
 				if ! $bOverrideForceStopNow;then
-					#nice -n 19 echoc --say "stopped $tmprCurrent"
-					nice -n 19 echoc --say "$tmprCurrent"
+					#nice -n 19 echoc --say "stopped $nTmprCurrent"
+					nice -n 19 echoc --say "$nTmprCurrent"
 				else
-					echo "external application asked override to keep pid=$pidToLimit stopped temperature=$tmprCurrent"
+					echo "external application asked override to keep pid=$pidToLimit stopped temperature=$nTmprCurrent"
 				fi
 			elif $bJustLimit;then
-				echo "just limit $tmprCurrent (stop delay $fSigStopDelay)"
+				echo "just limit $nTmprCurrent (stop delay $fSigStopDelay)"
 			else
-				echo "running $tmprCurrent"
+				echo "running $nTmprCurrent"
 			fi
 			SECFUNCdelay showTmpr --init
 		fi
 		
 		# from highest to lowest temperature limits
 		bTmprOverLimit=false
-		if((tmprCurrent>=nTmprLimitMax));then
+		if((nTmprCurrent>=nTmprLimitMax));then
 			bTmprOverLimit=true
 			#SECFUNCdelay minWaitToCoolCPU --init
 		fi
@@ -322,7 +323,7 @@ function FUNClimitCpu() {
 		fi
 		
 		if ! $bForceStop; then
-			if((tmprCurrent>=nJustLimitThreshold));then
+			if((nTmprCurrent>=nJustLimitThreshold));then
 				SECFUNCvarSet fSigStopDelay=$fStepMax
 				if $bJustStopPid;then
 					SECFUNCvarSet fSigRunDelay=0.0
@@ -331,7 +332,7 @@ function FUNClimitCpu() {
 					SECFUNCvarSet fSigRunDelay=`SECFUNCbcPrettyCalc "$fStepMin+$fStepMin"`
 					bJustLimit=true
 				fi
-			elif $bDoLowFpsLimiting && ((tmprCurrent>=nLowFpsLimitingThreshold));then
+			elif $bDoLowFpsLimiting && ((nTmprCurrent>=nLowFpsLimitingThreshold));then
 				# this is somewhat annoying like a lagged/low fps game...
 				SECFUNCvarSet fSigStopDelay=$fStepMin
 				SECFUNCvarSet fSigRunDelay=$fStepMin
@@ -347,16 +348,16 @@ function FUNClimitCpu() {
 		# check if can run normally again
 		if ! $bOverrideForceStopNow;then
 			# will wait user set bOverrideForceStopNow to true...
-			if((tmprCurrent<=nRunAgainThreshold));then
-				tmprCurrent=`FUNCtmprAverage 30`
-				if((tmprCurrent<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
+			if((nTmprCurrent<=nRunAgainThreshold));then
+				nTmprCurrent=`FUNCtmprAverage 30`
+				if((nTmprCurrent<=nRunAgainThreshold));then #to make it 'more sure' as temperature varies too much... 50 would be better but takes too much time..
 					((nCoolCPUCount++))
 					echo "nCoolCPUCount: $nCoolCPUCount of $nCoolCPUCountMax"
 					if((`SECFUNCdelay minWaitToCoolCPU --getsec`>=nMinWaitToCoolCPU));then
 						if((nCoolCPUCount>=nCoolCPUCountMax));then
 							if $bForceStop;then
 								secSayStack.sh --clearbuffer #to stop saying loads of useless information..
-								echoc --waitsay "ready to run again $tmprCurrent"
+								echoc --waitsay "ready to run again $nTmprCurrent"
 							fi
 						
 							bForceStop=false
@@ -413,43 +414,49 @@ function FUNCdaemon() {
 		#SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold #DO NOT hold this critical script execution!!!
 		
 		if $bDebugFakeTmpr;then
-			tmprCurrent=$tmprCurrentFake
+			nTmprCurrent=$tmprCurrentFake
 		else
-			tmprCurrent=`FUNCtmprAverage 3`
+			nTmprCurrent=`FUNCtmprAverage 3`
 		fi
-		remoteInfo.sh --set PCIadapterTmpr $tmprCurrent
+		remoteInfo.sh --set PCIadapterTmpr $nTmprCurrent
 	
-		if((maxTemperature<tmprCurrent));then
-			maxTemperature=$tmprCurrent
+		if((maxTemperature<nTmprCurrent));then
+			maxTemperature=$nTmprCurrent
 		fi
 	
-		#echoc --info "tmprCurrent=$tmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
+		#echoc --info "nTmprCurrent=$nTmprCurrent(max=$maxTemperature)(tmprLimit=$tmprLimit)"
 		if SECFUNCdelay ShowTopPids --checkorinit 60;then
 			FUNClistTopPids 3
 		fi
 		
 		# warning for high temperature near limit
-		if((tmprCurrent>=(tmprLimit-beforeLimitWarn)));then
-			if((prevTemperature!=tmprCurrent));then
+		if((nTmprCurrent>=(tmprLimit-beforeLimitWarn)));then
+			if((prevTemperature!=nTmprCurrent));then
 				if((SECONDS>(lastWarningSaidTime+warningDelay)));then
-					echoc --say "$tmprCurrent"
+					echoc --say "$nTmprCurrent"
 					lastWarningSaidTime=$SECONDS
 				fi
 			fi
 		fi
 		
-		if((tmprCurrent<=(tmprLimit-30)));then
-			FUNCmanageCPUFrequency ondemand&&:
-		else
-			if((tmprCurrent>=(tmprLimit-10)));then
-				FUNCmanageCPUFrequency powersave&&:
-			elif((tmprCurrent>=(tmprLimit-20)));then
-				FUNCmanageCPUFrequency conservative&&:
+		if $bControlCpuFrequency;then
+			if $bCpuFreqUseSteps;then
+				FUNCmanageCPUFrequencyBySteps
+			else
+				if((nTmprCurrent<=(tmprLimit-30)));then
+					FUNCmanageCPUFrequency ondemand&&:
+				else
+					if((nTmprCurrent>=(tmprLimit-10)));then
+						FUNCmanageCPUFrequency powersave&&:
+					elif((nTmprCurrent>=(tmprLimit-20)));then
+						FUNCmanageCPUFrequency conservative&&:
+					fi
+				fi
 			fi
 		fi
 		
 		#FUNChighPercPidList
-		if((tmprCurrent>=tmprLimit));then
+		if((nTmprCurrent>=tmprLimit));then
 			FUNChighPercPidList
 			FUNClistTopPids 3
 			if((${#aHighPercPidList[@]}==0));then
@@ -466,19 +473,19 @@ function FUNCdaemon() {
 				#echoc -x "kill -SIGSTOP $pidHighCPUusage"
 				echoc -x "kill -SIGSTOP ${aHighPercPidList[*]}"
 			
-				#echoc --say "high temperature $tmprCurrent, stopping: $pidHCUCmdName"&
-				echoc --say "$tmprCurrent"
+				#echoc --say "high temperature $nTmprCurrent, stopping: $pidHCUCmdName"&
+				echoc --say "$nTmprCurrent"
 				(export SEC_SAYVOL=100;echoc --say "high temperature, stopping some processes...")
 		
 				count=0
 				SECFUNCdelay timeToCoolDown --init
 				while true; do
 					SECFUNCvarSet isLoweringTemperature=true
-					tmprCurrentold=$tmprCurrent
-					tmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
+					tmprCurrentold=$nTmprCurrent
+					nTmprCurrent=`FUNCtmprAverage 10` #FUNCmonTmpr
 					((count++))
 			
-					echo "current temperature: $tmprCurrent"
+					echo "current temperature: $nTmprCurrent"
 					FUNClistTopPids $((${#aHighPercPidList[*]}+1))
 			
 					if((count>maxDelay));then
@@ -487,18 +494,18 @@ function FUNCdaemon() {
 					fi
 			
 					#stabilized or reached a minimum old<=current
-					if((count>=minimumWait && tmprCurrentold<=tmprCurrent));then
+					if((count>=minimumWait && tmprCurrentold<=nTmprCurrent));then
 						break;
 					fi
 			
 					FUNCsleep 1 #echoc -x "FUNCsleep 1" #let it cooldown a bit
-					echoc --say "$tmprCurrent"
+					echoc --say "$nTmprCurrent"
 				done
 				SECFUNCvarSet isLoweringTemperature=false
 				secSayStack.sh --clearbuffer #to stop saying loads of useless information..
-				#echoc --say "running $tmprCurrent"
+				#echoc --say "running $nTmprCurrent"
 			
-				echo "temperature lowered to: $tmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
+				echo "temperature lowered to: $nTmprCurrent in `SECFUNCdelay timeToCoolDown --getsec` seconds"
 				
 				#echoc -x "kill -SIGCONT $pidHighCPUusage"
 				echoc -x "kill -SIGCONT ${aHighPercPidList[*]}"
@@ -507,9 +514,9 @@ function FUNCdaemon() {
 		
 		# prime numbers ftw!
 		local lnDaemonSleep=`FUNCsleepCalcDelay`
-		FUNCinfoSleep $lnDaemonSleep "tmpr=$tmprCurrent; max=$maxTemperature($tmprLimit); sleep=${lnDaemonSleep}s; $strCPUGovernorLast"
+		FUNCinfoSleep $lnDaemonSleep "tmpr=$nTmprCurrent; max=$maxTemperature($tmprLimit); sleep=${lnDaemonSleep}s; $strCPUFreqGovernorCurrent"
 		
-		prevTemperature=$tmprCurrent
+		prevTemperature=$nTmprCurrent
 	done
 }
 
@@ -518,6 +525,49 @@ function FUNCcheckIfDaemonRunningOrExit() {
 		echoc -p "daemon not running!"
 		exit 1
 	fi
+}
+
+strCPUFreqGovernorCurrent=""
+astrCpuFreqSteps=(`cpufreq-info |grep "available frequency steps:" |head -n 1 |tr -d ' ' |tr ':,' '\n\n' |tail -n +2`)
+nCpuFreqStepsTotal=${#astrCpuFreqSteps[@]}
+echo "nCpuFreqStepsTotal='$nCpuFreqStepsTotal'"
+nTmprDiffFromLimitToMaxCpuFreq=30
+nCpuTmprStepToChangeFreq=$((nTmprDiffFromLimitToMaxCpuFreq/nCpuFreqStepsTotal))
+echo "nCpuTmprStepToChangeFreq='$nCpuTmprStepToChangeFreq'"
+nCpuFreqStepLast=-1
+function FUNCmanageCPUFrequencyBySteps() {
+	local nCpuFreqStepToSet=0
+	#echo "nTmprCurrent='$nTmprCurrent'"
+	
+	# in case nTmprCurrent lower than $((tmprLimit-nTmprDiffFromLimitToMaxCpuFreq)), nCpuFreqStepToSet will remain 0, that is maximum speed
+	for((nCpuFreqStepCheck=0; nCpuFreqStepCheck < nCpuFreqStepsTotal; nCpuFreqStepCheck++));do
+		local lnTmprStepCheck=$(( (nCpuFreqStepCheck+1)*nCpuTmprStepToChangeFreq ))
+		#echo "lnTmprStepCheck='$lnTmprStepCheck'"
+		#echo "tmprLimit-lnTmprStepCheck='$((tmprLimit-lnTmprStepCheck))'"
+		if(( nTmprCurrent>(tmprLimit-lnTmprStepCheck) ));then
+			nCpuFreqStepToSet=$(( (nCpuFreqStepsTotal-1) - nCpuFreqStepCheck ))
+			break
+		fi
+	done
+	
+	#echo "nCpuFreqStepToSet='$nCpuFreqStepToSet'"
+	
+	if((nCpuFreqStepLast==nCpuFreqStepToSet));then
+		return 0
+	fi
+	
+	for nCPU in "${anCPUList[@]}";do
+		if((nCpuFreqStepToSet==0));then
+			SECFUNCexec -c --echo sudo cpufreq-set --cpu $nCPU --governor ondemand
+		else
+			SECFUNCexec -c --echo sudo cpufreq-set --cpu $nCPU --freq ${astrCpuFreqSteps[$nCpuFreqStepToSet]}
+		fi
+	done
+	
+	cpufreq-info |egrep "analyzing CPU|current CPU frequency is " |gawk '{strLine=$0; getline; print strLine $0;}' |gawk '{print $3 $8 $9}'
+	
+	nCpuFreqStepLast=$nCpuFreqStepToSet
+	strCPUFreqGovernorCurrent="`cpufreq-info -o |tail -n 1 |tr -d ' '|tr '-' ' ' |gawk '{printf $3}'`"
 }
 
 anCPUList=(`lscpu -p |grep -v "^#"|cut -d, -f1`)
@@ -620,6 +670,7 @@ varset --default --allowuser bJustStopPid=false
 varset --default --allowuser bDoLowFpsLimiting=false
 varset --default --allowuser bOverrideForceStopNow=false
 varset --default --allowuser bControlCpuFrequency=true
+bCpuFreqUseSteps=false
 #bDaemon=false #DO NOT USE varset on this!!! because must be only one process to use it!
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	b2ndIsParam=false
@@ -660,6 +711,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			exit
 		elif [[ "$1" == "--nocpufreq" ]];then #help disables cpufreq managing
 			bControlCpuFrequency=false
+		elif [[ "$1" == "--cpufreqsteps" ]];then #help use cpufreq steps, requires privileges
+			bCpuFreqUseSteps=true
 		elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; put 'help' in place of <var> to see what vars can be changed
 			FUNCcheckIfDaemonRunningOrExit
 			shift
@@ -723,8 +776,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			if $b2ndIsParam; then
 				countToAvg="$2"
 			fi
-			tmprCurrent=`FUNCtmprAverage $countToAvg`
-			echo "$tmprCurrent"
+			nTmprCurrent=`FUNCtmprAverage $countToAvg`
+			echo "$nTmprCurrent"
 			exit
 		elif [[ "$1" == "--daemon" ]];then #help daemon keeps checking for temperature and stopping top proccesses
 			FUNCdaemon
