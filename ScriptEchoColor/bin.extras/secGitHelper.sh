@@ -158,7 +158,7 @@ while true;do
 			echoc -x "git gui"&&: 
 			;; 
 		d)
-			FUNCdiffCheckShow "`git tag |tail -n 1`..master"&&:
+			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:
 			;;
 		g)
 			git log --full-history --date=iso \
@@ -173,7 +173,7 @@ while true;do
 			if [[ -z "$strSECInstalledVersion" ]];then
 				echoc --alert "package scriptechocolor is not installed."
 			else
-				FUNCdiffCheckShow "HEAD@{$strLastCommitBeforeInstall}..master"&&:
+				FUNCgitDiffCheckShow "HEAD@{$strLastCommitBeforeInstall}..master"&&:
 			fi
 			;;
 		n)
@@ -187,7 +187,7 @@ while true;do
 			echoc -x "gnome-terminal"&&: 
 			;;
 		u)
-			FUNCdiffCheckShow origin/master&&: 
+			FUNCgitDiffCheckShow origin/master&&: 
 			;;
 	esac
 	
