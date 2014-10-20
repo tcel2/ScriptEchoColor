@@ -89,6 +89,18 @@ if [[ -n "$strChangesFile" ]];then
 	echo "strChangesFile='$strChangesFile'"
 fi
 
+function FUNCgitDiffCheckShow() {
+	local lastrCmd=("$@")
+	local lstrDiff="`git diff "${lastrCmd[@]}"`"&&:;
+	local lnDiffCount="`echo -n "$lstrDiff" |wc -l`"
+	if((lnDiffCount==0));then
+		echoc --alert "THERE IS NO DIFFERENCE!"
+	else
+		SECFUNCexec -c --echo git difftool -d "${lastrCmd[@]}"&&:
+	fi
+	return 0
+}
+
 SECFUNCuniqueLock --daemonwait
 while true;do
 	### ASK WHAT TO DO ###
@@ -138,29 +150,45 @@ while true;do
 	
 	### EXEC USER OPTION ###
 	case "`secascii $nRetValue`" in 
-		b) echoc -x "gitk"&&: ;; 
-		c)	echoc --alert "SOURCEFORGE PassWord may be asked...";
-				echoc -x "git gui"&&: ;; 
-		d) echoc -x "git difftool -d \"`git tag |tail -n 1`..master\""&&: ;;
-		g) git log --full-history --date=iso \
-			|egrep -v "^$|^commit |^Author: |^    [.]" \
-			|grep "^    " -B 1 \
-			|grep -v "^--" >"$strChangesFile";
+		b)
+			echoc -x "gitk"&&: 
+			;; 
+		c)
+			echoc --alert "SOURCEFORGE PassWord may be asked...";
+			echoc -x "git gui"&&: 
+			;; 
+		d)
+			FUNCdiffCheckShow "`git tag |tail -n 1`..master"&&:
+			;;
+		g)
+			git log --full-history --date=iso \
+				|egrep -v "^$|^commit |^Author: |^    [.]" \
+				|grep "^    " -B 1 \
+				|grep -v "^--" >"$strChangesFile";
 			if echoc -q "view changes file '$strChangesFile'?";then
 				echoc -x "gedit '$strChangesFile'"
 			fi
 			;;
-		i)	if [[ -z "$strSECInstalledVersion" ]];then
-					echoc --alert "package scriptechocolor is not installed."
-				else
-					echoc -x "git difftool -d \"HEAD\@{$strLastCommitBeforeInstall}..master\""&&:
-				fi
+		i)
+			if [[ -z "$strSECInstalledVersion" ]];then
+				echoc --alert "package scriptechocolor is not installed."
+			else
+				FUNCdiffCheckShow "HEAD@{$strLastCommitBeforeInstall}..master"&&:
+			fi
 			;;
-		n) echoc -x "nautilus ./"&&: ;;
-		p)	echoc --alert "SOURCEFORGE PassWord may be asked...";
-				echoc -x "git push --tags"&&: ;;
-		t) echoc -x "gnome-terminal"&&: ;;
-		u) git difftool -d origin/master&&: ;;
+		n)
+			echoc -x "nautilus ./"&&: 
+			;;
+		p)
+			echoc --alert "SOURCEFORGE PassWord may be asked...";
+			echoc -x "git push --tags"&&: 
+			;;
+		t)
+			echoc -x "gnome-terminal"&&: 
+			;;
+		u)
+			FUNCdiffCheckShow origin/master&&: 
+			;;
 	esac
 	
 done
