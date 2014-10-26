@@ -532,8 +532,8 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 	fi
 	
 	echo "`basename "$lstrScriptFile"` Functions:"
-	local lsedFunctionNameOnly='s".*(SECFUNC.*)\(\).*"\1"'
-	local lastrFunctions=(`grep "^[[:blank:]]*function SECFUNC" "$lstrScriptFile" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
+	local lsedFunctionNameOnly='s".*function[[:blank:]]*([[:alnum:]_]*)[[:blank:]]*\(\).*"\1"'
+	local lastrFunctions=(`grep "^[[:blank:]]*function[[:blank:]]*[[:alnum:]_]*[[:blank:]]*()" "$lstrScriptFile" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
 	lastrFunctions=(`echo "${lastrFunctions[@]-}" |tr " " "\n" |sort`)
 	for lstrFuncId in ${lastrFunctions[@]-};do
 		echo
@@ -1360,7 +1360,19 @@ function SECFUNCcheckActivateRunLog() {
 		if $SECbRunLogEnabled;then
 			if [[ -d "/proc/$SECnRunLogTeePid" ]];then
 				if [[ "$SECstrRunLogFile" != "$SECstrRunLogFileDefault" ]];then
-					ln -s "$SECstrRunLogFile" "$SECstrRunLogFileDefault"
+					if [[ -f "$SECstrRunLogFileDefault" ]];then
+						local lstrAlreadyPointsTo="`readlink -f "$SECstrRunLogFileDefault"`"
+						if [[ "$lstrAlreadyPointsTo" != "$SECstrRunLogFile" ]];then
+							SECFUNCechoErrA "SECstrRunLogFileDefault='$SECstrRunLogFileDefault' already exists and readlink to lstrAlreadyPointsTo='$lstrAlreadyPointsTo', unable to create it as symlink pointing to SECstrRunLogFile='$SECstrRunLogFile'"
+						fi
+					else
+						if [[ ! -a "$SECstrRunLogFileDefault" ]] || [[ -L "$SECstrRunLogFileDefault" ]];then #if it is a symlink, such is broken
+							if [[ -L "$SECstrRunLogFileDefault" ]];then
+								SECFUNCechoWarnA "overwriting broken symlink SECstrRunLogFileDefault='$SECstrRunLogFileDefault'"
+							fi
+							ln -sf "$SECstrRunLogFile" "$SECstrRunLogFileDefault"
+						fi
+					fi
 				fi
 			fi
 		else

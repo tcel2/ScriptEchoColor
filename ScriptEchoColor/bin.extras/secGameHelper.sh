@@ -24,23 +24,24 @@
 
 eval `secinit`
 
-function GAMEFUNCcheckIfGameIsRunning() { #<lstrFileExecutable>
+function GAMEFUNCcheckIfGameIsRunning() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
 	pgrep "$lstrFileExecutable" 2>&1 >/dev/null
 }
 
-function GAMEFUNCwaitGameStartRunning() { #<lstrFileExecutable>
+function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
 	while true;do
 		if GAMEFUNCcheckIfGameIsRunning "$lstrFileExecutable";then
 			break
 		fi
+		echoc --info "waiting lstrFileExecutable='$lstrFileExecutable' start running..."
 		sleep 3
 	done
 }
 
 SECFUNCdelay GAMEFUNCexitIfGameExits --init
-function GAMEFUNCexitIfGameExits() { #<lstrFileExecutable>
+function GAMEFUNCexitIfGameExits() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
 	echo -en "check if game is running for `SECFUNCdelay $FUNCNAME --getpretty`\r"
 	if ! GAMEFUNCcheckIfGameIsRunning "$lstrFileExecutable";then
@@ -49,7 +50,7 @@ function GAMEFUNCexitIfGameExits() { #<lstrFileExecutable>
 	fi
 }
 
-function GAMEFUNCexitWhenGameExitsLoop() { #<lstrFileExecutable>
+function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
 	while ! GAMEFUNCcheckIfGameIsRunning "$lstrFileExecutable";do
 		if echoc -q -t 3 "waiting lstrFileExecutable='$lstrFileExecutable' start, exit?";then
@@ -62,7 +63,7 @@ function GAMEFUNCexitWhenGameExitsLoop() { #<lstrFileExecutable>
 	done
 }
 
-function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #obrigatory params: "$@" (all params that were passed to the script) (useful to help on avoiding dup instances)
+function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
 	# check if there is other pids than self tree
 	SECFUNCdelay $FUNCNAME --init
 	while true;do
@@ -79,11 +80,125 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #obrigatory params: "$@" (all
 	done
 }
 
+function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
+	local lnKeepSaveInterval=100
+	local lnSaveLimit=50
+	local lbRunOnce=false
+	local lnSleepDelay=10
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		if [[ "$1" == "--help" ]];then #GAMEFUNCquickSaveAutoBkp_help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--keepsaveinterval" || "$1" == "-k" ]];then #GAMEFUNCquickSaveAutoBkp_help <lnKeepSaveInterval> how many saves must happen before one save is kept (not auto trashed)
+			lnKeepSaveInterval="${1-}"
+		elif [[ "$1" == "--savelimit" || "$1" == "-l" ]];then #GAMEFUNCquickSaveAutoBkp_help <lnSaveLimit> older saves will be trashed
+			lnSaveLimit="${1-}"
+		elif [[ "$1" == "--once" ]];then #GAMEFUNCquickSaveAutoBkp_help run once, no loop
+			lbRunOnce=true
+		elif [[ "$1" == "--sleepdelay" || "$1" == "-s" ]];then #GAMEFUNCquickSaveAutoBkp_help delay between savegame checks (in seconds)
+			lnSleepDelay="${1-}"
+		elif [[ "$1" == "--" ]];then #GAMEFUNCquickSaveAutoBkp_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			return 1
+		fi
+		shift
+	done
+	local lstrPathSavegames="$1"
+	local lstrQuickSaveNameAndExt="$2"
+	
+	if ! SECFUNCisNumber -dn "$lnKeepSaveInterval";then
+		SECFUNCechoErrA "invalid lnKeepSaveInterval='$lnKeepSaveInterval'"
+		return 1
+	fi
+	if ! SECFUNCisNumber -dn "$lnSaveLimit";then
+		SECFUNCechoErrA "invalid lnSaveLimit='$lnSaveLimit'"
+		return 1
+	fi
+	if ! SECFUNCisNumber -dn "$lnSleepDelay";then
+		SECFUNCechoErrA "invalid lnSleepDelay='$lnSleepDelay'"
+		return 1
+	fi
+	
+	cd "$lstrPathSavegames"
+	echoc --info "PWD='`pwd`'"
+
+	local lstrQuickSaveName="`echo "$lstrQuickSaveNameAndExt" |sed -r 's"(.*)[.][^.]*$"\1"'`"
+	local lstrQuickSaveExt="`echo "$lstrQuickSaveNameAndExt" |sed -r 's".*[.]([^.]*)$"\1"'`"
+	echoc --info "lnSaveLimit='$lnSaveLimit'"
+	
+	SECFUNCdelay "$FUNCNAME" --init
+	while true;do
+		GAMEFUNCexitIfGameExits "$strFileExecutable"
+		
+		local lstrSaveList="`ls -1 ??????????.$lstrQuickSaveExt |sort -nr`"
+		local lnSaveTotal="`echo "$lstrSaveList" |wc -l`"
+		local lstrFileNewestSave="`echo "$lstrSaveList" |head -n 1`"
+		local lstrFileOldestSave="`echo "$lstrSaveList" |tail -n 1`"
+		
+		if((lnSaveTotal>lnSaveLimit));then
+			trash -v "${lstrFileOldestSave%.$lstrQuickSaveExt}."*
+		fi
+		
+		local lastrExtensionList=(`ls -1 "$lstrQuickSaveName."* |sed -r "s'$lstrQuickSaveName[.]''"`)
+		if [[ -n "$lstrFileNewestSave" ]];then
+			local lstrIndex="${lstrFileNewestSave%.$lstrQuickSaveExt}"
+			if ! SECFUNCisNumber -dn "$lstrIndex";then
+				echoc --say -p "invalid save lstrIndex='$lstrIndex'"
+			else
+				if [[ -f "$lstrQuickSaveName.$lstrQuickSaveExt" ]];then
+					if ! cmp "$lstrQuickSaveName.$lstrQuickSaveExt" "${lstrIndex}.$lstrQuickSaveExt";then
+						# create new
+						nIndex="$((10#$lstrIndex))" #prevents octal error
+						((nIndex++))&&:
+					
+						local lstrIndexNew="`printf %010d $nIndex`"
+						
+						for strExtension in "${lastrExtensionList[@]}";do
+							cp -v "$lstrQuickSaveName.$strExtension" "${lstrIndexNew}.$strExtension"
+						done
+						if (( (nIndex % lnKeepSaveInterval) == 0 ));then
+							for strExtension in "${lastrExtensionList[@]}";do
+								cp -v "${lstrIndexNew}.$strExtension" "keep_${lstrIndexNew}.$strExtension"
+							done
+							echoc --say "keep save $nIndex"
+						else
+							echoc --say "save $nIndex"
+						fi
+					
+						SECFUNCdelay $1 --init
+					else
+						echo -en "waiting new $lstrQuickSaveName.$lstrQuickSaveExt for `SECFUNCdelay $1 --getpretty`s\r"
+					fi
+				else
+					echo "waiting $lstrQuickSaveName.$lstrQuickSaveExt be created..."
+				fi
+			fi
+		else
+			pwd
+			for strExtension in "${lastrExtensionList[@]}";do
+				cp -v "$lstrQuickSaveName.$strExtension" "0000000000.$strExtension"
+			done
+		fi
+		
+		if $lbRunOnce;then
+			return 0
+		fi
+		
+		sleep $lnSleepDelay
+	done
+	
+	return 0
+}
+
 if [[ "$0" == */secGameHelper.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #help
 			SECFUNCshowHelp --colorize "use this script as source at other scripts"
 			SECFUNCshowHelp
+			SECFUNCshowFunctionsHelp
 			exit 0
 #		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
 #			echo "#your code goes here"
