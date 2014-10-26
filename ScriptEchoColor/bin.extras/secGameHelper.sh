@@ -90,12 +90,15 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 			SECFUNCshowHelp $FUNCNAME
 			return 0
 		elif [[ "$1" == "--keepsaveinterval" || "$1" == "-k" ]];then #GAMEFUNCquickSaveAutoBkp_help <lnKeepSaveInterval> how many saves must happen before one save is kept (not auto trashed)
+			shift
 			lnKeepSaveInterval="${1-}"
 		elif [[ "$1" == "--savelimit" || "$1" == "-l" ]];then #GAMEFUNCquickSaveAutoBkp_help <lnSaveLimit> older saves will be trashed
+			shift
 			lnSaveLimit="${1-}"
 		elif [[ "$1" == "--once" ]];then #GAMEFUNCquickSaveAutoBkp_help run once, no loop
 			lbRunOnce=true
-		elif [[ "$1" == "--sleepdelay" || "$1" == "-s" ]];then #GAMEFUNCquickSaveAutoBkp_help delay between savegame checks (in seconds)
+		elif [[ "$1" == "--sleepdelay" || "$1" == "-s" ]];then #GAMEFUNCquickSaveAutoBkp_help delay between savegame checks (in seconds) when in loop (default) mode
+			shift
 			lnSleepDelay="${1-}"
 		elif [[ "$1" == "--" ]];then #GAMEFUNCquickSaveAutoBkp_help params after this are ignored as being these options
 			shift
@@ -121,7 +124,16 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 		SECFUNCechoErrA "invalid lnSleepDelay='$lnSleepDelay'"
 		return 1
 	fi
+	if [[ "${lstrPathSavegames:0:1}" != "/" ]];then
+		SECFUNCechoErrA "invalid lstrPathSavegames='$lstrPathSavegames', must be absolute"
+		return 1
+	fi
+	if [[ ! -d "$lstrPathSavegames" ]];then
+		SECFUNCechoErrA "invalid lstrPathSavegames='$lstrPathSavegames', inexistant"
+		return 1
+	fi
 	
+	#cd "`readlink -f "$lstrPathSavegames"`"
 	cd "$lstrPathSavegames"
 	echoc --info "PWD='`pwd`'"
 
@@ -168,9 +180,9 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 							echoc --say "save $nIndex"
 						fi
 					
-						SECFUNCdelay $1 --init
+						SECFUNCdelay "$FUNCNAME" --init
 					else
-						echo -en "waiting new $lstrQuickSaveName.$lstrQuickSaveExt for `SECFUNCdelay $1 --getpretty`s\r"
+						echo -en "waiting new $lstrQuickSaveName.$lstrQuickSaveExt for `SECFUNCdelay "$FUNCNAME" --getpretty`s\r"
 					fi
 				else
 					echo "waiting $lstrQuickSaveName.$lstrQuickSaveExt be created..."
