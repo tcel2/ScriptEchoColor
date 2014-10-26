@@ -422,7 +422,8 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[c
 		return
 	fi
 	
-	local lpath="$SECstrUserHomeConfigPath/SEC.AppVars.DB"
+	local lpath="$SECstrUserHomeConfigPath/SEC.ScriptsConfigurationFiles"
+	if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then mv -v "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >>/dev/stderr;	ln -sv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >>/dev/stderr; fi #TODO remove this one day, it is here just to provide an easy migration...
 	if [[ ! -d "$lpath" ]];then
 		mkdir -p "$lpath"
 	fi

@@ -117,6 +117,12 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 	eval "`declare |sed -r "s%^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)='(.*)'$%unset \1;%;tfound;d;:found"`"
 }
 
+#function SECFUNCversionCheck() {
+#	if [[ ! -d "$SECstrUserHomeConfigPath/" ]];then
+#		mkdir -vp "$SECstrUserHomeConfigPath/"
+#	fi
+#}
+
 SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
 
 # LAST THINGS CODE
@@ -129,6 +135,8 @@ if [[ "$0" == */funcFast.sh ]];then
 		shift
 	done
 fi
+
+#export SECnVersion="1414348722" #SECFUNCdtFmt --nonano
 
 export SECnPidInitLibFast=$$
 

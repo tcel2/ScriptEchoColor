@@ -154,6 +154,9 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 	done
 	
 	local lstrFormatSimplest="%s.%N"
+	if ! $lbShowNano;then
+		lstrFormatSimplest="%s"
+	fi
 	
 	lfTime="${1-}"
 	if [[ -z "$lfTime" ]];then

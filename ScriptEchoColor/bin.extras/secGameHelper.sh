@@ -80,7 +80,8 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 	done
 }
 
-function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
+#function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
+function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	local lnKeepSaveInterval=100
 	local lnSaveLimit=50
 	local lbRunOnce=false
@@ -109,8 +110,10 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 		fi
 		shift
 	done
-	local lstrPathSavegames="$1"
-	local lstrQuickSaveNameAndExt="$2"
+	local lstrQuickSaveFullPathNameAndExt="${1-}"
+	
+	local lstrPathSavegames="`dirname "$lstrQuickSaveFullPathNameAndExt"`"
+	local lstrQuickSaveNameAndExt="`basename "$lstrQuickSaveFullPathNameAndExt"`"
 	
 	if ! SECFUNCisNumber -dn "$lnKeepSaveInterval";then
 		SECFUNCechoErrA "invalid lnKeepSaveInterval='$lnKeepSaveInterval'"
@@ -134,6 +137,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 	fi
 	
 	#cd "`readlink -f "$lstrPathSavegames"`"
+	strPathPwdBkp="`pwd`"
 	cd "$lstrPathSavegames"
 	echoc --info "PWD='`pwd`'"
 
@@ -160,8 +164,8 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 			if ! SECFUNCisNumber -dn "$lstrIndex";then
 				echoc --say -p "invalid save lstrIndex='$lstrIndex'"
 			else
-				if [[ -f "$lstrQuickSaveName.$lstrQuickSaveExt" ]];then
-					if ! cmp "$lstrQuickSaveName.$lstrQuickSaveExt" "${lstrIndex}.$lstrQuickSaveExt";then
+				if [[ -f "$lstrQuickSaveNameAndExt" ]];then
+					if ! cmp "$lstrQuickSaveNameAndExt" "${lstrIndex}.$lstrQuickSaveExt";then
 						# create new
 						nIndex="$((10#$lstrIndex))" #prevents octal error
 						((nIndex++))&&:
@@ -182,10 +186,10 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 					
 						SECFUNCdelay "$FUNCNAME" --init
 					else
-						echo -en "waiting new $lstrQuickSaveName.$lstrQuickSaveExt for `SECFUNCdelay "$FUNCNAME" --getpretty`s\r"
+						echo -en "waiting new $lstrQuickSaveNameAndExt='$lstrQuickSaveNameAndExt' for `SECFUNCdelay "$FUNCNAME" --getpretty`s\r"
 					fi
 				else
-					echo "waiting $lstrQuickSaveName.$lstrQuickSaveExt be created..."
+					echo "waiting $lstrQuickSaveNameAndExt='$lstrQuickSaveNameAndExt' be created..."
 				fi
 			fi
 		else
@@ -196,12 +200,13 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNa
 		fi
 		
 		if $lbRunOnce;then
-			return 0
+			break
 		fi
 		
 		sleep $lnSleepDelay
 	done
 	
+	cd "$strPathPwdBkp"
 	return 0
 }
 
