@@ -86,6 +86,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	local lnSaveLimit=50
 	local lbRunOnce=false
 	local lnSleepDelay=10
+	local lnLeftZeros=10
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #GAMEFUNCquickSaveAutoBkp_help
 			SECFUNCshowHelp $FUNCNAME
@@ -101,6 +102,9 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 		elif [[ "$1" == "--sleepdelay" || "$1" == "-s" ]];then #GAMEFUNCquickSaveAutoBkp_help delay between savegame checks (in seconds) when in loop (default) mode
 			shift
 			lnSleepDelay="${1-}"
+		elif [[ "$1" == "--leftzeros" || "$1" == "-z" ]];then #GAMEFUNCquickSaveAutoBkp_help how many zeros to the left will be placed in the savegame filename
+			shift
+			lnLeftZeros="${1-}"
 		elif [[ "$1" == "--" ]];then #GAMEFUNCquickSaveAutoBkp_help params after this are ignored as being these options
 			shift
 			break
@@ -135,6 +139,10 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 		SECFUNCechoErrA "invalid lstrPathSavegames='$lstrPathSavegames', inexistant"
 		return 1
 	fi
+	if ! SECFUNCisNumber -dn "$lnLeftZeros";then
+		SECFUNCechoErrA "invalid lnLeftZeros='$lnLeftZeros'"
+		return 1
+	fi
 	
 	#cd "`readlink -f "$lstrPathSavegames"`"
 	strPathPwdBkp="`pwd`"
@@ -143,13 +151,17 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 
 	local lstrQuickSaveName="`echo "$lstrQuickSaveNameAndExt" |sed -r 's"(.*)[.][^.]*$"\1"'`"
 	local lstrQuickSaveExt="`echo "$lstrQuickSaveNameAndExt" |sed -r 's".*[.]([^.]*)$"\1"'`"
-	echoc --info "lnSaveLimit='$lnSaveLimit'"
+#	echoc --info "lnSaveLimit='$lnSaveLimit'"
+#	echoc --info "lnLeftZeros='$lnLeftZeros'"
+	
+	strLeftZeros="`  eval printf "0%.0s" {1..$lnLeftZeros}`"
+	strLeftMatches="`eval printf "?%.0s" {1..$lnLeftZeros}`"
 	
 	SECFUNCdelay "$FUNCNAME" --init
 	while true;do
 		GAMEFUNCexitIfGameExits "$strFileExecutable"
 		
-		local lstrSaveList="`ls -1 ??????????.$lstrQuickSaveExt |sort -nr`"
+		local lstrSaveList="`ls -1 $strLeftMatches.$lstrQuickSaveExt |sort -nr`"
 		local lnSaveTotal="`echo "$lstrSaveList" |wc -l`"
 		local lstrFileNewestSave="`echo "$lstrSaveList" |head -n 1`"
 		local lstrFileOldestSave="`echo "$lstrSaveList" |tail -n 1`"
@@ -170,7 +182,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 						nIndex="$((10#$lstrIndex))" #prevents octal error
 						((nIndex++))&&:
 					
-						local lstrIndexNew="`printf %010d $nIndex`"
+						local lstrIndexNew="`printf %0${lnLeftZeros}d $nIndex`"
 						
 						for strExtension in "${lastrExtensionList[@]}";do
 							cp -v "$lstrQuickSaveName.$strExtension" "${lstrIndexNew}.$strExtension"
@@ -195,7 +207,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 		else
 			pwd
 			for strExtension in "${lastrExtensionList[@]}";do
-				cp -v "$lstrQuickSaveName.$strExtension" "0000000000.$strExtension"
+				cp -v "$lstrQuickSaveName.$strExtension" "$strLeftZeros.$strExtension"
 			done
 		fi
 		
