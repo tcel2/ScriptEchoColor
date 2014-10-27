@@ -1,3 +1,5 @@
+Date:   2014-10-26 22:13:47 -0200
+    secGameHelper.sh --leftzeros;
 Date:   2014-10-26 04:01:36 -0200
     SECFUNCcheckActivateRunLog: fix crash for existing SECstrRunLogFileDefault;
     secGameHelper.sh: GAMEFUNCquickSaveAutoBkp
