@@ -448,7 +448,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m"
 		
 		# for function description
-		local lstrFuncDesc=`grep -h "function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#help" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`
+		local lstrFuncDesc=`grep -h "^[[:blank:]]*function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#help" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`
 		if [[ -n "$lstrFuncDesc" ]];then
 			echo -e "\t$lstrFuncDesc" \
 				|sed -r "$lsedColorizeOptionals" \
