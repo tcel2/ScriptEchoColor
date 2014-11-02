@@ -43,7 +43,7 @@ function FUNCrescan() {
 	echoc --alert "wait, bluetooth devices being scanned..."
 	if ! strDevices="`hcitool scan |tail -n +2`";then #skips 1st "scanning..." line
 		echoc -p "unable to scan for bluetooth devices"
-		exit 1
+		return 1
 	fi
 
 	#bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
@@ -72,7 +72,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "<astrFileToPushList>... Send files thru bluetooth."
 		SECFUNCshowHelp
-		exit
+		exit 0
 	elif [[ "$1" == "--nautilus" ]];then #internal use, no user help..., enables the nautilus mode.
 		bNautilusMode=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -141,7 +141,7 @@ if ! $bUseLastChosenDevice;then
 			fi
 			
 			if ! echoc -q "no devices found, re-scan bluetooth devices?";then
-				exit
+				exit 0
 			fi
 		done
 	fi
@@ -165,11 +165,16 @@ fi
 
 echoc --info "strDeviceIdLastChosen='$strDeviceIdLastChosen' Device Name='${astrDeviceList[$strDeviceIdLastChosen]-}'"
 
-nBluetoothChannel="`FUNCbluetoothChannel "$strDeviceIdLastChosen"`"&&:
-if ! SECFUNCisNumber -dn "$nBluetoothChannel";then
-	SECFUNCechoErrA "failed to acquire nBluetoothChannel='$nBluetoothChannel'"
-	exit 1
-fi
+while true;do
+	nBluetoothChannel="`FUNCbluetoothChannel "$strDeviceIdLastChosen"`"&&:
+	if SECFUNCisNumber -dn "$nBluetoothChannel";then
+		break;
+	else
+		if echoc -q -t 3 -p "failed to acquire nBluetoothChannel='$nBluetoothChannel', exit?";then
+			exit 1
+		fi
+	fi
+done
 
 #for strFileToPush in "${astrFileToPushList[@]}";do
 #	if [[ ! -f "$strFileToPush" ]];then
@@ -184,12 +189,14 @@ fi
 #				--put "$strFileToPush"
 #	fi
 #fi
-SECFUNCexec -c --echo \
+if ! SECFUNCexec -c --echo \
 	obexftp --nopath --noconn \
 		--uuid none \
 		--bluetooth "$strDeviceIdLastChosen" \
 		--channel "$nBluetoothChannel" \
-		--put "${astrFileToPushList[@]}"
+		--put "${astrFileToPushList[@]}";then
+	echoc -p "failed."
+fi
 
 echoc -w -t 60
 
