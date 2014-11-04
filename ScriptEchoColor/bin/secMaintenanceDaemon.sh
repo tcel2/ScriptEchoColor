@@ -62,6 +62,7 @@ bLockMonitor=false
 bPidsMonitor=false
 fMonitorDelay="3.0"
 bErrorsMonitor=false
+bErrorsMonitorOnlyTraps=false
 bLogsList=false
 bShowErrors=false
 bListPids=false
@@ -92,6 +93,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		fMonitorDelay=30
 	elif [[ "$1" == "--errmon" ]];then #help easy to read errors list
 		bErrorsMonitor=true
+	elif [[ "$1" == "--trapmon" ]];then #help easy to read errors list (shows only trapped errors)
+		bErrorsMonitorOnlyTraps=true
 	elif [[ "$1" == "--pidlist" ]];then #help list pids that are detected as using sec functions
 		bListPids=true
 	elif [[ "$1" == "--errors" ]];then #help show all errors (not only last ones)
@@ -247,16 +250,25 @@ elif $bShowErrors;then
 		echoc -w -t 60 "No errors on log."
 	done
 	exit
-elif $bErrorsMonitor;then
+elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 	#tail -F "$strFileErrorLog"
 	echoc --info "strFileErrorLog='$strFileErrorLog'"
 	nLineCount=0
 	while true;do
 		nLineCountCurrent=$(cat "$strFileErrorLog" |wc -l)
+		
 		#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
-		tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e "s'(\(trap\))'`echo -e "\E[31m"`\1`echo -e "\E[0m"`'" -e 's";";\n\t"g' -e 's".*"&\n"'
+		strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"
+		if $bErrorsMonitorOnlyTraps;then
+			strErrsToOutput="`echo "$strErrsToOutput" |grep "(trap)"`"&&:
+		fi
+		if [[ -n "$strErrsToOutput" ]];then
+			echo "$strErrsToOutput" |sed -r -e "s'(\(trap\))'`echo -e "\E[31m"`\1`echo -e "\E[0m"`'" -e 's";";\n\t"g' -e 's".*"&\n"'
+		fi
+		
 		nLineCount=$nLineCountCurrent
-		echoc -w "SECERROR Log, `SECFUNCdtFmt --pretty`"
+		
+		echoc -w "Log for SECERROR(s), `SECFUNCdtFmt --pretty`"
 	done
 	exit
 elif $bLogsList;then

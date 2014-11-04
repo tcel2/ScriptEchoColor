@@ -42,9 +42,13 @@ function FUNCretargetSymlink() {
 #			lstrTarget="`pwd`/$lstrTarget"
 #		fi
 		bForceDirectory=false
+		bTextFieldEditMode=false
 		if [[ ! -a "$lstrTarget" ]];then
 			if echoc -q "missing lstrTarget='$lstrTarget', is directory?";then
 				bForceDirectory=true
+			fi
+			if echoc -q "edit with text field?";then
+				bTextFieldEditMode=true
 			fi
 		fi
 		strOptDirectory=""
@@ -55,12 +59,19 @@ function FUNCretargetSymlink() {
 			echo "Symlinking to directory."
 		fi
 		
-		local lstrNewSymlink="`zenity \
-			--title "$SECstrScriptSelfName" \
-			--file-selection \
-			$strOptDirectory \
-			--filename=\"$lstrTarget\"`"
-		#local lstrNewSymlink="`zenity --entry --entry-text "\`readlink "$lstrFile"\`"`"
+		if $bTextFieldEditMode;then
+			local lstrNewSymlink="`zenity \
+				--title "$SECstrScriptSelfName" \
+				--entry \
+				--width=750 \
+				--entry-text "\`readlink "$lstrFile"\`"`"
+		else
+			local lstrNewSymlink="`zenity \
+				--title "$SECstrScriptSelfName" \
+				--file-selection \
+				$strOptDirectory \
+				--filename=\"$lstrTarget\"`"
+		fi
 		if [[ -a "$lstrNewSymlink" ]];then
 			#echoc -x "rm -v '$lstrFile'"
 			echoc -x "ln -vsfT $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
