@@ -1,3 +1,10 @@
+Date:   2014-11-03 23:32:59 -0200
+    secMaintenanceDaemon.sh --trapmon;
+    sec.Symlink.Edit.NautilusScript.sh: broken symlink can be textfield edite now;
+Date:   2014-11-01 23:21:52 -0200
+    sec.Bluetooth.SendFile.NautilusScript.sh: handling errors better;
+Date:   2014-11-01 18:54:20 -0200
+    SECFUNCshowHelp: fix preventing function help using commented function lines;
 Date:   2014-10-26 22:13:47 -0200
     secGameHelper.sh --leftzeros;
 Date:   2014-10-26 04:01:36 -0200
