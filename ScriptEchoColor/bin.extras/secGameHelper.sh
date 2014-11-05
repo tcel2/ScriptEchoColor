@@ -118,6 +118,9 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	
 	local lstrPathSavegames="`dirname "$lstrQuickSaveFullPathNameAndExt"`"
 	local lstrQuickSaveNameAndExt="`basename "$lstrQuickSaveFullPathNameAndExt"`"
+#	echo "lstrQuickSaveFullPathNameAndExt='$lstrQuickSaveFullPathNameAndExt'"
+#	echo "lstrPathSavegames='$lstrPathSavegames'"
+#	echo "lstrQuickSaveNameAndExt='$lstrQuickSaveNameAndExt'"
 	
 	if ! SECFUNCisNumber -dn "$lnKeepSaveInterval";then
 		SECFUNCechoErrA "invalid lnKeepSaveInterval='$lnKeepSaveInterval'"
@@ -171,6 +174,12 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 		fi
 		
 		local lastrExtensionList=(`ls -1 "$lstrQuickSaveName."* |sed -r "s'$lstrQuickSaveName[.]''"`)
+		if [[ -z "${lastrExtensionList[@]-}" ]];then
+			echoc -p "unable to gather filename extensions for lstrQuickSaveName='$lstrQuickSaveName', at PWD='$PWD'"
+			echoc -x "ls -l '${lstrQuickSaveName}.'*"
+			echoc -w
+			return 1
+		fi
 		if [[ -n "$lstrFileNewestSave" ]];then
 			local lstrIndex="${lstrFileNewestSave%.$lstrQuickSaveExt}"
 			if ! SECFUNCisNumber -dn "$lstrIndex";then
@@ -208,6 +217,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 			pwd
 			for strExtension in "${lastrExtensionList[@]}";do
 				cp -v "$lstrQuickSaveName.$strExtension" "$strLeftZeros.$strExtension"
+				echoc --say "save 0"
 			done
 		fi
 		
