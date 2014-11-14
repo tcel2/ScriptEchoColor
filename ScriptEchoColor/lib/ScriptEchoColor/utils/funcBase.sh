@@ -637,7 +637,7 @@ function SECFUNCexec() { #help
 			lbLog=true
 		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help creates a detached child process that will continue running without this parent, implies --log unless another log type is set; also disable --elapsed --nolog and disable the return value (prevent interactivity)
 			lbDetach=true;
-		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help list detached running pids
+		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help show list of detached pids at log
 			lbDetachedList=true;
 		else
 			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option $1"
@@ -645,6 +645,16 @@ function SECFUNCexec() { #help
 		fi
 		shift
 	done
+	
+	if $lbDetachedList;then
+		if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
+			grep "$FUNCNAME;lnPidDetached=" "$SEClstrLogFileSECFUNCexec"&&:
+			return 0
+		else
+			SECFUNCechoErrA "log file SEClstrLogFileSECFUNCexec='${SEClstrLogFileSECFUNCexec-}' not found."
+			return 1
+		fi
+	fi
 	
 	# fix options
 	if [[ "$SEC_DEBUG" == "true" ]];then
