@@ -1,4 +1,4 @@
-# backup your local copy
+# backup your local copy 
 
 git clone git://git.code.sf.net/p/scriptechocolor/git /tmp/scriptechocolor.git
 # remove the '.git' from there
