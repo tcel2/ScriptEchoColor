@@ -1137,6 +1137,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	local lbCheckOrInit=false
 	local l_b1stIsTrueOnCheckOrInit=false
 	local lbGetPrettyFull=false
+	local lbShowId=false
 	#TODO create an automatic init option that works with ex --getpretty, so a function can be called by a loop and still retain control over its initialization inside of it.
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
@@ -1172,6 +1173,8 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
 			lbGet=true
 			lbGetPrettyFull=true
+		elif [[ "$1" == "--showid" ]];then #SECFUNCdelay_help outputs the current delay id if used with --getpretty or --getprettyfull
+			lbShowId=true
 		elif [[ "$1" == "--now" ]];then #deprecated
 #			lbNow=true
 			SECFUNCechoErrA "'$1' has deprecated, use 'SECFUNCdtFmt' instead"
@@ -1186,7 +1189,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	#if $lbCheckOrInit && ( $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow );then
 	if $lbCheckOrInit;then
 #		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbNow;then
-		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbGetPrettyFull;then
+		if $lbInit || $lbGet || $lbGetSec || $lbGetPretty || $lbGetPrettyFull || $lbShowId;then
 			SECFUNCechoErrA "--checkorinit must be used without other options"
 			SECFUNCdelay --help |grep "\-\-checkorinit"
 			_SECFUNCcriticalForceExit
@@ -1204,6 +1207,10 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	function SECFUNCdelay_get(){
 		local lfNow="`SECFUNCdtFmt`"
 		local lfDelayToOutput="`SECFUNCbcPrettyCalc --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
+		local lstrShowId=""
+		if $lbShowId;then
+			lstrShowId="$indexId, "
+		fi
 		if $lbGetSec;then
 			echo "$lfDelayToOutput" |sed -r 's"^([[:digit:]]*)[.][[:digit:]]*$"\1"' #seconds only
 		elif $lbGetPretty;then
@@ -1213,9 +1220,9 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelay"
 			#echo "lfDelayToOutput='$lfDelayToOutput'" >>/dev/stderr
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelayToOutput"
-			SECFUNCdtFmt --delay --nozero --pretty "$lfDelayToOutput"
+			echo -n "$lstrShowId";SECFUNCdtFmt --delay --nozero --pretty "$lfDelayToOutput"
 		elif $lbGetPrettyFull;then
-			SECFUNCdtFmt --delay --pretty "$lfDelayToOutput"
+			echo -n "$lstrShowId";SECFUNCdtFmt --delay --pretty "$lfDelayToOutput"
 		else
 			echo "$lfDelayToOutput"
 		fi
