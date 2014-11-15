@@ -27,6 +27,7 @@ bCore=false
 bBase=false
 bMisc=false
 bVars=false
+bExtras=false
 bRunLogForce=false
 bRunLogDisable=false
 bMaintenanceDaemon=true
@@ -63,19 +64,23 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
 		exit
+	elif [[ "$1" == "--help-extras" ]];then #help help for extras lib
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcExtras.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcExtras.sh --help'
+		exit
 	elif [[ "$1" == "--help-summary" ]];then #help summary of functions on all libs
 		eval `secinit`
 		#sedOnlyFunctions="s'^.*/func(.*)[.]sh:function (SECFUNC[[:alnum:]_]*).*'\1:\2'"
 		#"`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func"*".sh" \
 		#sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*#help (.*)'\1\t\2'"
 		sedOnlyFunctions="s'^function (SECFUNC[[:alnum:]_]*).*'\1'"
-		astrLibs=(Fast Core Base Misc Vars)
+		astrLibs=(Fast Core Base Misc Vars Extras)
 		for strLib in "${astrLibs[@]}";do
 			SECFUNCdrawLine --left " $strLib " "~"
 			grep "^function SECFUNC" "`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func$strLib.sh" |sed -r "$sedOnlyFunctions" |sort |column -c `tput cols` |column -t
 		done
 		exit
-	elif [[ "$1" == "--fast" ]];then #help fastest setup (only aliases and arrays are restored), expects parent environment has exported everything necessary already.
+	elif [[ "$1" == "--fast" ]];then #help fastest setup lib (only aliases and arrays are restored), expects parent environment has exported everything necessary already.
 		bFast=true
 	elif [[ "$1" == "--core" ]];then #help load core lib
 		bCore=true
@@ -85,6 +90,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bMisc=true
 	elif [[ "$1" == "--vars" ]];then #help load vars lib, loads misc (default)
 		bVars=true
+	elif [[ "$1" == "--extras" ]];then #help load vars lib, loads extras
+		bExtras=true
 	elif [[ "$1" == "--force" || "$1" == "-f" ]];then #help force reload of libs, probably only useful for this project development
 		bForceReload=true
 	elif [[ "$1" == "--log" ]];then #help stdout and stderr will be copied to $SECstrRunLogFile, while the terminal will remain interactive if it already was.
@@ -118,9 +125,9 @@ if $bFast;then
 	fi
 fi
 
-#if ! $bBase && ! $bMisc && ! $bVars;then
-if ! $bFast && ! $bCore && ! $bBase && ! $bMisc && ! $bVars;then
-	# the one that uses most libs shall be the default
+# sets the default lib
+if ! $bFast && ! $bCore && ! $bBase && ! $bMisc && ! $bVars && ! $bExtras;then
+	# the one that uses most libs shall be the default, least the Extras lib that are not used in the core application, only by extras scripts
 	bVars=true
 fi
 
@@ -172,6 +179,11 @@ elif $bVars;then
 	if ! $bForceReload && [[ "${SECnPidInitLibVars-}" == "$PPID" ]];then bFastExit=true;else
 		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh\";" #it imports funcMisc.sh
 	fi
+elif $bExtras;then
+	if ! $bForceReload && [[ "${SECnPidInitLibExtras-}" == "$PPID" ]];then bFastExit=true;else
+		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcExtras.sh\";" #it imports funcMisc.sh
+		bVars=true #to allow SECFUNCvarInit to work
+	fi
 fi
 
 if $bInteractiveRequired;then #this check must happen before fast exit
@@ -187,7 +199,7 @@ if $bExportFunctions;then
 	echo 'eval "`SECFUNCexportFunctions`";'
 fi
 
-# if functions have been exported before this, if his opens any subshell, exported functions will work (despite aliases and arrays wont)... mmm... may be it is pointless...
+# if functions have been exported before this, in case this opens any subshell, exported functions will work #TODO(despite aliases and arrays wont)... mmm... may be it is pointless?
 if $bVars;then
 	if $bVarChildDB;then
 		echo 'SECFUNCvarInit;'

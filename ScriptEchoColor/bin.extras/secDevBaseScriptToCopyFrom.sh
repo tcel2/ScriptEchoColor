@@ -64,7 +64,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
-#		else #USE THIS ON PRIVATE FUNCTIONS
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
 #			SECFUNCechoErrA "invalid option '$1'"
 #			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
 		fi

@@ -115,7 +115,7 @@ done
 
 fMinDelay="0.1" #0.1 just for safety
 if    ! SECFUNCisNumber --notnegative "$fMonitorDelay" \
-   ||   SECFUNCbcPrettyCalc --cmpquiet "$fMonitorDelay<$fMinDelay";
+   ||   SECFUNCbcPrettyCalcA --cmpquiet "$fMonitorDelay<$fMinDelay";
 then
 	SECFUNCechoErrA "invalid fMonitorDelay='$fMonitorDelay'"
 	fMonitorDelay="$fMinDelay"

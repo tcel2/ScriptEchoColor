@@ -28,6 +28,7 @@
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh") #no need for the array to be previously set empty
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh";
+###############################################################################
 
 # FUNCTIONS
 
@@ -367,28 +368,28 @@ fi
 
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
 	SECFUNCdbgFuncInA;
-	local lbColorizeEcho=false
 	local lbSort=false
 	local lstrScriptFile="$0"
+	local lstrColorizeEcho=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
 			SECFUNCdbgFuncOutA;return
-		elif [[ "${1-}" == "--colorize" || "${1-}" == "-c" ]];then #SECFUNCshowHelp_help helps to colorize specific text
+		elif [[ "${1-}" == "--colorize" || "${1-}" == "-c" ]];then #SECFUNCshowHelp_help <lstrColorizeEcho> helps to colorize specific text
 			shift
 			lstrColorizeEcho="${1-}"
-		
-			lbColorizeEcho=true
 		elif [[ "${1-}" == "--sort" ]];then #SECFUNCshowHelp_help sort the help options
 			lbSort=true
 		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options (is default now)
 			lbSort=false
-		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help set the script file to gather help data
+		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help <lstrScriptFile> set the script file to gather help data from
 			shift
 			lstrScriptFile="${1-}"
 		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
 			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
 			SECFUNCdbgFuncOutA;return
+		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help [lstrScriptFile] <lbSort> to show self tests only...
+			:
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCdbgFuncOutA;return 1
@@ -398,13 +399,51 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	
 	# Colors: light blue=94, light yellow=93, light green=92, light cyan=96, light red=91
 	local le=$(printf '\033') # Escape char to provide colors on sed on terminal
-	local lsedColorizeOptionals='s,[[]([^]]*)[]],'$le'[0m'$le'[96m[\1]'$le'[0m,g' #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
-	local lsedColorizeRequireds='s,[<]([^>]*)[>],'$le'[0m'$le'[91m<\1>'$le'[0m,g'
-	local lsedColorizeTheOption='s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),'$le'[0m'$le'[92m\1\2\3'$le'[0m,g'
+	local lsedMatchRequireds='([<])([^>]*)([>])'
+	local lsedMatchOptionals='([[])([^]]*)([]])'
+	local lsedColorizeOptionals="s,$lsedMatchOptionals,$le[0m$le[96m[\2]$le[0m,g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeRequireds="s,$lsedMatchRequireds,$le[0m$le[91m<\2>$le[0m,g"
+	local lsedColorizeTheOption="s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),$le[0m$le[92m\1\2\3$le[0m,g"
 	local lsedTranslateEscn='s,\\n,\n,g'
 	local lsedTranslateEsct='s,\\t,\t,g'
-	if $lbColorizeEcho;then
+
+	function _SECFUNCshowHelp_SECFUNCmatch(){
+		#read lstrLine
+		IFS= read lstrLine #IFS= required to prevent skipping /t
+		#IFS=$'\n' read lstrLine
+		
+		local lstrMatch="$1"
+		local lstrVarId="`echo "$lstrLine" |sed -r "s,.*$lstrMatch.*,\2,"`"
+		local lbShowValue=true
+		if [[ "$lstrVarId" == "FUNCNAME" ]];then
+			lbShowValue=false
+		fi
+		if ${!lstrVarId+false};then #if variable, stored into lstrVarId, is NOT set (if it is set the result is empty that evaluates to true)
+			lbShowValue=false
+		fi
+		#if ! ${!lstrVarId+false};then
+		if $lbShowValue;then
+			echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='$le[5m${!lstrVarId}$le[25m'\3,"
+		else
+			echo "$lstrLine"
+		fi
+	}
+	function _SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues(){
+		local lstrLineMain;
+		#while	read lstrLineMain;do
+		while	IFS= read lstrLineMain;do #IFS= required to prevent skipping /t
+		#while	IFS=$'\n' read lstrLineMain;do
+			#echo "lstrLine='$lstrLine'" >>/dev/stderr
+			echo "$lstrLineMain" \
+				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchOptionals" \
+				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchRequireds" 
+		done
+	}
+	
+	######################### a text line passed to --colorize
+	if [[ -n "${lstrColorizeEcho}" ]];then
 		echo "$lstrColorizeEcho" \
+			|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
 			|sed -r "$lsedColorizeOptionals" \
 			|sed -r "$lsedColorizeRequireds" \
 			|sed -r "$lsedColorizeTheOption" \
@@ -445,12 +484,22 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		
-		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m"
+		local lstrRegexFuncMatch="^[[:blank:]]*function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#help"
+		local lstrFileNameWithMatch=""
+		for lstrFile in "${lastrFile[@]}";do
+			if grep -q "$lstrRegexFuncMatch" "$lstrFile";then
+				lstrFileNameWithMatch=" at `basename "$lstrFile"`"
+				break;
+			fi
+		done
 		
-		# for function description
-		local lstrFuncDesc=`grep -h "^[[:blank:]]*function ${lstrFunctionNameToken}[[:blank:]]*().*{.*#help" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`
+		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}"
+		
+		######################### function description
+		local lstrFuncDesc=`grep -h "$lstrRegexFuncMatch" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`
 		if [[ -n "$lstrFuncDesc" ]];then
 			echo -e "\t$lstrFuncDesc" \
+				|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
 				|sed -r "$lsedColorizeOptionals" \
 				|sed -r "$lsedColorizeRequireds" \
 				|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
@@ -462,7 +511,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		echo "Help options for `basename "$lstrScriptFile"`:"
 	fi
 	
-	# SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
+	######################### SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
 	cmdSort="cat" #dummy to not break code...
 	if $lbSort;then
 		cmdSort="sort"
@@ -486,6 +535,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveHelpToken" \
+		|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
 		|sed -r "$lsedColorizeOptionals" \
 		|sed -r "$lsedColorizeRequireds" \
 		|sed -r "$lsedRemoveComparedVariable" \
@@ -1450,6 +1500,7 @@ export SECbRunLogPidTree
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 
+###############################################################################
 # LAST THINGS CODE
 if [[ "$0" == */funcCore.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do

@@ -26,6 +26,7 @@
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh") #no need for the array to be previously set empty
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";
+###############################################################################
 
 # MAIN CODE
 
@@ -640,7 +641,7 @@ function SECFUNCvarWaitValue() { #help [OPTIONS] <var> <value> [delay]: wait unt
 		fi
 	done
 }
-function SECFUNCvarWaitRegister() { #help <var> [delay=1]: wait var be stored. Loop check delay can be float. Also get the var.
+function SECFUNCvarWaitRegister() { #help <var> [l_delay]: wait var be stored. Loop check delay can be float. Also get the var.
 	local l_delay=${2-}
 	if [[ -z "$l_delay" ]]; then
 		l_delay=1
@@ -1256,6 +1257,7 @@ function SECFUNCvarUnitTest() { #help
 	SECFUNCvarShow l_values
 }
 
+###############################################################################
 # LAST THINGS CODE
 if [[ "$0" == */funcVars.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do

@@ -26,6 +26,7 @@
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh") #no need for the array to be previously set empty
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh";
+###############################################################################
 
 # MAIN CODE
 
@@ -44,7 +45,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	local lbListLocksWithPids=false
 	local lbPidOfLockFile=false
 	local lstrLockFile=""
-	local lfSleepDelay="`SECFUNCbcPrettyCalc --scale 3 "$SECnLockRetryDelay/1000.0"`"
+	local lfSleepDelay="`SECFUNCbcPrettyCalcA --scale 3 "$SECnLockRetryDelay/1000.0"`"
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -145,7 +146,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 			SECFUNCdbgFuncOutA;return 0;
 		fi
 		
-		if SECFUNCbcPrettyCalc --cmpquiet "$lfSleepDelay<0.001";then
+		if SECFUNCbcPrettyCalcA --cmpquiet "$lfSleepDelay<0.001";then
 			SECFUNCechoBugtrackA "SECnLockRetryDelay='$SECnLockRetryDelay' but lfSleepDelay='$lfSleepDelay'"
 			#lfSleepDelay="0.001"
 			lfSleepDelay="0.1" #seems something went wrong so use default
@@ -198,10 +199,10 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			lbQuiet=true
 		elif [[ "$1" == "--notquiet" ]];then #SECFUNCuniqueLock_help allow output to /dev/stdout
 			lbQuiet=false
-		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <id> set the lock id, if not set, the 'id' defaults to `basename $0`
+		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <lstrId> set the lock id, if not set, the 'id' defaults to `basename $0`
 			shift
 			lstrId="$1"
-		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <pid> force pid to be related to the lock, mainly to acquire (default) and --release the lock
+		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <l_pid> force pid to be related to the lock, mainly to acquire (default) and --release the lock
 			shift
 			l_pid=$1
 			#if ! ps -p $l_pid >/dev/null 2>&1;then
@@ -621,6 +622,7 @@ function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a fil
 #	exit $nStatus
 #}
 
+###############################################################################
 # LAST THINGS CODE
 if [[ "$0" == */funcMisc.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do

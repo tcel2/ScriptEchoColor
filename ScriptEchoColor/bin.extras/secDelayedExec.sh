@@ -24,7 +24,7 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
-eval `secinit --nochild`
+eval `secinit --nochild --extras`
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >>/dev/stderr
 echo " \$@='$@'" >>/dev/stderr
@@ -186,8 +186,10 @@ if $bCheckPointDaemon;then
 			if bash -c "$strCustomCommand";then
 				if $bCheckPointDaemonHold;then
 					echoc --say "run?"
+					strTitle="$SECstrScriptSelfName[$$], hold waiting instances."
 					while true;do
-						if zenity --question --title "$SECstrScriptSelfName" --text "allow waiting instances to be run?";then
+						SECFUNCCwindowOnTop "$strTitle"
+						if zenity --question --title "$strTitle" --text "allow waiting instances to be run?";then
 							break;
 						fi
 					done
@@ -353,7 +355,9 @@ if $bCheckIfAlreadyRunning;then
 				fi
 			fi
 		else
-			if zenity --question --title "$SECstrScriptSelfName" --text "$strFullSelfCmd\n\nnPidSelf=$$; kill the nPidOther='$nPidOther' that is already running?";then
+			strTitle="$SECstrScriptSelfName[$$], multiple instances running."
+			SECFUNCCwindowOnTop "$strTitle"
+			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$; kill the nPidOther='$nPidOther' that is already running?";then
 				bKillOther=true
 			fi
 		fi

@@ -28,6 +28,7 @@
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcBase.sh") #no need for the array to be previously set empty
 source "$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh";
+###############################################################################
 
 # MAIN CODE
 
@@ -180,11 +181,11 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 	if $lbDelayMode;then
 		local lnOneDayInSeconds="$((3600*24))"
 		#((lfTime+=$SECnFixDate))
-		local lnDays="`SECFUNCbcPrettyCalc --trunc --scale 0 "$lfTime/$lnOneDayInSeconds"`"
-		lfTime="`SECFUNCbcPrettyCalc --scale 9 "$lfTime+$SECnFixDate"`"
+		local lnDays="`SECFUNCbcPrettyCalcA --trunc --scale 0 "$lfTime/$lnOneDayInSeconds"`"
+		lfTime="`SECFUNCbcPrettyCalcA --scale 9 "$lfTime+$SECnFixDate"`"
 		
-		#local lstrDays="(`SECFUNCbcPrettyCalc --scale 9 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"` days) "
-#		local lnDays="`SECFUNCbcPrettyCalc --scale 0 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"`"
+		#local lstrDays="(`SECFUNCbcPrettyCalcA --scale 9 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"` days) "
+#		local lnDays="`SECFUNCbcPrettyCalcA --scale 0 "($lfTime-$SECnFixDate)/$lnOneDayInSeconds"`"
 	fi
 	local lnTimeSeconds="${lfTime%.*}" #removed nanos
 	local lnTimeNano="${lfTime#*.}" #only nanos
@@ -245,7 +246,7 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 			#SECFUNCdtFmt_set_lstrFormat "" "" "" "."
 			lstrFormat="$lstrFormatSimplest"
 			if $lbDelayMode;then
-				lfTime="`SECFUNCbcPrettyCalc --scale 9 "$lfTime-$SECnFixDate"`" #undo the fix to show properly
+				lfTime="`SECFUNCbcPrettyCalcA --scale 9 "$lfTime-$SECnFixDate"`" #undo the fix to show properly
 			fi
 		fi
 	fi
@@ -298,8 +299,7 @@ function SECFUNCdtTimeToFileNameNow() { #
 	_SECFUNCcriticalForceExit 
 }
 
-alias SECFUNCprcA="SECFUNCprc --calledWithAlias --caller \"\${FUNCNAME-}\" --callerOfCallerFunc \"\${SEClstrFuncCaller-}\""
-function SECFUNCprc() { #help use as `SECFUNCprcA <otherFunction> [params]`, "prevent recursive call" (prc) over 'otherFunction'; requires a variable 'SEClstrFuncCaller' to be set as being the caller of the function that is calling this one\nWARNING this will fail if called from a subfunction of a function...
+function SECFUNCprc() { #help use (the alias) as `SECFUNCprcA <otherFunction> [params]`, "prevent recursive call" (prc) over 'otherFunction'; requires a variable 'SEClstrFuncCaller' to be set as being the caller of the function that is calling this one\nWARNING this will fail if called from a subfunction of a function...
 	local lstrCaller=""
 	local lstrFuncCallerOfCaller=""
 	local lbCalledWithAlias=false
@@ -807,7 +807,7 @@ function SECFUNCexec() { #help
   SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$strExec"
   
 	if $bShowElapsed;then
-		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalc "$end-$ini"`s"
+		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
 	fi
 	
   return $lnReturnValue
@@ -838,15 +838,19 @@ function SECFUNCppidListToGrep() { #help
   echo "$grepMatch$ppidList "
 }
 
-function SECFUNCbcPrettyCalc() { #help 
+function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	local bCmpMode=false
 	local bCmpQuiet=false
 	local lnScale=2
 	local lbRound=true
+	local lstrCaller=""
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return 0
+		elif [[ "$1" == "--caller" ]];then #SECFUNCsingleLetterOptions_help is the name of the function calling this one
+			shift
+			lstrCaller="${1-}"
 		elif [[ "$1" == "--cmp" ]];then #SECFUNCbcPrettyCalc_help output comparison result as "true" or "false"
 			bCmpMode=true
 		elif [[ "$1" == "--cmpquiet" ]];then #SECFUNCbcPrettyCalc_help return comparison as execution value for $? where 0=true 1=false
@@ -858,22 +862,32 @@ function SECFUNCbcPrettyCalc() { #help
 		elif [[ "$1" == "--trunc" ]];then #SECFUNCbcPrettyCalc_help default is to round the decimal value
 			lbRound=false
 		else
-			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCechoErrA "lstrCaller='$lstrCaller' invalid option '$1'"
 			return 1
 		fi
 		shift
 	done
 	local lstrOutput="$1"
+	local lstrOutputInitial="$lstrOutput"
 	
 	if $lbRound;then
+		# NOTICE: bc does not exit with error on syntax error, but an empty output means there is error.
 		lstrOutput="`bc <<< "scale=$((lnScale+1));$lstrOutput"`"
+		if [[ -z "$lstrOutput" ]];then
+		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(1) lstrOutputInitial='$lstrOutputInitial'"
+		  return 2 
+		fi
 		
 		local lstrSignal="+"
 		if [[ "${lstrOutput:0:1}" == "-" ]];then
 			lstrSignal="-"
 		fi
-		lstrOutput=`bc <<< "scale=${lnScale};\
-			((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`
+		lstrOutput="`bc <<< "scale=${lnScale};\
+			((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`"
+		if [[ -z "$lstrOutput" ]];then
+		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(2) lstrOutputInitial='$lstrOutputInitial'"
+		  return 2 
+		fi
 			
 #		local lstrLcNumericBkp="$LC_NUMERIC"
 #		export LC_NUMERIC="en_US.UTF-8" #force "." as decimal separator to make printf work...
@@ -888,8 +902,12 @@ function SECFUNCbcPrettyCalc() { #help
 		lstrZeroDotZeroes="0.`eval "printf '0%.0s' {1..$lnScale}"`"
 	fi
 	
-	#TODO: what is this comment??? -> if delay is less than 1s prints leading "0" like "0.123" instead of ".123"
-	local lstrOutput=`bc <<< "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`
+	# if it is less than 1.0 prints leading "0" like "0.123" instead of ".123"
+	lstrOutput="`bc <<< "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`"
+	if [[ -z "$lstrOutput" ]];then
+	  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at adding left zero lstrOutputInitial='$lstrOutputInitial'"
+	  return 2 
+	fi
 	
 	
 	if $bCmpMode;then
@@ -906,8 +924,8 @@ function SECFUNCbcPrettyCalc() { #help
 				echo -n "false"
 			fi
 		else
-		  SECFUNCechoErrA "invalid result for comparison lstrOutput: '$lstrOutput'"
-		  return 2
+		  SECFUNCechoErrA "lstrCaller='$lstrCaller' invalid result for comparison lstrOutput='$lstrOutput'"
+		  return 2 
 		fi
 	else
 		echo -n "$lstrOutput"
@@ -1148,6 +1166,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	local l_b1stIsTrueOnCheckOrInit=false
 	local lbGetPrettyFull=false
 	local lbShowId=false
+	local lnCheckDelayAt=0
 	#TODO create an automatic init option that works with ex --getpretty, so a function can be called by a loop and still retain control over its initialization inside of it.
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
@@ -1155,14 +1174,14 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			return
 		elif [[ "$1" == "--1stistrue" ]];then #SECFUNCdelay_help to use with --checkorinit that makes 1st run return true
 			l_b1stIsTrueOnCheckOrInit=true
-		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <delayLimit> will check if delay (in seconds, can be float) is above or equal specified at delayLimit;\n\t\twill then return true and re-init the delay variable;\n\t\totherwise return false
+		elif [[ "$1" == "--checkorinit" ]];then #SECFUNCdelay_help <lnCheckDelayAt> will check if delay (in seconds, can be float) is above or equal specified at lnCheckDelayAt;\n\t\twill then return true and re-init the delay variable;\n\t\totherwise return false
 			shift
-			local nCheckDelayAt=${1-}
+			lnCheckDelayAt=${1-}
 			
 			lbCheckOrInit=true
-		elif [[ "$1" == "--checkorinit1" ]];then #SECFUNCdelay_help <delayLimit> like --1stistrue  --checkorinit 
+		elif [[ "$1" == "--checkorinit1" ]];then #SECFUNCdelay_help <lnCheckDelayAt> like --1stistrue  --checkorinit 
 			shift
-			local nCheckDelayAt=${1-}
+			lnCheckDelayAt=${1-}
 			
 			lbCheckOrInit=true
 			l_b1stIsTrueOnCheckOrInit=true
@@ -1216,7 +1235,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	
 	function SECFUNCdelay_get(){
 		local lfNow="`SECFUNCdtFmt`"
-		local lfDelayToOutput="`SECFUNCbcPrettyCalc --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
+		local lfDelayToOutput="`SECFUNCbcPrettyCalcA --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
 		local lstrShowId=""
 		if $lbShowId;then
 			lstrShowId="$indexId, "
@@ -1226,7 +1245,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		elif $lbGetPretty;then
 			#local lfDelay="`SECFUNCdelay $indexId --get`"
 			#SECFUNCtimePretty "$lfDelay"
-			#SECFUNCtimePretty "`SECFUNCbcPrettyCalc "$lfDelay+$SECnFixDate"`"
+			#SECFUNCtimePretty "`SECFUNCbcPrettyCalcA "$lfDelay+$SECnFixDate"`"
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelay"
 			#echo "lfDelayToOutput='$lfDelayToOutput'" >>/dev/stderr
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelayToOutput"
@@ -1245,7 +1264,9 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 #	elif $lbNow;then
 #		SECFUNCdtFmt
   elif $lbCheckOrInit;then
-		if [[ -z "$nCheckDelayAt" ]] || [[ -n `echo "$nCheckDelayAt" |tr -d '[:digit:].'` ]];then
+#		if [[ -z "$lnCheckDelayAt" ]] || [[ -n "`echo "$lnCheckDelayAt" |tr -d '[:digit:].'`" ]];then
+#		if [[ -n "`echo "$lnCheckDelayAt" |tr -d '[:digit:].'`" ]];then
+  	if ! SECFUNCisNumber -n "$lnCheckDelayAt";then
 			SECFUNCechoErrA "required valid <delayLimit>, can be float"
 			SECFUNCdelay --help |grep "\-\-checkorinit"
 			_SECFUNCcriticalForceExit
@@ -1259,7 +1280,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		fi
 		
 		local delay=`SECFUNCdelay_get`
-		if SECFUNCbcPrettyCalc --cmpquiet "$delay>=$nCheckDelayAt";then
+		if SECFUNCbcPrettyCalcA --cmpquiet "$delay>=$lnCheckDelayAt";then
 			SECFUNCdelay_init
 			return 0
 		else
@@ -1270,6 +1291,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	fi
 }
 
+###############################################################################
 # LAST THINGS CODE
 if [[ `basename "$0"` == "funcBase.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do

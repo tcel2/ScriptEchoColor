@@ -205,7 +205,7 @@ while true; do
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 		
-		#if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
+		#if SECFUNCbcPrettyCalcA --cmpquiet "`SECFUNCdelay checkIfRunning` > 10";then
 		if SECFUNCdelay checkIfRunning --checkorinit 10;then
 			echoc --info "check if chromium is still running"
 			if ! xdotool getwindowname $chromiumWindowId; then # 2>&1 >/dev/null
@@ -336,7 +336,7 @@ while true; do
 			SECFUNCdelay --init
 		else
 			# wait 60s before increasing the delay
-			if SECFUNCbcPrettyCalc --cmpquiet "`SECFUNCdelay` < 60";then
+			if SECFUNCbcPrettyCalcA --cmpquiet "`SECFUNCdelay` < 60";then
 				if ! sleep $delayRaiseTabOutliner;then exit 1;fi
 			else
 				FUNCwait #echoc -w -t 5

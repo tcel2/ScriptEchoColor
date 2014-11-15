@@ -39,7 +39,12 @@ function SECFUNCfastInitCheck() {
 }
 SECFUNCfastInitCheck
 
-# ALIASES
+##############################################################################
+#################################### ALIASES #################################
+##############################################################################
+### all aliases from all libs should be defined here, so this fast lib     ###
+### will grant all of them are working properly!                           ###
+##############################################################################
 
 #alias SECFUNCsingleLetterOptionsA='SECFUNCsingleLetterOptions --caller "${FUNCNAME-}" '
 # if echo "$1" |grep -q "[^-]?\-[[:alpha:]][[:alpha:]]";then
@@ -73,8 +78,12 @@ alias SECFUNCdbgFuncInA='SECFUNCechoDbgA --funcin -- "$@" '
 alias SECFUNCdbgFuncOutA='SECFUNCechoDbgA --funcout '
 
 alias SECFUNCexecA="SECFUNCexec --callerfunc \"\${FUNCNAME-}\" --caller \"$_SECmsgCallerPrefix\" "
+
+#TODO DO NOT USE _SECmsgCallerPrefix on these as they require more performance?
 alias SECFUNCvalidateIdA="SECFUNCvalidateId --caller \"\${FUNCNAME-}\" "
 alias SECFUNCfixIdA="SECFUNCfixId --caller \"\${FUNCNAME-}\" "
+alias SECFUNCprcA="SECFUNCprc --calledWithAlias --caller \"\${FUNCNAME-}\" --callerOfCallerFunc \"\${SEClstrFuncCaller-}\""
+alias SECFUNCbcPrettyCalcA="SECFUNCbcPrettyCalc --caller \"\${FUNCNAME-}\" "
 
 alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
@@ -125,6 +134,7 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 
 SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
 
+###############################################################################
 # LAST THINGS CODE
 if [[ "$0" == */funcFast.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do

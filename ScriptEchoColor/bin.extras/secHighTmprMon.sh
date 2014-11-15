@@ -329,7 +329,7 @@ function FUNClimitCpu() {
 					SECFUNCvarSet fSigRunDelay=0.0
 					bForceStop=true
 				else
-					SECFUNCvarSet fSigRunDelay=`SECFUNCbcPrettyCalc "$fStepMin+$fStepMin"`
+					SECFUNCvarSet fSigRunDelay="`SECFUNCbcPrettyCalcA "$fStepMin+$fStepMin"`"
 					bJustLimit=true
 				fi
 			elif $bDoLowFpsLimiting && ((nTmprCurrent>=nLowFpsLimitingThreshold));then

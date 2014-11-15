@@ -191,6 +191,6 @@ if $bDown;then
 	strOperation="-"
 fi
 
-fNewGamma="`SECFUNCbcPrettyCalc "${fCurrentGamma}${strOperation}${fStep}"`"
+fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}${strOperation}${fStep}"`"
 xgamma -gamma "$fNewGamma"
 
