@@ -839,6 +839,7 @@ function SECFUNCppidListToGrep() { #help
 }
 
 function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
+	#TODO try to convert to wcalc?
 	local bCmpMode=false
 	local bCmpQuiet=false
 	local lnScale=2
@@ -853,7 +854,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 			lstrCaller="${1-}"
 		elif [[ "$1" == "--cmp" ]];then #SECFUNCbcPrettyCalc_help output comparison result as "true" or "false"
 			bCmpMode=true
-		elif [[ "$1" == "--cmpquiet" ]];then #SECFUNCbcPrettyCalc_help return comparison as execution value for $? where 0=true 1=false
+		elif [[ "$1" == "--cmpquiet" ]];then #SECFUNCbcPrettyCalc_help return comparison as execution value for $? where 0=true 3=false (if it returns 1, means some error happened...)
 			bCmpMode=true
 			bCmpQuiet=true
 		elif [[ "$1" == "--scale" ]];then #SECFUNCbcPrettyCalc_help scale is the decimal places shown to the right of the dot
@@ -875,7 +876,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 		lstrOutput="`bc <<< "scale=$((lnScale+1));$lstrOutput"`"
 		if [[ -z "$lstrOutput" ]];then
 		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(1) lstrOutputInitial='$lstrOutputInitial'"
-		  return 2 
+		  return 1
 		fi
 		
 		local lstrSignal="+"
@@ -886,7 +887,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 			((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`"
 		if [[ -z "$lstrOutput" ]];then
 		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(2) lstrOutputInitial='$lstrOutputInitial'"
-		  return 2 
+		  return 1
 		fi
 			
 #		local lstrLcNumericBkp="$LC_NUMERIC"
@@ -906,7 +907,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	lstrOutput="`bc <<< "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`"
 	if [[ -z "$lstrOutput" ]];then
 	  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at adding left zero lstrOutputInitial='$lstrOutputInitial'"
-	  return 2 
+	  return 1
 	fi
 	
 	
@@ -919,18 +920,19 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 			fi
 		elif [[ "${lstrOutput:0:1}" == "0" ]];then
 			if $bCmpQuiet;then
-				return 1
+				return 3
 			else
 				echo -n "false"
 			fi
 		else
 		  SECFUNCechoErrA "lstrCaller='$lstrCaller' invalid result for comparison lstrOutput='$lstrOutput'"
-		  return 2 
+		  return 1
 		fi
 	else
 		echo -n "$lstrOutput"
 	fi
 	
+	return 0
 }
 
 function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]

@@ -42,9 +42,19 @@ echoc "@{lw}Environment variables used as these types below, will begin with ->
 echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
 echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'
 
- @wCoding Tips: 
+ @{wu}Coding Tips:@{-u}
   @wBecause of 'trap ERR', commands that can fail may simply end with '&&:' ex.: @gln -s a b&&:
-  @wBecause of 'set -u', if a variable is not set, do set it up. Or use this: @g\${variable-}" #TODO <-- fix scripteechocolor about that
+  @wBecause of 'set -u', if a variable is not set, do set it up. Or use this: @g\${variable-} @{rn}#TODO <-- the missing example here requires a fix at scripteechocolor@{-n}
+ 
+ @{wu}Exit/Return values shall not be these:@{-u}
+	@y1      @wCatchall for general errors (this is actually ok for unspecified errors tho...)
+	@r2      @wMisuse of shell builtins (according to Bash documentation)
+	@r126    @wCommand invoked cannot execute
+	@r127    @wcommand not found
+	@r128+n  @wFatal error signal n
+	@r130    @wScript terminated by Ctrl-C
+	@r255*   @wExit status out of range
+  "
 SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
 echo
 
