@@ -1,3 +1,9 @@
+Date:   2014-11-15 18:32:16 -0200
+    SECFUNCbcPrettyCalcA: new alias helps on showing caller for syntax errors;
+    secinit --extras: added lib at main package to use only with extras pacakge and user scripts;
+    SECFUNCCwindowOnTop: new;
+    SECFUNCbcPrettyCalc --caller: better error messages for bc syntax errors;
+    SECFUNCshowHelp: now, default values for variables that can be set by optional parameters are shown blinking on the help that is output;
 Date:   2014-11-14 20:06:52 -0200
     SECFUNCexec --detachedlist
 Date:   2014-11-14 18:26:05 -0200
