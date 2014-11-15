@@ -1,3 +1,5 @@
+Date:   2014-11-15 18:52:16 -0200
+    fixing some IFS usages...
 Date:   2014-11-15 18:32:16 -0200
     SECFUNCbcPrettyCalcA: new alias helps on showing caller for syntax errors;
     secinit --extras: added lib at main package to use only with extras pacakge and user scripts;
