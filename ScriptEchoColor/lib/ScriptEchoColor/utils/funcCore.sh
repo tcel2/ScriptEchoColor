@@ -75,7 +75,8 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh") #no need for the array to be previously set empty
 
-SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
+#SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
+IFS=$'\n' SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`) #fix duplicity on array
 
 # INITIALIZATIONS
 
@@ -474,7 +475,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		#fix duplicity on array
-		SECstrIFSbkp="$IFS";IFS=$'\n';lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`);IFS="$SECstrIFSbkp"
+		#SECstrIFSbkp="$IFS";IFS=$'\n';lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`);IFS="$SECstrIFSbkp"
+		IFS=$'\n' lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`)
 	fi
 	
 	local lgrepNoFunctions="^[[:blank:]]*function .*"
@@ -493,7 +495,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			fi
 		done
 		
-		echo -e "  \E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}"
+		echo -e "\t\E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}"
 		
 		######################### function description
 		local lstrFuncDesc=`grep -h "$lstrRegexFuncMatch" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`

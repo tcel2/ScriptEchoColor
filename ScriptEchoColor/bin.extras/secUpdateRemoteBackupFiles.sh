@@ -553,7 +553,7 @@ elif $bRecreateHistory;then
 	fi
 elif $bLsMissHist; then
 	bkpIFS="$IFS"; #internal field separator: default is: " \t\n", hexa: 0x20,0x9,0xA, octa: 040,011,012
-	IFS=$'\n'; #TODO confirm if: this way, spaces on filenames will be ignored when creating the array
+	IFS=$'\n'; #this way, spaces on filenames will be ignored when creating the array
 	
 	echoc --info "Add files history: '$addFileHist'"
 	aAllFiles=(`cat "$addFileHist"`);
