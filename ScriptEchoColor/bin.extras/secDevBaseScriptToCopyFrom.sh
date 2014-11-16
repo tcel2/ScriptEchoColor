@@ -48,12 +48,13 @@ echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @w
  
  @{wu}Exit/Return values shall not be these:@{-u}
 	@y1      @wCatchall for general errors (this is actually ok for unspecified errors tho...)
-	@r2      @wMisuse of shell builtins (according to Bash documentation)
+	@y2      @wMisuse of shell builtins (according to Bash documentation) (but seems to be only returned by bash builtins...)
 	@r126    @wCommand invoked cannot execute
 	@r127    @wcommand not found
 	@r128+n  @wFatal error signal n
 	@r130    @wScript terminated by Ctrl-C
 	@r255*   @wExit status out of range
+  @wSo basically you can safely go from @g0 @wto @g125@w!
   "
 SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
 echo
