@@ -631,7 +631,7 @@ elif $bAddFilesMode; then
 		strAbsFileTarget="${pathBackupsToRemote}/$strRelativeFile"
 		mkdir -vp "`dirname "$strAbsFileTarget"`"
 		cp -vp "$strFile" "$strAbsFileTarget"
-		$0 --forcemigrationtounisonmode
+		$0 --skipnautilus --forcemigrationtounisonmode
 		
 		# history of added files
 		if ! grep -q "$strFile" "$addFileHist"; then
