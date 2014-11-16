@@ -33,6 +33,7 @@ aWindowListToSkip=(
 	"^unity-panel$"
 	".*VMware Player.*"
 	"^Yakuake$"
+	"^Conky .*"
 )
 
 #TODO initially read all windows status, and also detect new windows and read their status too, if not too cpu encumbering...

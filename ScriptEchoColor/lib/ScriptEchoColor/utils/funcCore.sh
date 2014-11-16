@@ -76,7 +76,7 @@ if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";f
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh") #no need for the array to be previously set empty
 
 #SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
-IFS=$'\n' SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`) #fix duplicity on array
+IFS=$'\n' declare -a SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`) #fix duplicity on array, the declare is required to make IFS work only on this line of code
 
 # INITIALIZATIONS
 
@@ -476,7 +476,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		#fix duplicity on array
 		#SECstrIFSbkp="$IFS";IFS=$'\n';lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`);IFS="$SECstrIFSbkp"
-		IFS=$'\n' lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`)
+		IFS=$'\n' declare -a lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`) #the declare is to force IFS be set only for this line of code
 	fi
 	
 	local lgrepNoFunctions="^[[:blank:]]*function .*"
