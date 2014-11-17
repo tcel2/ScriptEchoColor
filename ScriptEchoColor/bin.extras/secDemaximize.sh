@@ -176,7 +176,7 @@ while true; do
 
 	# SKIP check
 	bContinue=false
-	for checkName in ${aWindowListToSkip[@]};do
+	for checkName in "${aWindowListToSkip[@]}";do
 		#if [[ "$checkName" == "$windowName" ]];then
 		if((`expr match "$windowName" "$checkName"`>0));then
 			bContinue=true

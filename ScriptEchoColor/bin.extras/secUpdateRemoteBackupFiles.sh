@@ -563,7 +563,7 @@ elif $bLsMissHist; then
 	echo
 	echoc --info "Missing Files At\n\t[Real means file is missing at '$HOME']\n\t[RBF means file missing too at '$pathBackupsToRemote']:"
 	echo
-	for fileReal in ${aAllFiles[@]};do
+	for fileReal in "${aAllFiles[@]}";do
 		if [[ "${fileReal:0:${#strSkipGitFilesPrefix}}" == "$strSkipGitFilesPrefix" ]];then
 			continue
 		fi
