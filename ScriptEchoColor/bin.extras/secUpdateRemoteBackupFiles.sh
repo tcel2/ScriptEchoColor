@@ -69,7 +69,7 @@ echo $SECcfgFileName
 
 bAddFilesMode=false
 bRmRBFfilesMode=false
-varset --default --show bAutoSync=false
+varset --default bAutoSync=false
 bDaemon=false
 export bCmpData=false
 bSkipNautilusCheckNow=false
@@ -81,11 +81,11 @@ bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
 bForceMigrationToUnisonMode=false
-varset --default --show bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
-varset --default --show --allowuser bBackgroundWork=false
-varset --default --show bAutoGit=false
-varset --default --show bUseUnison=true
-varset --default --show --allowuser nBackgroundSleep=1
+varset --default bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
+varset --default --allowuser bBackgroundWork=false
+varset --default bAutoGit=false
+varset --default bUseUnison=true
+varset --default --allowuser nBackgroundSleep=1
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
