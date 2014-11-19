@@ -38,6 +38,41 @@ aWindowListToSkip=(
 
 #TODO initially read all windows status, and also detect new windows and read their status too, if not too cpu encumbering...
 
+bReactivateWindow=false
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help this help
+		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
+		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
+		SECFUNCshowHelp
+		exit
+	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) that can be a regexp, separated by blank space
+		shift
+		while [[ -n "$1" ]] && [[ "${1:0:1}" != "-" ]];do
+			aWindowListToSkip+=("$1")
+			shift
+		done
+		varset --show aWindowListToSkip
+	elif [[ "$1" == "--reactivate" ]];then #help re-activates windows. A window may be active, but have no keyboard input focus, this will fix that.
+		bReactivateWindow=true
+	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
+		shift
+		sedVarValue="^([[:alnum:]]*)=(.*)"
+		while((`expr match "$1" "^[[:alnum:]]*="`>0));do
+			secVar=`  echo "$1" |sed -r "s'$sedVarValue'\1'"`
+			secValue=`echo "$1" |sed -r "s'$sedVarValue'\2'"`
+			if ! varset --show $secVar $secValue;then
+				echoc -p "invalid var [$secVar] value [$secValue]"
+				exit 1
+			fi
+			shift
+		done
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
+
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register
 
@@ -46,12 +81,10 @@ nScreenHeight=-1
 nPseudoMaxWidth=-1
 nPseudoMaxHeight=-1
 function FUNCupdateScreenGeometryData(){
-#	eval `xrandr \
-#		|grep '*' \
-#		|sed -r 's"^[[:blank:]]*([[:digit:]]*)x([[:digit:]]*)[[:blank:]]*.*"\
-#			declare -g nScreenWidth=\1;\
-#			declare -g nScreenHeight=\2;"'`
-	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
+#	declare -g nScreenWidth="` xdotool getdisplaygeometry |cut -d' ' -f1`"
+#	declare -g nScreenHeight="`xdotool getdisplaygeometry |cut -d' ' -f2`"
+	#anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
+	anGeom=(`xdotool getdisplaygeometry`)
 	declare -g nScreenWidth="${anGeom[0]}"
 	declare -g nScreenHeight="${anGeom[1]}"
 	nPseudoMaxWidth=$((nScreenWidth-25)) #help width to resize the demaximized window
@@ -85,10 +118,33 @@ function FUNCwindowGeom() { #@@@helper nWindowX nWindowY nWindowWidth nWindowHei
 	local lnWindowId=$1
 	#eval `xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
 #	xwininfo -id $lnWindowId 2>"$strLogFile" |grep -a "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' |tr -d "\n"
-	xwininfo -id $lnWindowId 2>"$strLogFile" \
-		|egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]]*$" \
-		|sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' \
-		|tr -d "\n"
+#	echo "lnWindowId='$lnWindowId'" >>/dev/stderr
+#	xwininfo -id $lnWindowId |grep "upper-left" >>/dev/stderr
+	
+#	xwininfo -id $lnWindowId 2>"$strLogFile" \
+#		|egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]]*$" \
+#		|sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' \
+#		|tr -d "\n"
+	local lstrToEval="`xwininfo -id $lnWindowId`"
+	#echo "lstrToEval='$lstrToEval'" >>/dev/stderr
+	lstrToEval="`echo "$lstrToEval" |egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]-]*$"`"
+#	echo "lstrToEval='$lstrToEval'" >>/dev/stderr
+	lstrToEval="`echo "$lstrToEval" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"'`"
+#	echo "lstrToEval='$lstrToEval'" >>/dev/stderr
+	lstrToEval="`echo "$lstrToEval" |tr -d "\n"`"
+	#echo "lstrToEval='$lstrToEval'" >>/dev/stderr
+	
+	echo "$lstrToEval"
+		
+#		strHexaWindowId="`printf "0x%08x" $windowId`"
+#		#xdotool getwindowgeometry $nWindowId
+#		strPosition="`wmctrl -lG |grep "^$strHexaWindowId "`"
+#		#echo "$strPosition"
+#		strPosition="`echo "$strPosition" |awk '{print $3 "\t" $4}'`"
+#		nX="`echo "$strPosition" |cut -f1`"
+#		nY="`echo "$strPosition" |cut -f2`"
+#		echo "$nX $nY"
+	
 }
 
 function FUNCdebugShowVars() {
@@ -107,38 +163,6 @@ function FUNCisMaximized() {
 }		
 
 ############### MAIN
-
-while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--help" ]];then #help this help
-		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
-		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
-		SECFUNCshowHelp
-		exit
-	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) that can be a regexp, separated by blank space
-		shift
-		while [[ -n "$1" ]] && [[ "${1:0:1}" != "-" ]];do
-			aWindowListToSkip+=("$1")
-			shift
-		done
-		varset --show aWindowListToSkip
-	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
-		shift
-		sedVarValue="^([[:alnum:]]*)=(.*)"
-		while((`expr match "$1" "^[[:alnum:]]*="`>0));do
-			secVar=`  echo "$1" |sed -r "s'$sedVarValue'\1'"`
-			secValue=`echo "$1" |sed -r "s'$sedVarValue'\2'"`
-			if ! varset --show $secVar $secValue;then
-				echoc -p "invalid var [$secVar] value [$secValue]"
-				exit 1
-			fi
-			shift
-		done
-	else
-		echoc -p "invalid option '$1'"
-		exit 1
-	fi
-	shift
-done
 
 function FUNCvalidateAll() {
 	if	! FUNCvalidateNumber nPseudoMaxWidth		||
@@ -159,6 +183,7 @@ strLastSkipped=""
 declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
 SECFUNCdelay RefreshData --init
+SECFUNCdelay bReactivateWindow --init
 while true; do 
 	sleep 0.25;
 	
@@ -170,10 +195,10 @@ while true; do
 	if SECFUNCdelay daemonHold --checkorinit 5;then
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
-
+	
 	if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
 	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then ContAftErrA;fi
-
+	
 	# SKIP check
 	bContinue=false
 	for checkName in "${aWindowListToSkip[@]}";do
@@ -189,7 +214,57 @@ while true; do
 	done
 	if $bContinue;then continue;fi # is NOT an error...
 	
-	# Do it
+	############################### DO IT ###############################
+	strWindowGeom="`FUNCwindowGeom $windowId`"
+	eval "$strWindowGeom"
+
+#	bDesktopIsAtViewport0=false
+#	if wmctrl -d |grep -q " VP: 0,0 ";then
+#		bDesktopIsAtViewport0=true
+#	fi
+	anViewPortPos=(`wmctrl -d |awk '{print $6}' |tr ',' '\t'`)
+	nViewPortPosX=${anViewPortPos[0]}
+	nViewPortPosY=${anViewPortPos[1]}
+	
+	bWindowIsMissplaced=false
+#	if $bDesktopIsAtViewport0;then
+	if((nViewPortPosX==0 && nWindowX<0));then
+		bWindowIsMissplaced=true
+	fi
+	if((nViewPortPosY==0 && nWindowY<0));then
+		bWindowIsMissplaced=true
+	fi
+	
+	if ! $bWindowIsMissplaced;then
+		# window must be at current viewport otherwise skip it
+		if ! ((nWindowX>0 && nWindowY>0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
+			continue
+		fi
+	fi
+	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
+	
+	if $bReactivateWindow;then
+		if SECFUNCdelay bReactivateWindow --checkorinit 3;then
+#			echo "windowId='$windowId'; windowName='$windowName'; nWindowX='$nWindowX'; nWindowY='$nWindowY'; nScreenWidth='$nScreenWidth'; nScreenHeight='$nScreenHeight'" >>/dev/stderr
+#			xwininfo -id $windowId |grep "upper-left" >>/dev/stderr
+#			(xwininfo -id $windowId |grep "upper-left" >>/dev/stderr)
+#			xwininfo -id $windowId |grep "upper-left" >>/dev/stderr
+#	strToEval="`xwininfo -id $windowId 2>"$strLogFile" \
+#		|egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]]*$" \
+#		|sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' \
+#		|tr -d "\n"`"
+#	echo "strToEval='$strToEval'"
+#	eval "$strToEval"
+#			wmctrl -d
+
+#			if((nWindowX>0 && nWindowY>0));then
+#				if((nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
+					xdotool windowactivate $windowId;
+#				fi
+#			fi
+		fi
+	fi
+	
 	bPseudoMaximized=false
 	if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
 		bPseudoMaximized=true
@@ -257,7 +332,7 @@ while true; do
 			nPMGWindowWidth=$nWindowWidth
 			nPMGWindowHeight=$nWindowHeight
 		fi
-		eval `FUNCwindowGeom $windowId`
+		#eval `FUNCwindowGeom $windowId`
 		
 		# backup size and pos if NOT pseudo-maximized
 		#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
@@ -273,6 +348,9 @@ while true; do
 	
 		#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
 			bFixWindowPos=false
+			if $bWindowIsMissplaced;then
+				bFixWindowPos=true
+			fi
 			if(( nWindowY < nYposMinReadPos ));then
 				bFixWindowPos=true
 			fi
