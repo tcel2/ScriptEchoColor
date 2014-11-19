@@ -200,7 +200,10 @@ while true; do
 	fi
 	
 	if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
-	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then ContAftErrA;fi
+	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
+		xdotool windowactivate `xdotool search "^Desktop$"`; #this way desktop shortcut keys work again!
+		ContAftErrA;
+	fi
 	
 	# SKIP check
 	bContinue=false
