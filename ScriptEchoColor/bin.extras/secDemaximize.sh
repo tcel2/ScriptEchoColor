@@ -39,6 +39,7 @@ aWindowListToSkip=(
 #TODO initially read all windows status, and also detect new windows and read their status too, if not too cpu encumbering...
 
 bReactivateWindow=false
+strReactWindNamesRegex=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -52,7 +53,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			shift
 		done
 		varset --show aWindowListToSkip
-	elif [[ "$1" == "--reactivate" ]];then #help re-activates windows. A window may be active, but have no keyboard input focus, this will fix that.
+	elif [[ "$1" == "--reactivate" ]];then #help <strReactWindNamesRegex> re-activates only windows that match this regex ex.: "^windowA.*|^windowB.*". A window may be active, but have no keyboard input focus, this will fix that.
+		shift
+		strReactWindNamesRegex="${1-}"
 		bReactivateWindow=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
@@ -229,39 +232,28 @@ while true; do
 	bWindowIsMissplaced=false
 #	if $bDesktopIsAtViewport0;then
 	if((nViewPortPosX==0 && nWindowX<0));then
+		echo "Missplaced: X0"
 		bWindowIsMissplaced=true
 	fi
 	if((nViewPortPosY==0 && nWindowY<0));then
+		echo "Missplaced: Y0"
 		bWindowIsMissplaced=true
 	fi
 	
 	if ! $bWindowIsMissplaced;then
 		# window must be at current viewport otherwise skip it
-		if ! ((nWindowX>0 && nWindowY>0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
+		if ! ((nWindowX>=0 && nWindowY>=0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
 			continue
 		fi
 	fi
 	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
 	
 	if $bReactivateWindow;then
-		if SECFUNCdelay bReactivateWindow --checkorinit 3;then
-#			echo "windowId='$windowId'; windowName='$windowName'; nWindowX='$nWindowX'; nWindowY='$nWindowY'; nScreenWidth='$nScreenWidth'; nScreenHeight='$nScreenHeight'" >>/dev/stderr
-#			xwininfo -id $windowId |grep "upper-left" >>/dev/stderr
-#			(xwininfo -id $windowId |grep "upper-left" >>/dev/stderr)
-#			xwininfo -id $windowId |grep "upper-left" >>/dev/stderr
-#	strToEval="`xwininfo -id $windowId 2>"$strLogFile" \
-#		|egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]]*$" \
-#		|sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' \
-#		|tr -d "\n"`"
-#	echo "strToEval='$strToEval'"
-#	eval "$strToEval"
-#			wmctrl -d
-
-#			if((nWindowX>0 && nWindowY>0));then
-#				if((nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
-					xdotool windowactivate $windowId;
-#				fi
-#			fi
+		if SECFUNCdelay bReactivateWindow --checkorinit 1.5;then
+			if echo "$windowName" |egrep -q "$strReactWindNamesRegex";then
+				xdotool windowactivate $windowId;
+				echo "Activated: $windowName"
+			fi
 		fi
 	fi
 	
@@ -321,7 +313,7 @@ while true; do
 			
 			echo "Pseudo Maximized: $windowName"
 		fi
-	else
+	else ################## NOT MAXIMIZED ########################
 		#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
 		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
 		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
@@ -351,9 +343,19 @@ while true; do
 			if $bWindowIsMissplaced;then
 				bFixWindowPos=true
 			fi
+
+			if(( nWindowY < 0 ));then
+				bFixWindowPos=true
+			fi
+			if(( nWindowX < 0 ));then
+				bFixWindowPos=true
+			fi
+			
+			# less than the systray top panel
 			if(( nWindowY < nYposMinReadPos ));then
 				bFixWindowPos=true
 			fi
+
 			if(( nWindowX < nScreenWidth ));then
 				if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
 					bFixWindowPos=true
@@ -364,6 +366,7 @@ while true; do
 					bFixWindowPos=true
 				fi
 			fi
+
 			if $bFixWindowPos;then
 				if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
 				echo "Fixing (placement): $windowName"
