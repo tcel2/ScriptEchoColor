@@ -230,23 +230,31 @@ while true; do
 	nViewPortPosY=${anViewPortPos[1]}
 	
 	bWindowIsMissplaced=false
-#	if $bDesktopIsAtViewport0;then
-	if((nViewPortPosX==0 && nWindowX<0));then
-		echo "Missplaced: X0"
-		bWindowIsMissplaced=true
-	fi
-	if((nViewPortPosY==0 && nWindowY<0));then
-		echo "Missplaced: Y0"
-		bWindowIsMissplaced=true
-	fi
+##	if $bDesktopIsAtViewport0;then
+#	if((nViewPortPosX==0 && nWindowX<0));then
+#		echo "Missplaced: X0"
+#		bWindowIsMissplaced=true
+#	fi
+#	if((nViewPortPosY==0 && nWindowY<0));then
+#		echo "Missplaced: Y0"
+#		bWindowIsMissplaced=true
+#	fi
+#	
+#	if ! $bWindowIsMissplaced;then
+#		# window must be at current viewport otherwise skip it
+#		if ! ((nWindowX>=0 && nWindowY>=0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
+#			continue
+#		fi
+#	fi
+#	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
 	
-	if ! $bWindowIsMissplaced;then
-		# window must be at current viewport otherwise skip it
-		if ! ((nWindowX>=0 && nWindowY>=0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
-			continue
-		fi
+	# skip windows outside of current viewport
+	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
+		continue
 	fi
-	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
+	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
+		continue
+	fi
 	
 	if $bReactivateWindow;then
 		if SECFUNCdelay bReactivateWindow --checkorinit 1.5;then
@@ -345,24 +353,29 @@ while true; do
 			fi
 
 			if(( nWindowY < 0 ));then
+				echo "Missplaced: Y<0"
 				bFixWindowPos=true
 			fi
 			if(( nWindowX < 0 ));then
+				echo "Missplaced: X<0"
 				bFixWindowPos=true
 			fi
 			
 			# less than the systray top panel
 			if(( nWindowY < nYposMinReadPos ));then
+				echo "Missplaced: Y<Min"
 				bFixWindowPos=true
 			fi
 
 			if(( nWindowX < nScreenWidth ));then
 				if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
+					echo "Missplaced: X+W beyond Screen"
 					bFixWindowPos=true
 				fi
 			fi
 			if(( nWindowY < nScreenHeight ));then
 				if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
+					echo "Missplaced: Y+H beyond Screen"
 					bFixWindowPos=true
 				fi
 			fi
