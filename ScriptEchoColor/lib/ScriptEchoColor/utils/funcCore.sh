@@ -410,7 +410,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 
 	function _SECFUNCshowHelp_SECFUNCmatch(){
 		#read lstrLine
-		IFS= read lstrLine #IFS= required to prevent skipping /t
+		IFS= read -r lstrLine #IFS= required to prevent skipping \t, and -r required to not interpret "\"
 		#IFS=$'\n' read lstrLine
 		
 		local lstrMatch="$1"
@@ -432,7 +432,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	function _SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues(){
 		local lstrLineMain;
 		#while	read lstrLineMain;do
-		while	IFS= read lstrLineMain;do #IFS= required to prevent skipping /t
+		while	IFS= read -r lstrLineMain;do #IFS= required to prevent skipping /t
 		#while	IFS=$'\n' read lstrLineMain;do
 			#echo "lstrLine='$lstrLine'" >>/dev/stderr
 			echo "$lstrLineMain" \
