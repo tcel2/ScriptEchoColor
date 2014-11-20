@@ -566,7 +566,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 	echo "$lstrOptions"
 }
 
-function SECFUNCexec() { #help 
+function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
 	local bOmitOutput=false
 	local bShowElapsed=false
 	local bWaitKey=false
@@ -590,7 +590,6 @@ function SECFUNCexec() { #help
 	local lbColorize=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
-			SECFUNCshowHelp -c "[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function"
 			SECFUNCshowHelp --nosort ${FUNCNAME}
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one

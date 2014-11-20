@@ -200,6 +200,9 @@ function SECFUNCaddToRcFile() {
 		cd "$SECinstallPath"
 	fi
 	
+	# when developing, this will be helpful
+	export SEC_WARN=true
+	
 	# user custom initial command
 	if $SECDEVbHasCmdTmp;then
 #		eval `secinit --force` # mainly to restore the exported arrays and initialize the log
