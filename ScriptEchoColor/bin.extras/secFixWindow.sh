@@ -201,7 +201,7 @@ while true; do
 	
 	if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
 	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
-		xdotool windowactivate `xdotool search --sync "^Desktop$"` #this way desktop shortcut keys work again!
+		xdotool windowactivate `xdotool search --sync "^Desktop$"`&&: #this way desktop shortcut keys work again!
 #		while ! xdotool windowactivate `xdotool search --sync "^Desktop$"`;do #this way desktop shortcut keys work again!
 #			echo "Err: unable to find 'Desktop'"
 #			sleep 0.5
