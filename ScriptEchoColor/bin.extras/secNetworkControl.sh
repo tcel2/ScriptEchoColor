@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+eval `secinit --extras`
 
 # initializations and functions
 
@@ -60,11 +60,17 @@ done
 
 if $bToggle;then
 	if nmcli nm |tail -n 1 |grep -q connected;then 
+		strText="Internet OFF"
+		SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
+		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
 		nmcli nm enable false;
-		echoc --say --info "internet off"
+		echoc --say --info "$strText"
 	else 
+		strText="Internet ON"
+		SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
+		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
 		nmcli nm enable true;
-		echoc --say --info "internet on"
+		echoc --say --info "$strText"
 	fi
 	exit $?
 fi
