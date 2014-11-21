@@ -71,10 +71,6 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	fi;
 }
 
-# TOP CODE
-if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
-SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh") #no need for the array to be previously set empty
-
 #SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
 IFS=$'\n' declare -a SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`) #fix duplicity on array, the declare is required to make IFS work only on this line of code
 
