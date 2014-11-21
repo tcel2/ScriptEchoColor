@@ -29,6 +29,7 @@ eval `secinit`
 bValidateOnly=false
 bCheckInternet=false
 bListNetworkFiles=false
+bToggle=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
@@ -48,12 +49,25 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bValidateOnly=true
 	elif [[ "$1" == "--listnetworkfiles" || "$1" == "-l" ]];then #help lsof -i
 		bListNetworkFiles=true
+	elif [[ "$1" == "--toggle" || "$1" == "-t" ]];then #help toggle network on/off
+		bToggle=true
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
 	shift
 done
+
+if $bToggle;then
+	if nmcli nm |tail -n 1 |grep -q connected;then 
+		nmcli nm enable false;
+		echoc --say --info "internet off"
+	else 
+		nmcli nm enable true;
+		echoc --say --info "internet on"
+	fi
+	exit $?
+fi
 
 function FUNCcheckInternet() {
   if ip route ls |grep --color=always "192.168.0." >/dev/null;then
