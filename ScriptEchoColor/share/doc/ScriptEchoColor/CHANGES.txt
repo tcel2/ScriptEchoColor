@@ -1,3 +1,7 @@
+Date:   2014-11-21 19:51:49 -0200
+    secNetworkControl.sh --toggle;
+Date:   2014-11-21 19:14:45 -0200
+    secFixConkySimpleClock.sh
 Date:   2014-11-20 15:52:05 -0200
     secDemaximize.sh renamed to secFixWindow.sh;
     SECFUNCshowHelp: fix escaped chars not being interpreted;
