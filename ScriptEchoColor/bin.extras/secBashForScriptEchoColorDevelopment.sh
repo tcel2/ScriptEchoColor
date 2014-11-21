@@ -32,7 +32,7 @@ if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or th
 	SECDEVbRunLog=$SECbRunLog
 fi
 
-eval `secinit --nolog`
+eval `secinit --extras --nolog`
 
 export SECDEVstrSelfName="`readlink -f "$0"`";SECDEVstrSelfName="`basename "$SECDEVstrSelfName"`"
 echo "Self: $0" >>/dev/stderr
@@ -173,7 +173,7 @@ function SECFUNCaddToRcFile() {
 	
 	# must be after PATH setup !!!
 	if $SECDEVbSecInit;then
-		local lstrInitCmd="secinit --force"
+		local lstrInitCmd="secinit --extras --force"
 		echoc --info " $lstrInitCmd"
 		eval `$lstrInitCmd`;
 	fi
@@ -212,7 +212,7 @@ function SECFUNCaddToRcFile() {
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 			( #eval `secinit --force`;
 				SECbRunLog=true #force log!
-				eval `secinit --force` # mainly to restore the exported arrays and initialize the log
+				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
