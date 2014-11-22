@@ -107,6 +107,8 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 	
 	SECastrSECFUNCCwindowOnTop_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
 	#echo "$lnChildPid"
+	
+	return 0
 }
 
 ###############################################################################

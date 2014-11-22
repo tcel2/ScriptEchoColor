@@ -258,11 +258,11 @@ elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 		nLineCountCurrent=$(cat "$strFileErrorLog" |wc -l)
 		
 		#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
-		strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"
+		strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"&&:
 		if $bErrorsMonitorOnlyTraps;then
 			strErrsToOutput="`echo "$strErrsToOutput" |grep "(trap)"`"&&:
 		fi
-		if [[ -n "$strErrsToOutput" ]];then
+		if [[ -n "$strErrsToOutput" ]];then # split the line into several easily readable lines!
 			echo "$strErrsToOutput" |sed -r -e "s'(\(trap\))'`echo -e "\E[31m"`\1`echo -e "\E[0m"`'" -e 's";";\n\t"g' -e 's".*"&\n"'
 		fi
 		

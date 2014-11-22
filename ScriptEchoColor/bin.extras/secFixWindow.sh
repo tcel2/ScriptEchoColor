@@ -182,6 +182,19 @@ FUNCvalidateAll
 #alias ContAftErrA="SECFUNCechoErrA \"code='\`sed -n \"\${LINENO}p\" \"$0\"\`';\";continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
 alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?\" >>/dev/stderr;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
 
+function FUNCisOnCurrentViewport(){ 
+	# actually checks if window is outside of current viewport,
+	# and if not, means it is on current!
+	
+	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
+		return 1
+	fi
+	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
+		return 1
+	fi
+	return 0
+}
+
 strLastSkipped=""
 declare -A aWindowGeomBkp
 declare -A aWindowPseudoMaximizedGeomBkp
@@ -255,11 +268,14 @@ while true; do
 #	fi
 #	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
 	
-	# skip windows outside of current viewport
-	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
-		continue
-	fi
-	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
+#	# skip windows outside of current viewport
+#	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
+#		continue
+#	fi
+#	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
+#		continue
+#	fi
+	if ! FUNCisOnCurrentViewport;then # skip windows outside of current viewport
 		continue
 	fi
 	
@@ -358,14 +374,16 @@ while true; do
 			if $bWindowIsMissplaced;then
 				bFixWindowPos=true
 			fi
-
-			if(( nWindowY < 0 ));then
-				echo "Missplaced: Y<0"
-				bFixWindowPos=true
-			fi
-			if(( nWindowX < 0 ));then
-				echo "Missplaced: X<0"
-				bFixWindowPos=true
+			
+			if FUNCisOnCurrentViewport;then
+				if(( nWindowY < 0 ));then
+					echo "Missplaced: Y<0"
+					bFixWindowPos=true
+				fi
+				if(( nWindowX < 0 ));then
+					echo "Missplaced: X<0"
+					bFixWindowPos=true
+				fi
 			fi
 			
 			# less than the systray top panel
