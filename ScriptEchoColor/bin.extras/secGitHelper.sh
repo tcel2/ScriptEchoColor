@@ -168,7 +168,7 @@ while true;do
 				|egrep -v "^$|^commit |^Author: |^    [.]" \
 				|grep "^    " -B 1 \
 				|grep -v "^--" >"$strChangesFile";
-			if echoc -t 3 -q "view changes file '$strChangesFile'?";then
+			if echoc -t 1 -q "view changes file '$strChangesFile'?";then
 				echoc -x "gedit '$strChangesFile'"
 			fi
 			;;
