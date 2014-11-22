@@ -400,6 +400,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	else
 		if SECFUNCfileLock --nowait "$l_runUniqueFile";then
 			echo $l_pid >"$l_runUniqueFile"
+			chmod o-rwx "$l_runUniqueFile"
 			SECnDaemonPid="$l_pid"
 			if ! ${lbQuiet:?};then
 				echo "$SECnDaemonPid"

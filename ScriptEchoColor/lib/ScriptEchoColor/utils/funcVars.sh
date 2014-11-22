@@ -964,6 +964,7 @@ function SECFUNCvarWriteDB() { #help
 	if [[ -n "$lstrDeclareAssociativeArray" ]];then
 		echo "$lstrDeclareAssociativeArray" >>"$SECvarFile"
 	fi
+	chmod o-rwx "$SECvarFile" #some security helps..
 	declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' -e "$l_sedRemoveArrayPliqs" >>"$SECvarFile"
 #  else
 #	  echo >"$SECvarFile" #clean
