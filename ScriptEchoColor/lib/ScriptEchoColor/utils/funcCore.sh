@@ -71,8 +71,8 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	fi;
 }
 
-#SECstrIFSbkp="$IFS";IFS=$'\n';SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`);IFS="$SECstrIFSbkp" #fix duplicity on array
-IFS=$'\n' declare -a SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]}" |sort -u`) #fix duplicity on array, the declare is required to make IFS work only on this line of code
+# fix duplicity on array, the declare is required to make IFS work only on this line of code
+IFS=$'\n' declare -a SECastrFuncFilesShowHelp=(`printf "%s\n" "${SECastrFuncFilesShowHelp[@]-}" |sort -u`) #TODO discover in what circunstances this array may not be filled when this line is reached?
 
 # INITIALIZATIONS
 

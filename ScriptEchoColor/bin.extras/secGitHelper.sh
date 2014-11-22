@@ -155,8 +155,10 @@ while true;do
 			;; 
 		c)
 			echoc --alert "SOURCEFORGE PassWord may be asked...";
-			SECFUNCCwindowOnTop "^Git Gui (.*): push .*"
+			strTitleRegex="^Git Gui (.*): push .*"
+			SECFUNCCwindowOnTop "$strTitleRegex"
 			echoc -x "git gui"&&: 
+			SECFUNCCwindowOnTop --stop "$strTitleRegex"
 			;; 
 		d)
 			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:

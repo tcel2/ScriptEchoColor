@@ -33,8 +33,10 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
+declare -a SECastrSECFUNCCwindowOnTop_ChildRegex=()
 function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and put on top
 	local lnDelay=3
+	local lstrStopMatchRegex=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowOnTop_help
 			SECFUNCshowHelp $FUNCNAME
@@ -42,6 +44,9 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowOnTop_help <lnDelay> between checks
 			shift
 			lnDelay="${1-}"
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowOnTop_help <lstrWindowTitleRegex>
+			shift
+			lstrStopMatchRegex="${1-}"
 		elif [[ "$1" == "--" ]];then #SECFUNCCwindowOnTop_help params after this are ignored as being these options
 			shift
 			break
@@ -55,6 +60,16 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 		shift
 	done
 	
+	if [[ -n "$lstrStopMatchRegex" ]];then
+		for lnPid in "${!SECastrSECFUNCCwindowOnTop_ChildRegex[@]}";do
+			if [[ "${SECastrSECFUNCCwindowOnTop_ChildRegex[lnPid]}" == "$lstrStopMatchRegex" ]];then
+				SECFUNCexecA -c --echo kill -SIGUSR1 $lnPid
+				#no break as can have more than one with same regex
+			fi
+		done
+		return 0
+	fi
+	
 	if ! SECFUNCisNumber -dn "$lnDelay";then
 		SECFUNCechoErrA "invalid lnDelay='$lnDelay'"
 		return 1
@@ -67,7 +82,12 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 	fi
 	
 	( #child process
+		local lbStop=false
+		trap 'lbStop=true;' USR1
 		while true;do
+			if $lbStop;then
+				break
+			fi
 			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
 			if SECFUNCisNumber -nd "$lnWindowId";then
 				if wmctrl -F -i -a "$lnWindowId" -b add,above;then
@@ -77,7 +97,10 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 			SEC_WARN=true SECFUNCechoWarnA "still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex' (to stop this, execute \`kill $BASHPID\`)"
 			sleep $lnDelay;
 		done
-	) &
+	) & lnChildPid=$!
+	
+	SECastrSECFUNCCwindowOnTop_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
+	#echo "$lnChildPid"
 }
 
 ###############################################################################
