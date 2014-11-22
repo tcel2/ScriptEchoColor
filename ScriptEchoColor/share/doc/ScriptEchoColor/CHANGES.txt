@@ -1,3 +1,5 @@
+Date:   2014-11-22 13:01:09 -0200
+    SECFUNCCwindowOnTop --stop;
 Date:   2014-11-22 11:51:48 -0200
     SECFUNCCwindowOnTop: now uses regex to match title;
 Date:   2014-11-21 19:51:49 -0200
