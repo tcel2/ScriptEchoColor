@@ -33,7 +33,7 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
-function SECFUNCCwindowOnTop() { #help <lstrWindowTitle> this will run a child process in loop til the window is found and put on top
+function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and put on top
 	local lnDelay=3
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowOnTop_help
@@ -60,17 +60,21 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitle> this will run a child p
 		return 1
 	fi
 	
-	local lstrWindowTitle="${1-}"
-	if [[ -z "$lstrWindowTitle" ]];then
-		SECFUNCechoErrA "lstrWindowTitle='$lstrWindowTitle' missing"
+	local lstrWindowTitleRegex="${1-}"
+	if [[ -z "$lstrWindowTitleRegex" ]];then
+		SECFUNCechoErrA "lstrWindowTitleRegex='$lstrWindowTitleRegex' missing"
 		return 1
 	fi
 	
 	( #child process
-		while ! wmctrl -F -a "$lstrWindowTitle" -b add,above;do
-			#if ! xdotool search --name "^${lstrWindowTitle}$";then #redundant...
-			SEC_WARN=true SECFUNCechoWarnA "still no window found with title lstrWindowTitle='$lstrWindowTitle' (to stop this, execute \`kill $BASHPID\`)"
-			#fi
+		while true;do
+			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
+			if SECFUNCisNumber -nd "$lnWindowId";then
+				if wmctrl -F -i -a "$lnWindowId" -b add,above;then
+					break;
+				fi
+			fi
+			SEC_WARN=true SECFUNCechoWarnA "still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex' (to stop this, execute \`kill $BASHPID\`)"
 			sleep $lnDelay;
 		done
 	) &

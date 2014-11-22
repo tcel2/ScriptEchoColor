@@ -155,6 +155,7 @@ while true;do
 			;; 
 		c)
 			echoc --alert "SOURCEFORGE PassWord may be asked...";
+			SECFUNCCwindowOnTop "^Git Gui (.*): push .*"
 			echoc -x "git gui"&&: 
 			;; 
 		d)
