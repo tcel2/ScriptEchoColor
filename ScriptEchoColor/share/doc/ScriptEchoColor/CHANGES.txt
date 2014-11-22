@@ -1,3 +1,5 @@
+Date:   2014-11-22 17:50:38 -0200
+    secFixWindow.sh: better handling of windows outside current viewport;
 Date:   2014-11-22 13:19:30 -0200
     `chmod o-rwx` to some files
 Date:   2014-11-22 13:01:09 -0200
