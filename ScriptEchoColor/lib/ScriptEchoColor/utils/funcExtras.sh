@@ -63,6 +63,10 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 	if [[ -n "$lstrStopMatchRegex" ]];then
 		for lnPid in "${!SECastrSECFUNCCwindowOnTop_ChildRegex[@]}";do
 			if [[ "${SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]}" == "$lstrStopMatchRegex" ]];then
+				if [[ ! -d "/proc/$lnPid" ]];then
+					unset SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]
+					continue
+				fi
 				if SECFUNCexecA -c --echo kill -SIGUSR1 $lnPid;then
 					unset SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]
 				fi
