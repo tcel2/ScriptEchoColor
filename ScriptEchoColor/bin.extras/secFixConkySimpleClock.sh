@@ -61,7 +61,7 @@ alignment top_right
 #${color grey}${execi 1 date +"%d %b"}${color yellow}${execi 1 date +" %H:%M"}${color grey}${execi 1 date +":%S"}
 
 TEXT
-${color grey}${time %d %b }${color yellow}${time %H:%M}${color grey}${time :%S}' >SimpleDatetimeClock.cfg
+${color grey}${time %d %b }${color yellow}${time %H}${color cyan}${time %M}${color grey}${time %S}' >SimpleDatetimeClock.cfg
 	SECFUNCexecA --echo -c cat SimpleDatetimeClock.cfg
 	echoc --info "now you can run Conky Manager to easily activate it on startup"
 	exit 0

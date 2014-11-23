@@ -28,6 +28,9 @@ eval `secinit`
 IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
 strFile="${astrFiles[0]}"
 
+#echo "NAUTILUS_SCRIPT_CURRENT_URI=$NAUTILUS_SCRIPT_CURRENT_URI"
+#echoc -w 
+
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
 function FUNCretargetSymlink() {
