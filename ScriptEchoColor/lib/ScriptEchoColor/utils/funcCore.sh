@@ -89,7 +89,7 @@ function _SECFUNCbugTrackExec() {
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$@;" >>"$SECstrBugTrackLogFile"
 	local lstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -un`.log"
 	_SECFUNClogMsg "$lstrBugTrackLogFile" "$@"
-	"$@" 2>>"$lstrBugTrackLogFile"
+	"$@" 2>>"$lstrBugTrackLogFile" #do not protect with &&:, it would not help on fixing commands...
 }
 : ${SECstrFileCriticalErrorLog:="/tmp/.SEC.CriticalMsgs.`id -un`.log"}
 export SECstrFileCriticalErrorLog
@@ -166,7 +166,7 @@ if [[ -z "${SEC_TmpFolder-}" ]];then
 	#export SEC_TmpFolder="$SECstrTmpFolderBase/.SEC.`id -un`"
 	if [[ ! -d "$SEC_TmpFolder" ]];then
 		#mkdir "$SEC_TmpFolder" 2>>"$SECstrBugTrackLogFile"
-		_SECFUNCbugTrackExec mkdir "$SEC_TmpFolder"
+		_SECFUNCbugTrackExec mkdir -p "$SEC_TmpFolder"
 	fi
 fi
 #TODO ln -sT; -T prevents creation of symlink inside a folder by requiring folder to not exist; check other "ln.*-.*s" that could be improved with `-T`
