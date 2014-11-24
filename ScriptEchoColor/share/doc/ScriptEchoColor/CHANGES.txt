@@ -1,3 +1,7 @@
+Date:   2014-11-24 15:25:19 -0200
+    secEnableWithoutInstalling.sh
+Date:   2014-11-24 15:24:55 -0200
+    secMaintenanceDaemon.sh: fix severe bug preventing it from starting properly on first run;
 Date:   2014-11-22 17:50:38 -0200
     secFixWindow.sh: better handling of windows outside current viewport;
 Date:   2014-11-22 13:19:30 -0200

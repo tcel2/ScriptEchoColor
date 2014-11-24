@@ -31,7 +31,10 @@ fi
 echo
 
 echo ">>---> update from git... <---<<"
-git pull origin
+#git pull origin
+git reset --hard HEAD
+git clean -f -d
+git pull
 echo
 
 cd bin
