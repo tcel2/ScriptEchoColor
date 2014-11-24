@@ -248,6 +248,7 @@ while true; do
 	anViewPortPos=(`wmctrl -d |awk '{print $6}' |tr ',' '\t'`)
 	nViewPortPosX=${anViewPortPos[0]}
 	nViewPortPosY=${anViewPortPos[1]}
+	strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
 	
 	bWindowIsMissplaced=false
 ##	if $bDesktopIsAtViewport0;then
@@ -283,7 +284,7 @@ while true; do
 		if SECFUNCdelay bReactivateWindow --checkorinit 1.5;then
 			if echo "$windowName" |egrep -q "$strReactWindNamesRegex";then
 				xdotool windowactivate $windowId;
-				echo "Activated: $windowName"
+				echo "Activated: $windowName $strVpMsg"
 			fi
 		fi
 	fi
@@ -322,7 +323,7 @@ while true; do
 #					fi
 #				done
 			aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-			echo "Safe backup: ${aWindowGeomBkp[$windowId]}"
+			echo "Safe backup: ${aWindowGeomBkp[$windowId]} $strVpMsg"
 			#xwininfo -id $windowId #@@@R
 		fi
 		
@@ -333,7 +334,7 @@ while true; do
 			
 			aWindowPseudoMaximizedGeomBkp[$windowId]=""
 			
-			echo "Restored non-maximized size and position: $windowName"
+			echo "Restored non-maximized size and position: $windowName $strVpMsg"
 		else
 			# pseudo-mazimized
 			if ! xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;then ContAftErrA;fi
@@ -342,7 +343,7 @@ while true; do
 			#xdotool getwindowname $windowId
 			aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
 			
-			echo "Pseudo Maximized: $windowName"
+			echo "Pseudo Maximized: $windowName $strVpMsg"
 		fi
 	else ################## NOT MAXIMIZED ########################
 		#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
@@ -370,7 +371,6 @@ while true; do
 		fi
 	
 		#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
-			strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
 			bFixWindowPos=false
 			if $bWindowIsMissplaced;then
 				echo "Missplaced: $strVpMsg"
@@ -409,7 +409,7 @@ while true; do
 
 			if $bFixWindowPos;then
 				if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
-				echo "Fixing (placement): $windowName"
+				echo "Fixing (placement): $windowName $strVpMsg"
 			fi
 		#fi
 	fi;
