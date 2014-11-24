@@ -22,6 +22,12 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+if [[ ! -f "bin/ScriptEchoColor.sh" ]];then
+	echo -e "\E[0m\E[31m\E[103m\E[5m '$0' must be run at '`dirname "$0"`/' like: './`basename "$0"`' \E[0m"
+	read -n 1 -p "press a key to exit..."
+	exit 1
+fi
+
 echo
 
 echo ">>---> update from git... <---<<"
