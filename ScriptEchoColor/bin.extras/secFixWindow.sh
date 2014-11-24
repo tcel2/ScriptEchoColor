@@ -370,37 +370,39 @@ while true; do
 		fi
 	
 		#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
+			strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
 			bFixWindowPos=false
 			if $bWindowIsMissplaced;then
+				echo "Missplaced: $strVpMsg"
 				bFixWindowPos=true
 			fi
 			
 			if FUNCisOnCurrentViewport;then
 				if(( nWindowY < 0 ));then
-					echo "Missplaced: Y<0"
+					echo "Missplaced: Y<0 $strVpMsg"
 					bFixWindowPos=true
 				fi
 				if(( nWindowX < 0 ));then
-					echo "Missplaced: X<0"
+					echo "Missplaced: X<0 $strVpMsg"
 					bFixWindowPos=true
 				fi
 			fi
 			
 			# less than the systray top panel
 			if(( nWindowY < nYposMinReadPos ));then
-				echo "Missplaced: Y<Min"
+				echo "Missplaced: Y<Min $strVpMsg"
 				bFixWindowPos=true
 			fi
 
 			if(( nWindowX < nScreenWidth ));then
 				if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
-					echo "Missplaced: X+W beyond Screen"
+					echo "Missplaced: X+W beyond Screen $strVpMsg"
 					bFixWindowPos=true
 				fi
 			fi
 			if(( nWindowY < nScreenHeight ));then
 				if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
-					echo "Missplaced: Y+H beyond Screen"
+					echo "Missplaced: Y+H beyond Screen $strVpMsg"
 					bFixWindowPos=true
 				fi
 			fi
