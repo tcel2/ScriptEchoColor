@@ -65,7 +65,9 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	
 	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
 	 	# if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
-		echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
+	 	if [[ -f "${SECstrFileErrorLog-}" ]];then #SECstrFileErrorLog not set may happen once..
+			echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
+		fi
 		echo "$lstrErrorTrap" >>/dev/stderr;
 		return 1;
 	fi;
