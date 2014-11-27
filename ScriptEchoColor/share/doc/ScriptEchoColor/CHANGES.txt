@@ -1,3 +1,7 @@
+Date:   2014-11-27 20:28:54 -0200
+    secOpenNewX.sh: now uses secXtermDetached.sh instead of self function;
+Date:   2014-11-27 19:48:38 -0200
+    secXtermDetached.sh --skiporganize --logonly --nohup;
 Date:   2014-11-24 15:25:19 -0200
     secEnableWithoutInstalling.sh
 Date:   2014-11-24 15:24:55 -0200
