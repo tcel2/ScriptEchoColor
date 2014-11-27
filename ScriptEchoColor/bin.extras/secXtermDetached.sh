@@ -52,6 +52,7 @@ strTitleForce=""
 echoc --info "Options: $@"
 export SECXbLogOnly=false
 export SECXbNoHup=false
+export SECXstrXtermOpts=""
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -63,12 +64,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		#grep "#help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #help (.*)'\t\1\t\2'"
 		SECFUNCshowHelp --nosort
 		exit
-	elif [[ "$1" == "--nice" ]];then #help <nice> negative value will require sudo
+	elif [[ "$1" == "--nice" ]];then #help <SECXnNice> negative value will require sudo
 		shift
-		SECXnNice=$1
-	elif [[ "$1" == "--display" ]];then #help <display>
+		SECXnNice="${1-}"
+	elif [[ "$1" == "--display" ]];then #help <nDisplay>
 		shift
-		nDisplay=$1
+		nDisplay="${1-}"
 	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same command)
 		SECXbDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
@@ -85,9 +86,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		SECXbLogOnly=true
 	elif [[ "$1" == "--nohup" ]];then #help the command will be executed with nohup, so will keep running even if terminal closes. It is more interesting to use --logonly as you will be able to manage that pid.
 		SECXbNoHup=true
-	elif [[ "$1" == "--waitonexit" ]];then #help <seconds> wait seconds before exiting
+	elif [[ "$1" == "--xtermopts" ]];then #help <SECXstrXtermOpts> pass the next param as options to xterm
 		shift
-		SECXnExitWait="$1"
+		SECXstrXtermOpts="${1-}"
+	elif [[ "$1" == "--waitonexit" ]];then #help <SECXnExitWait> wait seconds before exiting
+		shift
+		SECXnExitWait="${1-}"
 	elif [[ "$1" == "--skiporganize" || "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
 	elif [[ "$1" == "--killskip" ]];then #help to xterm not be killed
@@ -280,7 +284,7 @@ function FUNCexecParams() {
 #};export -f FUNCwatchLog
 
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
-strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
+strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
 #echo -e "$strExec"
 

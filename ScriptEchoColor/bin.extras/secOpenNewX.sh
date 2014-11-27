@@ -37,7 +37,7 @@ if [[ -z "${SEC_SAYVOL-}" ]];then
 	export SEC_SAYVOL=15 #from 0 to 100 #this should be controlled by external scripts...
 fi
 
-execX1="X :1"
+export execX1="X :1"
 grepX1="X :1"
 selfName=`basename "$0"`
 strOptXtermGeom="100x1" #"1x1" causes problems with ps and others, making everything hard to be readable
@@ -413,7 +413,8 @@ function FUNCscript() {
   	echoc -x "bash"
   	SECFUNCdbgFuncOutA;return
   elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
-    FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
+    #FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
+    secXtermDetached.sh FUNCshowHelp $DISPLAY 30
   elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
     if FUNCisScreenLockRunning ${1-};then
       exit 0
@@ -541,37 +542,37 @@ function FUNCkeepJwmAlive() {
 	done
 };export -f FUNCkeepJwmAlive
 
-function FUNCwaitX1exit() {
-#	while FUNCisX1running;do
-	while ps -p $pidX1 >/dev/null 2>&1; do
-		echo "wait X :1 exit"
-		sleep 1
-	done
-};export -f FUNCwaitX1exit
+#function FUNCwaitX1exit() {
+##	while FUNCisX1running;do
+#	while [[ -d "/proc/$pidX1" ]]; do
+#		echo "wait X :1 exit"
+#		sleep 1
+#	done
+#};export -f FUNCwaitX1exit
 
-function FUNCxtermDetached() {
-	local lcmdWaitX1exit=""
-	if [[ "$1" == "--waitx1exit" ]];then
-		lcmdWaitX1exit="FUNCwaitX1exit;"
-		shift
-	fi
-	
-	# this is a trick to prevent child terminal to close when its parent closes
-	local params="$@"
-#	function FUNCxtermDetachedExec() {
-#		$params
-#	};export -f FUNCxtermDetachedExec
-	
-	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$lcmdWaitX1exit\";echoc -w"&
-	local pidXterm=$!
-	
-	# wait for the child (with the $params) to open
-	while ! ps --ppid $pidXterm; do
-		sleep 1
-	done
-	
-	kill -SIGINT $pidXterm
-};export -f FUNCxtermDetached
+#function FUNCxtermDetached() {
+#	local lcmdWaitX1exit=""
+#	if [[ "$1" == "--waitx1exit" ]];then
+#		lcmdWaitX1exit="FUNCwaitX1exit;"
+#		shift
+#	fi
+#	
+#	# this is a trick to prevent child terminal to close when its parent closes
+#	local params="$@"
+##	function FUNCxtermDetachedExec() {
+##		$params
+##	};export -f FUNCxtermDetachedExec
+#	
+#	xterm -e "echo \"TEMP xterm...\"; xterm -e \"$params;$lcmdWaitX1exit\";echoc -w"&
+#	local pidXterm=$!
+#	
+#	# wait for the child (with the $params) to open
+#	while ! ps --ppid $pidXterm; do
+#		sleep 1
+#	done
+#	
+#	kill -SIGINT $pidXterm
+#};export -f FUNCxtermDetached
 
 function FUNCcmdAtNewX() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
@@ -754,7 +755,7 @@ done
 
 #echo "going to execute: $@"
 #@@@R runCmd="$1" #this command must be simple, if need complex put on a script file and call it!
-runCmd="$@" #this command must be simple, if need complex put on a script file or exported function and call it!
+export runCmd="$@" #this command must be simple, if need complex put on a script file or exported function and call it!
 
 #################### MAIN CODE ###########################################
 
@@ -916,20 +917,30 @@ fi
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
 pidXtermForNewX=-1
 if ! FUNCisX1running; then
-  cmdX1="\
-  echo \"INFO: hit CTRL+C to exit the other X session and close this window\";\
-  echo \"INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!\";\
-  echo \"INFO: hit ctrl+alt+f7 to get back to this X session (f7, f8 etc, may vary..)\";\
-  echo ;\
-  echo \"Going to execute on another X session: $runCmd\";\
-  echoc -x 'sudo -k $execX1'"
+	function FUNCexecCmdX1(){
+		echo "INFO: hit CTRL+C to exit the other X session and close this window";
+		echo "INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!";
+		echo "INFO: hit ctrl+alt+f7 to get back to this X session (f7, f8 etc, may vary..)";
+		echo ;
+		echo "Going to execute on another X session: $runCmd";
+		echoc -x "sudo -k $execX1"
+	};export -f FUNCexecCmdX1
+#  cmdX1="\
+#  echo \"INFO: hit CTRL+C to exit the other X session and close this window\";\
+#  echo \"INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!\";\
+#  echo \"INFO: hit ctrl+alt+f7 to get back to this X session (f7, f8 etc, may vary..)\";\
+#  echo ;\
+#  echo \"Going to execute on another X session: $runCmd\";\
+#  echoc -x 'sudo -k $execX1'"
 
   if [[ -z "$DISPLAY" ]]; then
-    #if at tty1 console there is no X already running
-    eval $cmdX1&
+    # if at tty1 console there is no X already running
+    #eval $cmdX1&
+    bash -c "FUNCexecCmdX1"&
     pidXtermForNewX=$!
   else
-    xterm -e "$cmdX1"&
+    #xterm -e "$cmdX1"&
+    secXtermDetached.sh --logonly "FUNCexecCmdX1"
     pidXtermForNewX=$!
   fi
 fi
@@ -955,19 +966,23 @@ if $useJWM; then
   pidJWM=$!
   
   #xterm -e "FUNCkeepJwmAlive $pidJWM $$ #kill=skip"&
-  FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
+  #FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
+  secXtermDetached.sh --killskip FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
 fi
 
-xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
+#xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
+#xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCdoNotCloseThisTerminal"
 
 #initializes the cicle of configurations!
 if $bInitNvidia;then
-	xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
+	#xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
+	secXtermDetached.sh --killskip --display :1 $0 --script nvidiaCicle #not threaded/child so the speech does not interfere with some games sound initialization check
 fi
 
 sleep 2 #TODO improve with qdbus waiting for jwm? 
@@ -976,10 +991,12 @@ sleep 2 #TODO improve with qdbus waiting for jwm?
 #xterm -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDScreenSaver; #kill=skip"&
 xscreensaver -display :1&
 if $bScreenSaverOnlyLockByHand;then
-	xterm -bg darkgreen -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
+	#xterm -bg darkgreen -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDPreventAutoLock; #kill=skip"&
+	secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkgreen -geometry $strOptXtermGeom" "FUNCCHILDPreventAutoLock"
 else
 	# interactive window, do not shrink..
-	xterm -bg darkgreen -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
+	#xterm -bg darkgreen -display :1 -e "export SECbRunLog=true;secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight; #kill=skip"&
+	(export SECbRunLog=true;secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkgreen" secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight)
 fi
 #xterm -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
 
@@ -995,14 +1012,16 @@ fi
 #bXTerm=true #TODO gnome-terminal is not working with this yet...
 
 #FUNCxtermDetached --waitX1exit FUNCshowHelp :0&
-FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
+#FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
+secXtermDetached.sh --display :1 FUNCshowHelp
 #pidZenity0=$!
 
 #while true; do
 	pidTerm=-1
 	if $bXTerm; then
 #		xterm -display :1 -e "$cmdOpenNewX" -e "bash"&
-		xterm -display :1 -e "bash -i -c FUNCcmdAtNewX #kill=skip"&
+#		xterm -display :1 -e "bash -i -c FUNCcmdAtNewX #kill=skip"&
+		secXtermDetached.sh --killskip --display :1 bash -i -c FUNCcmdAtNewX
 		pidTerm=$!
 	else
 		gnome-terminal --display=:1 -e "bash -i -c FUNCcmdAtNewX #kill=skip"&
@@ -1027,7 +1046,8 @@ FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
 #done
 
 if $bReturnToX0; then
-	xterm -display :1 -e "bash -ic \"$0 --script returnX0\""&
+	#xterm -display :1 -e "bash -ic \"$0 --script returnX0\""&
+	secXtermDetached.sh --display :1 bash -ic "$0 --script returnX0"
 fi
 
 ##initializes the cicle of configurations!
