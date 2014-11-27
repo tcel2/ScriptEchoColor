@@ -40,16 +40,18 @@ bDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
 bKillSkip=false
-export bDaemon=false
-export nNice=0
+export SECXbDaemon=false
+export SECXnNice=0
 nDisplay="$DISPLAY"
-export nExitWait=0
+export SECXnExitWait=0
 strTitleDefault="Xterm_Detached" #TODO check if this is useless?
 varset strTitle="$strTitleDefault"
 strTitleForce=""
 #export bLog=$SECbTermLog
 #export strLogFile=""
 echoc --info "Options: $@"
+export SECXbLogOnly=false
+export SECXbNoHup=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -63,12 +65,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		exit
 	elif [[ "$1" == "--nice" ]];then #help <nice> negative value will require sudo
 		shift
-		nNice=$1
+		SECXnNice=$1
 	elif [[ "$1" == "--display" ]];then #help <display>
 		shift
 		nDisplay=$1
 	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same command)
-		bDaemon=true
+		SECXbDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
 		strTitleForce="`SECFUNCfixId "$1"`"
@@ -79,10 +81,14 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 #		fi
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
+	elif [[ "$1" == "--logonly" ]];then #help the shown xterm will be just a log monitoring, unable to interact with the application running on it, with options to manage it
+		SECXbLogOnly=true
+	elif [[ "$1" == "--nohup" ]];then #help the command will be executed with nohup, so will keep running even if terminal closes. It is more interesting to use --logonly as you will be able to manage that pid.
+		SECXbNoHup=true
 	elif [[ "$1" == "--waitonexit" ]];then #help <seconds> wait seconds before exiting
 		shift
-		nExitWait="$1"
-	elif [[ "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
+		SECXnExitWait="$1"
+	elif [[ "$1" == "--skiporganize" || "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
 		bSkipCascade=true
 	elif [[ "$1" == "--killskip" ]];then #help to xterm not be killed
 		bKillSkip=true
@@ -119,8 +125,8 @@ else # strTitle is set to the command that is the first parameter
 fi
 
 export strSudoPrefix=""
-if((nNice<0));then
-	strSudoPrefix="sudo -k nice -n $nNice "
+if((SECXnNice<0));then
+	strSudoPrefix="sudo -k nice -n $SECXnNice "
 fi
 
 strSkipCascade=""
@@ -184,7 +190,7 @@ eval "function $strPseudoFunctionId () { FUNCexecParams${strDoNotClose}; };expor
 #xterm -e "echo \"TEMP xterm...\"; xterm -maximized -e \"FUNCFireWall\""& #maximize dont work properly...
 
 #params="$@"
-if $bDaemon;then
+if $SECXbDaemon;then
 	if [[ "$strTitle" == "$strTitleDefault" ]];then
 		# actually this will never be reached because of the automatic strTitle being the command...
 		echoc -p "Daemons requires non default title to create the unique lock..."
@@ -195,11 +201,12 @@ fi
 
 #params=`SECFUNCparamsToEval --escapequotes "$@"`"${strDoNotClose}${strSkipCascade}"
 ############# THIS FUNCTION MUST BE HERE AFTER OPTIONS #######
+export strFUNCexecMainCmd="$1"
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
 	eval `secinit`
 	
-	if $bDaemon;then
+	if $SECXbDaemon;then
 		while true;do
 			SECFUNCuniqueLock --setdbtodaemon $strTitle #SECFUNCdaemonUniqueLock $strTitle
 			if ! $SECbDaemonWasAlreadyRunning;then
@@ -207,16 +214,57 @@ function FUNCexecParams() {
 			fi
 		done
 	fi
-	
-	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
-	eval "${strSudoPrefix} ${strFUNCexecParams}"; nRet=$?
-	if((nRet!=0));then
-		echoc -p "returned $nRet"
-		echoc -w -t 60
+
+	local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
+	if $SECXbLogOnly || $SECXbNoHup;then
+		echo "lstrFileLogCmd='$lstrFileLogCmd'" >>/dev/stderr
+		tail -F "$lstrFileLogCmd"&
 	fi
 	
-	if((nExitWait>0));then
-		echoc -w -t $nExitWait #wait some time so any log can be read..
+	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
+	if $SECXbLogOnly;then
+		# stdout must be redirected or the terminal wont let it be a detached child...
+		#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
+		#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
+		nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
+		nPidCmd=$!
+		
+		while true;do
+			echoc --info "monitoring lstrFileLogCmd='$lstrFileLogCmd'"
+			echoc -x "ps --no-headers -o pid,ppid,cpu,stat,cmd -p $nPidCmd"
+			ScriptEchoColor -t 10 -Q "do what?@O_exit/_kill/force_Kill/_stop/_continue"&&:; case "`secascii $?`" in 
+				e) break;
+					;; 
+				k) kill $nPidCmd
+					;; 
+				K) kill -SIGKILL $nPidCmd
+					;; 
+				s) kill -SIGSTOP $nPidCmd
+					;; 
+				c) kill -SIGCONT $nPidCmd
+					;; 
+			esac
+			
+			if [[ ! -d "/proc/$nPidCmd" ]];then
+				echo "nPidCmd='$nPidCmd' exited" >>/dev/stderr
+				break;
+			fi
+		done
+	else
+		if $SECXbNoHup;then
+			nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
+		else
+			bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
+		fi
+		
+		if((nRet!=0));then
+			echoc -p "returned $nRet"
+			echoc -w -t 60
+		fi
+	fi
+	
+	if((SECXnExitWait>0));then
+		echoc -w -t $SECXnExitWait #wait some time so any log can be read..
 	fi
 	#echoc -w -t 60
 };export -f FUNCexecParams
