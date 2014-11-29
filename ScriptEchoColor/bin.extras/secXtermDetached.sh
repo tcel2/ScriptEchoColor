@@ -53,6 +53,7 @@ echoc --info "Options: $@"
 export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""
+bOnTop=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -74,12 +75,15 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		SECXbDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
-		strTitleForce="`SECFUNCfixId "$1"`"
+#		strTitleForce="`SECFUNCfixId "$1"`"
+		strTitleForce="${1-}"
 #		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
 #			echoc -p "title '$strTitle' contains invalid characters..."
 #			echoc -w "exiting..."
 #			exit 1
 #		fi
+	elif [[ "$1" == "--ontop" ]];then #help set xterm on top
+		bOnTop=true
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
 		bDoNotClose=true
 	elif [[ "$1" == "--logonly" ]];then #help the shown xterm will be just a log monitoring, unable to interact with the application running on it, with options to manage it
@@ -121,7 +125,8 @@ if [[ -z "${1-}" ]];then
 fi
 
 if [[ -n "$strTitleForce" ]];then
-	varset strTitle="$strTitleForce"
+#	varset strTitle="$strTitleForce"
+	varset strTitle="`SECFUNCfixId "$strTitleForce"`" #if user puts a title with invalid characters it will be said by not using --justfix option
 else # strTitle is set to the command that is the first parameter
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
 	varset strTitle="`SECFUNCfixId --justfix "$1"`"
@@ -177,8 +182,8 @@ if $bDoNotClose;then
 	strDoNotClose=";bash"
 fi
 
-# trick to avoid error message
-strPseudoFunctionId="${strTitle}_Title"
+# trick to avoid error message where function id may conflict (may already exist) #TODO unnecessary?
+strPseudoFunctionId="${strTitle}_pid$$_Title"
 while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	# the identifier must not be being used already by file, function, alias etc...
 	strPseudoFunctionId="${strPseudoFunctionId}_"
@@ -284,12 +289,17 @@ function FUNCexecParams() {
 #};export -f FUNCwatchLog
 
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
+
 strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
-#echo -e "$strExec"
-
 xterm -display "$nDisplay" -e "$strExec"&
+
+#strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
+#echo "Exec: $strExec"
+#nohup bash -c "xterm $SECXstrXtermOpts -display $nDisplay -e '$strExec'" >>/dev/stderr 2>&1 & disown
+
 pidXtermTemp=$!
+
 while ! ps --ppid $pidXtermTemp; do
 		if ! ps -p $pidXtermTemp;then
 			break
@@ -297,6 +307,7 @@ while ! ps --ppid $pidXtermTemp; do
 		ps -o pid,ppid,comm -p $pidXtermTemp
 		echoc -w -t 1 "waiting for the child to open (it has xterm temp as parent!).."
 done
+
 if $bWaitDBsymlink;then
 #	nCountFindDBsLinked=0
 	function FUNCfindSymlinks() {
@@ -324,6 +335,13 @@ fi
 #echoc -w -t 60 "waiting 60s so child shells have a chance to hook on the SEC DB..."
 #echoc -x "kill -SIGINT $pidXtermTemp"
 #if ! $bLog;then
+
+if $bOnTop;then
+	#TODO wait xterm window become responsive to accept ontop command, or test if it is ontop before exiting...
+	SECFUNCCwindowOnTop --delay 1 "${strPseudoFunctionId}.*" #must be here because the xterm window may still not be ready to receive the command!
+	#SECFUNCCwindowOnTop --stop "${strPseudoFunctionId}.*"
+fi
+
 if [[ -d "/proc/$pidXtermTemp" ]];then #it may have run so fast that doesnt exist anymore
 	kill -SIGINT $pidXtermTemp
 fi

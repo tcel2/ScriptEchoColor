@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+eval `secinit --extras`
 
 #eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
 IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
@@ -36,6 +36,9 @@ strFile="${astrFiles[0]}"
 function FUNCretargetSymlink() {
 	local lstrFile="${1-}"
 	echo "lstrFile='$lstrFile'"
+	local lstrFilePath="`dirname "$lstrFile"`"
+	echo "lstrFilePath='$lstrFilePath'"
+	echoc -x pwd
 	if [[ ! -L "$lstrFile" ]];then
 		zenity --info --text "File is not a symlink: '$lstrFile'"
 	else
@@ -50,7 +53,7 @@ function FUNCretargetSymlink() {
 			if echoc -q "missing lstrTarget='$lstrTarget', is directory?";then
 				bForceDirectory=true
 			fi
-			if echoc -q "edit with text field?";then
+			if echoc -q "as the file is missing, it is suggested that you edit using the '@s@yZenity Text Field@S' dialog, do it?";then
 				bTextFieldEditMode=true
 			fi
 		fi
@@ -75,6 +78,12 @@ function FUNCretargetSymlink() {
 				$strOptDirectory \
 				--filename=\"$lstrTarget\"`"
 		fi
+		
+		# in case user typed relative path
+		if [[ "${lstrNewSymlink:0:1}" != "/" ]];then
+			lstrNewSymlink="$lstrFilePath/$lstrNewSymlink"
+		fi
+		
 		if [[ -a "$lstrNewSymlink" ]];then
 			#echoc -x "rm -v '$lstrFile'"
 			echoc -x "ln -vsfT $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
@@ -85,6 +94,12 @@ function FUNCretargetSymlink() {
 	fi
 };export -f FUNCretargetSymlink
 
-cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
-xterm -e "bash -i -c \"FUNCretargetSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
+cd "/tmp" #safe place as NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
+#xterm -e "bash -i -c \"FUNCretargetSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
+#strTitle="${SECstrScriptSelfName}_pid$$"
+#SECFUNCCwindowOnTop --delay 1 "${strTitle}.*"
+#secXtermDetached.sh --ontop --title "${strTitle}" --skiporganize FUNCretargetSymlink "$strFile"
+secXtermDetached.sh --ontop --title "${SECstrScriptSelfName}" --skiporganize FUNCretargetSymlink "$strFile"
+#SECFUNCCwindowOnTop --stop "${strTitle}.*"
+#secXtermDetached.sh --skiporganize --ontop FUNCretargetSymlink "$strFile"
 
