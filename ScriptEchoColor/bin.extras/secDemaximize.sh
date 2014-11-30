@@ -1,1 +1,1 @@
-/home/teique/Projects/ScriptEchoColor/SourceForge.GIT/ScriptEchoColor/bin.extras/secFixWindow.sh
+secFixWindow.sh

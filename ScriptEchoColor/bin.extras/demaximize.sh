@@ -1,1 +1,0 @@
-secDemaximize.sh
