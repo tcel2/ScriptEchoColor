@@ -1,3 +1,5 @@
+Date:   2014-12-03 19:03:06 -0200
+    secOpenNewX.sh: show help with user options properly now.
 Date:   2014-12-03 18:12:04 -0200
     secGitHelper.sh: auto gen changes log while git gui is running;
 Date:   2014-12-03 17:59:46 -0200
