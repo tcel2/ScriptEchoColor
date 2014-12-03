@@ -965,6 +965,7 @@ if [[ -n "$strGeometry" ]];then
 	sleep 1
 fi
 
+
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
 if $useJWM; then
   jwm -display :1&
