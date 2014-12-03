@@ -135,7 +135,7 @@ while true;do
 	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
 \t_commit with 'git gui'/\n\
 \t_diff last tag from master/\n\
-\t_generate changes log file/\n\
+\t_generate and show changes log file/\n\
 \tdiff _installed from master/\n\
 \tdiff to be p_ushed/\n\
 \t_push tags to remote/\n\
@@ -185,9 +185,9 @@ while true;do
 			;;
 		g)
 			FUNCgenerateChangesLogFile
-			if echoc -t 1 -q "view changes file '$strChangesFile'?";then
+			#if echoc -t 1 -q "view changes file '$strChangesFile'?";then
 				echoc -x "gedit '$strChangesFile'"
-			fi
+			#fi
 			;;
 		i)
 			if [[ -z "$strSECInstalledVersion" ]];then
