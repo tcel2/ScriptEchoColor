@@ -580,11 +580,11 @@ function FUNCcmdAtNewX() {
 	bash;
 }; export -f FUNCcmdAtNewX
 
-function FUNCdoNotCloseThisTerminal() {
+function FUNCsoundEnablerDoNotCloseThisTerminal() {
 	echo "DO NOT CLOSE THIS TERMINAL, ck-launch-session";
 	ck-launch-session;
 	bash -c "echo \"wont reach here cuz of ck-launch-session...\""
-};export -f FUNCdoNotCloseThisTerminal
+};export -f FUNCsoundEnablerDoNotCloseThisTerminal
 
 function FUNCechocInitBashInteractive() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
@@ -616,11 +616,11 @@ function FUNCshowHelp() {
   
   #zenity --display=$1 $timeout --info --title "OpenNewX: your Custom Commands!" --text="$strCustomCmdHelp"&
 #  zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
-	strTitle="OpenNewX: your Custom Commands! [$$]"
-	SECFUNCCwindowCmd --ontop --maximize "$strTitle"
-  zenity --display=$1 $timeout --title "$strTitle" --text-info --filename="$helpFile"
+	strTitleRegex="OpenNewX: your Custom Commands! ppid$$"
+	SECFUNCCwindowCmd --ontop --maximize "$strTitleRegex"
+  SECFUNCexec --echo -c zenity --display=$1 $timeout --title "$strTitleRegex" --text-info --filename="$helpFile"
 	# will wait zenity exit
-  SECFUNCCwindowCmd --stop "$strTitle"
+  SECFUNCCwindowCmd --stop "$strTitleRegex"
 #  local pidZenity=$!
 #  
 #  local windowId=""
@@ -965,6 +965,10 @@ if [[ -n "$strGeometry" ]];then
 	sleep 1
 fi
 
+#FUNCxtermDetached --waitX1exit FUNCshowHelp :0&
+#FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
+secXtermDetached.sh --display :1 FUNCshowHelp :1 30
+#pidZenity0=$!
 
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
 if $useJWM; then
@@ -973,7 +977,7 @@ if $useJWM; then
   
   #xterm -e "FUNCkeepJwmAlive $pidJWM $$ #kill=skip"&
   #FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
-  secXtermDetached.sh --killskip --display :1 FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
+  secXtermDetached.sh --killskip --display :1 --xtermopts "-bg orange -geometry $strOptXtermGeom" FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
 fi
 
 #xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
@@ -982,8 +986,8 @@ secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry 
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-#xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal; #kill=skip"&
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCdoNotCloseThisTerminal"
+#xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCsoundEnablerDoNotCloseThisTerminal; #kill=skip"&
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCsoundEnablerDoNotCloseThisTerminal"
 
 #initializes the cicle of configurations!
 if $bInitNvidia;then
@@ -1016,11 +1020,6 @@ fi
 
 # good for games!
 #bXTerm=true #TODO gnome-terminal is not working with this yet...
-
-#FUNCxtermDetached --waitX1exit FUNCshowHelp :0&
-#FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
-secXtermDetached.sh --display :1 FUNCshowHelp
-#pidZenity0=$!
 
 #while true; do
 	pidTerm=-1
@@ -1063,7 +1062,7 @@ fi
 # this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-#xterm -geometry $strOptXtermGeom -display :1 -e "FUNCdoNotCloseThisTerminal #kill=skip"&
+#xterm -geometry $strOptXtermGeom -display :1 -e "FUNCsoundEnablerDoNotCloseThisTerminal #kill=skip"&
 
 #while FUNCisX1running; do
 while ps -p $pidX1 >/dev/null 2>&1; do
