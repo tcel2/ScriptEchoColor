@@ -101,6 +101,25 @@ function FUNCgitDiffCheckShow() {
 	return 0
 }
 
+function FUNCgenerateChangesLogFileGitGuiLoop() {
+	while pgrep -fx "git gui" >/dev/null;do 
+		nLastSize="`stat -c %s "$strChangesFile"`"
+		FUNCgenerateChangesLogFile; 
+		nNewSize="`stat -c %s "$strChangesFile"`"
+		if((nLastSize!=nNewSize));then
+			echo "updated: '`basename "$strChangesFile"`'"
+		fi
+		sleep 3;
+	done
+}
+
+function FUNCgenerateChangesLogFile() {
+	git log --full-history --date=iso \
+		|egrep -v "^$|^commit |^Author: |^    [.]" \
+		|grep "^    " -B 1 \
+		|grep -v "^--" >"$strChangesFile";
+}
+
 SECFUNCuniqueLock --daemonwait
 while true;do
 	### ASK WHAT TO DO ###
@@ -157,6 +176,7 @@ while true;do
 			echoc --alert "SOURCEFORGE PassWord may be asked...";
 			strTitleRegex="^Git Gui (.*): push .*"
 			SECFUNCCwindowOnTop "$strTitleRegex"
+			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc -x "git gui"&&: 
 			SECFUNCCwindowOnTop --stop "$strTitleRegex"
 			;; 
@@ -164,10 +184,7 @@ while true;do
 			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:
 			;;
 		g)
-			git log --full-history --date=iso \
-				|egrep -v "^$|^commit |^Author: |^    [.]" \
-				|grep "^    " -B 1 \
-				|grep -v "^--" >"$strChangesFile";
+			FUNCgenerateChangesLogFile
 			if echoc -t 1 -q "view changes file '$strChangesFile'?";then
 				echoc -x "gedit '$strChangesFile'"
 			fi
