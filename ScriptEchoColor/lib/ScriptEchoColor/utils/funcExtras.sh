@@ -33,21 +33,27 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
-declare -a SECastrSECFUNCCwindowOnTop_ChildRegex=()
-function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and put on top
+declare -a SECastrSECFUNCCwindowCmd_ChildRegex=()
+function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and put on top
 	local lnDelay=3
 	local lstrStopMatchRegex=""
+	local lbMaximize=false
+	local lbOnTop=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-		if [[ "$1" == "--help" ]];then #SECFUNCCwindowOnTop_help
+		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowOnTop_help <lnDelay> between checks
+		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
+			lbOnTop=true
+		elif [[ "$1" == "--maximize" ]];then #SECFUNCCwindowCmd_help maximize window
+			lbMaximize=true
+		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
 			shift
 			lnDelay="${1-}"
-		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowOnTop_help <lstrWindowTitleRegex>
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex>
 			shift
 			lstrStopMatchRegex="${1-}"
-		elif [[ "$1" == "--" ]];then #SECFUNCCwindowOnTop_help params after this are ignored as being these options
+		elif [[ "$1" == "--" ]];then #SECFUNCCwindowCmd_help params after this are ignored as being these options
 			shift
 			break
 		else
@@ -61,14 +67,14 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 	done
 	
 	if [[ -n "$lstrStopMatchRegex" ]];then
-		for lnPid in "${!SECastrSECFUNCCwindowOnTop_ChildRegex[@]}";do
-			if [[ "${SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]}" == "$lstrStopMatchRegex" ]];then
+		for lnPid in "${!SECastrSECFUNCCwindowCmd_ChildRegex[@]}";do
+			if [[ "${SECastrSECFUNCCwindowCmd_ChildRegex[$lnPid]}" == "$lstrStopMatchRegex" ]];then
 				if [[ ! -d "/proc/$lnPid" ]];then
-					unset SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]
+					unset SECastrSECFUNCCwindowCmd_ChildRegex[$lnPid]
 					continue
 				fi
 				if SECFUNCexecA -c --echo kill -SIGUSR1 $lnPid;then
-					unset SECastrSECFUNCCwindowOnTop_ChildRegex[$lnPid]
+					unset SECastrSECFUNCCwindowCmd_ChildRegex[$lnPid]
 				fi
 				#no break as can have more than one with same regex
 			fi
@@ -96,7 +102,14 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 			fi
 			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
 			if SECFUNCisNumber -nd "$lnWindowId";then
-				if wmctrl -F -i -a "$lnWindowId" -b add,above;then
+				if $lbOnTop && wmctrl -i -a "$lnWindowId" -b add,above;then
+					lbOnTop=false;
+				fi
+				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
+					lbMaximize=false;
+				fi
+				# only end when all is done
+				if ! $lbOnTop && ! $lbMaximize;then
 					break;
 				fi
 			fi
@@ -105,11 +118,16 @@ function SECFUNCCwindowOnTop() { #help <lstrWindowTitleRegex> this will run a ch
 		done
 	) & lnChildPid=$!
 	
-	SECastrSECFUNCCwindowOnTop_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
+	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
 	#echo "$lnChildPid"
 	
 	return 0
 }
+
+function SECFUNCCwindowOnTop() {
+	SECFUNCCwindowCmd --ontop "$@"
+}
+
 
 ###############################################################################
 # LAST THINGS CODE

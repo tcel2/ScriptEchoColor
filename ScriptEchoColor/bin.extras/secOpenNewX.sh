@@ -25,7 +25,7 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS #####################################
-eval `secinit`
+eval `secinit --extras`
 SECFUNCechoDbgA "init"
 SECFUNCuniqueLock --setdbtodaemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
 SECFUNCechoDbgA "SECvarFile='$SECvarFile'"
@@ -591,10 +591,10 @@ function FUNCechocInitBashInteractive() {
 	bash -i
 };export -f FUNCechocInitBashInteractive
 
-function FUNCmaximiseWindow() {
-	local windowId=$1
-	wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz
-};export -f FUNCmaximiseWindow
+#function FUNCmaximiseWindow() {
+#	local windowId=$1
+#	wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz
+#};export -f FUNCmaximiseWindow
 
 function FUNCshowHelp() {
   local timeout=""
@@ -615,13 +615,18 @@ function FUNCshowHelp() {
   echo -e "Custom Commands:\n${strCustomCmdHelp}\n\nCommands:\n${strJwmrcKeys}\n" >"$helpFile";
   
   #zenity --display=$1 $timeout --info --title "OpenNewX: your Custom Commands!" --text="$strCustomCmdHelp"&
-  zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
-  local pidZenity=$!
-  
-  local windowId=""
-  for windowId in `xdotool search --sync --pid $pidZenity`;do
-    FUNCmaximiseWindow $windowId
-  done
+#  zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
+	strTitle="OpenNewX: your Custom Commands! [$$]"
+	SECFUNCCwindowCmd --ontop --maximize "$strTitle"
+  zenity --display=$1 $timeout --title "$strTitle" --text-info --filename="$helpFile"
+	# will wait zenity exit
+  SECFUNCCwindowCmd --stop "$strTitle"
+#  local pidZenity=$!
+#  
+#  local windowId=""
+#  for windowId in `xdotool search --sync --pid $pidZenity`;do
+#    FUNCmaximiseWindow $windowId
+#  done
   
 #  while ps -p $pidZenity 2>&1 >/dev/null;do
 #    echo "wait zenity exit..."
@@ -967,7 +972,7 @@ if $useJWM; then
   
   #xterm -e "FUNCkeepJwmAlive $pidJWM $$ #kill=skip"&
   #FUNCxtermDetached "FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX #kill=skip"
-  secXtermDetached.sh --killskip FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
+  secXtermDetached.sh --killskip --display :1 FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
 fi
 
 #xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
