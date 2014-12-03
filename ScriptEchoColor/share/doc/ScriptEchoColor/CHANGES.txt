@@ -1,3 +1,7 @@
+Date:   2014-12-03 18:12:04 -0200
+    secGitHelper.sh: auto gen changes log while git gui is running;
+Date:   2014-12-03 17:59:46 -0200
+    secOpenNewX.sh: :1 runs independently now in case :0 crashes;
 Date:   2014-12-03 17:57:30 -0200
     SECFUNCCwindowCmd --ontop --maximize;
     secOpenNewX.sh: jwm checker at :1;
