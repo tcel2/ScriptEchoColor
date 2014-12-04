@@ -78,5 +78,5 @@ while true; do
 	else
 		echo "waiting yakuake focus"
 	fi
-	sleep 1;
+	sleep 3;
 done
