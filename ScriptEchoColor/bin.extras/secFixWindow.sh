@@ -180,7 +180,7 @@ function FUNCvalidateAll() {
 FUNCvalidateAll
 
 #alias ContAftErrA="SECFUNCechoErrA \"code='\`sed -n \"\${LINENO}p\" \"$0\"\`';\";continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
-alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?\" >>/dev/stderr;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
+alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?(windowId='${windowId-}')\" >>/dev/stderr;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
 
 function FUNCisOnCurrentViewport(){ 
 	# actually checks if window is outside of current viewport,
@@ -193,6 +193,10 @@ function FUNCisOnCurrentViewport(){
 		return 1
 	fi
 	return 0
+}
+
+function FUNCgetViewport(){
+	wmctrl -d |awk '{print $6}' |tr ',' '\t'
 }
 
 strLastSkipped=""
@@ -245,7 +249,7 @@ while true; do
 #	if wmctrl -d |grep -q " VP: 0,0 ";then
 #		bDesktopIsAtViewport0=true
 #	fi
-	anViewPortPos=(`wmctrl -d |awk '{print $6}' |tr ',' '\t'`)
+	anViewPortPos=(`FUNCgetViewport`)
 	nViewPortPosX=${anViewPortPos[0]}
 	nViewPortPosY=${anViewPortPos[1]}
 	strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
@@ -406,7 +410,14 @@ while true; do
 					bFixWindowPos=true
 				fi
 			fi
-
+			
+			# veto
+			anViewPortPosDoubleCheck=(`FUNCgetViewport`)
+			if((nViewPortPosX!=${anViewPortPosDoubleCheck[0]})) || ((nViewPortPosY!=${anViewPortPosDoubleCheck[1]}));then
+				echo "Viewport changed nViewPortPosX='$nViewPortPosX' vs '${anViewPortPosDoubleCheck[0]}', nViewPortPosY='$nViewPortPosY' vs '${anViewPortPosDoubleCheck[1]}'"
+				bFixWindowPos=false
+			fi
+			
 			if $bFixWindowPos;then
 				if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
 				echo "Fixing (placement): $windowName $strVpMsg"
