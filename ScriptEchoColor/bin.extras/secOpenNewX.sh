@@ -822,8 +822,9 @@ if $useJWM; then
 		  	endTagAtLine=`grep "</JWM>" -n /etc/jwm/system.jwmrc |sed -r 's"([[:digit:]]*):.*"\1"'`
 		  	
 		  	# copy the beggining of cfg file
+		    # disable desktop navigation Alt+Left ... as is conflicts with browsers and some IDEs.
 		  	head -n $((endTagAtLine-1)) /etc/jwm/system.jwmrc \
-		  		>"$HOME/.jwmrc"
+		  		|egrep -v '<Key mask="A" key="(Right|Left|Up|Down)">' >"$HOME/.jwmrc"
 			else
 				#create a new thin one
 				echo -e '
@@ -848,6 +849,7 @@ if $useJWM; then
   	#@@@R <Key mask="S4" key="G">exec:'"xterm -e \"$cmdNvidiaNormal\""'</Key>
     #@@@R <Key mask="4" key="G">exec:'"xterm -e \"FUNCnvidiaCicle\""'</Key>
     #@@@R      <Key mask="4" key="L">exec:bash -c "FUNCCHILDScreenLockNow"</Key>
+    
     echo -e '
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
