@@ -1,3 +1,5 @@
+Date:   2014-12-05 18:23:13 -0200
+    secFixWindow.sh: double check for current viewport;
 Date:   2014-12-03 19:03:06 -0200
     secOpenNewX.sh: show help with user options properly now.
 Date:   2014-12-03 18:12:04 -0200
