@@ -731,7 +731,7 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
     if pidXscrsv=`ps -A -o pid,command |grep "xscreensaver -display :1" |grep -v grep |sed -r "$sedOnlyPid"`;then
     	if [[ -n "$pidXscrsv" ]];then
 			  echo "pidXscrsv=$pidXscrsv"
-		    ps -p $pidXscrsv
+		    ps -p $pidXscrsv&&:
 		    kill -SIGKILL $pidXscrsv
 		  fi
     fi

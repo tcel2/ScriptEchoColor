@@ -50,7 +50,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bForceLightWeight=true
 	elif [[ "$1" == "--monitoron" ]];then #help force keep the monitor on
 		bDPMSmonitorOn=true
-	elif [[ "$1" == "--holdtoggle" ]];then #help command a running daemon to toggle holding execution, it will work for another instance running on another DISPLAY if such is set
+	elif [[ "$1" == "--holdtoggle" ]];then #help command a running daemon, per screen, to toggle holding execution, ex.: `DISPLAY=:1 secAutoScreenLock.sh --holdtoggle`
 		bHoldToggle=true
 	elif [[ "$1" == "--moviecheck" || "$1" == "-m" ]];then #help <nMovieCheckDelay> check if you are watching a movie in fullscreen and prevent screensaver from being activated
 		shift
