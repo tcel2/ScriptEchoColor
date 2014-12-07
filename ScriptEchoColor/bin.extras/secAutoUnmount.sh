@@ -51,6 +51,7 @@ eval `secinit`
 bList=false
 bRetry=false
 bStillActiveWarn=true
+nKeepAliveDelayInMin=30
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "To let a backup storage go safely sleep, its base id must be supplied (the one that doesnt ends with '-part?'). Also detects unison and keeps devices awake."
@@ -69,6 +70,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bList=true
 	elif [[ "$1" == "--retry" ]];then #help device may not be ready so keep trying
 		bRetry=true
+	elif [[ "$1" == "--keepalive" ]];then #help <nKeepAliveDelayInMin> each delay in minutes, auto mount and unmount; the device may become buggy if unmounted for too long
+		shift
+		nKeepAliveDelayInMin="${1-}"
+		
+		bKeepAlive=true
 	elif [[ "$1" == "--nostillactivewarn" ]];then #help disable audible warning for backup storage being kept active for too long
 		bStillActiveWarn=false
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -81,6 +87,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 astrDevTemp=("$@")
+
+if ! SECFUNCisNumber -dn "$nKeepAliveDelayInMin";then
+	echoc -p "invalid nKeepAliveDelayInMin='$nKeepAliveDelayInMin'"
+	exit 1
+fi
 
 bExitWithError=false
 if ! $bList && [[ -z "${astrDevTemp[@]-}" ]];then
@@ -152,6 +163,7 @@ varset --allowuser --show nWaitSecondsToUnmount=300 #5min
 #astrDev=(`ls "$strDevBase"?`)
 
 declare -A anPidKeepAwake
+declare -A astrMountedPaths
 while true;do
 	for nIndex in ${!astrDev[@]};do
 		strDev="${astrDev[nIndex]}"
@@ -161,7 +173,8 @@ while true;do
 			bKeepAwake=false
 
 			strLsCmd="ls -lR"
-			strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (.*) type .*'\1'"`"
+			strDeviceMountedPath="`mount |grep "$strDev" |sed -r "s'^$strDev on (/.*) type .*'\1'"`"
+			astrMountedPaths[$strDev]="$strDeviceMountedPath"
 			
 			function FUNCkillLostLs () { #mainly useful at developing time where this script is exited several times...
 				pgrep -fx "$strLsCmd $strDeviceMountedPath" \
@@ -233,7 +246,31 @@ while true;do
 		
 			strStatusPrevious[nIndex]="${strStatus[nIndex]}"
 		else
-			echoc --info "$strDev unmounted for `SECFUNCdelay "Device${nIndex}" --getsec`s"
+			nUnmountedFor="`SECFUNCdelay "Device${nIndex}" --getsec`"
+			echoc --info "$strDev unmounted for ${nUnmountedFor}s"
+			
+			if $bKeepAlive;then
+				if(( nUnmountedFor >= (nKeepAliveDelayInMin*60) ));then
+					bKeepAliveWorking=true
+#					if ! SECFUNCexec --echo -c mount "$strDev";then
+#						if ! SECFUNCexec --echo -c mount "${astrMountedPaths[$strDev]-}";then
+#							echoc --alert "failed"
+#							bKeepAliveWorking=false
+#						fi
+#					fi
+					if ! SECFUNCexec --echo -c udisks --mount "$strDev";then
+						echoc --alert "failed"
+						bKeepAliveWorking=false
+					else
+						SECFUNCdelay "Device${nIndex}" --init
+					fi
+					
+					if $bKeepAliveWorking;then
+						echoc -w -t 10 "wait a bit"
+						SECFUNCexec --echo -c umount "$strDev"&&:
+					fi
+				fi
+			fi
 		fi
 	done
 	
