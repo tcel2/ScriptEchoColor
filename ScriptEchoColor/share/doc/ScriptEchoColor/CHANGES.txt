@@ -1,3 +1,5 @@
+Date:   2014-12-07 14:35:46 -0200
+    secAutoUnmount.sh --keepalive;
 Date:   2014-12-05 20:28:49 -0200
     secOpenNewX.sh: disabled alt+arrows desktop conflicting navigation with browsers and IDE;
 Date:   2014-12-05 18:23:13 -0200
