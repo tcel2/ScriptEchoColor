@@ -1,3 +1,5 @@
+Date:   2014-12-08 15:10:26 -0200
+    secFixWindow.sh: now considers window balance (middle point);
 Date:   2014-12-07 14:35:46 -0200
     secAutoUnmount.sh --keepalive;
 Date:   2014-12-05 20:28:49 -0200
