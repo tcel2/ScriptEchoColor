@@ -411,11 +411,24 @@ while true; do
 				fi
 			fi
 			
-			# veto
+			############ veto ##################
 			anViewPortPosDoubleCheck=(`FUNCgetViewport`)
 			if((nViewPortPosX!=${anViewPortPosDoubleCheck[0]})) || ((nViewPortPosY!=${anViewPortPosDoubleCheck[1]}));then
-				echo "Viewport changed nViewPortPosX='$nViewPortPosX' vs '${anViewPortPosDoubleCheck[0]}', nViewPortPosY='$nViewPortPosY' vs '${anViewPortPosDoubleCheck[1]}'"
-				bFixWindowPos=false
+				echo "Veto: viewport changed nViewPortPosX='$nViewPortPosX' vs '${anViewPortPosDoubleCheck[0]}', nViewPortPosY='$nViewPortPosY' vs '${anViewPortPosDoubleCheck[1]}'"
+				bFixWindowPos=false;
+			fi
+			
+			nWindowMiddleX=$(( nWindowX+(nWindowWidth/2) ))
+			nWindowMiddleY=$(( nWindowY+(nWindowHeight/2) ))
+			if((nWindowMiddleX<0 || nWindowMiddleY<0 || nWindowMiddleX>nScreenWidth || nWindowMiddleY>nScreenHeight));then
+				echo "Veto: window is balanced to other viewport. nWindowMiddleX='$nWindowMiddleX', nWindowMiddleY='$nWindowMiddleY'"
+				bFixWindowPos=false;
+			fi
+			
+			if ! windowIdCheck="`xdotool getactivewindow`";then ContAftErrA;fi
+			if((windowId!=windowIdCheck));then
+				echo "Veto: window changed."
+				bFixWindowPos=false;
 			fi
 			
 			if $bFixWindowPos;then
