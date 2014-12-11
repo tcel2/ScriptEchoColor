@@ -168,6 +168,13 @@ while true;do
 	for nIndex in ${!astrDev[@]};do
 		strDev="${astrDev[nIndex]}"
 		
+		funct FUNCkillLs(){
+			if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
+				kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
+				anPidKeepAwake[$strDev]="" #cleanup to prevent access to a reused pid
+			fi
+		}
+		
 		if mount |grep -q "^$strDev";then
 			bResetTimer=false
 			bKeepAwake=false
@@ -217,9 +224,11 @@ while true;do
 				# do not use bResetTimer=true here, ls work should provide enough status changes to make it work...
 				bKeepAwake=true
 			else
-				if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
-					kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
-				fi
+				FUNCkillLs
+#				if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
+#					kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
+#					anPidKeepAwake[$strDev]="" #cleanup to prevent access to a reused pid
+#				fi
 			fi
 			
 			strStatus[nIndex]=$(iostat -d $strDev |sed "/^$/d" |tail -n 1 |sed -r "s'[[:blank:]]+' 'g" |cut -d" " -f 5,6)
@@ -246,6 +255,12 @@ while true;do
 		
 			strStatusPrevious[nIndex]="${strStatus[nIndex]}"
 		else
+			FUNCkillLs
+#			if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
+#				kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
+#				anPidKeepAwake[$strDev]="" #cleanup to prevent access to a reused pid
+#			fi
+			
 			nUnmountedFor="`SECFUNCdelay "Device${nIndex}" --getsec`"
 			echoc --info "$strDev unmounted for ${nUnmountedFor}s"
 			
