@@ -63,52 +63,54 @@ strSayId="$SEC_SAYID"
 bResume=false
 strDaemonSays="Say stack daemon initialized."
 bClearCache=false
+strEffects=""
 
 function FUNCechoDbgSS() { 
-	SECFUNCechoDbgA --caller "FUNCsayStack" "$1"; 
+	SECFUNCechoDbgA --caller "$_SECSAYselfBaseName" "$1"; 
 };export -f FUNCechoDbgSS
 
-function FUNCechoErrSS() { 
-	SECFUNCechoErrA --caller "FUNCsayStack" "$1"; 
-};export -f FUNCechoErrSS
+#function FUNCechoErrSS() { 
+#	SECFUNCechoErrA --caller "$_SECSAYselfBaseName" "$1"; 
+#};export -f FUNCechoErrSS
 
-function FUNCexecSS() {
-	###### options
-	local caller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
-		if [[ "$1" == "--help" ]];then #FUNCexecSS_help show this help
-			#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
-			SECFUNCshowHelp ${FUNCNAME}
-			return 0
-		elif [[ "$1" == "--caller" ]];then #FUNCexecSS_help is the name of the function calling this one
-			shift
-			caller="${1}: "
-		else
-			FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
-			return 1
-		fi
-		shift
-	done
-	
-	###### main code
-	SECFUNCexecA --caller "FUNCsayStack" --quiet "$@"
-};export -f FUNCexecSS
+#function FUNCexecSS() {
+#	###### options
+#	local caller=""
+#	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+#		if [[ "$1" == "--help" ]];then #FUNCexecSS_help show this help
+#			#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
+#			SECFUNCshowHelp ${FUNCNAME}
+#			return 0
+#		elif [[ "$1" == "--caller" ]];then #FUNCexecSS_help is the name of the function calling this one
+#			shift
+#			caller="${1}: "
+#		else
+#			FUNCechoErrSS "invalid option $1"
+#			return 1
+#		fi
+#		shift
+#	done
+#	
+#	###### main code
+#	SECFUNCexecA --caller "$_SECSAYselfBaseName" --quiet "$@"
+#};export -f FUNCexecSS
 
 function FUNCisPidActive() { #generic check with info
 	if [[ -z "${1-}" ]]; then
-		FUNCechoErrSS "$FUNCNAME: $LINENO: empty pid value"
+		SECFUNCechoErrA "empty pid value"
 		return 1
 	fi
 	
 	# this is necessary as pid ids wrap at `cat /proc/sys/kernel/pid_max`
 	# the pid 'command' at `ps` must have this script filename
 	# this prevents this file from being sourced, see (*1) at the end...
-	# do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO explain why...
+	#@@@r # do not use FUNCexecSS or SECFUNCexec or SECFUNCexecA here! #TODO explain why...
 	if ! ps -p $1 --no-headers -o command |grep -q "$_SECSAYselfBaseName"; then
 		return 1
 	fi
 	
-	FUNCexecSS --caller "$FUNCNAME" ps -p $1 -o pid,ppid,stat,state,command;
+	#FUNCexecSS --caller "$FUNCNAME" ps -p $1 -o pid,ppid,stat,state,command;
+	SECFUNCexecA ps -p $1 -o pid,ppid,stat,state,command;
 	return $?
 };export -f FUNCisPidActive
 
@@ -120,7 +122,7 @@ function FUNCcheckIfLockPidIsRunning() {
 	FUNCechoDbgSS "already running pid is $otherPid"
 	if ! FUNCisPidActive $otherPid; then
 		# if pid is not running, probably crashed so clean up locks
-		FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
+		SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
 		return 1 # pid is not running
 	fi
 	
@@ -136,14 +138,14 @@ function FUNCgetRealLockFile() {
 		if [[ -L "$lockFile" ]];then
 			realLockFile="`readlink "$lockFile"`"
 			if [[ ! -f "$realLockFile" ]];then
-				FUNCechoErrSS "$FUNCNAME: $LINENO: $realLockFile doesnt exist, its pid crashed?"
-				FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
+				SECFUNCechoErrA "$realLockFile doesnt exist, its pid crashed?"
+				SECFUNCexecA rm $_SECdbgVerboseOpt "$lockFile"
 				continue
 			fi
 		elif [[ -a "$lockFile" ]];then
 			#rm "${_SECSAYfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
-			FUNCechoErrSS "$FUNCNAME: $LINENO: $lockFile should be a symlink! the mess will be cleaned..."
-			FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
+			SECFUNCechoErrA "$lockFile should be a symlink! the mess will be cleaned..."
+			SECFUNCexecA rm $_SECdbgVerboseOpt "$lockFile"
 			continue
 		fi
 
@@ -191,21 +193,21 @@ function FUNCsuspend() {
 };export -f FUNCsuspend
 
 function FUNCresumeJustDel() {
-	FUNCexecSS rm $_SECdbgVerboseOpt "$suspendFile"
+	SECFUNCexecA rm $_SECdbgVerboseOpt "$suspendFile"
 };export -f FUNCresumeJustDel
 
 function FUNCcreateCache(){
 	local md5sumText="${1}"
 	local fileAudio="${2}"
 	
-	FUNCexecSS cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
+	SECFUNCexecA cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
 	SECFUNCechoDbgA "SEC_SAYMP3=$SEC_SAYMP3"
 	if $SEC_SAYMP3;then
 		local lbConversionWorked=false
 		local lnBitRate=32
 		
 		if ! $lbConversionWorked;then
-			if ! FUNCexecSS avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+			if ! SECFUNCexecA avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
 				SECFUNCechoErrA "avconv failed." #is avconv broken?
 				rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
 			else
@@ -214,7 +216,7 @@ function FUNCcreateCache(){
 		fi
 		
 		if ! $lbConversionWorked;then
-			if ! FUNCexecSS ffmpeg -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+			if ! SECFUNCexecA ffmpeg -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
 				SECFUNCechoErrA "ffmpeg failed."
 				rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
 			else
@@ -241,8 +243,8 @@ function FUNChasCache() {
 	
 	SECFUNCechoDbgA "cache missing: $cacheFile"
 	# mainly to remove invalid (size=0) files
-	FUNCexecSS rm "$cacheFile"
-	FUNCexecSS rm "$cacheFileReal"
+	SECFUNCexecA rm "$cacheFile"
+	SECFUNCexecA rm "$cacheFileReal"
 	
 	return 1
 };export -f FUNChasCache
@@ -253,20 +255,20 @@ function FUNCplay() {
 #		shift
 #	fi
 	
-	local md5sumText="${1-}"
-	local sayVol="${2-}"
+	local lmd5sumText="$1"
+	local lsayVol="$2"
 
-	if ! FUNChasCache "$md5sumText";then
-		SECFUNCechoErrA "no cache for md5sumText='$md5sumText'"
+	if ! FUNChasCache "$lmd5sumText";then
+		SECFUNCechoErrA "no cache for lmd5sumText='$lmd5sumText'"
 		return 1
 	fi
 	
-	local cacheFile="$_SECSAYcacheFolder/$md5sumText"
+	local cacheFile="$_SECSAYcacheFolder/$lmd5sumText"
 	
 	
-	FUNCexecSS touch "$cacheFile" #to indicate that it was recently used
+	SECFUNCexecA touch "$cacheFile" #to indicate that it was recently used
 	local fileAudio="$cacheFile"
-	SECFUNCechoDbgA "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
+	SECFUNCechoDbgA "lmd5sumText=$lmd5sumText lsayVol=$lsayVol fileAudio=$fileAudio"
 	if $SEC_SAYMP3;then
 		local fileAudioMp3="${fileAudio}.mp3"
 		if [[ -f "$fileAudioMp3" ]];then
@@ -274,7 +276,7 @@ function FUNCplay() {
 		fi
 	fi
 	
-	FUNCexecSS play -v $sayVol "$fileAudio";
+	SECFUNCexecA play -v "$lsayVol" "$fileAudio";
 };export -f FUNCplay;
 
 ####################### other initializations
@@ -290,49 +292,52 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bNextIsParam=true
 	fi
 	
-	if [[ "$1" == "--help" ]];then #FUNCsayStack_help show this help
+	if [[ "$1" == "--help" ]];then #help show this help
 		#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
-		#FUNCexecSS --help
-		SECFUNCshowHelp ${FUNCNAME}
+		#SECFUNCexecA --help
+		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--sayvol" ]];then #FUNCsayStack_help set volume to be used at festival
+	elif [[ "$1" == "--sayvol" ]];then #help set volume to be used at festival
 		shift
 	  SEC_SAYVOL="$1"
-	elif [[ "$1" == "--nomp3" ]];then #FUNCsayStack_help do not use mp3 format, but cache files will be about 10x bigger...
+	elif [[ "$1" == "--effects" ]];then #help <strEffects> set volume to be used at festival
+		shift
+	  strEffects="$1"
+	elif [[ "$1" == "--nomp3" ]];then #help do not use mp3 format, but cache files will be about 10x bigger...
 		SEC_SAYMP3=false
-	elif [[ "$1" == "--clearcache" ]];then #FUNCsayStack_help all audio files on cache will be removed
+	elif [[ "$1" == "--clearcache" ]];then #help all audio files on cache will be removed
 		bClearCache=true
-	elif [[ "$1" == "--daemon" ]];then #FUNCsayStack_help keeps running and takes care of all speak requests with log
+	elif [[ "$1" == "--daemon" ]];then #help keeps running and takes care of all speak requests with log
 		bDaemon=true
-	elif [[ "$1" == "--waitsay" ]];then #FUNCsayStack_help only exit after the saying of the specified text has finished
+	elif [[ "$1" == "--waitsay" ]];then #help only exit after the saying of the specified text has finished
 		bWaitSay=true
-	elif [[ "$1" == "--suspend" ]];then #FUNCsayStack_help suspend speaking, and exit only after the speaking is surely suspended (see --resume)
+	elif [[ "$1" == "--suspend" ]];then #help suspend speaking, and exit only after the speaking is surely suspended (see --resume)
 		FUNCsuspend
 		# must not allow to speak anything after suspend or this function wont exit...
 		exit 0 #exit_FUNCsayStack: wont put empty lines
-	elif [[ "$1" == "--resume" ]];then #FUNCsayStack_help resume speaking
+	elif [[ "$1" == "--resume" ]];then #help resume speaking
 		FUNCresumeJustDel
 		bResume=true
-	elif [[ "$1" == "--resume-justdel" ]];then #FUNCsayStack_help just delete the suspend file, allowing other pids to resume speaking
+	elif [[ "$1" == "--resume-justdel" ]];then #help just delete the suspend file, allowing other pids to resume speaking
 		FUNCresumeJustDel
 		exit 0 #exit_FUNCsayStack: wont put empty lines
-#		elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help [id filter], clear SayStack buffer for all speeches requested by all applications til now; if filter is set, will only clear matching lines, see --id option
+#		elif [[ "$1" == "--clearbuffer" ]];then #help [id filter], clear SayStack buffer for all speeches requested by all applications til now; if filter is set, will only clear matching lines, see --id option
 #			if $bNextIsParam;then
 #				shift
 #				strSayId="$1"
 #				grep -v "SECsayId '$strSayId)"
 #			else
-#				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+#				SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
 #			fi
 #			exit 0 #exit_FUNCsayStack: wont put empty lines
-	elif [[ "$1" == "--clearbuffer" ]];then #FUNCsayStack_help clear SayStack buffer for all speeches requested by all applications til now; Though if SEC_SAYID, or --id, is set, will only clear matching lines..
+	elif [[ "$1" == "--clearbuffer" ]];then #help clear SayStack buffer for all speeches requested by all applications til now; Though if SEC_SAYID, or --id, is set, will only clear matching lines..
 		if [[ -n "$strSayId" ]];then
-			FUNCexecSS sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
+			SECFUNCexecA sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
 		else
-			FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+			SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
 		fi
 		exit 0 #exit_FUNCsayStack: wont put empty lines
-	elif [[ "$1" == "--id" ]];then #FUNCsayStack_help identifier to store at buffer
+	elif [[ "$1" == "--id" ]];then #help identifier to store at buffer
 		shift
 		strSayId="$1"
 	elif [[ "$1" == "--cacheonly" ]];then #(internal use)
@@ -340,7 +345,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		FUNCcreateCache "$1" "$2"
 		exit 0 #exit_FUNCsayStack: wont put empty lines
 	else
-		FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
+		SECFUNCechoErrA "invalid option $1"
 	  exit 1 #exit_FUNCsayStack: 
 	fi
 	shift
@@ -349,10 +354,10 @@ sayText="${1-}" #last param
 sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
 md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
 if $bClearCache;then
-	FUNCexecSS trash "$_SECSAYcacheFolder"
+	SECFUNCexecA trash "$_SECSAYcacheFolder"
 	exit 0 #exit_FUNCsayStack: clear cache must be called alone (why?)
 fi
-FUNCexecSS mkdir -p "$_SECSAYcacheFolder"
+SECFUNCexecA mkdir -p "$_SECSAYcacheFolder"
 if $bDaemon;then
 	sayText="${strDaemonSays}${sayText}"
 fi
@@ -367,7 +372,9 @@ if [[ -z "$sayText" ]]; then
 fi
 
 #echo "$sayText" >>"$_SECSAYfileSayStack"
-sayVol=`echo "scale=2;$SEC_SAYVOL/100" |bc -l`
+#echo "SEC_SAYVOL='$SEC_SAYVOL'"
+sayVol="`echo "scale=2;$SEC_SAYVOL/100" |bc -l`"
+#echo "sayVol='$sayVol'"
 paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this param with a var name SECsortOrder that I believe wont conflict with pre-existant ones on festival
 paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival
 paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
@@ -395,12 +402,12 @@ while true; do
 #			if [[ ! -f "$realLockFile" ]];then
 #				#cleanup because probably crashed and the file wasnt normally removed?
 #				#realLockFile=""
-#				FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
+#				SECFUNCexecA rm $_SECdbgVerboseOpt "$lockFile"
 #				continue #try again
 #			fi
 #		elif [[ -a "$lockFile" ]];then
 #			#rm "${_SECSAYfileSayStack}"* # clean inconsistency ? but doing this wont help fix bug
-#			FUNCechoErrSS "$FUNCNAME: $LINENO: $lockFile should be a symlink!"
+#			SECFUNCechoErrA "$lockFile should be a symlink!"
 #			exit 1 #exit_FUNCsayStack: 
 #		fi
 #		if ! local realLockFile=`FUNCgetRealLockFile`;then
@@ -416,7 +423,7 @@ while true; do
 		echo "$selfFullCmd" >>"$realLockFile"
 		ps -p $selfMainFunctionPid --no-headers -o command >>"$realLockFile"
 		
-		while ! FUNCexecSS ln $_SECdbgVerboseOpt -s "$realLockFile" "$lockFile"; do #create the symlink
+		while ! SECFUNCexecA ln $_SECdbgVerboseOpt -s "$realLockFile" "$lockFile"; do #create the symlink
 			if ! sleep $sleepDelay; then exit 1; fi #exit_FUNCsayStack: on sleep fail
 		done
 		break
@@ -429,7 +436,7 @@ while true; do
 #			FUNCechoDbgSS "already running pid is $otherPid"
 #			if ! FUNCisPidActive $otherPid; then
 #				# if pid is not running, probably crashed so clean up locks
-#				FUNCexecSS rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
+#				SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}."*".lock"
 #				continue #try again
 #			fi
 		
@@ -443,7 +450,7 @@ while true; do
 		exit 0 #exit_FUNCsayStack: as another pid is already saying the stack
 	fi
 	
-	FUNCechoErrSS "$FUNCNAME: $LINENO: this line of the code should not have been reached!"
+	SECFUNCechoErrA "this line of the code should not have been reached!"
 	exit 1 #exit_FUNCsayStack: 
 done	
 
@@ -476,18 +483,18 @@ while true; do
 			md5sumText="`FUNCgetParamValue "$strHead" SECmd5sum`"
 			#sedGetSayVol="s;.* 'SECsayVol '([[:digit:]]*[.][[:digit:]]*)\).*;\1;"
 			#sayVol=`echo "$strHead" |sed -r "$sedGetSayVol"`
-			sayVol="`FUNCgetParamValue "$strHead" SECsayVol`"
+			nSayVol="`FUNCgetParamValue "$strHead" SECsayVol`"
 			strSndEffects="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
 			
 			#echo "strHead=$strHead" >>/dev/stderr
 			if ! FUNChasCache $md5sumText;then
-				echo "$strHead"	|FUNCexecSS festival --pipe # this line will CREATE the CACHE!
+				echo "$strHead"	|SECFUNCexecA festival --pipe # this line will CREATE the CACHE!
 			fi
 			
-			FUNCplay "$md5sumText" $sayVol "$strSndEffects"
+			FUNCplay "$md5sumText" "$nSayVol" "$strSndEffects"
 			
-			#FUNCexecSS sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
-			FUNCexecSS sed -i "/$md5sumText/d" "$_SECSAYfileSayStack" #delete correct line
+			#SECFUNCexecA sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
+			SECFUNCexecA sed -i "/$md5sumText/d" "$_SECSAYfileSayStack" #delete correct line
 		else
 			if ! $bDaemon;then
 				break
@@ -503,7 +510,7 @@ while true; do
 done
 
 ####################### release the lock
-FUNCexecSS rm $_SECdbgVerboseOpt "$realLockFile"
-FUNCexecSS rm $_SECdbgVerboseOpt "$lockFile"
+SECFUNCexecA rm $_SECdbgVerboseOpt "$realLockFile"
+SECFUNCexecA rm $_SECdbgVerboseOpt "$lockFile"
 FUNCechoDbgSS "<- exit at"
 
