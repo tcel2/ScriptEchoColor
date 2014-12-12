@@ -251,11 +251,11 @@ function FUNCcheckCreateCache() {
 	return 1
 };export -f FUNCcheckCreateCache
 function FUNCplay() { 
-	local lbCacheOnly=false
-	if [[ "$1" == "--cacheonly" ]];then
-		lbCacheOnly=true
-		shift
-	fi
+#	local lbCacheOnly=false
+#	if [[ "$1" == "--cacheonly" ]];then
+#		lbCacheOnly=true
+#		shift
+#	fi
 	
 	local md5sumText="${1-}"
 	local sayVol="${2-}"
@@ -274,9 +274,9 @@ function FUNCplay() {
 		fi
 	fi
 	
-	if ! $lbCacheOnly;then
+#	if ! $lbCacheOnly;then
 		FUNCexecSS play -v $sayVol "$fileAudio";
-	fi
+#	fi
 };export -f FUNCplay;
 
 ####################### other initializations
@@ -339,7 +339,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		strSayId="$1"
 	elif [[ "$1" == "--cacheonly" ]];then #(internal use)
 		shift
-		FUNCplay --cacheonly "$@"
+		#FUNCplay --cacheonly "$@"
+		FUNCcreateCache "$1" "$2"
 		exit 0 #exit_FUNCsayStack: wont put empty lines
 	else
 		FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
@@ -381,8 +382,9 @@ echo "${paramSortOrder}\
 			(Parameter.set 'Audio_Method 'Audio_Command)\
 			(Parameter.set 'Audio_Required_Rate 16000)\
 			(Parameter.set 'Audio_Required_Format 'snd)\
-			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText $sayVol '\$FILE\")\
+			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText '\$FILE\")\
 			(SayText \"$sayText\")" >>"$_SECSAYfileSayStack"
+#			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText $sayVol '\$FILE\")\
 sort "$_SECSAYfileSayStack" -o "$_SECSAYfileSayStack" #ensure FIFO
 
 ####################### lock file work
