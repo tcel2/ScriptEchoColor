@@ -63,7 +63,7 @@ strSayId="$SEC_SAYID"
 bResume=false
 strDaemonSays="Say stack daemon initialized."
 bClearCache=false
-strEffects=""
+strSndEffects=""
 
 function FUNCechoDbgSS() { 
 	SECFUNCechoDbgA --caller "$_SECSAYselfBaseName" "$1"; 
@@ -197,54 +197,54 @@ function FUNCresumeJustDel() {
 };export -f FUNCresumeJustDel
 
 function FUNCcreateCache(){
-	local md5sumText="${1}"
+	local lmd5sumText="${1}"
 	local fileAudio="${2}"
 	
-	SECFUNCexecA cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
+	SECFUNCexecA cp "$fileAudio" "$_SECSAYcacheFolder/${lmd5sumText}"
 	SECFUNCechoDbgA "SEC_SAYMP3=$SEC_SAYMP3"
 	if $SEC_SAYMP3;then
 		local lbConversionWorked=false
 		local lnBitRate=32
 		
 		if ! $lbConversionWorked;then
-			if ! SECFUNCexecA avconv -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+			if ! SECFUNCexecA avconv -i "$_SECSAYcacheFolder/${lmd5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${lmd5sumText}.mp3";then
 				SECFUNCechoErrA "avconv failed." #is avconv broken?
-				rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
+				rm "$_SECSAYcacheFolder/${lmd5sumText}.mp3"
 			else
 				lbConversionWorked=true
 			fi
 		fi
 		
 		if ! $lbConversionWorked;then
-			if ! SECFUNCexecA ffmpeg -i "$_SECSAYcacheFolder/${md5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${md5sumText}.mp3";then
+			if ! SECFUNCexecA ffmpeg -i "$_SECSAYcacheFolder/${lmd5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${lmd5sumText}.mp3";then
 				SECFUNCechoErrA "ffmpeg failed."
-				rm "$_SECSAYcacheFolder/${md5sumText}.mp3"
+				rm "$_SECSAYcacheFolder/${lmd5sumText}.mp3"
 			else
 				lbConversionWorked=true
 			fi
 		fi
 		
 		if $lbConversionWorked;then
-			rm "$_SECSAYcacheFolder/${md5sumText}"
-			ln -s "$_SECSAYcacheFolder/${md5sumText}.mp3" "$_SECSAYcacheFolder/${md5sumText}"
+			rm "$_SECSAYcacheFolder/${lmd5sumText}"
+			ln -s "$_SECSAYcacheFolder/${lmd5sumText}.mp3" "$_SECSAYcacheFolder/${lmd5sumText}"
 		fi
 	fi
 }
 function FUNChasCache() {
-	local md5sumText="${1}"
+	local lmd5sumText="${1}"
 	#local fileAudio="${2-}" #optional
 	
-	local cacheFile="$_SECSAYcacheFolder/$md5sumText"
-	local cacheFileReal="`readlink -f "$cacheFile"`"
-	if [[ -f "$cacheFileReal" ]] && ((`stat -c "%s" "$cacheFileReal"`>0));then
-		SECFUNCechoDbgA "cache exists: $cacheFile"
+	local lstrCacheFile="$_SECSAYcacheFolder/$lmd5sumText"
+	local lstrCacheFileReal="`readlink -f "$lstrCacheFile"`"
+	if [[ -f "$lstrCacheFileReal" ]] && ((`stat -c "%s" "$lstrCacheFileReal"`>0));then
+		SECFUNCechoDbgA "cache exists: $lstrCacheFile"
 		return 0
 	fi
 	
-	SECFUNCechoDbgA "cache missing: $cacheFile"
+	SECFUNCechoDbgA "cache missing: $lstrCacheFile"
 	# mainly to remove invalid (size=0) files
-	SECFUNCexecA rm "$cacheFile"
-	SECFUNCexecA rm "$cacheFileReal"
+	SECFUNCexecA rm "$lstrCacheFile"
+	SECFUNCexecA rm "$lstrCacheFileReal"
 	
 	return 1
 };export -f FUNChasCache
@@ -255,19 +255,19 @@ function FUNCplay() {
 #		shift
 #	fi
 	
-	local lmd5sumText="$1"
-	local lsayVol="$2"
+	local lmd5sumText="$1";shift
+	local lsayVol="$1";shift
+	local lstrSndEffects="$1";shift
 
 	if ! FUNChasCache "$lmd5sumText";then
 		SECFUNCechoErrA "no cache for lmd5sumText='$lmd5sumText'"
 		return 1
 	fi
 	
-	local cacheFile="$_SECSAYcacheFolder/$lmd5sumText"
+	local lstrCacheFile="$_SECSAYcacheFolder/$lmd5sumText"
 	
-	
-	SECFUNCexecA touch "$cacheFile" #to indicate that it was recently used
-	local fileAudio="$cacheFile"
+	SECFUNCexecA touch "$lstrCacheFile" #to indicate that it was recently used
+	local fileAudio="$lstrCacheFile"
 	SECFUNCechoDbgA "lmd5sumText=$lmd5sumText lsayVol=$lsayVol fileAudio=$fileAudio"
 	if $SEC_SAYMP3;then
 		local fileAudioMp3="${fileAudio}.mp3"
@@ -276,7 +276,7 @@ function FUNCplay() {
 		fi
 	fi
 	
-	SECFUNCexecA play -v "$lsayVol" "$fileAudio";
+	SECFUNCexecA play -v "$lsayVol" "$fileAudio" $lstrSndEffects #lstrSndEffects no quotes to become params (work?)
 };export -f FUNCplay;
 
 ####################### other initializations
@@ -300,9 +300,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--sayvol" ]];then #help set volume to be used at festival
 		shift
 	  SEC_SAYVOL="$1"
-	elif [[ "$1" == "--effects" ]];then #help <strEffects> set volume to be used at festival
+	elif [[ "$1" == "--effects" ]];then #help <strSndEffects> set volume to be used at festival
 		shift
-	  strEffects="$1"
+	  strSndEffects="$1"
 	elif [[ "$1" == "--nomp3" ]];then #help do not use mp3 format, but cache files will be about 10x bigger...
 		SEC_SAYMP3=false
 	elif [[ "$1" == "--clearcache" ]];then #help all audio files on cache will be removed
@@ -379,10 +379,12 @@ paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this
 paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival
 paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
 paramSayId="(Parameter.set 'SECsayId '$strSayId)"
+paramSndEffects="(Parameter.set 'SECstrSndEffects '$strSndEffects)"
 echo "${paramSortOrder}\
 			${paramMd5sum}\
 			${paramSayVol}\
 			${paramSayId}\
+			${paramSndEffects}\
 			(Parameter.set 'Audio_Method 'Audio_Command)\
 			(Parameter.set 'Audio_Required_Rate 16000)\
 			(Parameter.set 'Audio_Required_Format 'snd)\
@@ -480,21 +482,21 @@ while true; do
 			
 			#sedGetMd5sum="s;.* 'SECmd5sum '([[:alnum:]]*)\).*;\1;"
 			#md5sumText=`echo "$strHead" |sed -r "$sedGetMd5sum"`
-			md5sumText="`FUNCgetParamValue "$strHead" SECmd5sum`"
+			md5sumTextGet="`FUNCgetParamValue "$strHead" SECmd5sum`"
 			#sedGetSayVol="s;.* 'SECsayVol '([[:digit:]]*[.][[:digit:]]*)\).*;\1;"
 			#sayVol=`echo "$strHead" |sed -r "$sedGetSayVol"`
-			nSayVol="`FUNCgetParamValue "$strHead" SECsayVol`"
-			strSndEffects="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
+			nSayVolGet="`FUNCgetParamValue "$strHead" SECsayVol`"
+			strSndEffectsGet="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
 			
 			#echo "strHead=$strHead" >>/dev/stderr
-			if ! FUNChasCache $md5sumText;then
+			if ! FUNChasCache $md5sumTextGet;then
 				echo "$strHead"	|SECFUNCexecA festival --pipe # this line will CREATE the CACHE!
 			fi
 			
-			FUNCplay "$md5sumText" "$nSayVol" "$strSndEffects"
+			FUNCplay "$md5sumTextGet" "$nSayVolGet" "$strSndEffectsGet"
 			
 			#SECFUNCexecA sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
-			SECFUNCexecA sed -i "/$md5sumText/d" "$_SECSAYfileSayStack" #delete correct line
+			SECFUNCexecA sed -i "/$md5sumTextGet/d" "$_SECSAYfileSayStack" #delete correct line
 		else
 			if ! $bDaemon;then
 				break
