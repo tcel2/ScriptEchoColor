@@ -194,21 +194,9 @@ function FUNCresumeJustDel() {
 	FUNCexecSS rm $_SECdbgVerboseOpt "$suspendFile"
 };export -f FUNCresumeJustDel
 
-function FUNChasCache() {
-	local md5sumText="${1-}"
-	local fileAudio="${2-}" #optional
-	
-	local cacheFile="$_SECSAYcacheFolder/$md5sumText"
-	local cacheFileReal="`readlink -f "$cacheFile"`"
-	if [[ -f "$cacheFileReal" ]] && ((`stat -c "%s" "$cacheFileReal"`>0));then
-		SECFUNCechoDbgA "cache exists: $cacheFile"
-		return 0
-	else
-		SECFUNCechoDbgA "cache missing: $cacheFile"
-		# mainly to remove invalid (size=0) files
-		FUNCexecSS rm "$cacheFile"
-		FUNCexecSS rm "$cacheFileReal"
-	fi
+function FUNCcreateCache(){
+	local md5sumText="${1}"
+	local fileAudio="${2}"
 	
 	if [[ -f "$fileAudio" ]];then
 		FUNCexecSS cp "$fileAudio" "$_SECSAYcacheFolder/${md5sumText}"
@@ -241,16 +229,41 @@ function FUNChasCache() {
 			fi
 		fi
 	fi
+}
+function FUNCcheckCreateCache() {
+	local md5sumText="${1-}"
+	local fileAudio="${2-}" #optional
+	
+	local cacheFile="$_SECSAYcacheFolder/$md5sumText"
+	local cacheFileReal="`readlink -f "$cacheFile"`"
+	if [[ -f "$cacheFileReal" ]] && ((`stat -c "%s" "$cacheFileReal"`>0));then
+		SECFUNCechoDbgA "cache exists: $cacheFile"
+		return 0
+	else
+		SECFUNCechoDbgA "cache missing: $cacheFile"
+		# mainly to remove invalid (size=0) files
+		FUNCexecSS rm "$cacheFile"
+		FUNCexecSS rm "$cacheFileReal"
+	fi
+	
+	FUNCcreateCache "$md5sumText" "$fileAudio"
+	
 	return 1
-};export -f FUNChasCache
+};export -f FUNCcheckCreateCache
 function FUNCplay() { 
+	local lbCacheOnly=false
+	if [[ "$1" == "--cacheonly" ]];then
+		lbCacheOnly=true
+		shift
+	fi
+	
 	local md5sumText="${1-}"
 	local sayVol="${2-}"
 	local fileAudio="${3-}" #optional
 	SECFUNCechoDbgA "md5sumText=$md5sumText sayVol=$sayVol fileAudio=$fileAudio"
 	
 	local cacheFile="$_SECSAYcacheFolder/$md5sumText"
-	if FUNChasCache "$md5sumText" "$fileAudio";then
+	if FUNCcheckCreateCache "$md5sumText" "$fileAudio";then
 		FUNCexecSS touch "$cacheFile" #to indicate that it was recently used
 		fileAudio="$cacheFile"
 		if $SEC_SAYMP3;then
@@ -261,7 +274,9 @@ function FUNCplay() {
 		fi
 	fi
 	
-	FUNCexecSS play -v $sayVol "$fileAudio";
+	if ! $lbCacheOnly;then
+		FUNCexecSS play -v $sayVol "$fileAudio";
+	fi
 };export -f FUNCplay;
 
 ####################### other initializations
@@ -322,9 +337,9 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--id" ]];then #FUNCsayStack_help identifier to store at buffer
 		shift
 		strSayId="$1"
-	elif [[ "$1" == "--i-play" ]];then #(internal use)
+	elif [[ "$1" == "--cacheonly" ]];then #(internal use)
 		shift
-		FUNCplay "$@"
+		FUNCplay --cacheonly "$@"
 		exit 0 #exit_FUNCsayStack: wont put empty lines
 	else
 		FUNCechoErrSS "$FUNCNAME: $LINENO: invalid option $1"
@@ -366,7 +381,7 @@ echo "${paramSortOrder}\
 			(Parameter.set 'Audio_Method 'Audio_Command)\
 			(Parameter.set 'Audio_Required_Rate 16000)\
 			(Parameter.set 'Audio_Required_Format 'snd)\
-			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --i-play $md5sumText $sayVol '\$FILE\")\
+			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText $sayVol '\$FILE\")\
 			(SayText \"$sayText\")" >>"$_SECSAYfileSayStack"
 sort "$_SECSAYfileSayStack" -o "$_SECSAYfileSayStack" #ensure FIFO
 
@@ -465,11 +480,11 @@ while true; do
 			sayVol="`FUNCgetParamValue "$strHead" SECsayVol`"
 			
 			#echo "strHead=$strHead" >>/dev/stderr
-			if FUNChasCache $md5sumText;then
-				FUNCplay "$md5sumText" $sayVol
-			else
+			if ! FUNCcheckCreateCache $md5sumText;then
 				echo "$strHead"	|FUNCexecSS festival --pipe
 			fi
+			
+			FUNCplay "$md5sumText" $sayVol
 			
 			#FUNCexecSS sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
 			FUNCexecSS sed -i "/$md5sumText/d" "$_SECSAYfileSayStack" #delete correct line

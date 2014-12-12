@@ -752,10 +752,10 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		return 0
 	fi
 	
-	local lnReturnValue=0
+	local lnSECFUNCexecReturnValue=0
 	if $bShowElapsed;then local ini=`SECFUNCdtFmt`;fi
-  #eval "$strExec" $omitOutput;lnReturnValue=$?
-  #"$@" $omitOutput;lnReturnValue=$?
+  #eval "$strExec" $omitOutput;lnSECFUNCexecReturnValue=$?
+  #"$@" $omitOutput;lnSECFUNCexecReturnValue=$?
   if $lbDoLog && [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
   	if $lbDetach;then
 	  	#"$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
@@ -765,15 +765,15 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';$@" >>"$SEClstrLogFileSECFUNCexec"
 		else
 		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;$@" >>"$SEClstrLogFileSECFUNCexec"
-		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnReturnValue=$?
-		  #"$@" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnReturnValue=$? #tee prevent return value
+		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+		  #"$@" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
 		fi
   else
   	if $bOmitOutput;then
-		  #"$@" 2>/dev/null 1>/dev/null;lnReturnValue=$?
-		  "$@" >/dev/null 2>&1;lnReturnValue=$?
+		  #"$@" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
+		  "$@" >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
   	else
-  		"$@";lnReturnValue=$?
+  		"$@";lnSECFUNCexecReturnValue=$?
   	fi
   fi
 	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
@@ -797,11 +797,11 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	fi
 	
 	local lstrReturned=""
-	#if((lnReturnValue>=0));then
+	#if((lnSECFUNCexecReturnValue>=0));then
 	if $lbDetach;then
 		lstrReturned="(DetachedChild): "
 	else
-		lstrReturned="RETURN=$lnReturnValue: "
+		lstrReturned="RETURN=$lnSECFUNCexecReturnValue: "
 	fi
   SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$strExec"
   
@@ -809,7 +809,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
 	fi
 	
-  return $lnReturnValue
+  return $lnSECFUNCexecReturnValue
 }
 
 function SECFUNCexecShowElapsed() { #help 
