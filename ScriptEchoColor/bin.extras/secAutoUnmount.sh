@@ -168,7 +168,7 @@ while true;do
 	for nIndex in ${!astrDev[@]};do
 		strDev="${astrDev[nIndex]}"
 		
-		funct FUNCkillLs(){
+		function FUNCkillLs(){
 			if [[ -d "/proc/${anPidKeepAwake[$strDev]-0}" ]];then
 				kill -SIGKILL ${anPidKeepAwake[$strDev]}&&:
 				anPidKeepAwake[$strDev]="" #cleanup to prevent access to a reused pid
