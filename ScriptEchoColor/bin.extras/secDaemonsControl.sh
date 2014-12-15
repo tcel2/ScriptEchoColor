@@ -202,10 +202,10 @@ elif $bCheckHold;then
 	FUNCregisterOneDaemon
 	
 	: ${anDaemonsKeepRunning[$SECnDaemonPid]:=false}
-
 	if ${anDaemonsKeepRunning[$SECnDaemonPid]};then
 		SECFUNCcfgReadDB # to grant it is still to keep this one running
 	fi
+	: ${anDaemonsKeepRunning[$SECnDaemonPid]:=false} # a second time IS required as the array may be cleaned
 	
 	if ! ${anDaemonsKeepRunning[$SECnDaemonPid]};then
 		if $bHoldScripts;then

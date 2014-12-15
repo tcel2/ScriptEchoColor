@@ -78,5 +78,10 @@ while true; do
 	else
 		echo "waiting yakuake focus"
 	fi
+	
+	if SECFUNCdelay daemonHold --checkorinit 5;then
+		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+	fi
+	
 	sleep 3;
 done
