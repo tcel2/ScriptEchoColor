@@ -32,10 +32,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCshowHelp --colorize "This script only works properly with package 'Version-Revision' in the format 'YYYYMMDD-HHMMSS'"
 		SECFUNCshowHelp
 		exit
-	elif [[ "$1" == "--package" || "$1" == "-p" ]];then #help package name to be queried with dpkg
+	elif [[ "$1" == "--package" || "$1" == "-p" ]];then #help <strDpkgPackage> package name to be queried with dpkg
 		shift
 		strDpkgPackage="${1-}"
-	elif [[ "$1" == "--devpath" || "$1" == "-d" ]];then #help development path where .git directory can be found into
+	elif [[ "$1" == "--devpath" || "$1" == "-d" ]];then #help <strDevPath> development path where .git directory can be found into
 		shift
 		strDevPath="${1-}"
 	elif [[ "$1" == "--changes" || "$1" == "-d" ]];then #help <strChangesFile> set the changes log file
