@@ -1,3 +1,5 @@
+Date:   2014-12-15 13:31:52 -0200
+    secDaemonsControl.sh: fix, now it properly identifies all SEC daemons;
 Date:   2014-12-12 18:26:54 -0200
     secSayStack.sh --effects (now each speech can receive sound effects!);
 Date:   2014-12-08 15:10:26 -0200

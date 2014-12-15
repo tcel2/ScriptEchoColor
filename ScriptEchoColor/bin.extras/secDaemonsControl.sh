@@ -70,12 +70,25 @@ function FUNClist() {
 	SECFUNCdbgFuncInA;
 	SECFUNCcfgReadDB
 	SECFUNCdrawLine "Daemons List at `SECFUNCdtFmt --pretty`:"
-	echo -e "Index\tPid\tName"
+	echo -e "Index\tStatus\tPid\tName"
 	nCount=0
 	for strDaemonId in `echo ${!aDaemonsPid[@]} |tr ' ' '\n' |sort`;do
 		nPid="${aDaemonsPid[$strDaemonId]-}"
-		if ps -p $nPid >/dev/null 2>&1;then
-			echo -e "$nCount\t$nPid\t$strDaemonId";
+		
+		#if ps -p $nPid >/dev/null 2>&1;then
+		if [[ -d "/proc/$nPid" ]];then
+			strStatus=""
+			if [[ "${anDaemonsKeepRunning[$nPid]-}" == "true" ]];then
+				strStatus="Keep"
+			else
+				if $bHoldScripts;then
+					strStatus="HOLD"
+				else
+					strStatus="run"					
+				fi
+			fi
+			
+			echo -e "$nCount\t$strStatus\t$nPid\t$strDaemonId";
 			((nCount++))
 		else
 			unset aDaemonsPid[$strDaemonId]
