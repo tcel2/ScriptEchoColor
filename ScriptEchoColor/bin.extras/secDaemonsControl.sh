@@ -25,15 +25,22 @@
 
 ############################# INIT ###############################
 eval `secinit -i --ilog --novarchilddb` # --ilog because of the option '--checkhold' that is called by many scripts...
-# other options/commands can communicate with monitor daemon this way, if it is running...
-if SECFUNCuniqueLock --isdaemonrunning;then
-	SECFUNCuniqueLock --setdbtodaemon
-else
+
+#if SECFUNCuniqueLock --isdaemonrunning;then
+#	SECFUNCuniqueLock --setdbtodaemon
+#else
+#	SECFUNCechoBugtrackA "daemons monitor isnt running..."
+#fi
+if ! SECFUNCuniqueLock --isdaemonrunning;then
 	SECFUNCechoBugtrackA "daemons monitor isnt running..."
 fi
 
+#echo $SECvarFile
+#echo ">>>$SECnDaemonPid" >>/dev/stderr
+
 strSelfName="`basename "$0"`"
 declare -A aDaemonsPid
+declare -a anDaemonsKeepRunning
 export SEC_SAYVOL=20
 
 #aDaemonsPid=()
@@ -82,17 +89,19 @@ function FUNClist() {
 function FUNCregisterOneDaemon() {
 	SECFUNCdbgFuncInA;
 	#strPPidId=`ps --no-headers -p $PPID -o comm`
-	nPidDaemon=$SECnDaemonPid
-	if((nPidDaemon==0));then
-		nPidDaemon=$PPID
+	local lnPidDaemon=$SECnDaemonPid
+	if((lnPidDaemon==0));then
+		lnPidDaemon=$PPID
 	fi
-	strPPidId=`grep "$nPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$nPidDaemon$'\1'"`
+	#SECFUNCexec --echo grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |SECFUNCexec --echo sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$lnPidDaemon$'\1'"
+	#strPPidId=`grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$lnPidDaemon$'\1'"`
+	strPPidId=`grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)([._]sh|):$lnPidDaemon$'\1'"` # may or may not: end with .sh or _sh
 	strPPidId=`SECFUNCfixId "$strPPidId"`
 	if [[ -z "$strPPidId" ]];then
-		strPPidId="pid$nPidDaemon"
+		strPPidId="pid$lnPidDaemon"
 	fi
-	if [[ "${aDaemonsPid[$strPPidId]-}" != $nPidDaemon ]];then
-		aDaemonsPid[$strPPidId]=$nPidDaemon
+	if [[ "${aDaemonsPid[$strPPidId]-}" != $lnPidDaemon ]];then
+		aDaemonsPid[$strPPidId]=$lnPidDaemon
 		#declare -p aDaemonsPid
 		SECFUNCcfgWriteVar aDaemonsPid
 	fi
@@ -132,6 +141,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
+if ! $bCheckHold;then
+	SECFUNCuniqueLock --setdbtodaemon # other options/commands can communicate with monitor daemon this way, if it is running...
+fi
+
 ############################# MAIN ###############################
 if $bMonitorDaemons;then
 	SECFUNCuniqueLock --daemonwait
@@ -145,8 +158,9 @@ if $bMonitorDaemons;then
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
-		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_auto hold on screen lock"&&:; case "`secascii $?`" in 
+		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_force hold all/_auto hold on screen lock"&&:; case "`secascii $?`" in 
 			a)	SECFUNCvarToggle --show bAutoHoldOnScreenLock;; 
+			f)  anDaemonsKeepRunning=(); SECFUNCcfgWriteVar anDaemonsKeepRunning;;
 			h)	$strSelfName --holdall;; 
 			r)	$strSelfName --releaseall;; 
 		esac
@@ -173,27 +187,41 @@ elif $bList;then
 	FUNClist
 elif $bCheckHold;then
 	FUNCregisterOneDaemon
-	if $bHoldScripts;then
-		echoc --info "$strSelfName: script on hold [`SECFUNCdtFmt --pretty`] (hit: 'y' to run once; 'r' to release all)..."
+	
+	: ${anDaemonsKeepRunning[$SECnDaemonPid]:=false}
+
+	if ${anDaemonsKeepRunning[$SECnDaemonPid]};then
+		SECFUNCcfgReadDB # to grant it is still to keep this one running
+	fi
+	
+	if ! ${anDaemonsKeepRunning[$SECnDaemonPid]};then
+		if $bHoldScripts;then
+			#echoc --info "$strSelfName: script on hold [`SECFUNCdtFmt --pretty`] (hit: 'y' to run once; 'r' to release all)..."
+			echoc -t 0.1 -Q "This daemon pid SECnDaemonPid='$SECnDaemonPid' @Orun _once/_release all/_keep only this one running"&&:
 		
-		SECONDS=0
-		while $bHoldScripts;do
-			echo -ne "${SECONDS}s\r"
+			SECONDS=0
+			while $bHoldScripts;do
+				echo -ne "${SECONDS}s\r"
+			
+				#sleep 5
+				read -n 1 -t 5 strResp&&:
+				if [[ "$strResp" == "o" ]];then
+					break
+				elif [[ "$strResp" == "r" ]];then
+					SECFUNCcfgWriteVar bHoldScripts=false
+					break
+				elif [[ "$strResp" == "k" ]];then
+					anDaemonsKeepRunning[$SECnDaemonPid]=true
+					SECFUNCcfgWriteVar anDaemonsKeepRunning
+					break
+				fi
+			
+				SECFUNCcfgReadDB #TODO explain: reads after why? because of the breaks?
+			done
 		
-			#sleep 5
-			read -n 1 -t 5 strResp&&:
-			if [[ "$strResp" == "y" ]];then
-				break
-			elif [[ "$strResp" == "r" ]];then
-				SECFUNCcfgWriteVar bHoldScripts=false
-				break
-			fi
-		
-			SECFUNCcfgReadDB
-		done
-		
-		echo
-		echoc --info "$strSelfName: script continues [`SECFUNCdtFmt --pretty`]..."
+			echo
+			echoc --info "$strSelfName: script continues [`SECFUNCdtFmt --pretty`]..."
+		fi
 	fi
 elif $bHoldAll;then
 	echoc --info "daemon scripts will hold execution"
