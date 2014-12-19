@@ -171,11 +171,27 @@ if $bMonitorDaemons;then
 		FUNClist
 		#sleep 10
 		#read -n 1 -t 10 #allows hit enter to refresh now
-		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_force hold all/_auto hold on screen lock"&&:; case "`secascii $?`" in 
+		echoc -Q -t 60 "'Enter' to refresh?@O_hold all/_release all/_force hold all/toggle _keep pid running/_auto hold on screen lock"&&:; case "`secascii $?`" in 
 			a)	SECFUNCvarToggle --show bAutoHoldOnScreenLock;; 
 			f)  anDaemonsKeepRunning=(); SECFUNCcfgWriteVar anDaemonsKeepRunning;;
 			h)	$strSelfName --holdall;; 
 			r)	$strSelfName --releaseall;; 
+			k)	nPidKeepRunning="`echoc -S "paste/type the pid to toggle 'keep running'"`";
+					if SECFUNCisNumber -dn "$nPidKeepRunning";then
+						if [[ -d "/proc/$nPidKeepRunning" ]];then
+							if [[ "${anDaemonsKeepRunning[$nPidKeepRunning]-}" == "true" ]];then
+								anDaemonsKeepRunning[$nPidKeepRunning]=false
+							else
+								anDaemonsKeepRunning[$nPidKeepRunning]=true
+							fi
+							SECFUNCcfgWriteVar anDaemonsKeepRunning
+						else
+							echoc -p "invalid nPidKeepRunning='$nPidKeepRunning'"
+						fi
+					else
+						echoc -p "invalid nPidKeepRunning='$nPidKeepRunning'"
+					fi
+					;;
 		esac
 		
 		SECFUNCvarReadDB

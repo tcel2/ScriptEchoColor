@@ -65,6 +65,12 @@ function FUNCretargetSymlink() {
 			echo "Symlinking to directory."
 		fi
 		
+		if ! $bTextFieldEditMode;then
+			if echoc -t 3 -q "use TextField symlink edit mode?";then
+				bTextFieldEditMode=true
+			fi
+		fi
+		
 		if $bTextFieldEditMode;then
 			local lstrNewSymlink="`zenity \
 				--title "$SECstrScriptSelfName" \
@@ -79,11 +85,13 @@ function FUNCretargetSymlink() {
 				--filename=\"$lstrTarget\"`"
 		fi
 		
-		# in case user typed relative path
-		if [[ "${lstrNewSymlink:0:1}" != "/" ]];then
-			lstrNewSymlink="$lstrFilePath/$lstrNewSymlink"
-		fi
+#		# in case user typed relative path
+#		if [[ "${lstrNewSymlink:0:1}" != "/" ]];then
+#			lstrNewSymlink="$lstrFilePath/$lstrNewSymlink"
+#		fi
 		
+		cd "`dirname "$lstrFile"`"
+		echoc -x pwd
 		if [[ -a "$lstrNewSymlink" ]];then
 			#echoc -x "rm -v '$lstrFile'"
 			echoc -x "ln -vsfT $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
