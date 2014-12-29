@@ -28,6 +28,7 @@ bAutoOpenTabs=false
 fSafeDelay="3.0"
 bPersist=false
 bContinue=false
+bJustSave=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -43,6 +44,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bPersist=true
 	elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #help will continue from last session open tabs, does not requires nautilus to be opened
 		bContinue=true
+	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later
+		bJustSave=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -53,6 +56,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 astrNewTabs=("$@")
+
+if $bJustSave;then
+	bPersist=true
+	bContinue=false
+fi
 
 strStoreAt="/tmp"
 if $bPersist;then
@@ -138,6 +146,11 @@ else
 fi
 
 echo "strTmpFolderWithLinks='$strTmpFolderWithLinks'"
+
+if $bJustSave; then 
+	SECFUNCexecA --echo -c ls -l "$strTmpFolderWithLinks/"
+	exit 0;
+fi
 
 if ! echoc -q "continue at your own risk?";then
 	exit
