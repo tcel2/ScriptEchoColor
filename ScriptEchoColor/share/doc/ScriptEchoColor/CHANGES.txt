@@ -1,3 +1,9 @@
+Date:   2014-12-29 15:37:30 -0200
+    secNautilusRestartAndRestoreTabs.sh --justsave: just saves the tabs session to be used later;
+Date:   2014-12-29 15:31:02 -0200
+    secNautilusRestartAndRestoreTabs.sh --autoopentabs --safedelay --persist --continue;
+    secNautilusRestartAndRestoreTabs.sh -pa; #will reopen nautilus with current tabs session, temporarily "fixing" copy/paste bug!;
+    secNautilusRestartAndRestoreTabs.sh -pac; #will open a new nautilus window with last saved tabs session!;
 Date:   2014-12-29 00:30:15 -0200
     secNautilusRestartAndRestoreTabs.sh: greatly improved, faster and safer!;
 Date:   2014-12-19 20:11:44 -0200
