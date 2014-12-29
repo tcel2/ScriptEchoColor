@@ -26,7 +26,10 @@ eval `secinit`
 
 bAutoOpenTabs=false
 fSafeDelay="3.0"
+bPersist=false
+bContinue=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "to disable speech, use as: SEC_SAYVOL=0 $SECstrScriptSelfName ..."
 		SECFUNCshowHelp
@@ -36,6 +39,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--safedelay" ]];then #help <fSafeDelay> better not change this, unless it is more than default.
 		shift
 		fSafeDelay="${1-}"
+	elif [[ "$1" == "--persist" || "$1" == "-p" ]];then #help it will just store the tabs folders symlinks at user home instead of /tmp
+		bPersist=true
+	elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #help will continue from last session open tabs, does not requires nautilus to be opened
+		bContinue=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -46,6 +53,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 astrNewTabs=("$@")
+
+strStoreAt="/tmp"
+if $bPersist;then
+	strStoreAt="$SECstrUserScriptCfgPath"
+fi
 
 if ! SECFUNCisNumber -n "$fSafeDelay";then
 	echoc -p "invalid fSafeDelay='$fSafeDelay'"
@@ -70,42 +82,62 @@ function FUNCnautilusFocus() {
 
 sedUrlDecoder='s"%"\\x"g'
 
-astrOpenLocations=()
-bJustAddTab=false
-if [[ -n "${astrNewTabs[0]-}" ]];then
-	bJustAddTab=true
-	for strNewTab in "${astrNewTabs[@]}";do
-		astrOpenLocations+=("$strNewTab")
-		#FUNCaddTab "$strNewTab"
-	done
-	#exit 0
-else
-	astrOpenLocationsTmp=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
-	if [[ -z "${astrOpenLocationsTmp[@]-}" ]];then
-		echoc -p "astrOpenLocationsTmp is empty, is nautilus closed?"
-		exit 1
-	fi
-	for strOpenLocation in "${astrOpenLocationsTmp[@]}"; do 
-		astrOpenLocations+=("`echo "$strOpenLocation" \
-			|sed -r 's@^file://(.*)@\1@' \
-			|sed "$sedUrlDecoder" \
-			|sed 's;.*;"&";' \
-			|xargs printf`")
-	done
-fi
-
 varset --show astrOpenLocations
 for strOpenLocation in "${astrOpenLocations[@]}"; do 
 	echo "$strOpenLocation"
 done
 
-strTmpFolderWithLinks="/tmp/.${SECstrScriptSelfName}.linksToTabs/`SECFUNCdtFmt --filename`/"
-mkdir -vp "$strTmpFolderWithLinks"
-nTabIndex=0
-for strOpenLocation in "${astrOpenLocations[@]}"; do 
-	ln -vsf "$strOpenLocation" "$strTmpFolderWithLinks/$nTabIndex-`basename "$strOpenLocation"`"
-	((nTabIndex++))&&:
-done
+strTmpFolderWithLinks="$strStoreAt/.${SECstrScriptSelfName}.linksToTabs/`SECFUNCdtFmt --filename`/"
+if $bContinue;then
+	strLast="`ls "$(dirname "$strTmpFolderWithLinks")/" -t1 |head -n 1`"
+	if [[ -z "$strLast" ]];then
+		echoc -p "invalid strLast='$strLast'"
+		exit 1
+	fi
+	strTmpFolderWithLinks="`dirname "$strTmpFolderWithLinks"`/$strLast"
+	if [[ ! -d "$strTmpFolderWithLinks" ]];then
+		echoc -p "invalid strTmpFolderWithLinks='$strTmpFolderWithLinks'"
+		exit 1
+	fi
+	if [[ -z "`ls "$strTmpFolderWithLinks/"`" ]];then
+		echoc -p "strTmpFolderWithLinks='$strTmpFolderWithLinks' is empty"
+		exit 1
+	fi
+else
+	astrOpenLocations=()
+	bJustAddTab=false
+	if [[ -n "${astrNewTabs[0]-}" ]];then
+		bJustAddTab=true
+		for strNewTab in "${astrNewTabs[@]}";do
+			astrOpenLocations+=("$strNewTab")
+			#FUNCaddTab "$strNewTab"
+		done
+		#exit 0
+	else
+		astrOpenLocationsTmp=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
+		if [[ -z "${astrOpenLocationsTmp[@]-}" ]];then
+			echoc -p "astrOpenLocationsTmp is empty, is nautilus closed?"
+			exit 1
+		else
+			for strOpenLocation in "${astrOpenLocationsTmp[@]}"; do 
+				astrOpenLocations+=("`echo "$strOpenLocation" \
+					|sed -r 's@^file://(.*)@\1@' \
+					|sed "$sedUrlDecoder" \
+					|sed 's;.*;"&";' \
+					|xargs printf`")
+			done
+		fi
+	fi
+
+	mkdir -vp "$strTmpFolderWithLinks"
+	nTabIndex=0
+	for strOpenLocation in "${astrOpenLocations[@]}"; do 
+		ln -vsf "$strOpenLocation" "$strTmpFolderWithLinks/$nTabIndex-`basename "$strOpenLocation"`"
+		((nTabIndex++))&&:
+	done
+fi
+
+echo "strTmpFolderWithLinks='$strTmpFolderWithLinks'"
 
 if ! echoc -q "continue at your own risk?";then
 	exit
@@ -113,10 +145,12 @@ fi
 
 SECFUNCdelay --init
 
-echoc -x "nautilus -q"
-echoc -w -t $fSafeDelay #TODO alternatively check it stop running
+if ! $bContinue;then
+	echoc -x "nautilus -q"
+	echoc -w -t $fSafeDelay #TODO alternatively check it stop running
+fi
 #echoc -x "nautilus '$strTmpFolderWithLinks'";
-echoc -x "nautilus '$strTmpFolderWithLinks' >/tmp/nautilus.log 2>&1 &"
+echoc -x "nautilus '$strTmpFolderWithLinks' >$strStoreAt/nautilus.log 2>&1 &"
 echoc -w -t $fSafeDelay #TODO alternatively check it stop running
 
 if $bAutoOpenTabs;then

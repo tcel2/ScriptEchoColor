@@ -62,7 +62,7 @@ echo
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
-	
+	#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #FUNCexample_help
 			SECFUNCshowHelp $FUNCNAME
@@ -86,6 +86,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 }
 
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
 		SECFUNCshowHelp
