@@ -66,7 +66,7 @@ function FUNCretargetSymlink() {
 		fi
 		
 		if ! $bTextFieldEditMode;then
-			if echoc -t 3 -q "use TextField symlink edit mode?";then
+			if echoc -t 15 -q "use TextField symlink edit mode?";then
 				bTextFieldEditMode=true
 			fi
 		fi

@@ -24,7 +24,33 @@
 
 eval `secinit`
 
+bAutoOpenTabs=false
+fSafeDelay="3.0"
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	if [[ "$1" == "--help" ]];then #help
+		SECFUNCshowHelp --colorize "to disable speech, use as: SEC_SAYVOL=0 $SECstrScriptSelfName ..."
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "--autoopentabs" || "$1" == "-a" ]];then #help key strokes will be sent to nautilus to auto open tabs, but you can do them manually (may be safer) after selecting all folders and hitting ctrl+shift+t
+		bAutoOpenTabs=true
+	elif [[ "$1" == "--safedelay" ]];then #help <fSafeDelay> better not change this, unless it is more than default.
+		shift
+		fSafeDelay="${1-}"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
+	else
+		echoc -p "invalid option '$1'"
+		exit 1
+	fi
+	shift
+done
 astrNewTabs=("$@")
+
+if ! SECFUNCisNumber -n "$fSafeDelay";then
+	echoc -p "invalid fSafeDelay='$fSafeDelay'"
+	exit 1 
+fi
 
 if ! nPidNautilus=`pgrep nautilus`;then
 	echoc -p "nautilus is not running"
@@ -42,41 +68,6 @@ function FUNCnautilusFocus() {
 	xdotool windowactivate `xdotool search --pid $nPidNautilus 2>/dev/null |tail -n 1` 2>/dev/null 
 }
 
-function FUNCaddTab() {
-	local lnSafeDelay="1.0"
-	local lbSkipTab=false
-	if [[ "$1" == "--SkipAddTab" ]];then
-		lbSkipTab=true
-		shift
-	fi
-	local lstrOpenLocation="$1"
-	
-	if [[ ! -d "$lstrOpenLocation" ]];then
-		SECFUNCexec --echo ls -ld "$lstrOpenLocation"
-		SECFUNCexec --echo stat -c %F "$lstrOpenLocation"
-		echoc -p "invalid location '$lstrOpenLocation'"
-		return 1
-	fi
-
-	echoc --info "Working With: '$lstrOpenLocation'";
-	
-	if ! $lbSkipTab;then
-		FUNCnautilusFocus
-		xdotool key "ctrl+t" 2>/dev/null;sleep $lnSafeDelay
-	fi
-
-	FUNCnautilusFocus
-	xdotool key "ctrl+l" 2>/dev/null;sleep $lnSafeDelay
-	
-	#xdotool type --delay 300 "$lstrOpenLocation" 2>/dev/null;sleep 1
-	echo -n "$lstrOpenLocation" |xclip -selection "clip-board" -in
-	FUNCnautilusFocus
-	xdotool key "ctrl+v" 2>/dev/null;sleep $lnSafeDelay
-
-	FUNCnautilusFocus
-	xdotool key Return 2>/dev/null;sleep $lnSafeDelay
-}
-
 sedUrlDecoder='s"%"\\x"g'
 
 astrOpenLocations=()
@@ -90,6 +81,10 @@ if [[ -n "${astrNewTabs[0]-}" ]];then
 	#exit 0
 else
 	astrOpenLocationsTmp=(`qdbus org.gnome.Nautilus /org/freedesktop/FileManager1 org.freedesktop.FileManager1.OpenLocations |tac`);
+	if [[ -z "${astrOpenLocationsTmp[@]-}" ]];then
+		echoc -p "astrOpenLocationsTmp is empty, is nautilus closed?"
+		exit 1
+	fi
 	for strOpenLocation in "${astrOpenLocationsTmp[@]}"; do 
 		astrOpenLocations+=("`echo "$strOpenLocation" \
 			|sed -r 's@^file://(.*)@\1@' \
@@ -104,69 +99,44 @@ for strOpenLocation in "${astrOpenLocations[@]}"; do
 	echo "$strOpenLocation"
 done
 
+strTmpFolderWithLinks="/tmp/.${SECstrScriptSelfName}.linksToTabs/`SECFUNCdtFmt --filename`/"
+mkdir -vp "$strTmpFolderWithLinks"
+nTabIndex=0
+for strOpenLocation in "${astrOpenLocations[@]}"; do 
+	ln -vsf "$strOpenLocation" "$strTmpFolderWithLinks/$nTabIndex-`basename "$strOpenLocation"`"
+	((nTabIndex++))&&:
+done
+
 if ! echoc -q "continue at your own risk?";then
 	exit
 fi
 
-strClipboardBkp="`xclip -selection "clip-board" -out`"
-if((${#astrOpenLocations[@]}>0));then
-	SECFUNCdelay --init
-	echoc --say --alert "wait script finish its execution as commands will be typed on the top window..." #could find no workaround that could type directly on specified window id ...
-	
-	if ! $bJustAddTab;then
-		echoc -x "nautilus -q"
-		echoc -w -t 3 #TODO alternatively check it stop running
-		echoc -x "nautilus >/tmp/nautilus.log 2>&1 &"
-		nPidNautilus=`pgrep nautilus`
-		echoc -w -t 3 #TODO check it is running
-	fi
+SECFUNCdelay --init
 
+echoc -x "nautilus -q"
+echoc -w -t $fSafeDelay #TODO alternatively check it stop running
+#echoc -x "nautilus '$strTmpFolderWithLinks'";
+echoc -x "nautilus '$strTmpFolderWithLinks' >/tmp/nautilus.log 2>&1 &"
+echoc -w -t $fSafeDelay #TODO alternatively check it stop running
+
+if $bAutoOpenTabs;then
+	nPidNautilus=`pgrep nautilus`
+#	lnSafeDelay="2.0"
+
+	echoc --say --alert "wait script finish its execution as commands will be typed on the top window..." #could find no workaround that could type directly on specified window id ...	
+	
 	FUNCnautilusFocus
-	bFirst=true
-	if $bJustAddTab;then
-		bFirst=false
-	fi
-	for strOpenLocation in "${astrOpenLocations[@]}"; do 
-		#echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@' |sed "$sedUrlDecoder" |xargs printf;echo
-#		strOpenLocation=`echo "$strOpenLocation" |sed -r 's@^file://(.*)@\1@'`
-#		strOpenLocation=`echo "$strOpenLocation" |sed "$sedUrlDecoder"`
-#		strOpenLocation=`echo "$strOpenLocation" |xargs printf`
-#		strOpenLocation=`echo "$strOpenLocation" \
-#			|sed -r 's@^file://(.*)@\1@' \
-#			|sed "$sedUrlDecoder" \
-#			|sed 's;.*;"&";' \
-#			|xargs printf`
-		
-		strSkipAddTab=""
-		if $bFirst;then
-			strSkipAddTab="--SkipAddTab"
-			bFirst=false
-		fi
-		
-		#echo "$strOpenLocation"
-		FUNCaddTab $strSkipAddTab "$strOpenLocation"&&:
-		
-#		if $bFirst;then
-#			bFirst=false
-#		else
-#			FUNCnautilusFocus
-#			xdotool key "ctrl+t";sleep 1
-#		fi
-
-#		FUNCnautilusFocus
-#		xdotool key "ctrl+l";sleep 1
-#		
-#		#xdotool type --delay 300 "$strOpenLocation";sleep 1
-#		echo -n "$strOpenLocation" |xclip -selection "clip-board" -in
-#		FUNCnautilusFocus
-#		xdotool key "ctrl+v";sleep 1
-
-#		xdotool key Return
+	xdotool key "ctrl+a" 2>/dev/null
+	sleep $fSafeDelay
 	
-#		sleep 1
-	done
+	FUNCnautilusFocus
+	xdotool key "ctrl+shift+t" 2>/dev/null;
+	sleep $fSafeDelay
 	
-	echoc --info --say "Finished restoring nautilus tabs, it took `SECFUNCdelay --getsec` seconds."
+	FUNCnautilusFocus
+	xdotool key "ctrl+w" 2>/dev/null;
+	#sleep $fSafeDelay
 fi
-echo "$strClipboardBkp" |xclip -selection "clip-board" -in
+
+echoc --info --say "Finished restoring nautilus tabs, it took `SECFUNCdelay --getsec` seconds."
 
