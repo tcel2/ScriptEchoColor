@@ -393,7 +393,23 @@ function FUNCzenitySelectAndAddFiles() {
 
 function FUNCunison(){
 	echoc --info "running unison"
-	unison \
+	
+	( # if the unison command is going to use a zerobyte file (or a corrupt one, try to identify it with strace or `-debug verbose`?), remove all these invalid files before running it.
+		cd "$HOME/.unison";
+		while true; do 
+			strSmallestFile="`ls -S |tac |head -n 1`";
+			if((`stat -c %s "$strSmallestFile"`==0));then 
+				echoc --say "unison problem at `SECFUNCseparateInWords "$SECstrScriptSelfName"`"
+				if echoc -q "trash this strSmallestFile='$strSmallestFile' zero size file?";then 
+					SECFUNCexecA --echo -c trash "$strSmallestFile";
+				fi;
+			else 
+				break;
+			fi;
+		done
+	)
+	
+	SECFUNCexecA --echo -c unison \
 		"$SECstrUserScriptCfgPath/Home" \
 		"${pathBackupsToRemote}/" \
 		-links false \

@@ -44,7 +44,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bPersist=true
 	elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #help will continue from last session open tabs, does not requires nautilus to be opened
 		bContinue=true
-	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later
+	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later (implies --persist ; disables --continue )
 		bJustSave=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
