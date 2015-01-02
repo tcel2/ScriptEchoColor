@@ -196,7 +196,7 @@ function FUNCresumeJustDel() {
 	SECFUNCexecA rm $_SECdbgVerboseOpt "$suspendFile"
 };export -f FUNCresumeJustDel
 
-function FUNCcreateCache(){
+function FUNCcreateCache(){ #TODO create the cached files much easier with like: echo asdf |text2wave -o sampleoutput.wav
 	local lmd5sumText="${1}"
 	local fileAudio="${2}"
 	

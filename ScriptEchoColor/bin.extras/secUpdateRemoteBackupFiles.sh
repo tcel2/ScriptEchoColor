@@ -394,21 +394,22 @@ function FUNCzenitySelectAndAddFiles() {
 function FUNCunison(){
 	echoc --info "running unison"
 	
-	( # if the unison command is going to use a zerobyte file (or a corrupt one, try to identify it with strace or `-debug verbose`?), remove all these invalid files before running it.
-		cd "$HOME/.unison";
-		while true; do 
-			strSmallestFile="`ls -S |tac |head -n 1`";
-			if((`stat -c %s "$strSmallestFile"`==0));then 
-				echoc --say "unison problem at `SECFUNCseparateInWords "$SECstrScriptSelfName"`"
-				if echoc -q "trash this strSmallestFile='$strSmallestFile' zero size file?";then 
-					SECFUNCexecA --echo -c trash "$strSmallestFile";
-				fi;
-			else 
-				break;
-			fi;
-		done
-	)
+#	( # if the unison command is going to use a zerobyte file (or a corrupt one, try to identify it with strace or `-debug verbose`?), remove all these invalid files before running it.
+#		cd "$HOME/.unison";
+#		while true; do 
+#			strSmallestFile="`ls -S |tac |head -n 1`";
+#			if((`stat -c %s "$strSmallestFile"`==0));then 
+#				echoc --say "unison problem at `SECFUNCseparateInWords "$SECstrScriptSelfName"`"
+#				if echoc -q "trash this strSmallestFile='$strSmallestFile' zero size file?";then 
+#					SECFUNCexecA --echo -c trash "$strSmallestFile";
+#				fi;
+#			else 
+#				break;
+#			fi;
+#		done
+#	)
 	
+	# -ignorearchives will help on avoiding corrupted files
 	SECFUNCexecA --echo -c unison \
 		"$SECstrUserScriptCfgPath/Home" \
 		"${pathBackupsToRemote}/" \
@@ -416,6 +417,7 @@ function FUNCunison(){
 		-fastcheck true \
 		-times -retry 2 \
 		-follow "Regex .*" \
+		-ignorearchives \
 		-force "$SECstrUserScriptCfgPath/Home" \
 		-nodeletion "$SECstrUserScriptCfgPath/Home" \
 		-nodeletion "${pathBackupsToRemote}/" \
