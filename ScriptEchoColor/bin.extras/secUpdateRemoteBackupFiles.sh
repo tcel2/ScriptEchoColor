@@ -480,7 +480,9 @@ if $bDaemon;then
 		echoc -w -t 5 "daemons sleep too..."
 		
 		#if SECFUNCdelay daemonHold --checkorinit 5;then
+		if ! $bUseUnison;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+		fi
 		#fi
 		
 		#if ! sleep 5; then exit 1; fi
