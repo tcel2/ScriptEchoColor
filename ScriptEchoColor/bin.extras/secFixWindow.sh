@@ -117,37 +117,20 @@ function FUNCvalidateNumber() {
 	return 0
 }
 
-function FUNCwindowGeom() { #@@@helper nWindowX nWindowY nWindowWidth nWindowHeight
+function FUNCwindowGeom() {
 	local lnWindowId=$1
-	#eval `xwininfo -id $lnWindowId 2>"$strLogFile" |grep "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2"'`
-#	xwininfo -id $lnWindowId 2>"$strLogFile" |grep -a "Absolute\|Width\|Height" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' |tr -d "\n"
-#	echo "lnWindowId='$lnWindowId'" >>/dev/stderr
-#	xwininfo -id $lnWindowId |grep "upper-left" >>/dev/stderr
 	
-#	xwininfo -id $lnWindowId 2>"$strLogFile" \
-#		|egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]]*$" \
-#		|sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"' \
-#		|tr -d "\n"
-	local lstrToEval="`xwininfo -id $lnWindowId`"
-	#echo "lstrToEval='$lstrToEval'" >>/dev/stderr
-	lstrToEval="`echo "$lstrToEval" |egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]-]*$"`"
-#	echo "lstrToEval='$lstrToEval'" >>/dev/stderr
-	lstrToEval="`echo "$lstrToEval" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"'`"
-#	echo "lstrToEval='$lstrToEval'" >>/dev/stderr
-	lstrToEval="`echo "$lstrToEval" |tr -d "\n"`"
-	#echo "lstrToEval='$lstrToEval'" >>/dev/stderr
+	local lstrToEval=""
+	if lstrToEval="`xwininfo -id $lnWindowId`";then
+		lstrToEval="`echo "$lstrToEval" |egrep -a "^[[:blank:]]*((Absolute upper-left [XY]:)|(Width:)|(Height:))[[:blank:]]*[[:digit:]-]*$"`"
+		lstrToEval="`echo "$lstrToEval" |sed -r 's".*(X|Y|Width|Height):[[:blank:]]*(-?[0-9]+)"nWindow\1=\2;"'`" # defines: nWindowX nWindowY nWindowWidth nWindowHeight
+		lstrToEval="`echo "$lstrToEval" |tr -d "\n"`"
+	else
+		return 1
+	fi
 	
 	echo "$lstrToEval"
-		
-#		strHexaWindowId="`printf "0x%08x" $windowId`"
-#		#xdotool getwindowgeometry $nWindowId
-#		strPosition="`wmctrl -lG |grep "^$strHexaWindowId "`"
-#		#echo "$strPosition"
-#		strPosition="`echo "$strPosition" |awk '{print $3 "\t" $4}'`"
-#		nX="`echo "$strPosition" |cut -f1`"
-#		nY="`echo "$strPosition" |cut -f2`"
-#		echo "$nX $nY"
-	
+	return 0
 }
 
 function FUNCdebugShowVars() {
@@ -242,7 +225,7 @@ while true; do
 	if $bContinue;then continue;fi # is NOT an error...
 	
 	############################### DO IT ###############################
-	strWindowGeom="`FUNCwindowGeom $windowId`"
+	if ! strWindowGeom="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
 	eval "$strWindowGeom"
 
 #	bDesktopIsAtViewport0=false
@@ -300,13 +283,19 @@ while true; do
 	
 	if FUNCisMaximized $windowId;then
 		# demaximize
-		codeGeomMax="`FUNCwindowGeom $windowId`"
+		if ! codeGeomMax="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
 		wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
 		# wait new geometry be effectively applied
-		while [[ "$codeGeomMax" == "`FUNCwindowGeom $windowId`" ]];do
+		bErrCont=false
+		while true;do
+			if ! strCodeGeomCurrent="`FUNCwindowGeom $windowId`";then bErrCont=true;break;fi
+			if [[ "$codeGeomMax" != "$strCodeGeomCurrent" ]];then
+				break;
+			fi
 			#echo "wait..."
 			sleep 0.1
 		done
+		if $bErrCont;then ContAftErrA;fi
 		
 		#xwininfo -wm -id $windowId
 #			while xwininfo -wm -id $windowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";do
@@ -326,7 +315,7 @@ while true; do
 #						break
 #					fi
 #				done
-			aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
 			echo "Safe backup: ${aWindowGeomBkp[$windowId]} $strVpMsg"
 			#xwininfo -id $windowId #@@@R
 		fi
@@ -345,7 +334,7 @@ while true; do
 			if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
 			
 			#xdotool getwindowname $windowId
-			aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			if ! aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
 			
 			echo "Pseudo Maximized: $windowName $strVpMsg"
 		fi
@@ -370,7 +359,7 @@ while true; do
 				((nWindowHeight<nPMGWindowHeight));
 		then
 			#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
-			aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+			if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
 			aWindowPseudoMaximizedGeomBkp[$windowId]=""
 		fi
 	
