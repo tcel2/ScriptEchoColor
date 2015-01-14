@@ -58,7 +58,8 @@ gap_x 10
 gap_y 30
 alignment top_right
 
-#${color grey}${execi 1 date +"%d %b"}${color yellow}${execi 1 date +" %H:%M"}${color grey}${execi 1 date +":%S"}
+# with date shell command: ${color grey}${execi 1 date +"%d %b"}${color yellow}${execi 1 date +" %H:%M"}${color grey}${execi 1 date +":%S"}
+# beggin of current clipboard entry: ${color darkgrey}${execi 3 bash -c '"'"'nWidth=50;printf "%-${nWidth}s\n" "`xclip -o -selection clipboard |head -n 1 |cut -c1-${nWidth}`"'"'"'}
 
 TEXT
 ${color darkgrey}${time %a}${color lightgrey}${time %d}${color darkgrey}${time %b}${color yellow}${time %H}${color cyan}${time %M}${color darkgrey}${time %S}' >SimpleDatetimeClock.cfg

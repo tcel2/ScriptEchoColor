@@ -776,6 +776,15 @@ fi
 #  useJWM=false
 #fi
 
+if pgrep compiz;then
+	if ! pgrep metacity;then
+		echoc --alert "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
+		if echoc -q "run 'metacity'?";then
+			secXtermDetached.sh metacity --replace
+		fi
+	fi
+fi
+
 # at this point, X1 will be managed by openNewX
 while FUNCisX1running;do
 	if echoc -q -t 3 "Open New X. You must stop the other session at :1 before continuing. Kill X1 now?"; then

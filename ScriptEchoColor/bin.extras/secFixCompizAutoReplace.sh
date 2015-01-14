@@ -81,7 +81,7 @@ function FUNCwait() {
 #	fi
 }
 
-function FUNCisCompizRunning() {
+function FUNCisCompizRunning() { #TODO this does not work after `metacity --replace`
 	#if ps -A -o command |grep -q -x compiz; then
 	FUNCechoErr "check if compiz is running..."
 	#if qdbus |grep -q org.freedesktop.compiz; then
