@@ -1,3 +1,5 @@
+Date:   2015-01-15 17:00:35 -0200
+    deprecated secFixCompizAutoReplace.sh, replaced by secReplaceWindowManager.sh;
 Date:   2014-12-30 15:42:37 -0200
     secUpdateRemoteBackupFiles.sh: checks for empty files at ~/.unison;
 Date:   2014-12-29 15:37:30 -0200
