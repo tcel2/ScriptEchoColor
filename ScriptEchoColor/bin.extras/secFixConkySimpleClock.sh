@@ -49,7 +49,7 @@ if $bCreateClock;then
 	SECFUNCexecA --echo -c pwd
 	SECFUNCexecA --echo -c mv -vf SimpleDatetimeClock.cfg "SimpleDatetimeClock.cfg.`SECFUNCdtFmt --filename`.bkp"&&:
 	echo 'use_xft yes
-xftfont Sans:style=Bold:size=10
+xftfont monospace:style=Bold:size=10
 own_window yes
 own_window_title Conky - SimpleDatetimeClock
 own_window_hints undecorated,above,sticky,skip_taskbar,skip_pager

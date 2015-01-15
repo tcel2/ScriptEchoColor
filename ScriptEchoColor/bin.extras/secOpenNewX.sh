@@ -776,11 +776,13 @@ fi
 #  useJWM=false
 #fi
 
+bCompizOff=false
 if pgrep compiz;then
 	if ! pgrep metacity;then
 		echoc --alert "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
 		if echoc -q "run 'metacity'?";then
 			secXtermDetached.sh metacity --replace
+			bCompizOff=true
 		fi
 	fi
 fi
@@ -922,12 +924,14 @@ export cmdOpenNewX="bash -c \"$kbdSetup; bash -c \\\"$runCmd;bash -i\\\"; bash -
 echo "cmdOpenNewX=$cmdOpenNewX"
 
 # wait for compiz to start to not mess its behavior
-if [[ -n "$DISPLAY" ]] && $bWaitCompiz; then
-	while ! echoc -x "qdbus org.freedesktop.compiz 1>/dev/null"; do #do not ignore the error output!
-		if echoc -q -t 1 "check if CCSM D-BUS was enabled. Quit"; then 
-			exit 1; 
-		fi
-	done
+if ! $bCompizOff;then
+	if [[ -n "$DISPLAY" ]] && $bWaitCompiz; then
+		while ! echoc -x "qdbus org.freedesktop.compiz 1>/dev/null"; do #do not ignore the error output!
+			if echoc -q -t 1 "check if CCSM D-BUS was enabled. Quit"; then 
+				exit 1; 
+			fi
+		done
+	fi
 fi
 
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
@@ -1082,6 +1086,14 @@ while ps -p $pidX1 >/dev/null 2>&1; do
 		$0 --killX1
 	fi
 done
+
+if $bCompizOff;then
+	if ! ps -A |grep -q -x compiz;then
+		if echoc -q "restore compiz?";then
+			secXtermDetached.sh compiz --replace
+		fi
+	fi
+fi
 
 echoc --say "X1 closed"
 #echoc -w "exit...."

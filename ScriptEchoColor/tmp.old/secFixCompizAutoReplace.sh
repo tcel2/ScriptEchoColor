@@ -81,11 +81,11 @@ function FUNCwait() {
 #	fi
 }
 
-function FUNCisCompizRunning() { #TODO this does not work after `metacity --replace`
-	#if ps -A -o command |grep -q -x compiz; then
+function FUNCisCompizRunning() {
 	FUNCechoErr "check if compiz is running..."
 	#if qdbus |grep -q org.freedesktop.compiz; then
-	if qdbus |grep -q com.canonical.Unity; then
+	#if qdbus |grep -q com.canonical.Unity; then #compiz could be running but not active?
+	if ps -A -o command |grep -q -x compiz; then #metacity --replace makes compiz stop, but dbus will still have compiz stuff
 		return 0
 	fi
 	return 1
