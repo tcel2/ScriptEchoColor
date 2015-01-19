@@ -117,6 +117,11 @@ function FUNCvalidateNumber() {
 	return 0
 }
 
+# just creating globals
+nWindowX= 
+nWindowY= 
+nWindowWidth=
+nWindowHeight=
 function FUNCwindowGeom() {
 	local lnWindowId=$1
 	
@@ -188,8 +193,6 @@ declare -A aWindowPseudoMaximizedGeomBkp
 SECFUNCdelay RefreshData --init
 SECFUNCdelay bReactivateWindow --init
 while true; do 
-	sleep 0.25;
-	
 	if SECFUNCdelay RefreshData --checkorinit1 10;then
 		FUNCupdateScreenGeometryData
 		FUNCvalidateAll
@@ -199,232 +202,296 @@ while true; do
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	
-	if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
-	if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
-		xdotool windowactivate `xdotool search --sync "^Desktop$"`&&: #this way desktop shortcut keys work again!
-#		while ! xdotool windowactivate `xdotool search --sync "^Desktop$"`;do #this way desktop shortcut keys work again!
-#			echo "Err: unable to find 'Desktop'"
-#			sleep 0.5
-#		done
-		ContAftErrA;
-	fi
-	
-	# SKIP check
-	bContinue=false
-	for checkName in "${aWindowListToSkip[@]}";do
-		#if [[ "$checkName" == "$windowName" ]];then
-		if((`expr match "$windowName" "$checkName"`>0));then
-			bContinue=true
-			if [[ "$strLastSkipped" != "$windowName" ]];then
-				echo "INFO: Skipped: $windowName"
-				strLastSkipped="$windowName"
-			fi
-			break
-		fi
-	done
-	if $bContinue;then continue;fi # is NOT an error...
-	
-	############################### DO IT ###############################
-	if ! strWindowGeom="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
-	eval "$strWindowGeom"
-
-#	bDesktopIsAtViewport0=false
-#	if wmctrl -d |grep -q " VP: 0,0 ";then
-#		bDesktopIsAtViewport0=true
-#	fi
-	anViewPortPos=(`FUNCgetViewport`)
-	nViewPortPosX=${anViewPortPos[0]}
-	nViewPortPosY=${anViewPortPos[1]}
-	strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
-	
-	bWindowIsMissplaced=false
-##	if $bDesktopIsAtViewport0;then
-#	if((nViewPortPosX==0 && nWindowX<0));then
-#		echo "Missplaced: X0"
-#		bWindowIsMissplaced=true
-#	fi
-#	if((nViewPortPosY==0 && nWindowY<0));then
-#		echo "Missplaced: Y0"
-#		bWindowIsMissplaced=true
-#	fi
-#	
-#	if ! $bWindowIsMissplaced;then
-#		# window must be at current viewport otherwise skip it
-#		if ! ((nWindowX>=0 && nWindowY>=0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
-#			continue
-#		fi
-#	fi
-#	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
-	
-#	# skip windows outside of current viewport
-#	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
-#		continue
-#	fi
-#	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
-#		continue
-#	fi
-	if ! FUNCisOnCurrentViewport;then # skip windows outside of current viewport
-		continue
-	fi
-	
-	if $bReactivateWindow;then
-		if SECFUNCdelay bReactivateWindow --checkorinit 1.5;then
-			if echo "$windowName" |egrep -q "$strReactWindNamesRegex";then
-				xdotool windowactivate $windowId;
-				echo "Activated: $windowName $strVpMsg"
-			fi
+	anWindowList=(`xdotool getactivewindow`)
+	bFixAllWindowsOnce=false
+	if SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
+		echoc --info "Fix all windows once: warning, viewport must be changed for each window it is on, so you have to wait a bit..."
+		if echoc -q -t 3 "fix all windows independently of focus, once?";then
+			anWindowList=(`wmctrl -l |cut -d' ' -f1`)
+			bFixAllWindowsOnce=true
 		fi
 	fi
 	
-	bPseudoMaximized=false
-	if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
-		bPseudoMaximized=true
-	fi
+	for windowId in "${anWindowList[@]}";do
+		sleep 0.25;
+		
+		#if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
+		if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
+			xdotool windowactivate `xdotool search --sync "^Desktop$"`&&: #this way desktop shortcut keys work again!
+	#		while ! xdotool windowactivate `xdotool search --sync "^Desktop$"`;do #this way desktop shortcut keys work again!
+	#			echo "Err: unable to find 'Desktop'"
+	#			sleep 0.5
+	#		done
+			ContAftErrA;
+		fi
 	
-	if FUNCisMaximized $windowId;then
-		# demaximize
-		if ! codeGeomMax="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
-		wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
-		# wait new geometry be effectively applied
-		bErrCont=false
-		while true;do
-			if ! strCodeGeomCurrent="`FUNCwindowGeom $windowId`";then bErrCont=true;break;fi
-			if [[ "$codeGeomMax" != "$strCodeGeomCurrent" ]];then
-				break;
+		# SKIP check
+		bContinue=false
+		for checkName in "${aWindowListToSkip[@]}";do
+			#if [[ "$checkName" == "$windowName" ]];then
+			if((`expr match "$windowName" "$checkName"`>0));then
+				bContinue=true
+				if [[ "$strLastSkipped" != "$windowName" ]];then
+					echo "INFO: Skipped: $windowName ($windowId)"
+					strLastSkipped="$windowName"
+				fi
+				break
 			fi
-			#echo "wait..."
-			sleep 0.1
 		done
-		if $bErrCont;then ContAftErrA;fi
+		if $bContinue;then continue;fi # is NOT an error...
+	
+		############################### DO IT ###############################
+		function FUNCupdateViewportInfo() {
+			declare -g anViewPortPos=(`FUNCgetViewport`)
+			declare -g nViewPortPosX=${anViewPortPos[0]}
+			declare -g nViewPortPosY=${anViewPortPos[1]}
+			declare -g strVpMsg="(vp:$nViewPortPosX,$nViewPortPosY)"
+		}
+		FUNCupdateViewportInfo
 		
-		#xwininfo -wm -id $windowId
-#			while xwininfo -wm -id $windowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";do
-#				echo "wait..."
-#				sleep 0.1
-#			done
-		#sleep 1
+		echo "Working with: $windowName ($windowId)"
 		
-		# in case user clicked directly on maximize button
-		#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
-		if [[ -z "${aWindowGeomBkp[$windowId]-}" ]];then
-#				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-#				while true;do
-#					codeGeomTmp="`FUNCwindowGeom $windowId`"
-#					if [[ "$codeGeomTmp" != "${aWindowGeomBkp[$windowId]}" ]];then
-#						aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
-#						break
-#					fi
-#				done
-			if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
-			echo "Safe backup: ${aWindowGeomBkp[$windowId]} $strVpMsg"
-			#xwininfo -id $windowId #@@@R
+		function FUNCatuWindowInfo() {
+			# atu window geom info
+			if ! strWindowGeom="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
+			eval "$strWindowGeom"
+			declare -g nWindowMiddleX=$(( nWindowX+(nWindowWidth/2) ))
+			declare -g nWindowMiddleY=$(( nWindowY+(nWindowHeight/2) ))
+		}
+		FUNCatuWindowInfo
+		
+		if $bFixAllWindowsOnce;then
+			nNewViewPortPosX=$nViewPortPosX
+			nNewViewPortPosY=$nViewPortPosY
+			
+			bChangeViewport=false
+			
+			if((nWindowMiddleX<0));then
+				((nNewViewPortPosX=nViewPortPosX-nScreenWidth))&&:
+				if((nNewViewPortPosX<0));then nNewViewPortPosX=0;fi
+				bChangeViewport=true
+			elif((nWindowMiddleX>nScreenWidth));then
+				((nNewViewPortPosX=nViewPortPosX+nScreenWidth))&&:
+				bChangeViewport=true
+			fi
+			
+			if((nWindowMiddleY<0));then
+				((nNewViewPortPosY=nViewPortPosY-nScreenHeight))&&:
+				if((nNewViewPortPosY<0));then nNewViewPortPosY=0;fi
+				bChangeViewport=true
+			elif((nWindowMiddleY>nScreenHeight));then
+				((nNewViewPortPosY=nViewPortPosY+nScreenHeight))&&:
+				bChangeViewport=true
+			fi
+			
+			if $bChangeViewport;then
+				SECFUNCexec -c --echo xdotool set_desktop_viewport $nNewViewPortPosX $nNewViewPortPosY
+				#sleep 3 #just for safety
+			
+				FUNCupdateViewportInfo
+				
+				FUNCatuWindowInfo
+			fi
 		fi
+
+	#	bDesktopIsAtViewport0=false
+	#	if wmctrl -d |grep -q " VP: 0,0 ";then
+	#		bDesktopIsAtViewport0=true
+	#	fi
 		
-		if $bPseudoMaximized;then
-			eval "${aWindowGeomBkp[$windowId]}" #restore variables
-			if ! xdotool windowsize $windowId $nWindowWidth $nWindowHeight;then ContAftErrA;fi
-			if ! xdotool windowmove $windowId $((nWindowX-nRestoreFixXpos)) $((nWindowY-nRestoreFixYpos));then ContAftErrA;fi
-			
-			aWindowPseudoMaximizedGeomBkp[$windowId]=""
-			
-			echo "Restored non-maximized size and position: $windowName $strVpMsg"
-		else
-			# pseudo-mazimized
-			if ! xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;then ContAftErrA;fi
-			if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
-			
-			#xdotool getwindowname $windowId
-			if ! aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
-			
-			echo "Pseudo Maximized: $windowName $strVpMsg"
-		fi
-	else ################## NOT MAXIMIZED ########################
-		#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
-		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
-		#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
-		if $bPseudoMaximized;then
-			eval "${aWindowPseudoMaximizedGeomBkp[$windowId]}"
-			nPMGWindowX=$nWindowX
-			nPMGWindowY=$nWindowY
-			nPMGWindowWidth=$nWindowWidth
-			nPMGWindowHeight=$nWindowHeight
-		fi
-		#eval `FUNCwindowGeom $windowId`
-		
-		# backup size and pos if NOT pseudo-maximized
-		#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
-		#FUNCdebugShowVars nWindowWidth nWindowHeight nPMGWindowWidth nPMGWindowHeight
-		if	! $bPseudoMaximized || 
-				((nWindowWidth<nPMGWindowWidth)) ||
-				((nWindowHeight<nPMGWindowHeight));
-		then
-			#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
-			if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
-			aWindowPseudoMaximizedGeomBkp[$windowId]=""
+		bWindowIsMissplaced=false
+	##	if $bDesktopIsAtViewport0;then
+	#	if((nViewPortPosX==0 && nWindowX<0));then
+	#		echo "Missplaced: X0"
+	#		bWindowIsMissplaced=true
+	#	fi
+	#	if((nViewPortPosY==0 && nWindowY<0));then
+	#		echo "Missplaced: Y0"
+	#		bWindowIsMissplaced=true
+	#	fi
+	#	
+	#	if ! $bWindowIsMissplaced;then
+	#		# window must be at current viewport otherwise skip it
+	#		if ! ((nWindowX>=0 && nWindowY>=0 && nWindowX<nScreenWidth && nWindowY<nScreenHeight));then
+	#			continue
+	#		fi
+	#	fi
+	#	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
+	
+	#	# skip windows outside of current viewport
+	#	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then
+	#		continue
+	#	fi
+	#	if((nWindowX>nScreenWidth)) || ((nWindowY>nScreenHeight));then
+	#		continue
+	#	fi
+		if ! FUNCisOnCurrentViewport;then # skip windows outside of current viewport
+			continue
 		fi
 	
-		#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
-			bFixWindowPos=false
-			if $bWindowIsMissplaced;then
-				echo "Missplaced: $strVpMsg"
-				bFixWindowPos=true
-			fi
-			
-			if FUNCisOnCurrentViewport;then
-				if(( nWindowY < 0 ));then
-					echo "Missplaced: Y<0 $strVpMsg"
-					bFixWindowPos=true
-				fi
-				if(( nWindowX < 0 ));then
-					echo "Missplaced: X<0 $strVpMsg"
-					bFixWindowPos=true
+		if $bReactivateWindow;then
+			if SECFUNCdelay bReactivateWindow --checkorinit 1.5;then
+				if echo "$windowName" |egrep -q "$strReactWindNamesRegex";then
+					xdotool windowactivate $windowId;
+					echo "Activated: $windowName $strVpMsg"
 				fi
 			fi
-			
-			# less than the systray top panel
-			if(( nWindowY < nYposMinReadPos ));then
-				echo "Missplaced: Y<Min $strVpMsg"
-				bFixWindowPos=true
-			fi
-
-			if(( nWindowX < nScreenWidth ));then
-				if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
-					echo "Missplaced: X+W beyond Screen $strVpMsg"
-					bFixWindowPos=true
+		fi
+	
+		bPseudoMaximized=false
+		if [[ -n "${aWindowPseudoMaximizedGeomBkp[$windowId]-}" ]];then
+			bPseudoMaximized=true
+		fi
+	
+		if FUNCisMaximized $windowId;then
+			# demaximize
+			if ! codeGeomMax="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
+			wmctrl -i -r $windowId -b toggle,maximized_vert,maximized_horz;
+			# wait new geometry be effectively applied
+			bErrCont=false
+			while true;do
+				if ! strCodeGeomCurrent="`FUNCwindowGeom $windowId`";then bErrCont=true;break;fi
+				if [[ "$codeGeomMax" != "$strCodeGeomCurrent" ]];then
+					break;
 				fi
+				#echo "wait..."
+				sleep 0.1
+			done
+			if $bErrCont;then ContAftErrA;fi
+		
+			#xwininfo -wm -id $windowId
+	#			while xwininfo -wm -id $windowId 2>"$strLogFile" |tr -d '\n' |grep -q "Maximized Vert.*Horz";do
+	#				echo "wait..."
+	#				sleep 0.1
+	#			done
+			#sleep 1
+		
+			# in case user clicked directly on maximize button
+			#echo "zzz: ${aWindowGeomBkp[$windowId]}" #@@@R
+			if [[ -z "${aWindowGeomBkp[$windowId]-}" ]];then
+	#				aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+	#				while true;do
+	#					codeGeomTmp="`FUNCwindowGeom $windowId`"
+	#					if [[ "$codeGeomTmp" != "${aWindowGeomBkp[$windowId]}" ]];then
+	#						aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`"
+	#						break
+	#					fi
+	#				done
+				if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
+				echo "Safe backup: ${aWindowGeomBkp[$windowId]} $strVpMsg"
+				#xwininfo -id $windowId #@@@R
 			fi
-			if(( nWindowY < nScreenHeight ));then
-				if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
-					echo "Missplaced: Y+H beyond Screen $strVpMsg"
-					bFixWindowPos=true
-				fi
-			fi
+		
+			if $bPseudoMaximized;then
+				eval "${aWindowGeomBkp[$windowId]}" #restore variables
+				if ! xdotool windowsize $windowId $nWindowWidth $nWindowHeight;then ContAftErrA;fi
+				if ! xdotool windowmove $windowId $((nWindowX-nRestoreFixXpos)) $((nWindowY-nRestoreFixYpos));then ContAftErrA;fi
 			
-			############ veto ##################
-			anViewPortPosDoubleCheck=(`FUNCgetViewport`)
-			if((nViewPortPosX!=${anViewPortPosDoubleCheck[0]})) || ((nViewPortPosY!=${anViewPortPosDoubleCheck[1]}));then
-				echo "Veto: viewport changed nViewPortPosX='$nViewPortPosX' vs '${anViewPortPosDoubleCheck[0]}', nViewPortPosY='$nViewPortPosY' vs '${anViewPortPosDoubleCheck[1]}'"
-				bFixWindowPos=false;
-			fi
+				aWindowPseudoMaximizedGeomBkp[$windowId]=""
 			
-			nWindowMiddleX=$(( nWindowX+(nWindowWidth/2) ))
-			nWindowMiddleY=$(( nWindowY+(nWindowHeight/2) ))
-			if((nWindowMiddleX<0 || nWindowMiddleY<0 || nWindowMiddleX>nScreenWidth || nWindowMiddleY>nScreenHeight));then
-				echo "Veto: window is balanced to other viewport. nWindowMiddleX='$nWindowMiddleX', nWindowMiddleY='$nWindowMiddleY'"
-				bFixWindowPos=false;
-			fi
-			
-			if ! windowIdCheck="`xdotool getactivewindow`";then ContAftErrA;fi
-			if((windowId!=windowIdCheck));then
-				echo "Veto: window changed."
-				bFixWindowPos=false;
-			fi
-			
-			if $bFixWindowPos;then
+				echo "Restored non-maximized size and position: $windowName $strVpMsg"
+			else
+				# pseudo-mazimized
+				if ! xdotool windowsize $windowId $nPseudoMaxWidth $nPseudoMaxHeight;then ContAftErrA;fi
 				if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
-				echo "Fixing (placement): $windowName $strVpMsg"
+			
+				#xdotool getwindowname $windowId
+				if ! aWindowPseudoMaximizedGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
+			
+				echo "Pseudo Maximized: $windowName $strVpMsg"
 			fi
-		#fi
-	fi;
+		else ################## NOT MAXIMIZED ########################
+			#eval `xwininfo -id $windowId |grep -vi "geometry\|window id\|^$" |tr ":" "=" |tr -d " -" |sed -r 's;(.*)=(.*);_\1="\2";' |grep "_AbsoluteupperleftX\|_AbsoluteupperleftY\|_Width\|_Height"`
+			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |tr -d "[:alpha:]- \n"`")
+			#aWindowGeomBkp[$windowId]=("`xwininfo -id $windowId |grep "Absolute upper-left X:\|Absolute upper-left Y:\|Width:\|Height:" |sed -r 's"(.*):(.*)"_\1=\2;"' |tr -d "\n -"`")
+			if $bPseudoMaximized;then
+				eval "${aWindowPseudoMaximizedGeomBkp[$windowId]}"
+				nPMGWindowX=$nWindowX
+				nPMGWindowY=$nWindowY
+				nPMGWindowWidth=$nWindowWidth
+				nPMGWindowHeight=$nWindowHeight
+			fi
+			#eval `FUNCwindowGeom $windowId`
+		
+			# backup size and pos if NOT pseudo-maximized
+			#if ((nWindowWidth<nPseudoMaxWidth)) || ((nWindowHeight<nPseudoMaxHeight)) ;then
+			#FUNCdebugShowVars nWindowWidth nWindowHeight nPMGWindowWidth nPMGWindowHeight
+			if	! $bPseudoMaximized || 
+					((nWindowWidth<nPMGWindowWidth)) ||
+					((nWindowHeight<nPMGWindowHeight));
+			then
+				#aWindowGeomBkp[$windowId]="nWindowX=$nWindowX;nWindowY=$nWindowY;nWindowWidth=$nWindowWidth;nWindowHeight=$nWindowHeight"
+				if ! aWindowGeomBkp[$windowId]="`FUNCwindowGeom $windowId`";then ContAftErrA;fi
+				aWindowPseudoMaximizedGeomBkp[$windowId]=""
+			fi
+	
+			#if((nWindowY>0 && nWindowX>0));then #will skip windows outside of current viewport
+				bFixWindowPos=false
+				if $bWindowIsMissplaced;then
+					echo "Missplaced: $strVpMsg"
+					bFixWindowPos=true
+				fi
+			
+				if FUNCisOnCurrentViewport;then
+					if(( nWindowY < 0 ));then
+						echo "Missplaced: Y<0 $strVpMsg"
+						bFixWindowPos=true
+					fi
+					if(( nWindowX < 0 ));then
+						echo "Missplaced: X<0 $strVpMsg"
+						bFixWindowPos=true
+					fi
+				fi
+			
+				# less than the systray top panel
+				if(( nWindowY < nYposMinReadPos ));then
+					echo "Missplaced: Y<Min $strVpMsg"
+					bFixWindowPos=true
+				fi
+
+				if(( nWindowX < nScreenWidth ));then
+					if(( (nWindowX+nWindowWidth) > nScreenWidth ));then
+						echo "Missplaced: X+W beyond Screen $strVpMsg"
+						bFixWindowPos=true
+					fi
+				fi
+				if(( nWindowY < nScreenHeight ));then
+					if(( (nWindowY+nWindowHeight) > nScreenHeight ));then
+						echo "Missplaced: Y+H beyond Screen $strVpMsg"
+						bFixWindowPos=true
+					fi
+				fi
+			
+				############ veto ##################
+				anViewPortPosDoubleCheck=(`FUNCgetViewport`)
+				if((nViewPortPosX!=${anViewPortPosDoubleCheck[0]})) || ((nViewPortPosY!=${anViewPortPosDoubleCheck[1]}));then
+					echo "Veto: viewport changed nViewPortPosX='$nViewPortPosX' vs '${anViewPortPosDoubleCheck[0]}', nViewPortPosY='$nViewPortPosY' vs '${anViewPortPosDoubleCheck[1]}'"
+					bFixWindowPos=false;
+				fi
+			
+				if((nWindowMiddleX<0 || nWindowMiddleY<0 || nWindowMiddleX>nScreenWidth || nWindowMiddleY>nScreenHeight));then
+					echo "Veto: window is balanced to other viewport. nWindowMiddleX='$nWindowMiddleX', nWindowMiddleY='$nWindowMiddleY'"
+					bFixWindowPos=false;
+				fi
+				
+				if ! $bFixAllWindowsOnce;then
+					if ! windowIdCheck="`xdotool getactivewindow`";then ContAftErrA;fi
+					if((windowId!=windowIdCheck));then
+						echo "Veto: window changed."
+						bFixWindowPos=false;
+					fi
+				fi
+			
+				if $bFixWindowPos;then
+					if ! xdotool windowmove $windowId $nXpos $nYpos;then ContAftErrA;fi
+					echo "Fixing (placement): $windowName $strVpMsg"
+				fi
+			#fi
+		fi;
+	done
+	if $bFixAllWindowsOnce;then
+		echoc --say "fixing windows batch ended"
+	fi
+	
 done
 

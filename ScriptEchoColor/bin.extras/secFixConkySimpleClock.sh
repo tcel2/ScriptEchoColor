@@ -57,6 +57,7 @@ own_window_colour darkblue
 gap_x 10
 gap_y 30
 alignment top_right
+border_inner_margin 0
 
 # with date shell command: ${color grey}${execi 1 date +"%d %b"}${color yellow}${execi 1 date +" %H:%M"}${color grey}${execi 1 date +":%S"}
 # beggin of current clipboard entry: ${color darkgrey}${execi 3 bash -c '"'"'nWidth=50;printf "%-${nWidth}s\n" "`xclip -o -selection clipboard |head -n 1 |cut -c1-${nWidth}`"'"'"'}
