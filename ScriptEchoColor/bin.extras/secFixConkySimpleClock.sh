@@ -25,6 +25,7 @@
 eval `secinit --extras`
 
 bCreateClock=false
+bForceFix=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "makes Conky Simple Clock work better"
@@ -32,6 +33,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--createconfig" || "$1" == "-c" ]];then #help create/replace the simple clock config, modify it as you like
 		bCreateClock=true
+	elif [[ "$1" == "--forcefix" ]];then #help (may not be required)
+		bForceFix=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -48,6 +51,7 @@ if $bCreateClock;then
 	cd "$strPath"
 	SECFUNCexecA --echo -c pwd
 	SECFUNCexecA --echo -c mv -vf SimpleDatetimeClock.cfg "SimpleDatetimeClock.cfg.`SECFUNCdtFmt --filename`.bkp"&&:
+	
 	echo 'use_xft yes
 xftfont monospace:style=Bold:size=10
 own_window yes
@@ -64,26 +68,36 @@ border_inner_margin 0
 
 TEXT
 ${color darkgrey}${time %a}${color lightgrey}${time %d}${color darkgrey}${time %b}${color yellow}${time %H}${color cyan}${time %M}${color darkgrey}${time %S}' >SimpleDatetimeClock.cfg
+	
 	SECFUNCexecA --echo -c cat SimpleDatetimeClock.cfg
 	echoc --info "now you can run Conky Manager to easily activate it on startup"
 	exit 0
 fi
 
-SECFUNCuniqueLock --waitbecomedaemon
+if $bForceFix;then
+	#this code is unnecessary now...
+	SECFUNCuniqueLock --waitbecomedaemon
 
-while true; do
-	if [[ "`xdotool getwindowname $(xdotool getactivewindow)`" == "Yakuake" ]];then
-		echo "activate conky simple clock"
-		if ! xdotool windowactivate `xdotool search "Conky - SimpleDatetimeClock"`;then
-			echo "failed..."
+	while true; do
+		if [[ "`xdotool getwindowname $(xdotool getactivewindow)`" == "Yakuake" ]];then
+			echo "activate conky simple clock"
+			if ! xdotool windowactivate `xdotool search "Conky - SimpleDatetimeClock"`;then
+				echo "failed..."
+			fi
+		else
+			echo "waiting yakuake focus"
 		fi
-	else
-		echo "waiting yakuake focus"
-	fi
 	
-	if SECFUNCdelay daemonHold --checkorinit 5;then
-		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
-	fi
+		if SECFUNCdelay daemonHold --checkorinit 5;then
+			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+		fi
 	
-	sleep 3;
-done
+		sleep 3;
+	done
+else
+	echoc --info "if you are using compiz (Unity an Ubuntu)"
+	echoc --alert "At ccsm, in General Settings, DISABLE: @b'Hide Skip Taskbar Windows'"
+	echo "you can use --forcefix instead also"
+	echoc -w
+fi
+

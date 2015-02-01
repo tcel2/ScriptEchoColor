@@ -40,6 +40,7 @@ aWindowListToSkip=(
 
 bReactivateWindow=false
 strReactWindNamesRegex=""
+bWaitResquestFixAllOnly=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -57,6 +58,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		shift
 		strReactWindNamesRegex="${1-}"
 		bReactivateWindow=true
+	elif [[ "$1" == "--waitrequest" ]];then #help wait request and fix all windows at once, this prevents endless fixing window with focus
+		bWaitResquestFixAllOnly=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
 		sedVarValue="^([[:alnum:]]*)=(.*)"
@@ -204,11 +207,16 @@ while true; do
 	
 	anWindowList=(`xdotool getactivewindow`)
 	bFixAllWindowsOnce=false
-	if SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
+	if $bWaitResquestFixAllOnly || SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
 		echoc --info "Fix all windows once: warning, viewport must be changed for each window it is on, so you have to wait a bit..."
-		if echoc -q -t 3 "fix all windows independently of focus, once?";then
+		nWait=3;if $bWaitResquestFixAllOnly;then nWait=1800;fi
+		if echoc -q -t $nWait "fix all windows independently of focus, once?";then
 			anWindowList=(`wmctrl -l |cut -d' ' -f1`)
 			bFixAllWindowsOnce=true
+		else
+			if $bWaitResquestFixAllOnly;then
+				continue
+			fi
 		fi
 	fi
 	
