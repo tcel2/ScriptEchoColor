@@ -1,3 +1,6 @@
+Date:   2015-02-01 12:56:22 -0200
+    secFixConkySimpleClock.sh --forcefix;
+    secFixWindow.sh --waitrequest;
 Date:   2015-01-19 14:47:03 -0200
     secFixWindow.sh: now can run on all windows once, independently of focus;
 Date:   2015-01-15 17:00:35 -0200
