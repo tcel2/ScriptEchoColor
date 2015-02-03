@@ -27,14 +27,25 @@ eval `secinit`
 #strSelfName="`basename "$0"`"
 #strLogFile="/tmp/.${strSelfName}.log"
 
+nCpuLimitPercentual=1
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--help" ]];then
+	SECFUNCsingleLetterOptionsA;
+	if [[ "$1" == "--help" ]];then #help
 		echo "log at '$SECstrRunLogFile'"
-		exit
+		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "--perc" ]];then #help <nCpuLimitPercentual> set percentual
+		shift
+		nCpuLimitPercentual="${1-}"
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
+		shift
+		break
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
+	shift
 done
 
 if ! SECFUNCisShellInteractive;then
@@ -42,10 +53,19 @@ if ! SECFUNCisShellInteractive;then
 	exec 1>&2
 fi
 
+if ! SECFUNCisNumber -dn "$nCpuLimitPercentual";then
+	echoc -p "invalid nCpuLimitPercentual='$nCpuLimitPercentual'"
+	exit 1
+fi
+
+nPidCurrent="`pgrep -fx "cpulimit -p $(pgrep dropbox) -l .*"`"&&:
+if [[ -n "$nPidCurrent" ]];then
+	ps -p "$nPidCurrent"
+fi
+
 SECFUNCuniqueLock --daemonwait
 
 nPidDropbox=""
-nCpuLimitPercentual=1
 while true;do
 	#nPidDropbox=`ps -A -o pid,comm |egrep " dropbox$" |sed -r "s'^ *([[:digit:]]*) .*'\1'"`
 	nPidDropbox="`pgrep -f "/dropbox " |head -n 1`"&&:

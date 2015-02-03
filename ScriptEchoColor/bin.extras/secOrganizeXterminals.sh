@@ -288,16 +288,6 @@ strPidListPrevious=""
 if $bDaemon; then
 	echoc -x "renice -n 19 -p $$"
 	while true; do 
-		FUNCupdateScreenGeometryData
-		
-		strPidList=`FUNCpidList`
-		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
-			strPidListPrevious="$strPidList"
-			#$0 #call self to do the organization
-			FUNCorganize
-			bCascadeForceNow=false
-		fi
-		
 		#if ! sleep 5; then break; fi; 
 		#echo -ne "wait: ctrl+c for options..\r"
 		#read -t 1 #sleep 1 #`read` caused trouble with ctrl+c?
@@ -307,6 +297,16 @@ if $bDaemon; then
 			fi
 			#bAskNow=false
 		#fi
+		
+		FUNCupdateScreenGeometryData
+		
+		strPidList=`FUNCpidList`
+		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
+			strPidListPrevious="$strPidList"
+			#$0 #call self to do the organization
+			FUNCorganize
+			bCascadeForceNow=false
+		fi
 		
 		if SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
