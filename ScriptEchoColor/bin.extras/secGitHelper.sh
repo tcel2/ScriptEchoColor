@@ -38,7 +38,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--devpath" || "$1" == "-d" ]];then #help <strDevPath> development path where .git directory can be found into
 		shift
 		strDevPath="${1-}"
-	elif [[ "$1" == "--changes" || "$1" == "-d" ]];then #help <strChangesFile> set the changes log file
+	elif [[ "$1" == "--changes" ]];then #help <strChangesFile> set the changes log file
 		shift
 		strChangesFile="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
