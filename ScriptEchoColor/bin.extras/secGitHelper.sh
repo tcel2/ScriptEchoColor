@@ -120,6 +120,36 @@ function FUNCgenerateChangesLogFile() {
 		|grep -v "^--" >"$strChangesFile";
 }
 
+function FUNCshowCommits() { #param: lbShowAll
+	local lbShowAll=false
+	if [[ "${1-}" == "true" ]];then
+		lbShowAll=true
+		shift
+	fi
+	
+#	nMaxShownCommits=20
+#	echoc --info "last $nMaxShownCommits commits:"
+	echoc --info "last commits (highlited the one previous to install):"
+#	echo "$strCommits" |sed "s@.*@'&'@" |head -n $nMaxShownCommits |column
+	nNewestCommitsLimit=1000 #just an "absurd?" number to make it easier to code...
+	nTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`"
+	local lstrOutput="`echo "$strCommits" |sed "s@.*@'&'@"`"
+	local lnAfter=1
+	if $lbShowAll;then
+		lnAfter=$nNewestCommitsLimit
+	fi
+	lstrOutput="`echo "$lstrOutput" |grep "$strLastCommitBeforeInstall" -A $lnAfter -B $nNewestCommitsLimit --color=always`"
+	if((lnAfter==1));then
+		echo "$lstrOutput"
+	else
+		SECFUNCcheckActivateRunLog --restoredefaultoutputs
+		echoc -w -t 3 "press 'q' to quit it -> using \`|less\` loads of commits will be shown"
+		echo "$lstrOutput" |less -R
+		SECFUNCcheckActivateRunLog
+	fi
+	#|column -c $nTerminalWidth
+}
+
 SECFUNCuniqueLock --daemonwait
 while true;do
 	### ASK WHAT TO DO ###
@@ -138,11 +168,13 @@ while true;do
 \t_generate and show changes log file/\n\
 \tdiff _installed from master/\n\
 \tdiff to be p_ushed/\n\
+\tdiff d_ate from master/\n\
 \t_push tags to remote/\n\
 \t_nautilus at dev path/\n\
 \t_terminal at dev path/\n\
 \t_browse with gitk"&&:
 	nRetValue=$?
+	strRetLetter="`secascii $nRetValue`"
 	
 	### UPDATE CONTROL DATA AND SHOW INFORMATION ###
 	
@@ -152,23 +184,22 @@ while true;do
 	echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
 	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}';"
 	echoc "strDevPath='@y$strDevPath';"
-	
+
 	#|sed -r "s'.* ([[:digit:]-]* [[:digit:]:]*) .*'\1'" |tr -d ':-' |tr ' ' '-' \
 	strCommits="`git log --full-history --date=iso |grep Date |sed -r "s@.* ([[:digit:]-]*) ([[:digit:]:]*) .*@\1 \2@"`"
 	strLastCommitBeforeInstall="`(echo "$strCommits";echo "$strSECInstalledVersionFormatted") |sort -r |grep "$strSECInstalledVersionFormatted" -A 1 |tail -n 1`"
-#	nMaxShownCommits=20
-#	echoc --info "last $nMaxShownCommits commits:"
-	echoc --info "last commits (highlited the one previous to install):"
-#	echo "$strCommits" |sed "s@.*@'&'@" |head -n $nMaxShownCommits |column
-	nNewestCommitsLimit=1000 #just an "absurd?" number to make it easier to code...
-	nTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`"
-	echo "$strCommits" \
-		|sed "s@.*@'&'@" \
-		|grep "$strLastCommitBeforeInstall" -A 1 -B $nNewestCommitsLimit --color=always \
-		|column -c $nTerminalWidth
+	
+	FUNCshowCommits
 	
 	### EXEC USER OPTION ###
-	case "`secascii $nRetValue`" in 
+	case "$strRetLetter" in 
+		a)
+			FUNCshowCommits true
+			strDateTime="`echoc -S "type/paste date and time with this format @s@{Yb}AAAA-MM-DD hh:mm:ss@S"`"
+			if [[ -n "$strDateTime" ]];then
+				FUNCgitDiffCheckShow "HEAD@{$strDateTime}..master"&&:
+			fi
+			;;
 		b)
 			echoc -x "gitk"&&: 
 			;; 
