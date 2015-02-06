@@ -81,12 +81,14 @@ bRecreateHistory=false
 bConfirmAlways=false
 fileToIgnoreOnGitAdd=""
 bForceMigrationToUnisonMode=false
+bCompress=false
 varset --default bUseAsBackup=true # use RBF as backup, so if real files are deleted they will be still at RBF
 varset --default --allowuser bBackgroundWork=false
 varset --default bAutoGit=false
 varset --default bUseUnison=true
 varset --default --allowuser nBackgroundSleep=1
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]]; then #help show this help
 		echo "Updates files at your Remote Backups folder if they already exist there, relatively to your home folder."
 		#grep "#@help" "$0" |grep -v grep |sed -r 's".*\"[$]1\" == \"(--[[:alnum:]]*)\".*#@help:(.*)$"\t\1\t\2"'
@@ -95,6 +97,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--daemon" ]]; then #help runs automatically forever
 		bDaemon=true
 		#bLookForChanges=true
+	elif [[ "$1" == "--compress" || "$1" == "-c" ]]; then #help will backup a compressed file instead
+		bCompress=true
 	elif [[ "$1" == "--lookforchanges" ]]; then #help look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
 	elif [[ "$1" == "--purgemissingfiles" ]]; then #help will remove files at RBF that are missing on the real folders, only works with --lookforchanges 
@@ -103,7 +107,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bWait=true
 	elif [[ "$1" == "--skipnautilus" ]]; then #help 
 		bSkipNautilusCheckNow=true
-	elif [[ "$1" == "--addfiles" ]]; then #help <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
+	elif [[ "$1" == "--addfiles" || "$1" == "-a" ]]; then #help <files...> add files to the remote backup folder! this is also default option if the param is a file, no need to put this option.
 		bAddFilesMode=true
 	elif [[ "$1" == "--rmRBFmissingFiles" ]]; then #help opens an interface to select what missing files on real home folder are to be removed from the remote backup folder. implies --lsmisshist 
 		bRmRBFfilesMode=true
@@ -463,6 +467,50 @@ function FUNClsNot() { #synchronize like
 	fi
 };export -f FUNClsNot
 
+strSufixCompressedFile="$SECstrScriptSelfName.7z"
+function FUNCcompressFile() {
+	local lstrFileCompressed="${1}.$strSufixCompressedFile"
+	(
+		echoc --info "compressing '$lstrFileCompressed'"
+		SECFUNCexecA -c --echo 7z u "$lstrFileCompressed" "$1"
+		SECFUNCexecA -c --echo touch -r "$1" "$lstrFileCompressed"
+	) 1>/dev/stderr
+	echo "$lstrFileCompressed"
+}
+function FUNCcheckUpdateAllCompressedFiles() {
+	cd "$pathBackupsToRemote"
+	
+	# relative paths
+	IFS=$'\n' read -d '' -r -a lastrCompressedFilesList < <( \
+		find ./ \( -not -name "." -not -name ".." \) \
+			-and \( -iname "*.$strSufixCompressedFile" \) \
+			-and \( -not -path "./.git/*" \) \
+			-and \( -type f -or -type l \) \
+			-and \( -not -type d \) \
+			-and \( -not -xtype d \) \
+	)&&: #TODO it works but returns 1, why?
+	
+	if [[ -n "${lastrCompressedFilesList[@]-}" ]];then
+		for lstrCompressedFile in "${lastrCompressedFilesList[@]-}";do
+			local lstrCompressedFile="$HOME/$lstrCompressedFile"
+		
+			echo "Found: lstrCompressedFile='$lstrCompressedFile'"
+		
+			local lstrUncompressedFile="${lstrCompressedFile%.$strSufixCompressedFile}"
+		
+			if [[ -f "$lstrUncompressedFile" ]];then
+				echo "Found: lstrUncompressedFile='$lstrUncompressedFile'"
+			
+				if test "$lstrUncompressedFile" -nt "$lstrCompressedFile";then
+					FUNCcompressFile "$lstrUncompressedFile"
+				fi
+			else
+				echo "MISSING: lstrUncompressedFile='$lstrUncompressedFile'"
+			fi
+		done
+	fi
+}
+
 ################### MAIN CODES ######################################
 
 if $bDaemon;then
@@ -646,6 +694,10 @@ elif $bAddFilesMode; then
 			continue;
 		fi
 		
+		if $bCompress;then
+			strFile="`FUNCcompressFile "$strFile"`" #updates filename
+		fi
+		
 		# copy the file
 		strRelativeFile="${strFile:${#HOME}}"
 		strAbsFileTarget="${pathBackupsToRemote}/$strRelativeFile"
@@ -674,6 +726,8 @@ elif $bLookForChanges;then
 		if $bDoItConfirmed || $bConfirmAlways; then
 			bDoIt=true
 		fi
+		
+		FUNCcheckUpdateAllCompressedFiles
 		
 		# list what will be done 1st
 		cd "$pathBackupsToRemote"
