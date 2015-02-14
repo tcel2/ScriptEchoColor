@@ -137,11 +137,19 @@ while true;do
 		bAllowScreenLock=true
 	
 		if ! nActiveVirtualTerminal="$(SECFUNCexec --echo sudo fgconsole)";then bAllowScreenLock=false;fi
+		
 		if ! anXorgPidList=(`pgrep Xorg`);then bAllowScreenLock=false;fi
-		if ! nRunningAtVirtualTerminal="`\
+		
+		nRunningAtVirtualTerminal="`\
 			ps --no-headers -o tty,cmd -p ${anXorgPidList[@]} \
 			|grep $DISPLAY \
-			|sed -r 's"^tty([[:digit:]]*).*"\1"'`";then bAllowScreenLock=false;fi
+			|sed -r 's"^tty([[:digit:]]*).*"\1"'`"&&:
+		if ! SECFUNCisNumber -dn "$nRunningAtVirtualTerminal";then 
+			echoc -t 60 -p "invalid nRunningAtVirtualTerminal='$nRunningAtVirtualTerminal'";
+			continue;
+#			bAllowScreenLock=false;
+		fi
+			
 	#	if xscreensaver-command -time |grep "screen locked since";then bAllowScreenLock=false;fi
 		if((nRunningAtVirtualTerminal==nActiveVirtualTerminal));then bAllowScreenLock=false;fi
 		if $bHoldExecution;then bAllowScreenLock=false;fi
