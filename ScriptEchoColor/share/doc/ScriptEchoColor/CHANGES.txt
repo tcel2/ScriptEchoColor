@@ -1,3 +1,7 @@
+Date:   2015-02-21 23:20:55 -0200
+    secHighTmprMon.sh: added strChip var;
+Date:   2015-02-14 14:37:47 -0200
+    secAutoScreenLock.sh: fix on missing tty info at ps for Xorg? ...
 Date:   2015-02-06 17:22:38 -0200
     secUpdateRemoteBackupFiles.sh --compress;
 Date:   2015-02-04 15:58:28 -0200
