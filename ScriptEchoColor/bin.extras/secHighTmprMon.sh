@@ -419,7 +419,7 @@ function FUNCdaemon() {
 		else
 			nTmprCurrent=`FUNCtmprAverage 3`
 		fi
-		remoteInfo.sh --set PCIadapterTmpr $nTmprCurrent
+		secRemoteInfo.sh --set PCIadapterTmpr $nTmprCurrent
 	
 		if((maxTemperature<nTmprCurrent));then
 			maxTemperature=$nTmprCurrent
