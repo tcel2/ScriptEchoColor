@@ -49,6 +49,7 @@ export nTmprCurrent=0
 export tmprLimit=77 #begins beepinging at 80, a bit before, prevents the annoying beeping
 export minPercCPU=30
 
+export strChip="k10temp-pci-*"
 export topCPUtoCheckAmount=10
 export tmprToMonitor="temp1"
 export maxDelay=30 #15
@@ -192,7 +193,7 @@ function FUNCtmprAverage() {
 	local scale=0 #local scale=1
 	bc <<< ` \
 		for((i=0;i<$count;i++)); do \
-			sensors |sed -nr "$sedTemperature"; \
+			sensors "$strChip" |sed -nr "$sedTemperature"; \
 			FUNCsleep 0.1; \
 		done |tr '\n' '+' |sed "s|.*|scale=$scale;(&0)/$count|"`
 }
