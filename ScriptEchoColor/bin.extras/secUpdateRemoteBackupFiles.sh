@@ -62,6 +62,7 @@ varset --default bInterruptAsk=false
 ############### USER CFG
 
 export pathBackupsToRemote=""
+export strCompressPasswd=""
 SECFUNCcfgReadDB
 echo $SECcfgFileName
 
@@ -99,6 +100,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		#bLookForChanges=true
 	elif [[ "$1" == "--compress" || "$1" == "-c" ]]; then #help will backup a compressed file instead
 		bCompress=true
+	elif [[ "$1" == "--strCompressPasswd" ]]; then #help will ask for a global compress password to be used on all compressions (stored and used after `|sha1sum`, is just.. better then nothing..), and exit
+		read -s -p "Type password to be stored:" strCompressPasswd
+		if [[ -z "$strCompressPasswd" ]];then echoc -p "password is empty";exit 1;fi
+		strCompressPasswd="`echo "$strCompressPasswd" |sha1sum |cut -d' ' -f1`"
+		SECFUNCcfgWriteVar strCompressPasswd
+		exit 0
 	elif [[ "$1" == "--lookforchanges" ]]; then #help look for changes and update, is automatically set with --daemon option
 		bLookForChanges=true
 	elif [[ "$1" == "--purgemissingfiles" ]]; then #help will remove files at RBF that are missing on the real folders, only works with --lookforchanges 
@@ -127,7 +134,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		varset --show bAutoGit=true
 	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
 		shift
-		fileToIgnoreOnGitAdd="$1"
+		fileToIgnoreOnGitAdd="${1-}"
 	elif [[ "$1" == "--autosync" ]]; then #help will automatically copy the changes without asking
 		varset --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #help will list what files, of current folder recursively, are at Remote Backup Folder!
@@ -141,7 +148,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		bRecreateHistory=true
 	elif [[ "$1" == "--setbkpfolder" ]]; then #help this option should be run alone. This is a required setup of the folder that will be the target of remote backups, ex.: $HOME/Dropbox/Home
 		shift
-		pathBackupsToRemote="$1"
+		pathBackupsToRemote="${1-}"
 		SECFUNCcfgWriteVar pathBackupsToRemote
 	elif [[ "$1" == "--forcemigrationtounisonmode" ]]; then #help revalidates the list of RBF files to sync with the symlinks at control dir
 		bForceMigrationToUnisonMode=true
@@ -471,8 +478,15 @@ strSufixCompressedFile="$SECstrScriptSelfName.7z"
 function FUNCcompressFile() {
 	local lstrFileCompressed="${1}.$strSufixCompressedFile"
 	(
+		local lstrPassOpt=""
+		if [[ -n "$strCompressPasswd" ]];then
+			lstrPassOpt="-p${strCompressPasswd}"
+		fi
 		echoc --info "compressing '$lstrFileCompressed'"
-		SECFUNCexecA -c --echo 7z u "$lstrFileCompressed" "$1"
+		if [[ -f "$lstrFileCompressed" ]];then
+			SECFUNCexecA -c --echo trash -vf "$lstrFileCompressed"
+		fi
+		7z a $lstrPassOpt "$lstrFileCompressed" "$1" #to not echo the password
 		SECFUNCexecA -c --echo touch -r "$1" "$lstrFileCompressed"
 	) 1>/dev/stderr
 	echo "$lstrFileCompressed"
