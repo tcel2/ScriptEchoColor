@@ -37,6 +37,7 @@ eval `secinit`
 bDaemon=false
 nViewPortX=0
 nViewPortY=0
+bDaemonHold=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "append '#skipOrganize' to commands like: xterm -e \"ls #skipOrganize\", so such terminals wont be organized!"
@@ -44,6 +45,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--daemon" ]]; then #help keep running in a loop
 		bDaemon=true
+	elif [[ "$1" == "--nodaemonhold" ]]; then #help prevent being hold by daemon hold functionality
+		bDaemonHold=false
 	elif [[ "$1" == "--viewport" ]]; then #help <nViewPortX> <nViewPortY> what compiz viewport to place terminals?
 		shift
 		nViewPortX="${1-}"
@@ -308,7 +311,7 @@ if $bDaemon; then
 			bCascadeForceNow=false
 		fi
 		
-		if SECFUNCdelay daemonHold --checkorinit 5;then
+		if $bDaemonHold && SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 		fi
 	done

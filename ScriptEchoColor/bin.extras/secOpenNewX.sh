@@ -581,8 +581,12 @@ function FUNCcmdAtNewX() {
 }; export -f FUNCcmdAtNewX
 
 function FUNCsoundEnablerDoNotCloseThisTerminal() {
+	echoc --info "this makes sound work on X :1"
+	SECFUNCexecA -c --echo pax11publish -D :1 -e
+	
 	echo "DO NOT CLOSE THIS TERMINAL, ck-launch-session";
 	ck-launch-session;
+	
 	bash -c "echo \"wont reach here cuz of ck-launch-session...\""
 };export -f FUNCsoundEnablerDoNotCloseThisTerminal
 
@@ -764,6 +768,19 @@ export runCmd="$@" #this command must be simple, if need complex put on a script
 
 #################### MAIN CODE ###########################################
 
+if ! groups |tr ' ' '\n' |egrep "^audio$";then
+	echoc -p "$USER is not on 'audio' group, sound will not work at new X"
+	echoc --info "Fix with: \`usermod -a -G audio $USER\`"
+	exit 1
+fi
+
+if $useJWM;then
+	if ! which jwm;then
+		echoc -p "requires jwm to run"
+		exit 1
+	fi
+fi
+
 # validate options
 if((${#customCmd[@]}>0));then
 	if ! $bRecreateRCfile; then
@@ -777,14 +794,16 @@ fi
 #fi
 
 bCompizOff=false
-if pgrep compiz;then
-	if ! pgrep metacity;then
+if pgrep -x "^compiz$";then
+	if ! pgrep -x "^metacity$";then
 		echoc --alert "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
 		if echoc -q "run 'metacity'?";then
 			secXtermDetached.sh metacity --replace
 			bCompizOff=true
 		fi
 	fi
+else
+	bCompizOff=true
 fi
 
 # at this point, X1 will be managed by openNewX
@@ -890,11 +909,15 @@ if $useJWM; then
           <Key mask="4" key="0">exec:'"xterm -e \"${customCmd[9]-}\" #kill=skip"'</Key>
         </JWM>' \
       >>"$HOME/.jwmrc"
-      
+    
+    SECFUNCexecA -c --echo jwm -p&&:
+    strJwmMessages="`jwm -p 2>&1`"&&:
+    # ignore non problematic messages
+    strJwmMessages="`echo "$strJwmMessages" |egrep -v "JWM: warning: .* could not open include: /etc/jwm/debian-menu$"`"&&:
     #if ! jwm -p; then
-    if jwm -p 2>&1 |grep JWM; then
+    if echo "$strJwmMessages" |grep "^JWM:"; then
       #rm $HOME/.jwmrc
-      echo -n "WARN: .jwmrc is invalid, continue anyway? (y/...)";read -t 3 -n 1 resp
+      echo -n "WARN: .jwmrc is invalid, continue anyway? (y/...)";read -t 3 -n 1 resp&&:
       if [[ ! -z "$resp" ]]; then #default is to continue
       	echo
 		    if [[ "$resp" != "y" ]]; then
@@ -995,15 +1018,6 @@ if $useJWM; then
   secXtermDetached.sh --killskip --display :1 --xtermopts "-bg orange -geometry $strOptXtermGeom" FUNCkeepJwmAlive $pidJWM $$ $pidXtermForNewX
 fi
 
-#xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
-
-# this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
-#DISPLAY=:1 ck-launch-session #this makes this script stop executing...
-#xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
-#xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCsoundEnablerDoNotCloseThisTerminal; #kill=skip"&
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCsoundEnablerDoNotCloseThisTerminal"
-
 #initializes the cicle of configurations!
 if $bInitNvidia;then
 	#xterm -display :1 -e "$0 --script nvidiaCicle; #kill=skip" #not threaded/child so the speech does not interfere with some games sound initialization check
@@ -1024,6 +1038,15 @@ else
 	(export SECbRunLog=true;secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkgreen" secAutoScreenLock.sh --monitoron --xscreensaver --forcelightweight)
 fi
 #xterm -geometry $strOptXtermGeom -display :1 -e "FUNCCHILDScreenLockLightWeight; #kill=skip"&
+
+# this enables sound (and may be other things...) (see: http://askubuntu.com/questions/3981/start-a-second-x-session-with-different-resolution-and-sound) (see: https://bbs.archlinux.org/viewtopic.php?pid=637913)
+#DISPLAY=:1 ck-launch-session #this makes this script stop executing...
+#xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
+#xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCsoundEnablerDoNotCloseThisTerminal; #kill=skip"&
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCsoundEnablerDoNotCloseThisTerminal"
+
+#xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 
