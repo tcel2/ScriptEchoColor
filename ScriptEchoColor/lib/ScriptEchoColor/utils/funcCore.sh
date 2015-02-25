@@ -1450,6 +1450,10 @@ function SECFUNCcheckActivateRunLog() {
 			fi
 		fi
 #	fi
+
+	if [[ -f "$SECstrRunLogFile" ]];then
+		chmod o-rw "$SECstrRunLogFile"
+	fi
 }
 
 function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this function, and so before any prompt that happens after this function, will be consumed here.

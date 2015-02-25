@@ -486,7 +486,7 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 			lbRemoveVar=true
 		elif [[ "${1-}" == "--help" ]];then
 			SECFUNCshowHelp ${FUNCNAME}
-			return
+			return 0
 		else
 			SECFUNCechoErrA "invalid option: $1"
 			return 1
@@ -549,6 +549,10 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
 	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
+	
+	chmod u+rw,go-rw "$SECcfgFileName" #permissions for safety
+	
+	return 0
 }
 
 function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
