@@ -33,6 +33,10 @@ echo " \$@='$@'" >>/dev/stderr
 strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
 
+SECFUNCcfgReadDB
+echo "SECcfgFileName='$SECcfgFileName'"
+
+SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false #this grants startup always obbeying sleep
 varset bCheckPoint=false
 bWaitCheckPoint=false
 nDelayAtLoops=1
@@ -76,6 +80,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListIniCommands=true
 	elif [[ "$1" == "--listwaiting" ]];then #help list commands that entered (ini) the log file but havent RUN yet
 		bListWaiting=true
+	elif [[ "$1" == "--SECCFGbOverrideRunAllNow" ]];then #help <SECCFGbOverrideRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
+		shift
+		varset bTemp=true;varset bTemp="${1-}" #this if fake just to easy (lazy me) validate boolean... cfg vars should use the same as vars... onde day..
+		SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow="${1-}"
+		exit 0
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
@@ -316,7 +325,36 @@ if $bWaitCheckPoint;then
 	echo
 fi
 
-sleep $nSleepFor #timings are adjusted against each other, the checkpoint is actually a starting point
+#sleep $nSleepFor #timings are adjusted against each other, the checkpoint is actually a starting point
+function FUNCsleep() { #timings are adjusted against each other, the checkpoint is actually a starting point
+	local lnSleepFor="$1"
+	
+#	SECONDS=0
+	while true;do
+		SECFUNCcfgReadDB SECCFGbOverrideRunAllNow
+#		SECFUNCvarShow SECCFGbOverrideRunAllNow
+		echo "SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'"
+		if $SECCFGbOverrideRunAllNow;then
+			break;
+		fi
+		
+		local lnSleepStep=5
+		if((lnSleepFor>lnSleepStep));then
+			((lnSleepFor-=lnSleepStep))&&:
+		else
+			lnSleepStep=$lnSleepFor
+			lnSleepFor=0
+		fi
+		
+		echo "sleeping for: $lnSleepStep (tot=$nSleepFor)"
+		sleep $lnSleepStep
+		
+		if((lnSleepFor==0));then 
+			break;
+		fi
+	done
+}
+FUNCsleep $nSleepFor
 
 if $bCheckIfAlreadyRunning;then
 	while true;do
