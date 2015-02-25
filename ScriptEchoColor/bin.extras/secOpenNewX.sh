@@ -580,8 +580,48 @@ function FUNCcmdAtNewX() {
 	bash;
 }; export -f FUNCcmdAtNewX
 
+function FUNCfixPulseaudioThruTCP() {
+#	if $bFixPulseaudioAtX1;then
+		# play thru TCP using pulseaudio! see: http://billauer.co.il/blog/2014/01/pa-multiple-users/; http://askubuntu.com/a/589607/46437
+		local lstrPathPulseUser="$HOME/.pulse/"
+		mkdir -vp "$lstrPathPulseUser"
+		
+		local lstrFileDefaultPA="$lstrPathPulseUser/default.pa"
+		local lstrDefaultPAcfg="load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1"
+		if [[ ! -f "$lstrPathPulseUser/default.pa" ]];then
+			SECFUNCexecA -c --echo cp -v /etc/pulse/default.pa "$lstrPathPulseUser"
+			echo "$lstrDefaultPAcfg" >>"$lstrFileDefaultPA"
+		else
+			if ! grep "$lstrDefaultPAcfg" "$lstrFileDefaultPA";then
+				if echoc -q "missing pulseaudio TCP configuration at: default.pa, recreate it on next run?";then
+					SECFUNCexecA -c --echo mv -vf "$lstrFileDefaultPA" "${lstrFileDefaultPA}.`SECFUNCdtFmt --filename`.bkp"
+					exit 1
+				fi
+			fi
+		fi
+		
+		local lstrFileClientPA="$lstrPathPulseUser/client.conf"
+		local lstrClientPAcfg="default-server = 127.0.0.1"
+		if [[ ! -f "$lstrFileClientPA" ]];then
+			echo "$lstrClientPAcfg" >"$lstrFileClientPA"
+		else
+			if ! grep "$lstrClientPAcfg" "$lstrFileClientPA";then
+				if echoc -q "missing pulseaudio TCP configuration at: client.conf, recreate it on next run?";then
+					SECFUNCexecA -c --echo mv -vf "$lstrFileClientPA" "${lstrFileClientPA}.`SECFUNCdtFmt --filename`.bkp"
+					exit 1
+				fi
+			fi
+		fi
+		
+		# restart pulseaudio daemon
+		SECFUNCexecA -c --echo pulseaudio -k
+		SECFUNCexecA -c --echo pulseaudio -D	
+#	fi	
+}
+
 function FUNCsoundEnablerDoNotCloseThisTerminal() {
 	echoc --info "this makes sound work on X :1"
+	
 	SECFUNCexecA -c --echo pax11publish -D :1 -e
 	
 	echo "DO NOT CLOSE THIS TERMINAL, ck-launch-session";
@@ -654,6 +694,7 @@ SECFUNCvarSet --default bUseXscreensaver=true #varset exports it what is require
 bScreenSaverOnlyLockByHand=false
 bInitNvidia=false
 strGeometry=""
+bFixPulseaudioAtX1=false
 export strCustomCmdHelp=""
 while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   if [[ "$1" == "--no-wm" ]]; then #help SKIP WINDOW MANAGER (run pure X alone)
@@ -682,6 +723,8 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
     strGeometry="$1"
   elif [[ "$1" == "--returnX0" ]]; then #help lock display at :1 and return to :0
   	bReturnToX0=true
+  elif [[ "$1" == "--bFixPulseaudioAtX1" ]]; then #help <bFixPulseaudioAtX1> plays sound thru TCP
+  	bFixPulseaudioAtX1=true
   elif [[ "$1" == "--customcmd" ]]; then #help custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
   	shift
   	#customCmd=("${customCmd[@]-}" "$1")
@@ -767,6 +810,10 @@ done
 export runCmd="$@" #this command must be simple, if need complex put on a script file or exported function and call it!
 
 #################### MAIN CODE ###########################################
+
+if $bFixPulseaudioAtX1;then
+	FUNCfixPulseaudioThruTCP;
+fi
 
 if ! groups |tr ' ' '\n' |egrep "^audio$";then
 	echoc -p "$USER is not on 'audio' group, sound will not work at new X"
@@ -1043,7 +1090,9 @@ fi
 #DISPLAY=:1 ck-launch-session #this makes this script stop executing...
 #xterm -e "DISPLAY=:1 ck-launch-session"& #this creates a terminal at :0 that if closed will make sound at :1 stop working
 #xterm -bg darkred -geometry $strOptXtermGeom -display :1 -e "FUNCsoundEnablerDoNotCloseThisTerminal; #kill=skip"&
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCsoundEnablerDoNotCloseThisTerminal"
+#if $bFixPulseaudioAtX1;then
+	secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkred -geometry $strOptXtermGeom" "FUNCsoundEnablerDoNotCloseThisTerminal"
+#fi
 
 #xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
 secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
