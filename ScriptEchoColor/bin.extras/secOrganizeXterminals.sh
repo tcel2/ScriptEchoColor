@@ -35,8 +35,8 @@ eval `secinit`
 #SECFUNCvarSet --default basePosX=0
 #SECFUNCvarSet --default basePosY=0
 bDaemon=false
-nViewPortX=0
-nViewPortY=0
+nViewPortAskedX=0
+nViewPortAskedY=0
 bDaemonHold=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -47,11 +47,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bDaemon=true
 	elif [[ "$1" == "--nodaemonhold" ]]; then #help prevent being hold by daemon hold functionality
 		bDaemonHold=false
-	elif [[ "$1" == "--viewport" ]]; then #help <nViewPortX> <nViewPortY> what compiz viewport to place terminals?
+	elif [[ "$1" == "--viewport" ]]; then #help <nViewPortAskedX> <nViewPortAskedY> what compiz viewport to place terminals?
 		shift
-		nViewPortX="${1-}"
+		nViewPortAskedX="${1-}"
 		shift
-		nViewPortY="${1-}"
+		nViewPortAskedY="${1-}"
 #		if [[ -z "$1" ]]; then echoc -p "missing base position [$1]."; exit 1; fi
 #		SECFUNCvarSet --show basePosX=`echo "$1" |sed -r 's"([[:digit:]]*)x.*"\1"'`
 #		SECFUNCvarSet --show basePosY=`echo "$1" |sed -r 's"[[:digit:]]*x([[:digit:]]*)"\1"'`
@@ -104,14 +104,16 @@ function FUNCwindowList() {
 }
 
 ###################### MAIN CODE
-if ! SECFUNCisNumber -dn "$nViewPortX";then
-	echoc -p "invalid nViewPortX='$nViewPortX'"
+if ! SECFUNCisNumber -dn "$nViewPortAskedX";then
+	echoc -p "invalid nViewPortAskedX='$nViewPortAskedX'"
 	exit 1
 fi
-if ! SECFUNCisNumber -dn "$nViewPortY";then
-	echoc -p "invalid nViewPortY='$nViewPortY'"
+if ! SECFUNCisNumber -dn "$nViewPortAskedY";then
+	echoc -p "invalid nViewPortAskedY='$nViewPortAskedY'"
 	exit 1
 fi
+nViewPortX=$nViewPortAskedX
+nViewPortY=$nViewPortAskedY
 
 if $bDaemon;then
 #	if SECFUNCuniqueLock; then
@@ -154,16 +156,20 @@ function FUNCupdateScreenGeometryData(){
 	nViewPortMaxX=$(( (${anViewportGeom[0]}/nScreenWidth ) -1 )) #index begin on 0
 	nViewPortMaxY=$(( (${anViewportGeom[1]}/nScreenHeight) -1 )) #index begin on 0
 	#if((basePosX>=${anViewportGeom[0]}));then
-	if((nViewPortX>nViewPortMaxX));then
+	if((nViewPortAskedX>nViewPortMaxX));then
 		#SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' makes basePosX='$basePosX' beyond anViewportGeom[0]='${anViewportGeom[0]}', so terminals wouldnt be visible; fixing it."
-		SEC_WARN=true SECFUNCechoWarnA "nViewPortX='$nViewPortX' would put terminals beyond anViewportGeom[0]='${anViewportGeom[0]}'; fixing it."
+		SEC_WARN=true SECFUNCechoWarnA "nViewPortAskedX='$nViewPortAskedX' would put terminals beyond anViewportGeom[0]='${anViewportGeom[0]}'; fixing it."
 		nViewPortX=$nViewPortMaxX
+	else
+		nViewPortX=$nViewPortAskedX
 	fi
 	#if((basePosY>=${anViewportGeom[1]}));then
 	if((nViewPortY>nViewPortMaxY));then
 		#SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' makes basePosY='$basePosY' beyond anViewportGeom[1]='${anViewportGeom[1]}', so terminals wouldnt be visible; fixing it."
 		SEC_WARN=true SECFUNCechoWarnA "nViewPortY='$nViewPortY' would put terminals beyond anViewportGeom[1]='${anViewportGeom[1]}'; fixing it."
 		nViewPortY=$nViewPortMaxY
+	else
+		nViewPortY=$nViewPortAskedY
 	fi
 	echo "nViewPortX='$nViewPortX'"
 	echo "nViewPortY='$nViewPortY'"
@@ -286,33 +292,27 @@ function FUNCorganize() {
 	done
 }
 
-bCascadeForceNow=false #set at INT trap
+bOrganizeNow=true #first time will organize, also is set at INT trap
 strPidListPrevious=""
 if $bDaemon; then
 	echoc -x "renice -n 19 -p $$"
 	while true; do 
-		#if ! sleep 5; then break; fi; 
-		#echo -ne "wait: ctrl+c for options..\r"
-		#read -t 1 #sleep 1 #`read` caused trouble with ctrl+c?
-		#if $bAskNow;then
-			if echoc -n -q -t 60 "\rtile now";then
-				bCascadeForceNow=true
-			fi
-			#bAskNow=false
-		#fi
-		
 		FUNCupdateScreenGeometryData
 		
 		strPidList=`FUNCpidList`
-		if $bCascadeForceNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
+		if $bOrganizeNow || [[ "$strPidList" != "$strPidListPrevious" ]];then
 			strPidListPrevious="$strPidList"
 			#$0 #call self to do the organization
 			FUNCorganize
-			bCascadeForceNow=false
+			bOrganizeNow=false
 		fi
 		
 		if $bDaemonHold && SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
+		fi
+		
+		if echoc -n -q -t 60 "\rtile now";then
+			bOrganizeNow=true
 		fi
 	done
 	exit 0
