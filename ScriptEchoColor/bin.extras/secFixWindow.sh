@@ -498,7 +498,9 @@ while true; do
 		fi;
 	done
 	if $bFixAllWindowsOnce;then
-		echoc --say "fixing windows batch ended"
+		strMsgFixEnd="fixing windows batch ended"
+		echoc --say "$strMsgFixEnd"
+		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strMsgFixEnd"&
 	fi
 	
 done
