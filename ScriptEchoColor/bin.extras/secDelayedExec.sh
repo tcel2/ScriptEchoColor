@@ -84,6 +84,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		shift
 		varset bTemp=true;varset bTemp="${1-}" #this if fake just to easy (lazy me) validate boolean... cfg vars should use the same as vars... onde day..
 		SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow="${1-}"
+		echoc --info "hit ctrl+c to end."
+		while true;do SECFUNCcfgReadDB; echo "`SECFUNCdtFmt --alt`/SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'";sleep 1;done
 		exit 0
 	else
 		echo "invalid option '$1'" >>/dev/stderr
