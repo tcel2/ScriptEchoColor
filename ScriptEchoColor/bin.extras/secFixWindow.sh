@@ -205,13 +205,13 @@ while true; do
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	
-	anWindowList=(`xdotool getactivewindow`)
+	anWindowList=(`xdotool getactivewindow`)&&:
 	bFixAllWindowsOnce=false
 	if $bWaitResquestFixAllOnly || SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
 		echoc --info "Fix all windows once: warning, viewport must be changed for each window it is on, so you have to wait a bit..."
 		nWait=3;if $bWaitResquestFixAllOnly;then nWait=1800;fi
 		if echoc -q -t $nWait "fix all windows independently of focus, once?";then
-			anWindowList=(`wmctrl -l |cut -d' ' -f1`)
+			anWindowList=(`wmctrl -l |cut -d' ' -f1`)&&:
 			bFixAllWindowsOnce=true
 		else
 			if $bWaitResquestFixAllOnly;then
