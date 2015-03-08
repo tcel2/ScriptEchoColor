@@ -48,6 +48,7 @@ bListIniCommands=false
 bStay=false
 bListWaiting=false
 bCheckPointDaemonHold=false
+bRunAllNow=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -82,11 +83,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListWaiting=true
 	elif [[ "$1" == "--SECCFGbOverrideRunAllNow" ]];then #help <SECCFGbOverrideRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
 		shift
-		varset bTemp=true;varset bTemp="${1-}" #this if fake just to easy (lazy me) validate boolean... cfg vars should use the same as vars... onde day..
-		SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow="${1-}"
-		echoc --info "hit ctrl+c to end."
-		while true;do SECFUNCcfgReadDB; echo "`SECFUNCdtFmt --alt`/SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'";sleep 1;done
-		exit 0
+		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
 	else
 		echo "invalid option '$1'" >>/dev/stderr
 	fi
@@ -95,6 +92,53 @@ done
 
 strItIsAlreadyRunning="IT IS ALREADY RUNNING"
 strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+
+function FUNCcheckIfWaitCmdsHaveRun() {
+	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \
+	echoc --info "Commands that have not been run yet:"
+	grep "^ ini -> .*;w+[[:alnum:]]*s;pid='" "$strExecGlobalLogFile" \
+		|sed -r "s@.*;pid='([[:alnum:]]*)';.*@\1@" \
+		| { 
+			local lbAllRun=true
+		
+			while read nPid;do 
+				if [[ ! -d "/proc/$nPid" ]];then
+					continue
+				fi
+				if ! grep -q "^ RUN -> .*;pid='$nPid';" "$strExecGlobalLogFile";then
+					echo " nPid='$nPid';cmd='`ps --no-headers -o cmd -p $nPid`'"
+					lbAllRun=false
+				fi
+			done
+		
+			if ! $lbAllRun;then
+				return 1
+			fi
+			
+			return 0
+		}
+	
+	return $?
+}
+
+if $bRunAllNow;then
+	echoc --info "hit ctrl+c to end."
+	while true;do 
+		SECFUNCcfgReadDB; 
+		echo "`SECFUNCdtFmt --alt`/SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'";
+		SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=true
+		
+		if SECFUNCdelay --checkorinit 5 "SECCFGbOverrideRunAllNow";then
+			if FUNCcheckIfWaitCmdsHaveRun;then
+				break;
+			fi
+		fi
+		
+		sleep 1;
+	done
+	
+	exit 0
+fi
 
 if $bListIniCommands;then
 	SEC_WARN=true SECFUNCechoWarnA "this output still needs more cleaning..."
@@ -145,34 +189,6 @@ function FUNClog() { #help <type with 3 letters> [comment]
 	echo "$lstrLogging" >>"$strExecGlobalLogFile"
 }
 
-function FUNCcheckIfWaitCmdsHaveRun() {
-	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \
-	echoc --info "Commands that have not been run yet:"
-	grep "^ ini -> .*;w+[[:alnum:]]*s;pid='" "$strExecGlobalLogFile" \
-		|sed -r "s@.*;pid='([[:alnum:]]*)';.*@\1@" \
-		| { 
-			local lbAllRun=true
-		
-			while read nPid;do 
-				if [[ ! -d "/proc/$nPid" ]];then
-					continue
-				fi
-				if ! grep -q "^ RUN -> .*;pid='$nPid';" "$strExecGlobalLogFile";then
-					echo " nPid='$nPid';cmd='`ps --no-headers -o cmd -p $nPid`'"
-					lbAllRun=false
-				fi
-			done
-		
-			if ! $lbAllRun;then
-				return 1
-			fi
-			
-			return 0
-		}
-	
-	return $?
-}
-
 if $bListWaiting;then
 	FUNCcheckIfWaitCmdsHaveRun&&:
 	#echo "returned $?"
@@ -217,7 +233,7 @@ if $bCheckPointDaemon;then
 	strIdShowDelay="ShowDelay"
 	SECFUNCdelay "$strIdShowDelay" --init
 	while true;do
-		if SECFUNCdelay "WaitCmds" --checkorinit1 60;then
+		if SECFUNCdelay "WaitCmds" --checkorinit1 10;then
 			if FUNCcheckIfWaitCmdsHaveRun;then
 				break;
 			fi
