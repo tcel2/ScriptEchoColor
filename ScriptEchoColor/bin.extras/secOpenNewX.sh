@@ -615,7 +615,10 @@ function FUNCfixPulseaudioThruTCP() {
 		
 		# restart pulseaudio daemon
 		SECFUNCexecA -c --echo pulseaudio -k
-		SECFUNCexecA -c --echo pulseaudio -D	
+		while ! SECFUNCexecA -c --echo pgrep -x pulseaudio;do
+			sleep 1
+			SECFUNCexecA -c --echo pulseaudio -D	
+		done
 #	fi	
 }
 
