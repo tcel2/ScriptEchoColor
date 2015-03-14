@@ -809,20 +809,20 @@ export runCmd="$@" #this command must be simple, if need complex put on a script
 
 if $bFixPulseaudioAtX1;then
 	FUNCfixPulseaudioThruTCP;
-	
-	function FUNCrestartPulseAudioDaemonChild() {
-		eval `secinit`
-		# restart pulseaudio daemon
-		SECFUNCexecA -c --echo pulseaudio -k
-		while true;do
-			if ! pgrep -x pulseaudio;then
-				SECFUNCexecA -c --echo pulseaudio -D	
-			fi
-			sleep 3
-		done
-	};export -f FUNCrestartPulseAudioDaemonChild
-	secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild; echoc -w -t 60"
 fi
+
+function FUNCrestartPulseAudioDaemonChild() {
+	eval `secinit`
+	# restart pulseaudio daemon
+	SECFUNCexecA -c --echo pulseaudio -k
+	while true;do
+		if ! pgrep -x pulseaudio;then
+			SECFUNCexecA -c --echo pulseaudio -D	
+		fi
+		sleep 3
+	done
+};export -f FUNCrestartPulseAudioDaemonChild
+secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
 
 if ! groups |tr ' ' '\n' |egrep "^audio$";then
 	echoc -p "$USER is not on 'audio' group, sound will not work at new X"
