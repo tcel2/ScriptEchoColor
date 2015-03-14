@@ -25,8 +25,15 @@
 eval `secinit --extras`
 
 #eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
-IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
+if [[ -z "$1" ]];then
+	IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
+else
+	astrFiles=("$@")
+fi
 strFile="${astrFiles[0]}"
+if [[ "${strFile:0:1}" != "/" ]];then
+	strFile="`pwd`/$strFile"
+fi
 
 #echo "NAUTILUS_SCRIPT_CURRENT_URI=$NAUTILUS_SCRIPT_CURRENT_URI"
 #echoc -w 
@@ -38,6 +45,8 @@ function FUNCretargetSymlink() {
 	echo "lstrFile='$lstrFile'"
 	local lstrFilePath="`dirname "$lstrFile"`"
 	echo "lstrFilePath='$lstrFilePath'"
+	echoc -x pwd
+	cd "$lstrFilePath"
 	echoc -x pwd
 	if [[ ! -L "$lstrFile" ]];then
 		zenity --info --text "File is not a symlink: '$lstrFile'"
@@ -78,11 +87,13 @@ function FUNCretargetSymlink() {
 				--width=750 \
 				--entry-text "\`readlink "$lstrFile"\`"`"
 		else
+			local lstrTargetFolder="${lstrFilePath}/./"
+			echo "lstrTargetFolder='$lstrTargetFolder'"
 			local lstrNewSymlink="`zenity \
 				--title "$SECstrScriptSelfName" \
 				--file-selection \
 				$strOptDirectory \
-				--filename=\"$lstrTarget\"`"
+				--filename="${lstrTargetFolder}"`"
 		fi
 		
 #		# in case user typed relative path
@@ -90,9 +101,14 @@ function FUNCretargetSymlink() {
 #			lstrNewSymlink="$lstrFilePath/$lstrNewSymlink"
 #		fi
 		
-		cd "`dirname "$lstrFile"`"
+		cd "$lstrFilePath"
 		echoc -x pwd
 		if [[ -a "$lstrNewSymlink" ]];then
+			if [[ "`dirname "$lstrFile"`" == "`dirname "$lstrNewSymlink"`" ]];then
+				echoc --info "using relative symlink"
+				lstrNewSymlink="`basename "$lstrNewSymlink"`"
+			fi
+			
 			#echoc -x "rm -v '$lstrFile'"
 			echoc -x "ln -vsfT $strOptLnDir '$lstrNewSymlink' '$lstrFile'"
 		else
@@ -102,12 +118,12 @@ function FUNCretargetSymlink() {
 	fi
 };export -f FUNCretargetSymlink
 
-cd "/tmp" #safe place as NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
+#cd "/tmp" #safe place as NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
 #xterm -e "bash -i -c \"FUNCretargetSymlink '$strFile'\"" # -i required to force it work on ubuntu 12.10
 #strTitle="${SECstrScriptSelfName}_pid$$"
 #SECFUNCCwindowOnTop --delay 1 "${strTitle}.*"
 #secXtermDetached.sh --ontop --title "${strTitle}" --skiporganize FUNCretargetSymlink "$strFile"
-secXtermDetached.sh --ontop --title "${SECstrScriptSelfName}" --skiporganize FUNCretargetSymlink "$strFile"
+secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCretargetSymlink "$strFile"
 #SECFUNCCwindowOnTop --stop "${strTitle}.*"
 #secXtermDetached.sh --skiporganize --ontop FUNCretargetSymlink "$strFile"
 

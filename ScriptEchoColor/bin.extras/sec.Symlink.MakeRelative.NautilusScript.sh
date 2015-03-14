@@ -31,14 +31,24 @@ eval `secinit`
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
 function FUNCloop() {
-	IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
-	for strFile in "${astrFiles[@]}";do 
+	if [[ -z "$1" ]];then
+		IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+	else
+		astrFiles=("$@")
+	fi
+	
+	local lbFoundProblem=false
+	for strFile in "$@";do 
+		echoc --info "working with strFile='$strFile'"
 		if ! FUNCmakeRelativeSymlink "$strFile";then # -i required to force it work on ubuntu 12.10
 			echoc -p "failed to '$strFile'"
+			lbFoundProblem=false;
 			break;
 		fi
 	done
-	echoc -w -t 60
+#	if $lbFoundProblem;then
+		echoc -w -t 60
+#	fi
 };export -f FUNCloop
 
 function FUNCmakeRelativeSymlink() {
@@ -79,7 +89,7 @@ function FUNCmakeRelativeSymlink() {
 
 cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
 #xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
-secXtermDetached.sh --ontop --title "${SECstrScriptSelfName}" --skiporganize FUNCloop
+secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
 #for strFile in "${astrFiles[@]}";do 
 #	if ! xterm -e "bash -i -c \"FUNCmakeRelativeSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
 #		break;

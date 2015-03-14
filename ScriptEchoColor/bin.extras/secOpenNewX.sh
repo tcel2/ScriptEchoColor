@@ -612,13 +612,6 @@ function FUNCfixPulseaudioThruTCP() {
 				fi
 			fi
 		fi
-		
-		# restart pulseaudio daemon
-		SECFUNCexecA -c --echo pulseaudio -k
-		while ! SECFUNCexecA -c --echo pgrep -x pulseaudio;do
-			sleep 1
-			SECFUNCexecA -c --echo pulseaudio -D	
-		done
 #	fi	
 }
 
@@ -816,6 +809,18 @@ export runCmd="$@" #this command must be simple, if need complex put on a script
 
 if $bFixPulseaudioAtX1;then
 	FUNCfixPulseaudioThruTCP;
+	
+	function FUNCrestartPulseAudioDaemon() {
+		# restart pulseaudio daemon
+		SECFUNCexecA -c --echo pulseaudio -k
+		while true;do
+			if ! pgrep -x pulseaudio;then
+				SECFUNCexecA -c --echo pulseaudio -D	
+			fi
+			sleep 3
+		done
+	};export -f FUNCrestartPulseAudioDaemon
+	secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemon"
 fi
 
 if ! groups |tr ' ' '\n' |egrep "^audio$";then
