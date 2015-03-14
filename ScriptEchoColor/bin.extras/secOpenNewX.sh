@@ -810,7 +810,8 @@ export runCmd="$@" #this command must be simple, if need complex put on a script
 if $bFixPulseaudioAtX1;then
 	FUNCfixPulseaudioThruTCP;
 	
-	function FUNCrestartPulseAudioDaemon() {
+	function FUNCrestartPulseAudioDaemonChild() {
+		eval `secinit`
 		# restart pulseaudio daemon
 		SECFUNCexecA -c --echo pulseaudio -k
 		while true;do
@@ -819,8 +820,8 @@ if $bFixPulseaudioAtX1;then
 			fi
 			sleep 3
 		done
-	};export -f FUNCrestartPulseAudioDaemon
-	secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemon"
+	};export -f FUNCrestartPulseAudioDaemonChild
+	secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild; echoc -w -t 60"
 fi
 
 if ! groups |tr ' ' '\n' |egrep "^audio$";then

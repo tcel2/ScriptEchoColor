@@ -37,8 +37,11 @@ function FUNCloop() {
 		astrFiles=("$@")
 	fi
 	
+	pwd
+	declare -p astrFiles
+	
 	local lbFoundProblem=false
-	for strFile in "$@";do 
+	for strFile in "${astrFiles[@]}";do 
 		echoc --info "working with strFile='$strFile'"
 		if ! FUNCmakeRelativeSymlink "$strFile";then # -i required to force it work on ubuntu 12.10
 			echoc -p "failed to '$strFile'"
@@ -87,7 +90,7 @@ function FUNCmakeRelativeSymlink() {
 	return 0
 };export -f FUNCmakeRelativeSymlink
 
-cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
+#cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
 #xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
 secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
 #for strFile in "${astrFiles[@]}";do 
