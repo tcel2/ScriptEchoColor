@@ -93,6 +93,18 @@ function FUNCCHILDScreenLockNow() {
 	echoc -w -t 10 "just locked screen"
 };export -f FUNCCHILDScreenLockNow
 
+function FUNCrestartPulseAudioDaemonChild() {
+	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	# restart pulseaudio daemon
+	SECFUNCexecA -c --echo pulseaudio -k
+	while true;do
+		if ! pgrep -x pulseaudio;then
+			SECFUNCexecA -c --echo pulseaudio -D	
+		fi
+		sleep 3
+	done
+};export -f FUNCrestartPulseAudioDaemonChild
+
 function FUNCCHILDPreventAutoLock() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	while true;do
@@ -811,19 +823,6 @@ if $bFixPulseaudioAtX1;then
 	FUNCfixPulseaudioThruTCP;
 fi
 
-function FUNCrestartPulseAudioDaemonChild() {
-	eval `secinit`
-	# restart pulseaudio daemon
-	SECFUNCexecA -c --echo pulseaudio -k
-	while true;do
-		if ! pgrep -x pulseaudio;then
-			SECFUNCexecA -c --echo pulseaudio -D	
-		fi
-		sleep 3
-	done
-};export -f FUNCrestartPulseAudioDaemonChild
-secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
-
 if ! groups |tr ' ' '\n' |egrep "^audio$";then
 	echoc -p "$USER is not on 'audio' group, sound will not work at new X"
 	echoc --info "Fix with: \`usermod -a -G audio $USER\`"
@@ -1051,6 +1050,12 @@ while ! FUNCisX1running; do
 done
 varset --show pidX1=`FUNCisX1running`
 
+################################################################################
+################################################################################
+########################### X1 only running after here #########################
+################################################################################
+################################################################################
+
 # say in what tty it is running
 echoc --say "X at `ps -A -o tty,comm |grep Xorg |grep -v tty7 |grep -o "tty." |sed 's"."& "g'`"
 
@@ -1063,6 +1068,8 @@ fi
 #FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
 secXtermDetached.sh --display :1 FUNCshowHelp :1 30
 #pidZenity0=$!
+
+secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
 
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
 if $useJWM; then
