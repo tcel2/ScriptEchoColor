@@ -157,7 +157,8 @@ function SECFUNCaddToRcFile() {
 	
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
-	echo " PATH='$PATH'" >>/dev/stderr
+	#echo " PATH='$PATH'" >>/dev/stderr
+	echo -e "PATH=(\t`echo $PATH |sed 's":"\n\t"g'`)" >>/dev/stderr	
 	
 	###################################### TWICE MODE ###########################################
 	if $SECDEVbExecTwice;then #this grants all is updated
