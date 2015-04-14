@@ -41,6 +41,7 @@ aWindowListToSkip=(
 bReactivateWindow=false
 strReactWindNamesRegex=""
 bWaitResquestFixAllOnly=false
+bForcedHold=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -60,6 +61,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bReactivateWindow=true
 	elif [[ "$1" == "--waitrequest" ]];then #help wait request and fix all windows at once, this prevents endless fixing window with focus
 		bWaitResquestFixAllOnly=true
+	elif [[ "$1" == "--nohold" ]];then #help intensive loop execution is prevented by default, use this to allow it.
+		bForcedHold=false
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
 		sedVarValue="^([[:alnum:]]*)=(.*)"
@@ -201,7 +204,9 @@ while true; do
 		FUNCvalidateAll
 	fi
 	
-	if SECFUNCdelay daemonHold --checkorinit 5;then
+	if $bForcedHold;then
+		echoc -w "run once"
+	elif SECFUNCdelay daemonHold --checkorinit 5;then
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	

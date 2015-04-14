@@ -387,7 +387,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
 			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
 			SECFUNCdbgFuncOutA;return
-		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help [lstrScriptFile] <lbSort> to show self tests only...
+		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help [lstrScriptFile] <lbSort> this is not an actual option, it is just to show self tests only...
 			:
 		else
 			SECFUNCechoErrA "invalid option '$1'"
