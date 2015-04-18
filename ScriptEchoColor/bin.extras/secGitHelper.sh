@@ -143,10 +143,10 @@ function FUNCshowCommits() { #param: lbShowAll
 	if((lnAfter==1));then
 		echo "$lstrOutput"
 	else
-		SECFUNCcheckActivateRunLog --restoredefaultoutputs
-		echoc -w -t 3 "press 'q' to quit it -> using \`|less\` loads of commits will be shown"
-		echo "$lstrOutput" |less -R
-		SECFUNCcheckActivateRunLog
+		#SECFUNCcheckActivateRunLog --restoredefaultoutputs
+		#echoc -w -t 3 "press 'q' to quit it -> using \`|less\` loads of commits will be shown"
+		echo "$lstrOutput" # do not use `|less -R`, seems buggy... some weird files were created when using it...
+		#SECFUNCcheckActivateRunLog
 	fi
 	#|column -c $nTerminalWidth
 }
