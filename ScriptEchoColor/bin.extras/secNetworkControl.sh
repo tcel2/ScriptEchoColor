@@ -84,8 +84,10 @@ function FUNCcheckInternet() {
 
 if $bCheckInternet;then
 	if FUNCcheckInternet;then
+		echoc --info "Internet is ON"
 		exit 0
 	fi
+	echoc --info "Internet is OFF"
 	exit 1
 elif $bListNetworkFiles;then
 	lsof -i

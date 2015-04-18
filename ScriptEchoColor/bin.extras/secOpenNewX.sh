@@ -704,6 +704,7 @@ bInitNvidia=false
 strGeometry=""
 bFixPulseaudioAtX1=false
 export strCustomCmdHelp=""
+strJWMGroupMatchWindowExecutableName="dummy-none" # if empty, will match all
 while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   if [[ "$1" == "--no-wm" ]]; then #help SKIP WINDOW MANAGER (run pure X alone)
     useJWM=false
@@ -711,6 +712,9 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
     useKbd=false
   elif [[ "$1" == "--recreaterc" ]]; then #help recreate $HOME/.jwmrc file
   	bRecreateRCfile=true
+  elif [[ "$1" == "--jwmfixwindow" ]]; then #help <strJWMGroupMatchWindowExecutableName> a window that matches this executable name will be fixed/adjusted/improved like noborder etc...
+  	shift
+  	strJWMGroupMatchWindowExecutableName="${1-$strJWMGroupMatchWindowExecutableName}"
   elif [[ "$1" == "--xterm" ]]; then #help use xterm instead of gnome-terminal
   	bXTerm=true
   elif [[ "$1" == "--ignorecompiz" ]]; then #help ignore compiz finish starting
@@ -962,6 +966,15 @@ if $useJWM; then
           <Key mask="4" key="8">exec:'"xterm -e \"${customCmd[7]-}\" #kill=skip"'</Key>
           <Key mask="4" key="9">exec:'"xterm -e \"${customCmd[8]-}\" #kill=skip"'</Key>
           <Key mask="4" key="0">exec:'"xterm -e \"${customCmd[9]-}\" #kill=skip"'</Key>
+          
+					<Group>
+						<Name>'"$strJWMGroupMatchWindowExecutableName"'</Name>
+						<Option>maximized</Option>
+						<Option>noborder</Option>
+						<Option>notitle</Option>
+						<Option>layer:8</Option>
+					</Group>          
+          
         </JWM>' \
       >>"$HOME/.jwmrc"
     
