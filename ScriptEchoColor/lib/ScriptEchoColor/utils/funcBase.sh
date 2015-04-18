@@ -809,6 +809,10 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
 	fi
 	
+	if((lnSECFUNCexecReturnValue>0));then
+		strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@"
+	fi
+	
   return $lnSECFUNCexecReturnValue
 }
 
