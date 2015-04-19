@@ -35,7 +35,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--checkhogs" || "$1" == "-c" ]];then #help list all that can be hogging the system
 		bCheckHogs=true
-	elif [[ "$1" == "--timelimit" || "$1" == "-t" ]];then #help ex.: "14:49:28", filter out anything after this time
+	elif [[ "$1" == "--timelimit" || "$1" == "-t" ]];then #help ex.: "14:49:28", filter out anything after this time. Important Obs.: the time must be an exact match! so run 1st without this option to find it.
 		shift
 		strTimeLimit="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -67,8 +67,14 @@ if $bCheckHogs;then
 				|tail -n 1\
 		)&&:
 		nLimitLineNumber=$(echo "$strLineText" |cut -f1) #is TAB delimiter
+		if((nLimitLineNumber==0));then
+			echoc -p "possibly invalid/non-existant strTimeLimit='$strTimeLimit'"
+			exit 1
+		fi
 		((nLimitLineNumber++))&&:
+		echo "nLimitLineNumber='$nLimitLineNumber'"
 		strLogData="`echo "$strLogData" |head -n $nLimitLineNumber`"
+		#echo "strLogData='$strLogData'";exit
 	fi
 	
 	# not kworker info
@@ -77,11 +83,13 @@ if $bCheckHogs;then
 	((nLastHeaderLineNumber-=1000))&&:
 	if((nLastHeaderLineNumber<=0));then nLastHeaderLineNumber=0;fi
 #	head -n $nLimitLineNumber \
+	#set -x
 	echo "$strLogData" \
 		|tail -n +$nLastHeaderLineNumber \
 		|cut -c -`tput cols` \
 		|egrep -v "$regexKworker" \
 		|egrep --color " M | G |DISK READ|M/s"
+	#set +x
 	
 	# kworker summary
 	astrKworkerList=(`echo "$strLogData" |egrep "$regexKworker" -o |sort -u`);

@@ -331,10 +331,12 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 #			fi
 #			exit 0 #exit_FUNCsayStack: wont put empty lines
 	elif [[ "$1" == "--clearbuffer" ]];then #help clear SayStack buffer for all speeches requested by all applications til now; Though if SEC_SAYID, or --id, is set, will only clear matching lines..
-		if [[ -n "$strSayId" ]];then
-			SECFUNCexecA sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
-		else
-			SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+		if [[ -f "${_SECSAYfileSayStack}" ]];then
+			if [[ -n "$strSayId" ]];then
+				SECFUNCexecA sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
+			else
+				SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
+			fi
 		fi
 		exit 0 #exit_FUNCsayStack: wont put empty lines
 	elif [[ "$1" == "--id" ]];then #help identifier to store at buffer

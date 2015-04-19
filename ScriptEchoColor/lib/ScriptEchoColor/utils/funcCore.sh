@@ -45,7 +45,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	
 	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
 	lstrErrorTrap+="SECERROR(trap);"
-	lstrErrorTrap+="CustomMsg='$strSECFUNCtrapErrCustomMsg';"
+	lstrErrorTrap+="strSECFUNCtrapErrCustomMsg='$strSECFUNCtrapErrCustomMsg';"
 	lstrErrorTrap+="SECstrRunLogFile='${SECstrRunLogFile-}';"
 	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
