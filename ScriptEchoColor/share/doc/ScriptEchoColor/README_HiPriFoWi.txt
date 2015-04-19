@@ -1,3 +1,3 @@
 updated to ScriptEchoColor libs, at:
-bin.extras/secHiPriFoWi.sh
+https://sourceforge.net/p/scriptechocolor/git/ci/master/tree/ScriptEchoColor/bin.extras/secHiPriFoWi.sh
 
