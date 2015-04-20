@@ -27,10 +27,11 @@ SECFUNCcheckActivateRunLog --restoredefaultoutputs
 
 bCheckHogs=false
 strTimeLimit=""
+bPrevious=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	#SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "log iotop to track system hog"
+		SECFUNCshowHelp --colorize "log iotop to track system hog (needs improvements to track hog source..)"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--checkhogs" || "$1" == "-c" ]];then #help list all that can be hogging the system
@@ -38,6 +39,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--timelimit" || "$1" == "-t" ]];then #help ex.: "14:49:28", filter out anything after this time. Important Obs.: the time must be an exact match! so run 1st without this option to find it.
 		shift
 		strTimeLimit="${1-}"
+	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
+		bCheckHogs=true
+		bPrevious=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -51,6 +55,10 @@ done
 strLogFile="$SECstrUserHomeConfigPath/log/iotop.log"
 
 if $bCheckHogs;then
+	if $bPrevious;then
+		strLogFile+=".old.log"
+	fi
+	
 	echoc --info "strLogFile='$strLogFile'"
 	
 	regexKworker="\[kworker/[^]]*\]"
