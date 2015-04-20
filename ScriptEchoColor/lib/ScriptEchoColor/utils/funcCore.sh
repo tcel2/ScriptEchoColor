@@ -463,7 +463,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 #	fi
 	
 	local lastrFile=("$lstrScriptFile")
-	if [[ ! -f "${lastrFile[0]}" ]];then
+	if [[ ! -f "${lastrFile[0]}" ]] || [[ "`basename "${lastrFile[0]}"`" == "bash" ]];then
 #		if [[ "${lstrFunctionNameToken:0:10}" == "SECFUNCvar" ]];then
 #			#TODO !!! IMPORTANT !!! this MUST be the only place on funcMisc.sh that funcVars.sh or anything from it is known about!!! BEWARE!!!!!!!!!!!!!!!!!! Create a validator on a package builder?
 #			lastrFile=("$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh")
