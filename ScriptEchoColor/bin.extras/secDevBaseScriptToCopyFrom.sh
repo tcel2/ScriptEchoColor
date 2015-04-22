@@ -74,6 +74,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 			break
 		else
 			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
 			return 1
 #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
 #			SECFUNCechoErrA "invalid option '$1'"
@@ -98,6 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		break
 	else
 		echoc -p "invalid option '$1'"
+		$0 --help
 		exit 1
 	fi
 	shift
