@@ -35,6 +35,13 @@ bDPMSmonitorOn=false
 bMovieCheck=false
 nMovieCheckDelay=60
 bHoldToggle=false
+nDelay=10
+bDebugging=false
+astrSimpleCommandRegex=(
+	"^chromium-browser .*flashplayer.so"
+	"^/usr/bin/vlc "
+	"^totem "
+)
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
@@ -57,6 +64,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nMovieCheckDelay="${1-}"
 		
 		bMovieCheck=true
+	elif [[ "$1" == "--delay" ]];then #help <nDelay> main loop sleep delay
+		shift
+		nDelay=${1-}
+	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> append a regex to match pid command for the current winow being checked
+		shift
+		astrSimpleCommandRegex+=("${1-}");
+	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
+		bDebugging=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -66,6 +81,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+echoc --info "THESE regex will be checked:"
+for strSimpleCommandRegex in "${astrSimpleCommandRegex[@]}";do
+	echoc --info "\tstrSimpleCommandRegex='$strSimpleCommandRegex'"
+done
+
+if ! SECFUNCisNumber -dn "$nDelay";then
+	echoc -p "invalid nDelay='$nDelay'"
+	exit 1
+fi
 
 bHoldExecution=false
 if $bHoldToggle;then
@@ -222,8 +247,10 @@ while true;do
 		strActiveWindowName=""
 		bSimulateActivity=false
 		for((nMovieCheck=0;nMovieCheck<1;nMovieCheck++));do #fake loop just to use break functionality
-			if ! SECFUNCdelay bMovieCheck --checkorinit1 $nMovieCheckDelay;then
-				break
+			if ! $bDebugging;then
+				if ! SECFUNCdelay bMovieCheck --checkorinit1 $nMovieCheckDelay;then	
+					break;
+				fi
 			fi
 			
 			if ! nActiveWindowId="`xdotool getactivewindow`";then
@@ -234,7 +261,6 @@ while true;do
 			if ! xprop -id $nActiveWindowId |grep "_NET_WM_STATE_FULLSCREEN";then
 				break;
 			fi
-			
 			################### FULLSCREEN WINDOW CHECK GRANTED FROM HERE
 			
 			if ! strActiveWindowName="`xdotool getwindowname $nActiveWindowId`";then
@@ -260,16 +286,29 @@ while true;do
 				if SECFUNCppidList --pid "$nActiveWindowPid" --checkpid "`pgrep netflix-desktop`";then
 					bSimulateActivity=true
 				fi
-			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then # Chromium Flash player
-				bSimulateActivity=true
-			elif [[ "$strActiveWindowCmd" =~ ^"/usr/bin/vlc " ]];then # VLC
-				bSimulateActivity=true
+#			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then # Chromium Flash player
+#				bSimulateActivity=true
+#			elif [[ "$strActiveWindowCmd" =~ ^"/usr/bin/vlc " ]];then # VLC
+#				bSimulateActivity=true
+#			elif [[ "$strActiveWindowCmd" =~ ^"totem " ]];then # VLC
+#				bSimulateActivity=true
 			else
-				echoc --info "Maximized window not identified."
+				bFound=false
+				for strSimpleCommandRegex in "${astrSimpleCommandRegex[@]}";do
+					#echo "strActiveWindowCmd='$strActiveWindowCmd'"
+					if echo "$strActiveWindowCmd" |egrep "$strSimpleCommandRegex";then
+						bSimulateActivity=true
+						bFound=true
+					fi
+				done
+				if ! $bFound;then
+					echoc --info "Maximized window not identified."
+				fi
 			fi
 			
 			if $bSimulateActivity;then
 				if pgrep xscreensaver;then
+					echoc --info "some video seems to be playing, simulating screensaver activity"
 					xscreensaver-command -deactivate
 				fi
 			else
@@ -282,9 +321,9 @@ while true;do
 		done
 	fi
 	
-	if $bHoldExecution || echoc -q -t 10 "hold execution?";then
+	if $bHoldExecution || echoc -q -t $nDelay "hold execution?";then
 		varset --show bHoldExecution=true
-		if echoc -q -t 10 "HOLDING EXECUTION, release?";then
+		if echoc -q -t $nDelay "HOLDING EXECUTION, release?";then
 			varset --show bHoldExecution=false
 		fi
 	fi
