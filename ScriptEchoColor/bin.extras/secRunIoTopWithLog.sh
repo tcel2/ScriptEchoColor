@@ -25,8 +25,6 @@
 eval `secinit`
 SECFUNCcheckActivateRunLog --restoredefaultoutputs
 
-SECFUNCuniqueLock --daemonwait
-
 bCheckHogs=false
 strTimeLimit=""
 bPrevious=false
@@ -127,6 +125,9 @@ if $bCheckHogs;then
 	
 	exit 0
 fi
+
+######################################## DAEMON PART
+SECFUNCuniqueLock --daemonwait
 
 function FUNCcycleLogChild() {
 	function FUNCcycle_doIt(){
