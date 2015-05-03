@@ -30,8 +30,9 @@ SECFUNCuniqueLock --daemonwait
 bCheckHogs=false
 strTimeLimit=""
 bPrevious=false
+nDelay=5
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	#SECFUNCsingleLetterOptionsA;
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "log iotop to track system hog (needs improvements to track hog source..)"
 		SECFUNCshowHelp
@@ -41,6 +42,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--timelimit" || "$1" == "-t" ]];then #help ex.: "14:49:28", filter out anything after this time. Important Obs.: the time must be an exact match! so run 1st without this option to find it.
 		shift
 		strTimeLimit="${1-}"
+	elif [[ "$1" == "--delay" ]];then #help <nDelay> between gathering info
+		shift
+		nDelay="${1-}"
 	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
 		bCheckHogs=true
 		bPrevious=true
@@ -54,8 +58,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-strLogFileIotop="$SECstrUserHomeConfigPath/log/iotop.log"
-strLogFileIostat="$SECstrUserHomeConfigPath/log/iostat.log"
+if ! SECFUNCisNumber -dn "$nDelay";then
+	echoc -p "invalid nDelay='$nDelay'"
+	exit 1
+fi
+
+strLogFileIotop="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iotop.log"
+strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log"
+strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
+SECFUNCexecA -c --echo mkdir -p "$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/"
 
 if $bCheckHogs;then
 	if $bPrevious;then
@@ -118,43 +129,76 @@ if $bCheckHogs;then
 fi
 
 function FUNCcycleLogChild() {
+	function FUNCcycle_doIt(){
+		local lbDoIt="$1"
+		local lstrFile="$2"
+		if [[ -f "$lstrFile" ]];then 
+			if $lbDoIt;then
+				# mv will not work, the file is not reached by name but by inode?
+				SECFUNCexecA -c --echo cp -vf "$lstrFile" "${lstrFile}.old.log"
+				echo >"$lstrFile" #to empty it, but a write may happen between the copy and this...
+			fi
+		fi
+	}
+	
 	SECONDS=0
 	while true;do
 		sleep 60;
 		
-		bTruncNow=false
+		local bTruncNow=false
 		if((SECONDS>3600));then
 			bTruncNow=true
 			SECONDS=0
 		fi
 		
-		if [[ -f "$strLogFileIotop" ]];then 
-			#if((`stat -c %s "$strLogFileIotop"`>250000));then
-			if $bTruncNow;then
-	#			if [[ -f "${strLogFileIotop}.old.log" ]];then
-	#				trash "${strLogFileIotop}.old.log"
-	#			fi
-
-				# mv will not work, the file is not reached by name but by inode?
-				SECFUNCexecA -c --echo cp -vf "$strLogFileIotop" "${strLogFileIotop}.old.log"
-	#			cp -vf "$strLogFileIotop" "${strLogFileIotop}.`SECFUNCdtFmt --filename`.log"
-				echo >"$strLogFileIotop" #to empty it, but a write may happen between the copy and this...
-			fi
-		fi
+		FUNCcycle_doIt $bTruncNow "$strLogFileIotop"
+		FUNCcycle_doIt $bTruncNow "$strLogFileIostat"
+		FUNCcycle_doIt $bTruncNow "$strLogFileMisc"
 		
-		if [[ -f "$strLogFileIostat" ]];then 
-			if $bTruncNow;then
-				# mv will not work, the file is not reached by name but by inode?
-				SECFUNCexecA -c --echo cp -vf "$strLogFileIostat" "${strLogFileIostat}.old.log"
-				echo >"$strLogFileIostat" #to empty it, but a write may happen between the copy and this...
-			fi
-		fi
+#		if [[ -f "$strLogFileIotop" ]];then 
+#			#if((`stat -c %s "$strLogFileIotop"`>250000));then
+#			if $bTruncNow;then
+#	#			if [[ -f "${strLogFileIotop}.old.log" ]];then
+#	#				trash "${strLogFileIotop}.old.log"
+#	#			fi
+
+#				# mv will not work, the file is not reached by name but by inode?
+#				SECFUNCexecA -c --echo cp -vf "$strLogFileIotop" "${strLogFileIotop}.old.log"
+#	#			cp -vf "$strLogFileIotop" "${strLogFileIotop}.`SECFUNCdtFmt --filename`.log"
+#				echo >"$strLogFileIotop" #to empty it, but a write may happen between the copy and this...
+#			fi
+#		fi
+#		
+#		if [[ -f "$strLogFileIostat" ]];then 
+#			if $bTruncNow;then
+#				# mv will not work, the file is not reached by name but by inode?
+#				SECFUNCexecA -c --echo cp -vf "$strLogFileIostat" "${strLogFileIostat}.old.log"
+#				echo >"$strLogFileIostat" #to empty it, but a write may happen between the copy and this...
+#			fi
+#		fi
 		
 	done
 }
 FUNCcycleLogChild&
 
-(SECFUNCexecA -c --echo iostat -xm 3 2>&1 >>"$strLogFileIostat")&
+function FUNClogMisc() {
+	while true;do
+		echo >>"$strLogFileMisc"
+		SECFUNCdtFmt --pretty >>"$strLogFileMisc"
+		
+		# misc info
+		
+		# "^D" means "uninterruptable sleep". that is probably the case of a process waiting for IO
+		ps -A -o state,pid,cmd | grep "^D" >>"$strLogFileMisc"
+		
+		sleep $nDelay
+	done
+}
 
-SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=10 2>&1 |tee -a "$strLogFileIotop"
+(SECFUNCexecA -c --echo iostat -xm $nDelay 2>&1 >>"$strLogFileIostat")&
+FUNClogMisc&
+# last one shows also on current output
+SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
+
+echoc -p "ended why?"
 
