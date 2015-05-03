@@ -25,6 +25,8 @@
 eval `secinit`
 SECFUNCcheckActivateRunLog --restoredefaultoutputs
 
+SECFUNCuniqueLock --daemonwait
+
 bCheckHogs=false
 strTimeLimit=""
 bPrevious=false
@@ -52,18 +54,19 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-strLogFile="$SECstrUserHomeConfigPath/log/iotop.log"
+strLogFileIotop="$SECstrUserHomeConfigPath/log/iotop.log"
+strLogFileIostat="$SECstrUserHomeConfigPath/log/iostat.log"
 
 if $bCheckHogs;then
 	if $bPrevious;then
-		strLogFile+=".old.log"
+		strLogFileIotop+=".old.log"
 	fi
 	
-	echoc --info "strLogFile='$strLogFile'"
+	echoc --info "strLogFileIotop='$strLogFileIotop'"
 	
 	regexKworker="\[kworker/[^]]*\]"
 	
-	strLogData="`cat "$strLogFile"`"
+	strLogData="`cat "$strLogFileIotop"`"
 	nLimitLineNumber="`echo "$strLogData" |wc -l`"
 	
 	# limit log data by time stamp
@@ -119,25 +122,39 @@ function FUNCcycleLogChild() {
 	while true;do
 		sleep 60;
 		
-		if [[ ! -f "$strLogFile" ]];then 
-			continue;
-		fi
-		
-		#if((`stat -c %s "$strLogFile"`>250000));then
+		bTruncNow=false
 		if((SECONDS>3600));then
-#			if [[ -f "${strLogFile}.old.log" ]];then
-#				trash "${strLogFile}.old.log"
-#			fi
-
-			# mv will not work, the file is not reached by name but by inode?
-			cp -vf "$strLogFile" "${strLogFile}.old.log"
-#			cp -vf "$strLogFile" "${strLogFile}.`SECFUNCdtFmt --filename`.log"
-			echo >"$strLogFile" #to empty it, but a write may happen between the copy and this...
+			bTruncNow=true
 			SECONDS=0
 		fi
+		
+		if [[ -f "$strLogFileIotop" ]];then 
+			#if((`stat -c %s "$strLogFileIotop"`>250000));then
+			if $bTruncNow;then
+	#			if [[ -f "${strLogFileIotop}.old.log" ]];then
+	#				trash "${strLogFileIotop}.old.log"
+	#			fi
+
+				# mv will not work, the file is not reached by name but by inode?
+				SECFUNCexecA -c --echo cp -vf "$strLogFileIotop" "${strLogFileIotop}.old.log"
+	#			cp -vf "$strLogFileIotop" "${strLogFileIotop}.`SECFUNCdtFmt --filename`.log"
+				echo >"$strLogFileIotop" #to empty it, but a write may happen between the copy and this...
+			fi
+		fi
+		
+		if [[ -f "$strLogFileIostat" ]];then 
+			if $bTruncNow;then
+				# mv will not work, the file is not reached by name but by inode?
+				SECFUNCexecA -c --echo cp -vf "$strLogFileIostat" "${strLogFileIostat}.old.log"
+				echo >"$strLogFileIostat" #to empty it, but a write may happen between the copy and this...
+			fi
+		fi
+		
 	done
 }
 FUNCcycleLogChild&
 
-SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=10 2>&1 |tee -a "$strLogFile"
+(SECFUNCexecA -c --echo iostat -xm 3 2>&1 >>"$strLogFileIostat")&
+
+SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=10 2>&1 |tee -a "$strLogFileIotop"
 
