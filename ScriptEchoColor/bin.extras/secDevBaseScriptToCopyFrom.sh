@@ -63,12 +63,14 @@ echo
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
 	#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+	local lstrExample="DefaultValue"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #FUNCexample_help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help MISSING DESCRIPTION
-			echo "#your code goes here"
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
 		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options
 			shift
 			break
@@ -84,16 +86,19 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	done
 	
 	# code here
+	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+strExample="DefaultValue"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
-		echo "#your code goes here"
+	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
+		shift
+		strExample="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -109,5 +114,5 @@ done
 SECFUNCexec -c --echo FUNCexample --help
 SECFUNCexec -c --echo FUNCexample -e
 
-exit 0
+exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 
