@@ -29,16 +29,17 @@ nTimeLimit=3
 bKeepAlways=false
 bShowAfter=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "Take screenshot after mouse stops moving for nTimeLimit='$nTimeLimit'."
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--time" || "$1" == "-t" ]];then #help set wait delay in seconds for mouse be kept without moving
+	elif [[ "$1" == "--time" || "$1" == "-t" ]];then #help <nTimeLimit> set wait delay in seconds for mouse be kept without moving
 		shift
 		nTimeLimit="${1-}"
-	elif [[ "$1" == "--keep" ]];then #help do not ask to delete screenshot
+	elif [[ "$1" == "--keep" || "$1" == "-k" ]];then #help do not ask to delete screenshot
 		bKeepAlways=true
-	elif [[ "$1" == "--noshow" ]];then #help do not show the screenshot after taken
+	elif [[ "$1" == "--hidden" || "$1" == "-h" ]];then #help do not show the screenshot after taken
 		bShowAfter=false
 	elif [[ "$1" == "--" ]];then #help params after this are scrot options
 		bParamsAreScrotOptions=true
@@ -46,6 +47,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		break
 	else
 		echoc -p "invalid option '$1'"
+		$0 --help
 		exit 1
 	fi
 	shift
@@ -56,10 +58,10 @@ if ! SECFUNCisNumber -dn $nTimeLimit;then
 	exit 1
 fi
 
-astrScrotOptions=()
+astrParams=()
 if $bParamsAreScrotOptions;then
-	astrScrotOptions=("$@")	
-	echoc --info "astrScrotOptions[\@]=(${astrScrotOptions[@]})"
+	astrParams=("$@")	
+	echoc --info "astrParams[\@]=(${astrParams[@]})"
 fi
 
 strSaveTo="$HOME/Pictures"
@@ -82,8 +84,9 @@ while true;do
 done
 
 strFile="$strSaveTo/ScreenShot-`SECFUNCdtFmt --filename`.png"
+astrParams+=("$strFile")
 echoc --say "screenshot now"
-SECFUNCexec -c --echo scrot "${astrScrotOptions[@]-}" "$strFile"
+SECFUNCexecA -c --echo scrot "${astrParams[@]}"
 
 echoc -x "ls -l \"$strFile\""
 

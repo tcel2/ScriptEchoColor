@@ -46,6 +46,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bContinue=true
 	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later (implies --persist ; disables --continue )
 		bJustSave=true
+	elif [[ "$1" == "--fixmissingdevices" || "$1" == "-f" ]];then #help will refresh nautilus devices list
+		bFixMissDev=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -56,6 +58,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 astrNewTabs=("$@")
+
+if $bFixMissDev;then
+	SECFUNCexecA -c --echo ps -o pid,cmd -p `pgrep -f gvfs-udisks2-volume-monitor`&&:
+	SECFUNCexecA -c --echo pkill -f gvfs-udisks2-volume-monitor&&:
+	SECFUNCexecA -c --echo /usr/lib/gvfs/gvfs-udisks2-volume-monitor&
+	exit 0
+fi
 
 if $bJustSave;then
 	bPersist=true
