@@ -136,6 +136,8 @@ if $bCheckHogs;then
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
 		sedSpacesToTab='s" +"\t"g'
 		sedJoinNextLine="/^${strDateFormat}$/ N;s'\n'\t'g"
+		#sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\1/\2/\3-\4'"
+		sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\4'"
 		regexHighNumber="[[:digit:]]{3,}[.]" #for iowait columns 10,11,12 only BUT here there is one more column with date/time
 		
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1 |sed -r "$sedSpacesToTab" |cut -f2-`"
@@ -144,11 +146,21 @@ if $bCheckHogs;then
 		#for strDev in "${astrDevList[@]}";do
 		for((i=0;i<${#astrDevList[@]};i++));do
 			strDev="${astrDevList[i]}"
-			SECFUNCdrawLine --left "=== [Device: $strDev '${astrDevListPretty[i]}'] " "="
+			
+			strTips=""
+			
+			strLvm="${astrDevListPretty[i]}"
+			if [[ "$strLvm" == "$strDev" ]];then
+				strLvm=""
+			else
+				strLvm=";lvm='$strLvm'"
+			fi
+			
 			read -r -d '' strMatchData < <(
 				egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 					|sed -r "$sedJoinNextLine" \
 					|sed -r "$sedSpacesToTab" \
+					|sed -r "$sedPrettyDate" \
 					|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)"
 			)
 #			strMatchData="$(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
@@ -156,6 +168,22 @@ if $bCheckHogs;then
 #				|sed -r "$sedSpacesToTab" \
 #				|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)")"
 			#echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
+			
+			strMountPoint="`mount |grep -w "${astrDevListPretty[i]}" |sed -r 's".* on (.*) type .*"\1"'`"
+			if [[ -n "$strMountPoint" ]];then
+				strMountPoint=";mnt='$strMountPoint'"
+			fi
+			if [[ -n "$strMatchData" ]];then
+				if [[ -z "$strMountPoint" ]];then
+					strTips+=' look for mount clues at `pvdisplay -m`;'
+				fi
+			fi
+			
+			if [[ -n "$strTips" ]];then
+				strTips="#TIPS: $strTips"
+			fi
+			SECFUNCdrawLine --left "=== [dev='$strDev'${strLvm}${strMountPoint}] $strTips " "="
+			
 			if [[ -n "$strMatchData" ]];then
 				(
 					echo -e "Time\tdev=$strDev\t$strColumnsNames" |sed -r "$sedSpacesToTab"
@@ -239,7 +267,7 @@ function FUNClogMisc() {
 	done
 }
 
-(export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpz $nDelay 2>&1 >>"$strLogFileIostat")&
+(export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpzy $nDelay 2>&1 >>"$strLogFileIostat")&
 FUNClogMisc&
 # last one shows also on current output
 SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
