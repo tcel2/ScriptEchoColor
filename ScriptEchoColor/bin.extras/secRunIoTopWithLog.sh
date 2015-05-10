@@ -137,13 +137,15 @@ if $bCheckHogs;then
 		strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
 		sedSpacesToTab='s" +"\t"g'
 		sedJoinNextLine="/${strDateFormat}/ N;s'\n' 'g"
+		regexHighNumber="/[[:digit:]]{3,}[.]/"
 		for strDev in "${astrDevList[@]}";do
 			#echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
 			echo -e "Time\tDevice:$strDev\t$strColumnsNames"
 			egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 				|sed -r "$sedSpacesToTab" \
 				|sed -r "$sedJoinNextLine" \
-				|egrep "[[:digit:]]{3,}[.]"
+				|awk "match(\$10,$regexHighNumber)||match(\$11,$regexHighNumber)||match(\$12,$regexHighNumber)"
+#				|egrep "`echo -e "\t"`[[:digit:]]{3,}[.]"
 		done
 	}
 	FUNCiostatCheckHogs
