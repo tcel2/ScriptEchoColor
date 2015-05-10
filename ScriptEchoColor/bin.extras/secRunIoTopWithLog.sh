@@ -66,6 +66,21 @@ strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log
 strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
 SECFUNCexecA -c --echo mkdir -p "$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/"
 
+function FUNCiostatCheckHogs() {
+	echoc --info "I/O stat log:"
+	astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
+	strDateFormat="..-..-.... ..:..:.."
+	strColumnsNames="`grep "^Device:" "$strLogFileIostat" |head -n 1`"
+	for strDev in "${astrDevList[@]}";do
+		echo "$strDateFormat $strColumnsNames"
+		#echo "strDev='$strDev'"
+		egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+			|sed "/${strDateFormat}/ N;s'\n' 'g" \
+			|egrep " [[:digit:]]{3,}[.]" \
+			|tail -n 5
+	done
+}
+
 if $bCheckHogs;then
 	if $bPrevious;then
 		strLogFileIotop+=".old.log"
@@ -122,6 +137,8 @@ if $bCheckHogs;then
 			|egrep " G .* $strKworkerId" \
 			|tail -n 5;
 	done
+	
+	FUNCiostatCheckHogs
 	
 	exit 0
 fi
@@ -196,7 +213,7 @@ function FUNClogMisc() {
 	done
 }
 
-(SECFUNCexecA -c --echo iostat -xm $nDelay 2>&1 >>"$strLogFileIostat")&
+(SECFUNCexecA -c --echo iostat -txmp $nDelay 2>&1 >>"$strLogFileIostat")&
 FUNClogMisc&
 # last one shows also on current output
 SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
