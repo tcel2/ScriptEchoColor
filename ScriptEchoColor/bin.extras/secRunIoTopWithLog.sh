@@ -130,16 +130,20 @@ if $bCheckHogs;then
 		echoc --info "I/O stat log:"
 	
 		astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
-		strDateFormat="..-..-.... ..:..:.."
+		#2015-05-10T17:07:22-0300
+		strDateFormat="..-..-....T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1`"
 		strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
+		sedSpacesToTab='s" +"\t"g'
+		sedJoinNextLine="/${strDateFormat}/ N;s'\n' 'g"
 		for strDev in "${astrDevList[@]}";do
 			echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
 			#echo "strDev='$strDev'"
-			egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
-				|sed "/${strDateFormat}/ N;s'\n' 'g" \
-				|egrep " [[:digit:]]{3,}[.]"&&:
+			(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+				|sed -r "$sedSpacesToTab" \
+				|sed -r "$sedJoinNextLine" \
+				|egrep " [[:digit:]]{3,}[.]")&&:
 		done
 	}
 	FUNCiostatCheckHogs
@@ -217,7 +221,7 @@ function FUNClogMisc() {
 	done
 }
 
-(SECFUNCexecA -c --echo iostat -txmp $nDelay 2>&1 >>"$strLogFileIostat")&
+(export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpz $nDelay 2>&1 >>"$strLogFileIostat")&
 FUNClogMisc&
 # last one shows also on current output
 SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
