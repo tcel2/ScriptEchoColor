@@ -138,8 +138,8 @@ if $bCheckHogs;then
 		sedSpacesToTab='s" +"\t"g'
 		sedJoinNextLine="/${strDateFormat}/ N;s'\n' 'g"
 		for strDev in "${astrDevList[@]}";do
+			echo "strDev='$strDev'"
 			echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
-			#echo "strDev='$strDev'"
 			(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 				|sed -r "$sedSpacesToTab" \
 				|sed -r "$sedJoinNextLine" \
