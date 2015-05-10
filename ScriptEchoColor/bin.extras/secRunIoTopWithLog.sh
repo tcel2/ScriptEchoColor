@@ -25,9 +25,9 @@
 eval `secinit`
 SECFUNCcheckActivateRunLog --restoredefaultoutputs
 
-bCheckHogs=false
 strTimeLimit=""
-bPrevious=false
+bCheckHogs=false
+bCheckPrevious=false
 nDelay=5
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
@@ -45,7 +45,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nDelay="${1-}"
 	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
 		bCheckHogs=true
-		bPrevious=true
+		bCheckPrevious=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -61,29 +61,17 @@ if ! SECFUNCisNumber -dn "$nDelay";then
 	exit 1
 fi
 
+strOldLogSuffix=".old.log"
 strLogFileIotop="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iotop.log"
 strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log"
 strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
 SECFUNCexecA -c --echo mkdir -p "$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/"
 
-function FUNCiostatCheckHogs() {
-	echoc --info "I/O stat log:"
-	astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
-	strDateFormat="..-..-.... ..:..:.."
-	strColumnsNames="`grep "^Device:" "$strLogFileIostat" |head -n 1`"
-	for strDev in "${astrDevList[@]}";do
-		echo "$strDateFormat $strColumnsNames"
-		#echo "strDev='$strDev'"
-		egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
-			|sed "/${strDateFormat}/ N;s'\n' 'g" \
-			|egrep " [[:digit:]]{3,}[.]" \
-			|tail -n 5
-	done
-}
-
 if $bCheckHogs;then
-	if $bPrevious;then
-		strLogFileIotop+=".old.log"
+	if $bCheckPrevious;then
+		strLogFileIotop+="${strOldLogSuffix}"
+		strLogFileIostat+="${strOldLogSuffix}"
+		strLogFileMisc+="${strOldLogSuffix}"
 	fi
 	
 	echoc --info "strLogFileIotop='$strLogFileIotop'"
@@ -138,6 +126,22 @@ if $bCheckHogs;then
 			|tail -n 5;
 	done
 	
+	function FUNCiostatCheckHogs() {
+		echoc --info "I/O stat log:"
+	
+		astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
+		strDateFormat="..-..-.... ..:..:.."
+		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
+		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1`"
+		strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
+		for strDev in "${astrDevList[@]}";do
+			echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
+			#echo "strDev='$strDev'"
+			egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+				|sed "/${strDateFormat}/ N;s'\n' 'g" \
+				|egrep " [[:digit:]]{3,}[.]"&&:
+		done
+	}
 	FUNCiostatCheckHogs
 	
 	exit 0
@@ -153,7 +157,7 @@ function FUNCcycleLogChild() {
 		if [[ -f "$lstrFile" ]];then 
 			if $lbDoIt;then
 				# mv will not work, the file is not reached by name but by inode?
-				SECFUNCexecA -c --echo cp -vf "$lstrFile" "${lstrFile}.old.log"
+				SECFUNCexecA -c --echo cp -vf "$lstrFile" "${lstrFile}${strOldLogSuffix}"
 				echo >"$lstrFile" #to empty it, but a write may happen between the copy and this...
 			fi
 		fi
@@ -176,12 +180,12 @@ function FUNCcycleLogChild() {
 #		if [[ -f "$strLogFileIotop" ]];then 
 #			#if((`stat -c %s "$strLogFileIotop"`>250000));then
 #			if $bTruncNow;then
-#	#			if [[ -f "${strLogFileIotop}.old.log" ]];then
-#	#				trash "${strLogFileIotop}.old.log"
+#	#			if [[ -f "${strLogFileIotop}${strOldLogSuffix}" ]];then
+#	#				trash "${strLogFileIotop}${strOldLogSuffix}"
 #	#			fi
 
 #				# mv will not work, the file is not reached by name but by inode?
-#				SECFUNCexecA -c --echo cp -vf "$strLogFileIotop" "${strLogFileIotop}.old.log"
+#				SECFUNCexecA -c --echo cp -vf "$strLogFileIotop" "${strLogFileIotop}${strOldLogSuffix}"
 #	#			cp -vf "$strLogFileIotop" "${strLogFileIotop}.`SECFUNCdtFmt --filename`.log"
 #				echo >"$strLogFileIotop" #to empty it, but a write may happen between the copy and this...
 #			fi
@@ -190,7 +194,7 @@ function FUNCcycleLogChild() {
 #		if [[ -f "$strLogFileIostat" ]];then 
 #			if $bTruncNow;then
 #				# mv will not work, the file is not reached by name but by inode?
-#				SECFUNCexecA -c --echo cp -vf "$strLogFileIostat" "${strLogFileIostat}.old.log"
+#				SECFUNCexecA -c --echo cp -vf "$strLogFileIostat" "${strLogFileIostat}${strOldLogSuffix}"
 #				echo >"$strLogFileIostat" #to empty it, but a write may happen between the copy and this...
 #			fi
 #		fi
