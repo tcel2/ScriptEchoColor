@@ -70,7 +70,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	 	if [[ -f "${SECstrFileErrorLog-}" ]];then #SECstrFileErrorLog not set may happen once..
 			echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
 		fi
-		echo "$lstrErrorTrap" >>/dev/stderr;
+		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >>/dev/stderr;
 		return 1;
 	fi;
 }
