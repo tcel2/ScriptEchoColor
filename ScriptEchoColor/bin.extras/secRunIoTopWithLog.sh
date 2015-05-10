@@ -130,18 +130,21 @@ if $bCheckHogs;then
 		echoc --info "iostat log, all high I/O waits"
 	
 		astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
+		astrDevListPretty=(`iostat -pN |egrep "^Device:" -A1000 |tail -n +2 |sed -r 's" +"\t"g' |cut -f1`)
 		#2015-05-10T17:07:22-0300
 		strDateFormat="....-..-..T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
 		sedSpacesToTab='s" +"\t"g'
-		sedJoinNextLine="/${strDateFormat}/ N;s'\n'\t'g"
+		sedJoinNextLine="/^${strDateFormat}$/ N;s'\n'\t'g"
 		regexHighNumber="[[:digit:]]{3,}[.]" #for iowait columns 10,11,12 only BUT here there is one more column with date/time
 		
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1 |sed -r "$sedSpacesToTab" |cut -f2-`"
 		#strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
 		
-		for strDev in "${astrDevList[@]}";do
-			SECFUNCdrawLine --left "=== [Device: $strDev] " "="
+		#for strDev in "${astrDevList[@]}";do
+		for((i=0;i<${#astrDevList[@]};i++));do
+			strDev="${astrDevList[i]}"
+			SECFUNCdrawLine --left "=== [Device: $strDev '${astrDevListPretty[i]}'] " "="
 			read -r -d '' strMatchData < <(
 				egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 					|sed -r "$sedJoinNextLine" \
