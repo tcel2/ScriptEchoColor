@@ -127,25 +127,38 @@ if $bCheckHogs;then
 	done
 	
 	function FUNCiostatCheckHogs() {
-		echoc --info "I/O stat log:"
+		echoc --info "iostat log, all high I/O waits"
 	
 		astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
 		#2015-05-10T17:07:22-0300
 		strDateFormat="....-..-..T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
-		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1`"
-		strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
 		sedSpacesToTab='s" +"\t"g'
-		sedJoinNextLine="/${strDateFormat}/ N;s'\n' 'g"
-		regexHighNumber="/[[:digit:]]{3,}[.]/"
+		sedJoinNextLine="/${strDateFormat}/ N;s'\n'\t'g"
+		regexHighNumber="[[:digit:]]{3,}[.]" #for iowait columns 10,11,12 only BUT here there is one more column with date/time
+		
+		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1 |sed -r "$sedSpacesToTab" |cut -f2-`"
+		#strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
+		
 		for strDev in "${astrDevList[@]}";do
+			SECFUNCdrawLine --left "=== [Device: $strDev] " "="
+			read -r -d '' strMatchData < <(
+				egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+					|sed -r "$sedJoinNextLine" \
+					|sed -r "$sedSpacesToTab" \
+					|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)"
+			)
+#			strMatchData="$(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+#				|sed -r "$sedJoinNextLine" \
+#				|sed -r "$sedSpacesToTab" \
+#				|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)")"
 			#echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
-			echo -e "Time\tDevice:$strDev\t$strColumnsNames"
-			egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
-				|sed -r "$sedSpacesToTab" \
-				|sed -r "$sedJoinNextLine" \
-				|awk "match(\$10,$regexHighNumber)||match(\$11,$regexHighNumber)||match(\$12,$regexHighNumber)"
-#				|egrep "`echo -e "\t"`[[:digit:]]{3,}[.]"
+			if [[ -n "$strMatchData" ]];then
+				(
+					echo -e "Time\tdev=$strDev\t$strColumnsNames" |sed -r "$sedSpacesToTab"
+					echo "$strMatchData"
+				) |column -t |egrep --color=always "await|$regexHighNumber"&&:
+			fi
 		done
 	}
 	FUNCiostatCheckHogs
