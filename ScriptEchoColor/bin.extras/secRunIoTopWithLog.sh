@@ -131,19 +131,19 @@ if $bCheckHogs;then
 	
 		astrDevList=(`iostat -p |egrep -o "^sd[^ ]*|^dm-[^ ]*"`)
 		#2015-05-10T17:07:22-0300
-		strDateFormat="..-..-....T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
+		strDateFormat="....-..-..T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1`"
 		strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
 		sedSpacesToTab='s" +"\t"g'
 		sedJoinNextLine="/${strDateFormat}/ N;s'\n' 'g"
 		for strDev in "${astrDevList[@]}";do
-			echo "strDev='$strDev'"
-			echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
-			(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+			#echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
+			echo -e "Time\tDevice:$strDev\t$strColumnsNames"
+			egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 				|sed -r "$sedSpacesToTab" \
 				|sed -r "$sedJoinNextLine" \
-				|egrep " [[:digit:]]{3,}[.]")&&:
+				|egrep "[[:digit:]]{3,}[.]"
 		done
 	}
 	FUNCiostatCheckHogs
