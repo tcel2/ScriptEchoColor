@@ -25,6 +25,8 @@
 eval `secinit`
 SECFUNCcheckActivateRunLog --restoredefaultoutputs
 
+SECFUNCcfgReadDB
+
 strTimeLimit=""
 bCheckHogs=false
 bCheckPrevious=false
@@ -51,7 +53,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
 		bCheckHogs=true
 		bCheckPrevious=true
-	elif [[ "$1" == "--getlvminfo" ]];then #help better check report info, but requires sudo
+	elif [[ "$1" == "--getlvminfo" ]];then #help better check report info, but requires sudo, shall be used everytime you update your devices as it will store that information on a cfg variable
 		bLvmInfo=true
 	elif [[ "$1" == "--dbgIostatLogFile" ]];then #help <strLogFileIostat> for this script development mainly
 		shift
@@ -82,7 +84,7 @@ function FUNCcheckHogs() {
 	
 	echoc --info "strLogFileIotop='$strLogFileIotop'"
 	
-	declare -A astrLvmPvInfoListA
+	bLvmAlert=false
 	if $bLvmInfo;then
 		strLvmPVInfo="`SECFUNCexecA -c --echo sudo -k pvdisplay -m`"
 		IFS=$'\n' read -r -d '' -a astrLvmPvInfoList < <(
@@ -91,6 +93,7 @@ function FUNCcheckHogs() {
 				|sed -r -e 's"PV Name(.*)";\1\t"' -e 's"Logical volume""' -e 's"/dev/""' -e 's"/"-"' -e 's"[[:blank:]]+""g' \
 				|tr '\n;' '\t\n'
 		)
+		declare -Ag astrLvmPvInfoListA
 		#for strLvmPvInfo in "${astrLvmPvInfoList[@]}";do
 		for((iLvmPVIndex=0;iLvmPVIndex<${#astrLvmPvInfoList[@]};iLvmPVIndex++));do
 			strLvmPvInfo="${astrLvmPvInfoList[iLvmPVIndex]}"
@@ -107,6 +110,13 @@ function FUNCcheckHogs() {
 			`"
 		done
 		#declare -p astrLvmPvInfoListA
+		SECFUNCcfgWriteVar astrLvmPvInfoListA
+	else
+		# may have been read from cfg file
+		if SECFUNCvarIsArray astrLvmPvInfoListA;then
+			bLvmAlert=true
+			bLvmInfo=true
+		fi
 	fi
 	
 	regexKworker="\[kworker/[^]]*\]"
@@ -235,12 +245,13 @@ function FUNCcheckHogs() {
 			fi
 			#if [[ -n "$strMatchData" ]];then
 				if [[ -z "$strMountPoint" ]];then
+					strLvmInfo=""
 					if $bLvmInfo;then
 						strLvmInfo="${astrLvmPvInfoListA[$strDev]-}"
 					fi
 					
 					if [[ -n "$strLvmInfo" ]];then
-						strMountPoint="LVM:$strLvmInfo"
+						strMountPoint=";mnt='LVM:$strLvmInfo'"
 					else
 						if ! $bLvmInfo;then
 							strTips+=' try adding --getlvminfo;'
@@ -264,6 +275,10 @@ function FUNCcheckHogs() {
 		#declare -p astrLvmPvInfoListA
 	}
 	FUNCiostatCheckHogs
+	
+	if $bLvmAlert;then
+		echoc --info "Using stored physical volumes info on the report, may require update with --getlvminfo."
+	fi
 }
 if $bCheckHogs;then
 	FUNCcheckHogs
