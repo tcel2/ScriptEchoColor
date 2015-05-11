@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ########### INIT
-eval `secinit`
+eval `secinit --extras`
 aWindowListToSkip=(
 	"^cairo-dock$"
 	"^Desktop$"
@@ -505,7 +505,9 @@ while true; do
 	if $bFixAllWindowsOnce;then
 		strMsgFixEnd="fixing windows batch ended"
 		echoc --say "$strMsgFixEnd"
-		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strMsgFixEnd"&
+		
+		SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
+		SECFUNCexecA -c --echo zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strMsgFixEnd"&&:
 	fi
 	
 done

@@ -34,13 +34,15 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
 declare -a SECastrSECFUNCCwindowCmd_ChildRegex=()
-function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and put on top
+function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and commands are issued towards it
 	local lnDelay=3
 	local lstrStopMatchRegex=""
 	local lbMaximize=false
 	local lbOnTop=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
+			#SECFUNCshowHelp --colorize "a child process will wait to issue the action towards <lstrWindowTitleRegex> "
 			SECFUNCshowHelp $FUNCNAME
 			return 0
 		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
@@ -50,7 +52,7 @@ function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a chil
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
 			shift
 			lnDelay="${1-}"
-		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex>
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them.
 			shift
 			lstrStopMatchRegex="${1-}"
 		elif [[ "$1" == "--" ]];then #SECFUNCCwindowCmd_help params after this are ignored as being these options
@@ -58,6 +60,7 @@ function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a chil
 			break
 		else
 			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
 			return 1
 #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
 #			SECFUNCechoErrA "invalid option '$1'"
