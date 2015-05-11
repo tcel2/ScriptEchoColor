@@ -46,6 +46,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
 		SECFUNCshowHelp
+		echoc --info "\tVideo players detection: "
+		echo -en "\t";declare -p astrSimpleCommandRegex
 		exit
 	elif [[ "$1" == "--unity" ]];then #help use Unity to lock the screen
 		bModeUnity=true
@@ -67,7 +69,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help <nDelay> main loop sleep delay
 		shift
 		nDelay=${1-}
-	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> append a regex to match pid command for the current winow being checked
+	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> append a regex to match pid command for the current window being checked
 		shift
 		astrSimpleCommandRegex+=("${1-}");
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
