@@ -69,7 +69,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help <nDelay> main loop sleep delay
 		shift
 		nDelay=${1-}
-	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> append a regex to match pid command for the current window being checked
+	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> when watching a movie, append a regex to match pid command for the current window being checked to prevent screensaver activation
 		shift
 		astrSimpleCommandRegex+=("${1-}");
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
