@@ -29,6 +29,7 @@ strTimeLimit=""
 bCheckHogs=false
 bCheckPrevious=false
 nDelay=5
+bLvmInfo=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -46,6 +47,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
 		bCheckHogs=true
 		bCheckPrevious=true
+	elif [[ "$1" == "--getlvminfo" ]];then #help better check report info, but requires sudo
+		bLvmInfo=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -75,6 +78,11 @@ if $bCheckHogs;then
 	fi
 	
 	echoc --info "strLogFileIotop='$strLogFileIotop'"
+	
+	strLvmInfo=""
+	if $bLvmInfo;then
+		strLvmInfo="`SECFUNCexecA -c --echo sudo -k pvdisplay -m`"
+	fi
 	
 	regexKworker="\[kworker/[^]]*\]"
 	
@@ -134,11 +142,12 @@ if $bCheckHogs;then
 		#2015-05-10T17:07:22-0300
 		strDateFormat="....-..-..T..:..:..-...." #is regex BUT MUST be simple, MUST match in size of real date output
 		strDeviceColumnTitle="Device: " #DO NOT CHANGE!
-		sedSpacesToTab='s" +"\t"g'
-		sedJoinNextLine="/^${strDateFormat}$/ N;s'\n'\t'g"
-		#sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\1/\2/\3-\4'"
-		sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\4'"
-		regexHighNumber="[[:digit:]]{3,}[.]" #for iowait columns 10,11,12 only BUT here there is one more column with date/time
+		sedSpacesToTab='s" +"\t"g' #or or more spaces become a single tab to separate columns
+		sedJoinNextLine="/^${strDateFormat}$/{N;s'\n'\t'g}" #creates the 1st column with datetime info, may create a bug of one line with two ore more datetime columns
+		sedFixDoubleDatetime="/\t${strDateFormat}$/ s'.*\t([^ \t]*)$'\1'g" #a line with two or more datetime columns will keep only the last datetime
+		#sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\1/\2/\3-\4'" #good looking date and time
+		sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\4'" #only the time
+		regexHighNumber="[[:digit:]]{3,}[.]" #numbers >= 100 (3+ digits). For iowait columns 10,11,12 only BUT here there is one more column with date/time
 		
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1 |sed -r "$sedSpacesToTab" |cut -f2-`"
 		#strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
@@ -156,9 +165,10 @@ if $bCheckHogs;then
 				strLvm=";lvm='$strLvm'"
 			fi
 			
+			# sedFixDoubleDatetime requires the fixed line to be sedJoinNextLine again as it will have only datetime on it
 			read -r -d '' strMatchData < <(
 				egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
-					|sed -r "$sedJoinNextLine" \
+					|sed -r -e "$sedJoinNextLine" -e "$sedFixDoubleDatetime" -e "$sedJoinNextLine" \
 					|sed -r "$sedSpacesToTab" \
 					|sed -r "$sedPrettyDate" \
 					|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)"
@@ -267,7 +277,7 @@ function FUNClogMisc() {
 	done
 }
 
-(export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpzy $nDelay 2>&1 >>"$strLogFileIostat")&
+(export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpzy $nDelay 2>&1 >>"$strLogFileIostat")& #TODO get 'tps' info from iostat?
 FUNClogMisc&
 # last one shows also on current output
 SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
