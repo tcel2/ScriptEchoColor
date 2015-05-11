@@ -30,6 +30,10 @@ bCheckHogs=false
 bCheckPrevious=false
 nDelay=5
 bLvmInfo=false
+strOldLogSuffix=".old.log"
+strLogFileIotop="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iotop.log"
+strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log"
+strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -49,6 +53,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckPrevious=true
 	elif [[ "$1" == "--getlvminfo" ]];then #help better check report info, but requires sudo
 		bLvmInfo=true
+	elif [[ "$1" == "--dbgIostatLogFile" ]];then #help <strLogFileIostat> for this script development mainly
+		shift
+		strLogFileIostat="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -64,13 +71,9 @@ if ! SECFUNCisNumber -dn "$nDelay";then
 	exit 1
 fi
 
-strOldLogSuffix=".old.log"
-strLogFileIotop="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iotop.log"
-strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log"
-strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
 SECFUNCexecA -c --echo mkdir -p "$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/"
 
-if $bCheckHogs;then
+function FUNCcheckHogs() {
 	if $bCheckPrevious;then
 		strLogFileIotop+="${strOldLogSuffix}"
 		strLogFileIostat+="${strOldLogSuffix}"
@@ -147,39 +150,64 @@ if $bCheckHogs;then
 		sedFixDoubleDatetime="/\t${strDateFormat}$/ s'.*\t([^ \t]*)$'\1'g" #a line with two or more datetime columns will keep only the last datetime
 		#sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\1/\2/\3-\4'" #good looking date and time
 		sedPrettyDate="s'(....)-(..)-(..)T(..:..:..)-....'\4'" #only the time
-		regexHighNumber="[[:digit:]]{3,}[.]" #numbers >= 100 (3+ digits). For iowait columns 10,11,12 only BUT here there is one more column with date/time
+		regexHighNumber="[[:digit:]]{3,}[.]" #numbers >= 100 (3+ digits).
+		awkMatchColumns="match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)" #For iowait columns 10,11,12 only BUT here there is one more column with date/time
 		
 		strColumnsNames="`grep "^${strDeviceColumnTitle}" "$strLogFileIostat" |head -n 1 |sed -r "$sedSpacesToTab" |cut -f2-`"
 		#strColumnsNames="${strColumnsNames:${#strDeviceColumnTitle}}"
 		
 		#for strDev in "${astrDevList[@]}";do
-		for((i=0;i<${#astrDevList[@]};i++));do
-			strDev="${astrDevList[i]}"
+		for((iDevIndex=0;iDevIndex<${#astrDevList[@]};iDevIndex++));do
+			strDev="${astrDevList[iDevIndex]}"
 			
 			strTips=""
 			
-			strLvm="${astrDevListPretty[i]}"
+			strLvm="${astrDevListPretty[iDevIndex]}"
 			if [[ "$strLvm" == "$strDev" ]];then
 				strLvm=""
 			else
 				strLvm=";lvm='$strLvm'"
 			fi
 			
-			# sedFixDoubleDatetime requires the fixed line to be sedJoinNextLine again as it will have only datetime on it
-			read -r -d '' strMatchData < <(
-				egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
-					|sed -r -e "$sedJoinNextLine" -e "$sedFixDoubleDatetime" -e "$sedJoinNextLine" \
-					|sed -r "$sedSpacesToTab" \
-					|sed -r "$sedPrettyDate" \
-					|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)"
-			)
+			strMatchData=""
+			bFixedMode=true
+			if $bFixedMode;then
+				#fully fixed, better to understand later on again
+				IFS=$'\n' read -r -d '' -a astrMatchDataLineList < <(
+					egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+						|sed -r "$sedSpacesToTab" \
+						|sed -r "$sedPrettyDate"
+				)
+				#for strMatchDataLine in "${astrMatchDataLineList[@]}";do
+				for((iLineIndex=0;iLineIndex<${#astrMatchDataLineList[@]};iLineIndex++));do
+					strMatchDataLine="${astrMatchDataLineList[iLineIndex]}"
+					strMatchDataLineNext="${astrMatchDataLineList[iLineIndex+1]-}"
+					#echo "strDev='$strDev';strMatchDataLine='$strMatchDataLine'"
+					if [[ "$strMatchDataLineNext" =~ ^${strDev}${SECcharTab}.* ]];then
+						strMatchData+="${strMatchDataLine}${SECcharTab}${strMatchDataLineNext}${SECcharNL}"
+						((iLineIndex++))&&:
+					fi
+				done
+				#echo "strMatchData=${strMatchData}";exit 0
+				strMatchData="`echo "$strMatchData" |awk "$awkMatchColumns"`"
+			else
+				# sedFixDoubleDatetime requires the fixed line to be sedJoinNextLine again as it will have only datetime on it
+				read -r -d '' strMatchData < <(
+					egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
+						|sed -r -e "$sedJoinNextLine" -e "$sedFixDoubleDatetime" -e "$sedJoinNextLine" \
+						|sed -r "$sedSpacesToTab" \
+						|sed -r "$sedPrettyDate" \
+						|awk "$awkMatchColumns"
+				)
+			fi
+			
 #			strMatchData="$(egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 #				|sed -r "$sedJoinNextLine" \
 #				|sed -r "$sedSpacesToTab" \
 #				|awk "match(\$11,/$regexHighNumber/)||match(\$12,/$regexHighNumber/)||match(\$13,/$regexHighNumber/)")"
 			#echo "`printf "Device: %0${#strDateFormat}s" $strDev` $strColumnsNames"
 			
-			strMountPoint="`mount |grep -w "${astrDevListPretty[i]}" |sed -r 's".* on (.*) type .*"\1"'`"
+			strMountPoint="`mount |grep -w "${astrDevListPretty[iDevIndex]}" |sed -r 's".* on (.*) type .*"\1"'`"
 			if [[ -n "$strMountPoint" ]];then
 				strMountPoint=";mnt='$strMountPoint'"
 			fi
@@ -203,7 +231,9 @@ if $bCheckHogs;then
 		done
 	}
 	FUNCiostatCheckHogs
-	
+}
+if $bCheckHogs;then
+	FUNCcheckHogs
 	exit 0
 fi
 

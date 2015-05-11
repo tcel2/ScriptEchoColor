@@ -402,9 +402,9 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	#local le=$(printf '\033') # Escape char to provide colors on sed on terminal
 	local lsedMatchRequireds='([<])([^>]*)([>])'
 	local lsedMatchOptionals='([[])([^]]*)([]])'
-	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcolorEscapeChar}[96m[\2]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcharEsc}[96m[\2]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
 	local lsedColorizeRequireds="s,$lsedMatchRequireds,${SECcolorCancel}${SECcolorLightRed}<\2>${SECcolorCancel},g"
-	local lsedColorizeTheOption="s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),${SECcolorCancel}${SECcolorEscapeChar}[92m\1\2\3${SECcolorCancel},g"
+	local lsedColorizeTheOption="s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),${SECcolorCancel}${SECcharEsc}[92m\1\2\3${SECcolorCancel},g"
 	local lsedTranslateEscn='s,\\n,\n,g'
 	local lsedTranslateEsct='s,\\t,\t,g'
 
@@ -424,7 +424,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		#if ! ${!lstrVarId+false};then
 		if $lbShowValue;then
-			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcolorEscapeChar}[5m${!lstrVarId}${SECcolorEscapeChar}[25m'\3,"
+			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcharEsc}[5m${!lstrVarId}${SECcharEsc}[25m'\3,"
 			echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId}${SECcolorLightRed}'\3,"
 		else
 			echo "$lstrLine"
@@ -523,13 +523,13 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
 	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
-#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcolorEscapeChar}'[0m'${SECcolorEscapeChar}'[92m\1'${SECcolorEscapeChar}'[0m\t,g'
+#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g'
 	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcolorEscapeChar}'[0m'${SECcolorEscapeChar}'[92m\1'${SECcolorEscapeChar}'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
+	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
 	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
 	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
-#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcolorEscapeChar}'[0m'${SECcolorEscapeChar}'[91m<\2>'${SECcolorEscapeChar}'[0m,g'
-#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcolorEscapeChar}'[0m'${SECcolorEscapeChar}'[96m[\2]'${SECcolorEscapeChar}'[0m,g'
+#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'
+#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcharEsc}'[0m'${SECcharEsc}'[96m[\2]'${SECcharEsc}'[0m,g'
 	#local lsedAddNewLine='s".*"&\n"'
 	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
@@ -1505,11 +1505,16 @@ export SECnRunLogTeePid
 : ${SECbRunLogPidTree:=true}
 export SECbRunLogPidTree
 
-export SECcolorEscapeChar=$(printf '\033') # Escape char to provide colors on sed on terminal
+export SECcharTab=$'\t' #$(printf '\011') # this speeds up instead of using `echo -e "\t"`
+export SECcharNewLine=$'\n' # this speeds up instead of using `echo -e "\n"`
+export SECcharNL=$'\n' # this speeds up instead of using `echo -e "\n"`
+export SECcharCr=$'\r' # carriage return
+#export SECcolorEscapeChar=$'\e' #$(printf '\033') # Escape char to provide colors on sed on terminal
+export SECcharEsc=$'\e' #$(printf '\033') # Escape char to provide colors on sed on terminal
 # so now, these are the terminal escaped codes (not the string to be interpreted)
-export SECcolorLightRed="$SECcolorEscapeChar[91m"
-export SECcolorLightYellow="$SECcolorEscapeChar[93m"
-export SECcolorCancel="$SECcolorEscapeChar[0m"
+export SECcolorLightRed="$SECcharEsc[91m"
+export SECcolorLightYellow="$SECcharEsc[93m"
+export SECcolorCancel="$SECcharEsc[0m"
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 
