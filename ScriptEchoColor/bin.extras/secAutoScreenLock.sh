@@ -37,6 +37,7 @@ nMovieCheckDelay=60
 bHoldToggle=false
 nDelay=10
 bDebugging=false
+bMouseTrickMode=false
 astrSimpleCommandRegex=(
 	"^chromium-browser .*flashplayer.so"
 	"^/usr/bin/vlc "
@@ -72,6 +73,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> when watching a movie, append a regex to match pid command for the current window being checked to prevent screensaver activation
 		shift
 		astrSimpleCommandRegex+=("${1-}");
+	elif [[ "$1" == "--mousetrickmode" ]];then #help simulate mouse activity what will expectedly work with all screensavers but may have some side effects..
+		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
 		bDebugging=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -312,6 +315,12 @@ while true;do
 				if pgrep xscreensaver;then
 					echoc --info "some video seems to be playing, simulating screensaver activity"
 					xscreensaver-command -deactivate
+				fi
+				
+				if $bMouseTrickMode;then
+					xdotool mousemove_relative -- 10 10
+					sleep 0.25
+					xdotool mousemove_relative -- -10 -10
 				fi
 			else
 				SEC_WARN=true SECFUNCechoWarnA "extra info to debug below..."

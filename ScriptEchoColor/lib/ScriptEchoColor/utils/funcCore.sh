@@ -605,6 +605,12 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 	done
 }
 
+#function SECFUNCisNumberChkExit(){
+#	if ! SECFUNCisNumber "$@";then
+#		
+#	fi
+#}
+
 function SECFUNCisNumber(){ #help "is float" check by default
 	local bDecimalCheck=false
 	local bNotNegativeCheck=false

@@ -36,6 +36,7 @@ strOldLogSuffix=".old.log"
 strLogFileIotop="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iotop.log"
 strLogFileIostat="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/iostat.log"
 strLogFileMisc="$SECstrUserHomeConfigPath/log/$SECstrScriptSelfName/misc.log"
+nCycleLogTime=60
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -50,7 +51,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help <nDelay> between gathering info
 		shift
 		nDelay="${1-}"
-	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (older one)
+	elif [[ "$1" == "--checkprevious" || "$1" == "-p" ]];then #help check but using previous log file (previous one)
 		bCheckHogs=true
 		bCheckPrevious=true
 	elif [[ "$1" == "--getlvminfo" ]];then #help better check report info, but requires sudo, shall be used everytime you update your devices as it will store that information on a cfg variable
@@ -58,6 +59,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--dbgIostatLogFile" ]];then #help <strLogFileIostat> for this script development mainly
 		shift
 		strLogFileIostat="${1-}"
+	elif [[ "$1" == "--cyclelogtime" ]];then #help <nCycleLogTime> time in minutes to cycle the log.
+		shift
+		nCycleLogTime="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -70,6 +74,10 @@ done
 
 if ! SECFUNCisNumber -dn "$nDelay";then
 	echoc -p "invalid nDelay='$nDelay'"
+	exit 1
+fi
+if ! SECFUNCisNumber -dn "$nCycleLogTime";then
+	echoc -p "invalid nCycleLogTime='$nCycleLogTime'"
 	exit 1
 fi
 
@@ -311,7 +319,7 @@ function FUNCcycleLogChild() {
 		sleep 60;
 		
 		local bTruncNow=false
-		if((SECONDS>3600));then
+		if((SECONDS>(nCycleLogTime*60)));then
 			bTruncNow=true
 			SECONDS=0
 		fi
