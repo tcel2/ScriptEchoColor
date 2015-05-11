@@ -85,6 +85,28 @@ function FUNCcheckHogs() {
 	strLvmInfo=""
 	if $bLvmInfo;then
 		strLvmInfo="`SECFUNCexecA -c --echo sudo -k pvdisplay -m`"
+		IFS=$'\n' read -r -d '' -a astrLvmPvInfoList < <(
+			echo "$strLvmPVInfo" \
+				|egrep "PV Name|Logical volume" \
+				|sed -r -e 's"PV Name(.*)";\1\t"' -e 's"Logical volume""' -e 's"/dev/""' -e 's"/"-"' -e 's"[[:blank:]]+""g' \
+				|tr '\n;' '\t\n'
+		)
+		#for strLvmPvInfo in "${astrLvmPvInfoList[@]}";do
+		for((iLvmPVIndex=0;iLvmPVIndex<${#astrLvmPvInfoList[@]};iLvmPVIndex++));do
+			strLvmPvInfo="${astrLvmPvInfoList[iLvmPVIndex]}"
+			# remove dups and emptys
+			strLvmPvInfo="`
+				echo "$strLvmPvInfo" \
+					|head -n 1
+				echo "$SECcharTab"
+				echo "$strLvmPvInfo" \
+					|tr '\t' '\n' \
+					|tail -n +2 \
+					|sort -u \
+					|sed '/^$/ d' \
+					|tr '\n' '\t'`"
+			astrLvmPvInfoList[iLvmPVIndex]="$strLvmPvInfo"
+		done
 	fi
 	
 	regexKworker="\[kworker/[^]]*\]"
