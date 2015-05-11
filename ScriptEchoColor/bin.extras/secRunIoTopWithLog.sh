@@ -82,9 +82,9 @@ function FUNCcheckHogs() {
 	
 	echoc --info "strLogFileIotop='$strLogFileIotop'"
 	
-	strLvmInfo=""
+	declare -A astrLvmPvInfoListA
 	if $bLvmInfo;then
-		strLvmInfo="`SECFUNCexecA -c --echo sudo -k pvdisplay -m`"
+		strLvmPVInfo="`SECFUNCexecA -c --echo sudo -k pvdisplay -m`"
 		IFS=$'\n' read -r -d '' -a astrLvmPvInfoList < <(
 			echo "$strLvmPVInfo" \
 				|egrep "PV Name|Logical volume" \
@@ -94,19 +94,19 @@ function FUNCcheckHogs() {
 		#for strLvmPvInfo in "${astrLvmPvInfoList[@]}";do
 		for((iLvmPVIndex=0;iLvmPVIndex<${#astrLvmPvInfoList[@]};iLvmPVIndex++));do
 			strLvmPvInfo="${astrLvmPvInfoList[iLvmPVIndex]}"
-			# remove dups and emptys
-			strLvmPvInfo="`
+			strDevId="`echo "$strLvmPvInfo" |cut -f1`"
+			
+			# removing dups and emptys
+			astrLvmPvInfoListA[$strDevId]="`
 				echo "$strLvmPvInfo" \
-					|head -n 1
-				echo "$SECcharTab"
-				echo "$strLvmPvInfo" \
+					|cut -f2- \
 					|tr '\t' '\n' \
-					|tail -n +2 \
 					|sort -u \
 					|sed '/^$/ d' \
-					|tr '\n' '\t'`"
-			astrLvmPvInfoList[iLvmPVIndex]="$strLvmPvInfo"
+					|tr '\n' ','
+			`"
 		done
+		#declare -p astrLvmPvInfoListA
 	fi
 	
 	regexKworker="\[kworker/[^]]*\]"
@@ -233,11 +233,21 @@ function FUNCcheckHogs() {
 			if [[ -n "$strMountPoint" ]];then
 				strMountPoint=";mnt='$strMountPoint'"
 			fi
-			if [[ -n "$strMatchData" ]];then
+			#if [[ -n "$strMatchData" ]];then
 				if [[ -z "$strMountPoint" ]];then
-					strTips+=' look for mount clues at `pvdisplay -m`;'
+					if $bLvmInfo;then
+						strLvmInfo="${astrLvmPvInfoListA[$strDev]-}"
+					fi
+					
+					if [[ -n "$strLvmInfo" ]];then
+						strMountPoint="LVM:$strLvmInfo"
+					else
+						if ! $bLvmInfo;then
+							strTips+=' try adding --getlvminfo;'
+						fi
+					fi
 				fi
-			fi
+			#fi
 			
 			if [[ -n "$strTips" ]];then
 				strTips="#TIPS: $strTips"
@@ -251,6 +261,7 @@ function FUNCcheckHogs() {
 				) |column -t |egrep --color=always "await|$regexHighNumber"&&:
 			fi
 		done
+		#declare -p astrLvmPvInfoListA
 	}
 	FUNCiostatCheckHogs
 }
