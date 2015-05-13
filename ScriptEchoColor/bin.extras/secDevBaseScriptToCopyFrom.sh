@@ -65,7 +65,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 	local lstrExample="DefaultValue"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-		if [[ "$1" == "--help" ]];then #FUNCexample_help
+		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
@@ -92,7 +92,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 strExample="DefaultValue"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
-	if [[ "$1" == "--help" ]];then #help
+	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
 		SECFUNCshowHelp
 		exit 0
