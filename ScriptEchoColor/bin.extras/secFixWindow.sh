@@ -42,6 +42,7 @@ bReactivateWindow=false
 strReactWindNamesRegex=""
 bWaitResquestFixAllOnly=false
 bForcedHold=true
+bFixCompiz=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -63,6 +64,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWaitResquestFixAllOnly=true
 	elif [[ "$1" == "--nohold" ]];then #help intensive loop execution is prevented by default, use this to allow it.
 		bForcedHold=false
+	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply restarting compiz.
+		bFixCompiz=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
 		sedVarValue="^([[:alnum:]]*)=(.*)"
@@ -81,6 +84,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if $bFixCompiz;then
+  secXtermDetached.sh metacity --replace;
+  sleep 3; #this blind delay helps on properly fixing
+  secXtermDetached.sh compiz --replace
+  exit 0
+fi
 
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register
