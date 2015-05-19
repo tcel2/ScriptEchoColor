@@ -24,6 +24,8 @@
 
 eval `secinit`
 
+echoc -p "$0 needs fixing, is currently broken..";exit 1;
+
 function echoerr {
   echo "$@" >>/dev/stderr
 }
