@@ -292,6 +292,10 @@ function FUNCcheckHogs() {
 	if $bLvmAlert;then
 		echoc --info "Using stored physical volumes info on the report, may require update with --getlvminfo."
 	fi
+	
+	SECFUNCdrawLine
+	echoc --info "processes probably waiting for I/O"
+	SECFUNCexecA -c --echo tail -n 25 "$strLogFileMisc"
 }
 if $bCheckHogs;then
 	FUNCcheckHogs

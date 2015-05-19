@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+eval `secinit`
+
 function echoerr {
   echo "$@" >>/dev/stderr
 }
@@ -92,7 +94,7 @@ function FUNCtermId {
 
 function FUNCtask {
   local l_cmdList="$1"
-  local l_strTitle="$2"
+  local l_strTitle="${2-}"
   
   local l_newestSession=-1
   local l_cmdCount=`echo "$l_cmdList" |tr ',' '\n' |wc -l`
@@ -113,7 +115,7 @@ function FUNCtask {
       l_strTitle="${l_cmd:0:20}"
     fi
 
-    if((l_newestSession==-1));then
+    if((l_newestSession==-1)) || $bNewSessionAlways;then
       l_newestSession=`FUNCaddSession`
     fi
     
@@ -142,22 +144,25 @@ function FUNCtask {
 
 #wait for yakuake to start
 nSleep=0
+bNewSessionAlways=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 	  #grep "\"--" $0 |grep -v grep
 		SECFUNCshowHelp --colorize "Uses qdbus to open new sessions and terminals at Yakuake."
 		SECFUNCshowHelp
 		exit
-	elif [[ "$1" == "--checkAndRun" ]]; then #help check if yakuake is running before running the command at it
+	elif [[ "$1" == "--checkAndRun" || "$1" == "-c" ]]; then #help check if yakuake is running before running the command at it
 		while ! qdbus org.kde.yakuake 2>&1 >/dev/null; do
 		  sleep 1
 		done
-		sleep 3
-		qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
-		exit 0
+#		sleep 3
+#		qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
+#		exit 0
 	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help nSleep (seconds) before running
 		shift
 		nSleep="${1-}"
+	elif [[ "$1" == "--newsession" || "$1" == "-n" ]];then #help always open a new session
+		bNewSessionAlways=true;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
