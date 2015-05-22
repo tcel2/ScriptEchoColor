@@ -589,6 +589,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbStopLog=false
 	local lbColorize=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
 			return
@@ -609,7 +610,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			bWaitKey=true
 		elif [[ "$1" == "--elapsed" ]];then #SECFUNCexec_help quiet, ommit command output to stdout and
 			bShowElapsed=true;
-		elif [[ "$1" == "--echo" ]];then #SECFUNCexec_help echo the command that will be executed, output goes to /dev/stderr
+		elif [[ "$1" == "--echo" || "$1" == "-e" ]];then #SECFUNCexec_help echo the command that will be executed, output goes to /dev/stderr
 			bExecEcho=true;
 		elif [[ "$1" == "--justecho" ]];then #SECFUNCexec_help wont execute, will just echo what would be executed without any format to be easily reused as command anywhere; this output goes to /dev/stdout
 			bJustEcho=true;
