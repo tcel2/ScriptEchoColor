@@ -43,6 +43,7 @@ strReactWindNamesRegex=""
 bWaitResquestFixAllOnly=false
 bForcedHold=true
 bFixCompiz=false
+fDefaultDelay=60
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -64,6 +65,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWaitResquestFixAllOnly=true
 	elif [[ "$1" == "--nohold" ]];then #help intensive loop execution is prevented by default, use this to allow it.
 		bForcedHold=false
+	elif [[ "$1" == "--delay" ]];then #help <fDefaultDelay> delay at main loop, beware that too low value may cause trouble/problems, can be float.
+		shift
+		fDefaultDelay="${1-}"
 	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply restarting compiz.
 		bFixCompiz=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
@@ -84,6 +88,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if ! SECFUNCisNumber -n $fDefaultDelay;then
+	echoc -p "invalid fDefaultDelay='$fDefaultDelay'"
+	exit 1
+fi
 
 if $bFixCompiz;then
   secXtermDetached.sh metacity --replace;
@@ -209,6 +218,8 @@ declare -A aWindowPseudoMaximizedGeomBkp
 SECFUNCdelay RefreshData --init
 SECFUNCdelay bReactivateWindow --init
 while true; do 
+	fDelay=$fDefaultDelay
+	
 	if SECFUNCdelay RefreshData --checkorinit1 10;then
 		FUNCupdateScreenGeometryData
 		FUNCvalidateAll
@@ -228,6 +239,7 @@ while true; do
 		if echoc -q -t $nWait "fix all windows independently of focus, once?";then
 			anWindowList=(`wmctrl -l |cut -d' ' -f1`)&&:
 			bFixAllWindowsOnce=true
+			fDelay=0.25 #to go very fast, once
 		else
 			if $bWaitResquestFixAllOnly;then
 				continue
@@ -235,8 +247,13 @@ while true; do
 		fi
 	fi
 	
+	bBigDelay=`SECFUNCbcPrettyCalcA --cmp "$fDelay>2.0"`
 	for windowId in "${anWindowList[@]}";do
-		sleep 0.25;
+		if $bBigDelay;then
+			echoc -w -t "$fDelay"
+		else
+			sleep $fDelay;
+		fi
 		
 		#if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
 		if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
