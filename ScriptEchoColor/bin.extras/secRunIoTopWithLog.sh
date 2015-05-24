@@ -296,6 +296,11 @@ function FUNCcheckHogs() {
 	SECFUNCdrawLine
 	echoc --info "processes probably waiting for I/O"
 	SECFUNCexecA -c --echo tail -n 25 "$strLogFileMisc"
+	
+	echoc --info "log files:"
+	echo "$strLogFileIotop"
+	echo "$strLogFileIostat"
+	echo "$strLogFileMisc"
 }
 if $bCheckHogs;then
 	FUNCcheckHogs

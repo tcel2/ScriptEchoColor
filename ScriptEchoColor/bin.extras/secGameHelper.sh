@@ -66,12 +66,37 @@ function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
 	# check if there is other pids than self tree
 	SECFUNCdelay $FUNCNAME --init
+	
+	strParams=""
+	if [[ -n "${1-}" ]];then
+		strParams="$@"
+	fi
+	echoc --info "checking dup for this '$SECstrScriptSelfName${strParams}' pid=$$"
+	
 	while true;do
 		echoc --info "check if this script is already running for `SECFUNCdelay $FUNCNAME --getpretty`"
-		anPidList=(`pgrep -f "$SECstrScriptSelfName $@"`) #all pids with this script command, including self
-		if ps --no-headers -o pid,ppid  -p "${anPidList[@]}" |egrep -v "$$|$PPID";then
-			echoc -pw -t 10 "script '$SECstrScriptSelfName $@' already running, waiting other exit"
-			#exit 1
+		
+		anPidList=(`pgrep -f "$SECstrScriptSelfName${strParams}"`) #all pids with this script command, including self
+		declare -p anPidList
+		anPidSkipList=(`SECFUNCppidList --addself --child --pid $$`)
+		declare -p anPidSkipList
+		for((i1=${#anPidList[@]}-1;i1>=0;i1--));do
+			nPid="${anPidList[i1]}"
+			for((i2=0;i2<${#anPidSkipList[@]};i2++));do
+				nPidSkip="${anPidSkipList[i2]}"
+				if((nPid==nPidSkip));then
+					unset anPidList[i1] # unset only works from last to first
+				fi
+			done
+		done
+		declare -p anPidList
+		
+#		if [[ -n "${anPidList[@]}" ]];then
+		if((${#anPidList[@]}>0));then
+			if ps --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
+				echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
+				# DO NOT EXIT HERE TO NOT MESS USER SCRIPT! #exit 1 
+			fi
 		else
 			break;
 		fi

@@ -835,7 +835,7 @@ function SECFUNCppidListToGrep() { #help
   # output ex.: "^[ |]*30973\|^[ |]*3861\|^[ |]*1 "
 
   #echo `SECFUNCppidList "|"` |sed 's"|"\\|"g'
-  local ppidList=`SECFUNCppidList ","`
+  local ppidList=`SECFUNCppidList "$@" --separator ","`
   local separator='\\|'
   local grepMatch="^[ |]*" # to match none or more blank spaces at begin of line
   ppidList=`echo "$ppidList" |sed "s','$separator$grepMatch'g"`
