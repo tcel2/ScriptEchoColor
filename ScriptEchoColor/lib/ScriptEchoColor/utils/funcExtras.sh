@@ -34,11 +34,16 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
 declare -a SECastrSECFUNCCwindowCmd_ChildRegex=()
-function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a child process in loop til the window is found and commands are issued towards it
+function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will run a child process in loop til the window is found and commands are issued towards it
 	local lnDelay=3
 	local lstrStopMatchRegex=""
 	local lbMaximize=false
 	local lbOnTop=false
+	local lnPosX=-1
+	local lnPosY=-1
+	local lnWidth=-1
+	local lnHeight=-1
+	local lbMoveGeom=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
@@ -52,6 +57,20 @@ function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a chil
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
 			shift
 			lnDelay="${1-}"
+		elif [[ "$1" == "--move" || "$1" == "-m" ]];then #SECFUNCCwindowCmd_help <lnPosX> <lnPosY> move to
+			shift
+			lnPosX="${1-}"
+			shift
+			lnPosY="${1-}"
+			
+			lbMoveGeom=true;
+		elif [[ "$1" == "--geom" || "$1" == "-g" ]];then #SECFUNCCwindowCmd_help <lnWidth> <lnHeight> geometry
+			shift
+			lnWidth="${1-}"
+			shift
+			lnHeight="${1-}"
+			
+			lbMoveGeom=true;
 		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them.
 			shift
 			lstrStopMatchRegex="${1-}"
@@ -85,6 +104,22 @@ function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a chil
 		return 0
 	fi
 	
+	if ! SECFUNCisNumber -d $lnPosX;then
+		SECFUNCechoErrA "invalid lnPosX='$lnPosX'"
+		return 1
+	fi
+	if ! SECFUNCisNumber -d $lnPosY;then
+		SECFUNCechoErrA "invalid lnPosY='$lnPosY'"
+		return 1
+	fi
+	if ! SECFUNCisNumber -d $lnWidth;then
+		SECFUNCechoErrA "invalid lnWidth='$lnWidth'"
+		return 1
+	fi
+	if ! SECFUNCisNumber -d $lnHeight;then
+		SECFUNCechoErrA "invalid lnHeight='$lnHeight'"
+		return 1
+	fi
 	if ! SECFUNCisNumber -dn "$lnDelay";then
 		SECFUNCechoErrA "invalid lnDelay='$lnDelay'"
 		return 1
@@ -105,11 +140,17 @@ function SECFUNCCwindowCmd() { #help <lstrWindowTitleRegex> this will run a chil
 			fi
 			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
 			if SECFUNCisNumber -nd "$lnWindowId";then
+				##################
+				# each option will be issued one time, so must be disabled 
+				##################
 				if $lbOnTop && wmctrl -i -a "$lnWindowId" -b add,above;then
 					lbOnTop=false;
 				fi
 				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
 					lbMaximize=false;
+				fi
+				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then
+					lbMoveGeom=false;
 				fi
 				# only end when all is done
 				if ! $lbOnTop && ! $lbMaximize;then
