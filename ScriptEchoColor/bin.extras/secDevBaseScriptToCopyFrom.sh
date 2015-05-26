@@ -62,9 +62,9 @@ echo
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
-	#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 	local lstrExample="DefaultValue"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0

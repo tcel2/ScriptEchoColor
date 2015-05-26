@@ -44,6 +44,10 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 	local lnWidth=-1
 	local lnHeight=-1
 	local lbMoveGeom=false
+	local lbFocus=false
+	local lbWait=false
+	local lbChild=true
+	local lbMinimize=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
@@ -52,8 +56,12 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			return 0
 		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
 			lbOnTop=true
-		elif [[ "$1" == "--maximize" ]];then #SECFUNCCwindowCmd_help maximize window
+		elif [[ "$1" == "--focus" ]];then #SECFUNCCwindowCmd_help focus window
+			lbFocus=true
+		elif [[ "$1" == "--maximize" || "$1" == "-x" ]];then #SECFUNCCwindowCmd_help maximize window
 			lbMaximize=true
+		elif [[ "$1" == "--minimize" || "$1" == "-i" ]];then #SECFUNCCwindowCmd_help maximize window
+			lbMinimize=true
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
 			shift
 			lnDelay="${1-}"
@@ -73,7 +81,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			lbMoveGeom=true;
 		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them.
 			shift
-			lstrStopMatchRegex="${1-}"
+			lstrStopMatchRegex="${1-}" #TODO pointless..
+		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help wait regex match a window and return
+			lbWait=true
+		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child, helped by --wait 
+			lbChild=false
 		elif [[ "$1" == "--" ]];then #SECFUNCCwindowCmd_help params after this are ignored as being these options
 			shift
 			break
@@ -131,6 +143,15 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		return 1
 	fi
 	
+	local lstrWarnMsg="still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex'"
+	if $lbWait;then
+		while ! xdotool search --name "$lstrWindowTitleRegex";do
+			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg"
+			sleep $lnDelay;
+		done
+		return 0
+	fi
+	
 	( #child process
 		local lbStop=false
 		trap 'lbStop=true;' USR1
@@ -146,21 +167,37 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 				if $lbOnTop && wmctrl -i -a "$lnWindowId" -b add,above;then
 					lbOnTop=false;
 				fi
+				if $lbFocus && xdotool windowfocus "$lnWindowId" && xdotool windowactivate "$lnWindowId";then
+					lbFocus=false
+				fi
 				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
 					lbMaximize=false;
+				fi
+#				if $lbMinimize && wmctrl -i -r $lnWindowId -b add,hidden;then
+				if $lbMinimize && xdotool windowminimize $lnWindowId;then
+					lbMinimize=false;
 				fi
 				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then
 					lbMoveGeom=false;
 				fi
+				#############
+				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				# only end when all is done
-				if ! $lbOnTop && ! $lbMaximize;then
+				#############
+				if	! $lbOnTop && 
+						! $lbFocus && 
+						! $lbMoveGeom && 
+						! $lbMaximize && 
+						! $lbMinimize;then
 					break;
 				fi
 			fi
-			SEC_WARN=true SECFUNCechoWarnA "still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex' (to stop this, execute \`kill $BASHPID\`)"
+			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg (to stop this, execute \`kill $BASHPID\`)"
 			sleep $lnDelay;
 		done
-	) & lnChildPid=$!
+	) & lnChildPid=$!;if $lbChild;then wait;fi
 	
 	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
 	#echo "$lnChildPid"

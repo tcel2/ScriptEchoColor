@@ -64,6 +64,28 @@ function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 }
 
 function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
+	local lbWait=true
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--nowait" || "$1" == "-n" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help will not wait other exit, will just check for it
+			lbWait=false
+		elif [[ "$1" == "--" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift
+	done
+	
 	# check if there is other pids than self tree
 	SECFUNCdelay $FUNCNAME --init
 	
@@ -72,14 +94,21 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 		strParams="$@"
 	fi
 	echoc --info "checking dup for this '$SECstrScriptSelfName${strParams}' pid=$$"
+	ps --no-headers -o cmd -p $$
 	
 	while true;do
 		echoc --info "check if this script is already running for `SECFUNCdelay $FUNCNAME --getpretty`"
 		
 		anPidList=(`pgrep -f "$SECstrScriptSelfName${strParams}"`) #all pids with this script command, including self
-		declare -p anPidList
+		SECFUNCexecA -ce declare -p anPidList
+		
 		anPidSkipList=(`SECFUNCppidList --addself --child --pid $$`)
-		declare -p anPidSkipList
+		anPidSkipList+=(`SECFUNCppidList --pid $$`)
+		SECFUNCexecA -ce declare -p anPidSkipList
+		
+		#TODO wont work with secXtermDetached.sh
+		SECFUNCexecA -ce ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}" "${anPidSkipList[@]}"
+		
 		for((i1=${#anPidList[@]}-1;i1>=0;i1--));do
 			nPid="${anPidList[i1]}"
 			for((i2=0;i2<${#anPidSkipList[@]};i2++));do
@@ -89,13 +118,21 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 				fi
 			done
 		done
-		declare -p anPidList
+		SECFUNCexecA -ce declare -p anPidList
 		
 #		if [[ -n "${anPidList[@]}" ]];then
 		if((${#anPidList[@]}>0));then
-			if ps --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
-				echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
+			if ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
+				if $lbWait;then
+					echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
+				else
+					return 0
+				fi
 				# DO NOT EXIT HERE TO NOT MESS USER SCRIPT! #exit 1 
+			else
+				if $lbWait;then
+					return 1
+				fi
 			fi
 		else
 			break;
@@ -103,6 +140,8 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 		
 		#sleep 60
 	done
+	
+	return 1 #because it was not running and reached here
 }
 
 #function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
