@@ -64,6 +64,7 @@ function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 }
 
 function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
+	#TODO integrate with SECFUNCfileLock, more than one lock for the same script; could be a file lock + id?
 	local lbWait=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
