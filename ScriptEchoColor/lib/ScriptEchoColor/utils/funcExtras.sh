@@ -88,7 +88,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			lstrStopMatchRegex="${1-}" #TODO pointless..
 		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help just wait regex match a window and return 0
 			lbWait=true
-		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child, helped by --wait 
+		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child. Useful after a previous line using --wait option.
 			lbChild=false
 		elif [[ "$1" == "--" ]];then #SECFUNCCwindowCmd_help params after this are ignored as being these options
 			shift
@@ -213,7 +213,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			fi
 		done	
 	}
-	SECFUNCCwindowCmd_ChildLoop&lnChildPid=$!;if $lbChild;then wait;fi
+	(SECFUNCCwindowCmd_ChildLoop)&lnChildPid=$!;if ! $lbChild;then wait;fi
 	
 	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
 	#echo "$lnChildPid"

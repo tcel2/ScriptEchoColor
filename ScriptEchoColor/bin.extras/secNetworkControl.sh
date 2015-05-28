@@ -77,8 +77,9 @@ if $bToggle;then
 	fi
 	
 	if FUNCsetEnable $bEnable;then
-		SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
-		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
+		strTitle="$SECstrScriptSelfName: Info Internet Status"
+		SECFUNCCwindowOnTop -d 1 "^$strTitle$"
+		SECFUNCexecA -ce zenity --timeout 3 --info --title "$strTitle" --text "$strText"&
 		echoc --say --info "$strText"
 	fi
 	
