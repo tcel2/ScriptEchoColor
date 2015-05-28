@@ -48,6 +48,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 	local lbWait=false
 	local lbChild=true
 	local lbMinimize=false
+	local lnTimeout=60
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
@@ -79,10 +80,13 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			lnHeight="${1-}"
 			
 			lbMoveGeom=true;
+		elif [[ "$1" == "--timeout" || "$1" == "-o" ]];then #SECFUNCCwindowCmd_help <lnTimeout> after this timeout, will stop looking for window to match
+			shift 
+			lnTimeout="${1-}"
 		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them.
 			shift
 			lstrStopMatchRegex="${1-}" #TODO pointless..
-		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help wait regex match a window and return
+		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help just wait regex match a window and return 0
 			lbWait=true
 		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child, helped by --wait 
 			lbChild=false
@@ -116,6 +120,10 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		return 0
 	fi
 	
+	if ! SECFUNCisNumber -dn $lnTimeout;then
+		SECFUNCechoErrA "invalid lnTimeout='$lnTimeout'"
+		return 1
+	fi
 	if ! SECFUNCisNumber -d $lnPosX;then
 		SECFUNCechoErrA "invalid lnPosX='$lnPosX'"
 		return 1
@@ -152,7 +160,9 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		return 0
 	fi
 	
-	( #child process
+	function SECFUNCCwindowCmd_ChildLoop() {
+		SECFUNCrestoreAliases; # required as aliases are not applied on child processes like ()&
+#child process
 		local lbStop=false
 		trap 'lbStop=true;' USR1
 		while true;do
@@ -196,8 +206,14 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			fi
 			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg (to stop this, execute \`kill $BASHPID\`)"
 			sleep $lnDelay;
-		done
-	) & lnChildPid=$!;if $lbChild;then wait;fi
+			
+			if SECFUNCdelay lnTimeout --checkorinit $lnTimeout;then
+				SECFUNCechoErrA "$lstrWarnMsg (TIMEOUT)"
+				break;
+			fi
+		done	
+	}
+	SECFUNCCwindowCmd_ChildLoop&lnChildPid=$!;if $lbChild;then wait;fi
 	
 	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
 	#echo "$lnChildPid"

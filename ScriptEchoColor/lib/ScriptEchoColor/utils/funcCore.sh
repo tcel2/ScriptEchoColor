@@ -27,7 +27,8 @@
 # TOP CODE
 if ${SECinstallPath+false};then export SECinstallPath="`secGetInstallPath.sh`";fi; #to be faster
 SECastrFuncFilesShowHelp+=("$SECinstallPath/lib/ScriptEchoColor/utils/funcCore.sh") #no need for the array to be previously set empty
-source "$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh";
+export SECstrFileLibFast="$SECinstallPath/lib/ScriptEchoColor/utils/funcFast.sh"
+source "$SECstrFileLibFast";
 ###############################################################################
 
 # FUNCTIONS
@@ -1472,6 +1473,10 @@ function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this fu
 			break;
 		fi;
 	done
+}
+
+function SECFUNCrestoreAliases() {
+	source "$SECstrFileLibFast";
 }
 
 export SECbScriptSelfNameChanged=false
