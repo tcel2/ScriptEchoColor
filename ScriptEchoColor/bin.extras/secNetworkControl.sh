@@ -69,21 +69,34 @@ function FUNCsetEnable(){
 }
 
 if $bToggle;then
+	bEnable=true
+	strText="Internet ON"
 	if nmcli nm |tail -n 1 |grep -q connected;then 
-		if FUNCsetEnable false;then
-			strText="Internet OFF"
-			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
-			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
-			echoc --say --info "$strText"
-		fi
-	else 
-		if FUNCsetEnable true;then
-			strText="Internet ON"
-			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
-			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
-			echoc --say --info "$strText"
-		fi
+		bEnable=false
+		strText="Internet OFF"
 	fi
+	
+	if FUNCsetEnable $bEnable;then
+		SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
+		zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
+		echoc --say --info "$strText"
+	fi
+	
+#	if nmcli nm |tail -n 1 |grep -q connected;then 
+#		if FUNCsetEnable false;then
+#			strText="Internet OFF"
+#			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
+#			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
+#			echoc --say --info "$strText"
+#		fi
+#	else 
+#		if FUNCsetEnable true;then
+#			strText="Internet ON"
+#			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
+#			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
+#			echoc --say --info "$strText"
+#		fi
+#	fi
 	exit $?
 fi
 
