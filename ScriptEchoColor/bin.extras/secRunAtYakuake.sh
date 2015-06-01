@@ -24,8 +24,6 @@
 
 eval `secinit`
 
-echoc -p "$0 needs fixing, is currently broken..";exit 1;
-
 function echoerr {
   echo "$@" >>/dev/stderr
 }
@@ -147,6 +145,7 @@ function FUNCtask {
 #wait for yakuake to start
 nSleep=0
 bNewSessionAlways=false
+nAddSessions=0
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 	  #grep "\"--" $0 |grep -v grep
@@ -165,6 +164,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nSleep="${1-}"
 	elif [[ "$1" == "--newsession" || "$1" == "-n" ]];then #help always open a new session
 		bNewSessionAlways=true;
+	elif [[ "$1" == "--justaddsessions" || "$1" == "-a" ]];then #help just add <nAddSessions> and exit
+		shift
+		nAddSessions="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -174,6 +176,20 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if ! SECFUNCisNumber -dn $nAddSessions;then
+	echoc -p invalid "nAddSessions='$nAddSessions'"
+	exit 1
+fi
+
+if((nAddSessions>0));then
+	for((i=0;i<nAddSessions;i++));do 
+		qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.addSession;
+	done
+	exit 0
+fi
+
+echoc -p "$0, further functionalities needs fixing, is currently broken..";exit 1;
 
 if ! SECFUNCisNumber -dn $nSleep;then
 	echoc -p invalid "nSleep='$nSleep'"
