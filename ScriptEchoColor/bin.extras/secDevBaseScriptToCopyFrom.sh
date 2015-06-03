@@ -89,8 +89,10 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-CFGstrTest="Test"
 strExample="DefaultValue"
+bCfgTest=false
+CFGstrTest="Test"
+strParamWithOptionalValue="OptinalValue"
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
@@ -101,6 +103,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
+	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
+		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
+			shift
+			CFGstrTest="$1"
+		fi
+		
+		bCfgTest=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
