@@ -554,6 +554,57 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	
 	return 0
 }
+function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with specified prefix, default "CFG"
+	# var init here
+	local lstrPrefix="CFG"
+	local lbShowAll=true
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCcfgAutoWriteAllVars_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--noshow" || "$1" == "-n" ]];then #SECFUNCcfgAutoWriteAllVars_help will hide the default displaying of all config variables
+			lbShowAll=false
+		elif [[ "$1" == "--prefix" || "$1" == "-p" ]];then #SECFUNCcfgAutoWriteAllVars_help <lstrPrefix> cfg variables must begin with this prefix
+			shift
+			lstrPrefix="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCcfgAutoWriteAllVars_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	local lstrAllCfgVars="`declare |egrep "^[[:alnum:]_]*=" |egrep "^$lstrPrefix" |sed -r 's"^([^=]*)=.*"\1"'`"
+	#declare -p lstrAllCfgVars
+	local lastrAllCfgVars;IFS=$'\n' read -d'' -r -a lastrAllCfgVars < <(echo "$lstrAllCfgVars")&&:
+	#declare -p lastrAllCfgVars
+	
+	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
+		for lstrCfgVar in "${lastrAllCfgVars[@]-}";do
+			SECFUNCcfgWriteVar $lstrCfgVar
+			if $lbShowAll;then
+				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar}'" >>/dev/stderr
+			fi
+		done
+	fi
+	
+#	if $lbShowAll;then
+#		if [[ -n "${lastrAllCfgVars[@]-}" ]];then
+#			SECFUNCexecA -ce cat "$SECcfgFileName"
+#			#declare -p ${lastrAllCfgVars[@]}
+#		else
+#			SECFUNCechoWarnA "no cfg variables found..."
+#		fi
+#	fi
+}
 
 function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
 	SECFUNCdbgFuncInA;

@@ -267,13 +267,50 @@ fi
 # MAIN CODE
 #export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
 
-function SECFUNCarraySize() { #help usefull to prevent unbound variable error message
-	local lstrArrayId="$1"
-	if ! ${!lstrArrayId+false};then #this becomes false if unbound
-		eval 'echo "${#'$lstrArrayId'[@]}"'
-	else
+function SECFUNCarraySize() { #help usefull to prevent unbound variable error message; returns 1 if var is not an array and output 0; output to stdout the array size value
+	# var init here
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--" ]];then #SECFUNCarraySize_help params after this are ignored as being these options
+			shift
+			break
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	local lstrArrayId="${1-}"
+	
+	if [[ -z "$lstrArrayId" ]];then
+		SECFUNCechoWarnA "invalid lstrArrayId='$lstrArrayId'"
 		echo "0"
+		return 1
 	fi
+	
+	local sedGetVarModifiers="s@declare -([^[:blank:]]*) ${lstrArrayId}=.*@\1@"
+	if ! declare -p "${lstrArrayId}" |sed -r "$sedGetVarModifiers" |egrep -qo "[Aa]";then
+		SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
+		echo "0"
+		return 1
+	fi
+	
+#	if ! ${!lstrArrayId+false};then #this becomes false if unbound
+#		eval 'echo "${#'$lstrArrayId'[@]}"'
+#	else
+#		SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
+#		echo "0" #if not array or invalid
+#	fi
+	eval 'echo "${#'$lstrArrayId'[@]}"'
+	
+	return 0
 }
 
 : ${SECstrBashSourceFiles:=}

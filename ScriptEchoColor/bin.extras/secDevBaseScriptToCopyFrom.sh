@@ -82,14 +82,16 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 #			SECFUNCechoErrA "invalid option '$1'"
 #			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
 		fi
-		shift
+		shift&&:
 	done
 	
 	# code here
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+CFGstrTest="Test"
 strExample="DefaultValue"
+SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -107,8 +109,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		$0 --help
 		exit 1
 	fi
-	shift
+	shift&&:
 done
+# IMPORTANT validate CFG vars here before writing them all...
+SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 SECFUNCexec -c --echo FUNCexample --help
