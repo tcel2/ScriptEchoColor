@@ -30,6 +30,7 @@ bListProfiles=false
 bForce1st=false
 strProfile=""
 bDaemon=false
+bWait=true
 varset --allowuser --default nDaemonSleep=60
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -42,7 +43,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListProfiles=true;
 	elif [[ "$1" == "--daemon" ]];then #help keeps running endlessly
 		bDaemon=true;
-	elif [[ "$1" == "--delay" ]];then #help <delayInSeconds> changes the --daemon delay
+		bWait=false
+	elif [[ "$1" == "--delay" ]];then #help <nDaemonSleep> changes the --daemon delay
 		shift
 		varset --show nDaemonSleep="${1-}"
 	elif [[ "$1" == "--profile" ]];then #help <"profile name"> see --list
@@ -50,6 +52,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strProfile="${1-}"
 	elif [[ "$1" == "--force1st" ]];then #help forces propagate from 1st root to 2nd, makes it work like a "one way" mirroring/backuper, and do not ask questions to user
 		bForce1st=true
+	elif [[ "$1" == "--nowait" ]];then #help will not wait for user review of unison command (daemon will already not wait)
+		bWait=false
 	elif [[ "$1" == "--" ]];then #help remaining params after this are considered as not being options
 		lbStopParams=true;
 	else
@@ -124,7 +128,7 @@ function FUNCrun() {
 	if $bAutoRun;then
 		lbRun=true
 	else
-		if ! $bDaemon;then
+		if $bWait;then
 			echoc --info "$strExec"
 			if echoc -q "Run it?";then
 				lbRun=true
@@ -132,6 +136,16 @@ function FUNCrun() {
 		else
 			lbRun=true
 		fi
+#		if $bDaemon;then
+#			lbRun=true
+#		elif $bWait;then
+#			echoc --info "$strExec"
+#			if echoc -q "Run it?";then
+#				lbRun=true
+#			fi
+#		else
+#			lbRun=true
+#		fi
 	fi
 
 	if $lbRun;then
