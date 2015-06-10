@@ -54,7 +54,8 @@ export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""
 bOnTop=false
-while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+	SECFUNCsingleLetterOptionsA
 	#echo "Param: $1"
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Opens a terminal that will keep running after its parent terminal ends execution."
@@ -93,7 +94,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	elif [[ "$1" == "--xtermopts" ]];then #help <SECXstrXtermOpts> pass the next param as options to xterm
 		shift
 		SECXstrXtermOpts="${1-}"
-	elif [[ "$1" == "--waitonexit" ]];then #help <SECXnExitWait> wait seconds before exiting
+	elif [[ "$1" == "--waitonexit" || "$1" == "-w" ]];then #help <SECXnExitWait> wait seconds before exiting
 		shift
 		SECXnExitWait="${1-}"
 	elif [[ "$1" == "--skiporganize" || "$1" == "--skipcascade" ]];then #help to xterm not be auto organized 
@@ -114,13 +115,18 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		SECFUNCechoErrA "invalid option $1"
 		exit 1
 	fi
-	shift
+	shift&&:
 	#echo "NextParam: $1"
 done
 
 #echo "Remaining Params: $@"
 if [[ -z "${1-}" ]];then
 	echoc -p "missing command to exec"
+	exit 1
+fi
+
+if ! SECFUNCisNumber -dn $SECXnExitWait;then
+	echoc -p "invalid SECXnExitWait='$SECXnExitWait'"
 	exit 1
 fi
 

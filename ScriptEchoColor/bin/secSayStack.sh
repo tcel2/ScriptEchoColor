@@ -356,7 +356,7 @@ sayText="${1-}" #last param
 sedOnlyMd5sum='s"([[:alnum:]]*)[[:blank:]]*.*"\1"'
 md5sumText=`echo "$sayText" |tr "[A-Z]" "[a-z]" |md5sum |sed -r "$sedOnlyMd5sum"`
 if $bClearCache;then
-	SECFUNCexecA trash "$_SECSAYcacheFolder"
+	SECFUNCexecA trash -v "$_SECSAYcacheFolder"
 	exit 0 #exit_FUNCsayStack: clear cache must be called alone (why?)
 fi
 SECFUNCexecA mkdir -p "$_SECSAYcacheFolder"
