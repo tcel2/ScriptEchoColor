@@ -49,6 +49,7 @@ bStay=false
 bListWaiting=false
 bCheckPointDaemonHold=false
 bRunAllNow=false
+bRespectedSleep=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
@@ -57,6 +58,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help <nSleepFor> seconds before executing the command with its params.
 		shift
 		nSleepFor="${1-}"
+	elif [[ "$1" == "--respectedsleep" || "$1" == "-r" ]];then #help with this, sleep delay will be respected and --SECCFGbOverrideRunAllNow will be ignored.
+		bRespectedSleep=true
 	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
 		shift
 		nDelayAtLoops="${1-}"
@@ -351,9 +354,11 @@ function FUNCsleep() { #timings are adjusted against each other, the checkpoint 
 	while true;do
 		SECFUNCcfgReadDB SECCFGbOverrideRunAllNow
 #		SECFUNCvarShow SECCFGbOverrideRunAllNow
-		echo "SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'"
-		if $SECCFGbOverrideRunAllNow;then
-			break;
+		if ! $bRespectedSleep;then
+			echo "SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'"
+			if $SECCFGbOverrideRunAllNow;then
+				break;
+			fi
 		fi
 		
 		local lnSleepStep=5
@@ -364,7 +369,7 @@ function FUNCsleep() { #timings are adjusted against each other, the checkpoint 
 			lnSleepFor=0
 		fi
 		
-		echo "sleeping for: $lnSleepStep (tot=$nSleepFor)"
+		echo "sleeping for: $lnSleepStep of $nSleepFor"
 		sleep $lnSleepStep
 		
 		if((lnSleepFor==0));then 
@@ -454,5 +459,5 @@ if $bStay;then
 fi
 
 # end Log
-FUNClog end "delay `SECFUNCdelay RUN --getpretty`"
+FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
 
