@@ -23,37 +23,111 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 # these prevent continuing on errors...
-trap 'exit 1' ERR
+trap 'echo "ERROR...";exit 1' ERR
 set -u 
 
-if [[ ! -f "bin/ScriptEchoColor.sh" ]];then
-	echo -e "\E[0m\E[31m\E[103m\E[5m '$0' must be run at '`dirname "$0"`/' like: './`basename "$0"`' \E[0m"
-	read -n 1 -p "press a key to exit..."
-	exit 1
+################## init 
+
+function FUNCconsumeKeyBuffer() {
+  while true;do
+    read -n 1 -t 0.1&&:
+    if(($?==142));then #142 is: no key was pressed
+      break;
+    fi;
+  done
+}
+function FUNCexecEcho() {
+  #echo "======================="
+  #echo "EXEC: $@"
+  echo -e "EXEC: \E[0m\E[37m\E[46m\E[1m$@\E[0m"
+  "$@"
+  echo
+}
+function echoi(){
+	echo -e "\E[0m\E[34m\E[47m$@\E[0m"
+}
+function echop(){
+	echo -e "\E[0m\E[33m\E[41m\E[1mPROBLEM: $@\E[0m"
+}
+function echow(){
+	echo -e "\E[0m\E[97m\E[44m$@\E[0m"
+	FUNCconsumeKeyBuffer
+	read -n 1
+}
+function echoa(){
+	echo -e "\E[0m\E[31m\E[103m\E[5m$@\E[0m"
+}
+
+strSelfName="`basename "$0"`"
+strMainFile="ScriptEchoColor/bin/ScriptEchoColor.sh"
+
+: ${SECstrUserInstallPath:=$HOME/ScriptEchoColor}
+echoi "to change the default, before running this script, set env var SECstrUserInstallPath='$SECstrUserInstallPath' to something else."
+
+################ self check
+echoi " checking for this script update... "
+strTmpSelf="/tmp/$strSelfName"
+FUNCexecEcho wget -O "$strTmpSelf" "http://sourceforge.net/projects/scriptechocolor/files/Ubuntu%20.deb%20packages/$strSelfName/download"
+if ! FUNCexecEcho cmp "$0" "$strTmpSelf";then
+	(
+		FUNCexecEcho cp -vf "$strTmpSelf" "$0"
+		FUNCexecEcho ls -l "$0"
+		echoa "updated '$strSelfName', re-run it."
+	)&disown
+	exit 0
+fi
+
+################## validate installation
+bFirstClone=false
+if [[ ! -d "$strUserInstallPath" ]];then
+	FUNCexecEcho mkdir -vp "$strUserInstallPath"
+	bFirstClone=true
+fi
+FUNCexecEcho cd "$strUserInstallPath"
+
+if ! $bFirstClone;then
+	if [[ ! -f "$strMainFile" ]];then
+		echop "problem at installation? unable to find strMainFile='$strMainFile'"
+		echoa "remove/trash/rename its install path manually."
+		FUNCexecEcho pwd
+		#echop "'$0' must be run at '`dirname "$0"`/' like: './$strSelfName'"
+		echow "press a key to exit..."
+		exit 1
+	fi
+fi
+
+################# MAIN
+
+if $bFirstClone;then
+	FUNCexecEcho git clone git://git.code.sf.net/p/scriptechocolor/git "$strUserInstallPath"
+	echoi "first clone done!"
 fi
 echo
 
 ############################ at ScriptEchoColor/
-echo ">>---> removing local and updating from git... <---<<"
-pwd
-read -n 1 -p "continue? (ctrl+c to exit)"
-#git pull origin
-git reset --hard HEAD;
-git clean -f -d;
-git pull
-echo
+if ! $bFirstClone;then
+	echoi ">>---> removing local and updating from git... <---<<"
+	FUNCexecEcho pwd
+	echow "continue? (ctrl+c to exit)"
+	#git pull origin
+	FUNCexecEcho git reset --hard HEAD;
+	FUNCexecEcho git clean -f -d;
+	FUNCexecEcho git pull
+	echo
+fi
 
-cd bin #################################### at ScriptEchoColor/bin/
-echo ">>---> creating symlinks <---<<"
-pwd
+FUNCexecEcho cd bin #################################### at ScriptEchoColor/bin/
+echoi ">>---> creating/updating symlinks <---<<"
+FUNCexecEcho pwd
 strSECbinInstPathGit="`pwd`"
 ln -vs ../bin.extras/*   ./ 2>&1 |egrep -v ": File exists$"
 ln -vs ../bin.examples/* ./ 2>&1 |egrep -v ": File exists$"
 echo
 
-echo ">>---> initialize ScriptEchoColor <---<<"
+echoa testing;exit 0 #@@@!!! remove this line
+echoi ">>---> initialize ScriptEchoColor <---<<"
 ./echoc --info "ScriptEchoColor @nenabled!" #will initialize it
 echo
 
-echo ">>---> now add this '$strSECbinInstPathGit' to your PATH variable <---<<"
+echoa ">>---> now add this '$strSECbinInstPathGit' to your PATH variable <---<<"
 echo
