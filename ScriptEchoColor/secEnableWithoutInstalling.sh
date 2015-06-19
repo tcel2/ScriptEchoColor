@@ -22,8 +22,6 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-echo "being re-coded, wait a bit...";exit 0
-
 # these prevent continuing on errors...
 trap 'echo "ERROR...";exit 1' ERR
 set -u 
@@ -39,24 +37,24 @@ function FUNCconsumeKeyBuffer() {
   done
 }
 function FUNCexecEcho() {
-  #echo "======================="
-  #echo "EXEC: $@"
+  local lnRet
   echo -e "EXEC: \E[0m\E[37m\E[46m\E[1m$@\E[0m"
-  "$@"
+  "$@"&&:;lnRet=$?
   echo
+  return $lnRet;
 }
-function echoi(){
+function echoi(){ #info
 	echo -e "\E[0m\E[34m\E[47m$@\E[0m"
 }
-function echop(){
+function echop(){ #problem
 	echo -e "\E[0m\E[33m\E[41m\E[1mPROBLEM: $@\E[0m"
 }
-function echow(){
+function echow(){ #wait
 	echo -e "\E[0m\E[97m\E[44m$@\E[0m"
 	FUNCconsumeKeyBuffer
 	read -n 1
 }
-function echoa(){
+function echoa(){ #alert
 	echo -e "\E[0m\E[31m\E[103m\E[5m$@\E[0m"
 }
 
@@ -67,25 +65,29 @@ strMainFile="ScriptEchoColor/bin/ScriptEchoColor.sh"
 echoi "to change the default, before running this script, set env var SECstrUserInstallPath='$SECstrUserInstallPath' to something else."
 
 ################ self check
+#if false;then
 echoi " checking for this script update... "
 strTmpSelf="/tmp/$strSelfName"
 FUNCexecEcho wget -O "$strTmpSelf" "http://sourceforge.net/projects/scriptechocolor/files/Ubuntu%20.deb%20packages/$strSelfName/download"
 if ! FUNCexecEcho cmp "$0" "$strTmpSelf";then
 	(
+		FUNCexecEcho ls -l "$0"
 		FUNCexecEcho cp -vf "$strTmpSelf" "$0"
 		FUNCexecEcho ls -l "$0"
 		echoa "updated '$strSelfName', re-run it."
 	)&disown
 	exit 0
 fi
+#fi
 
 ################## validate installation
 bFirstClone=false
-if [[ ! -d "$strUserInstallPath" ]];then
-	FUNCexecEcho mkdir -vp "$strUserInstallPath"
+if [[ ! -d "$SECstrUserInstallPath" ]];then
+	FUNCexecEcho mkdir -vp "$SECstrUserInstallPath"
 	bFirstClone=true
 fi
-FUNCexecEcho cd "$strUserInstallPath"
+FUNCexecEcho cd "$SECstrUserInstallPath"
+FUNCexecEcho pwd
 
 if ! $bFirstClone;then
 	if [[ ! -f "$strMainFile" ]];then
@@ -101,7 +103,7 @@ fi
 ################# MAIN
 
 if $bFirstClone;then
-	FUNCexecEcho git clone git://git.code.sf.net/p/scriptechocolor/git "$strUserInstallPath"
+	FUNCexecEcho git clone git://git.code.sf.net/p/scriptechocolor/git "$SECstrUserInstallPath"
 	echoi "first clone done!"
 fi
 echo
@@ -118,18 +120,18 @@ if ! $bFirstClone;then
 	echo
 fi
 
-FUNCexecEcho cd bin #################################### at ScriptEchoColor/bin/
+FUNCexecEcho cd "ScriptEchoColor/bin" #################################### at ScriptEchoColor/bin/
 echoi ">>---> creating/updating symlinks <---<<"
 FUNCexecEcho pwd
-strSECbinInstPathGit="`pwd`"
 ln -vs ../bin.extras/*   ./ 2>&1 |egrep -v ": File exists$"
 ln -vs ../bin.examples/* ./ 2>&1 |egrep -v ": File exists$"
 echo
 
-echoa testing;exit 0 #@@@!!! remove this line
 echoi ">>---> initialize ScriptEchoColor <---<<"
-./echoc --info "ScriptEchoColor @nenabled!" #will initialize it
+./echoc --info "Success! ScriptEchoColor @nenabled!" #will initialize it
 echo
 
-echoa ">>---> now add this '$strSECbinInstPathGit' to your PATH variable <---<<"
+echoa ">>---> now add the below to your PATH variable <---<<"
+echoi "`secGetInstallPath.sh`/bin"
 echo
+
