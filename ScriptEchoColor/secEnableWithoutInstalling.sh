@@ -110,7 +110,7 @@ echo
 
 ############################ at ScriptEchoColor/
 if ! $bFirstClone;then
-	echoi ">>---> removing local and updating from git... <---<<"
+	echoi ">>---> cleaning local and updating from git... <---<<"
 	FUNCexecEcho pwd
 	echow "continue? (ctrl+c to exit)"
 	#git pull origin
