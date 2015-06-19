@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+echo "being re-coded, wait a bit...";exit 0
+
 # these prevent continuing on errors...
 trap 'echo "ERROR...";exit 1' ERR
 set -u 
