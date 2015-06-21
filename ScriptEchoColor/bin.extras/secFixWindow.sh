@@ -44,6 +44,7 @@ bWaitResquestFixAllOnly=false
 bForcedHold=true
 bFixCompiz=false
 fDefaultDelay=60
+bListUnmappedWindows=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -70,6 +71,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		fDefaultDelay="${1-}"
 	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply restarting compiz.
 		bFixCompiz=true
+	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
+		bListUnmappedWindows=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
 		sedVarValue="^([[:alnum:]]*)=(.*)"
@@ -98,6 +101,19 @@ if $bFixCompiz;then
   secXtermDetached.sh metacity --replace;
   sleep 3; #this blind delay helps on properly fixing
   secXtermDetached.sh compiz --replace
+  exit 0
+fi
+if $bListUnmappedWindows;then
+	anWindowIdList=(`xdotool search ".*"`);
+	echo -e "pid\twindowId\ttitle\tcmd";
+	for nWindowId in "${anWindowIdList[@]}";do 
+		if xwininfo -id $nWindowId |grep -q IsUnMapped;then 
+			nWindowPid=`xdotool getwindowpid $nWindowId 2>/dev/null`;
+			if [[ -n "$nWindowPid" ]];then 
+				echo -e "$nWindowPid\t$nWindowId\t`xdotool getwindowname $nWindowId`\t`ps --no-headers -o cmd -p $nWindowPid`";
+			fi;
+		fi;
+	done |sort -n
   exit 0
 fi
 

@@ -278,6 +278,7 @@ function FUNCorganize() {
 			eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 				viewportX=\1;\
 				viewportY=\2;"'`
+			SECFUNCexecA --echo xdotool windowmap $windowId	#why some windows get unmapped?
 			SECFUNCexecA --echo xdotool windowmove --sync $windowId \
 				$(( (basePosX-viewportX)+x )) \
 				$(( (basePosY-viewportY)+y )) 2>/dev/null; 
