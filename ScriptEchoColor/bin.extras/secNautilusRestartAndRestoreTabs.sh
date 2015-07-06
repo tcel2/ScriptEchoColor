@@ -29,6 +29,7 @@ fSafeDelay="3.0"
 bPersist=false
 bContinue=false
 bJustSave=false
+bFixMissDev=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
