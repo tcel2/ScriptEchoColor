@@ -38,15 +38,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--autoopentabs" || "$1" == "-a" ]];then #help key strokes will be sent to nautilus to auto open tabs, but you can do them manually (may be safer) after selecting all folders and hitting ctrl+shift+t
 		bAutoOpenTabs=true
+	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later (implies --persist ; disables --continue )
+		bJustSave=true
 	elif [[ "$1" == "--safedelay" ]];then #help <fSafeDelay> better not change this, unless it is more than default.
 		shift
 		fSafeDelay="${1-}"
-	elif [[ "$1" == "--persist" || "$1" == "-p" ]];then #help it will just store the tabs folders symlinks at user home instead of /tmp
+	elif [[ "$1" == "--persist" || "$1" == "-p" ]];then #help store the tabs folders symlinks at user home instead of /tmp
 		bPersist=true
 	elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #help will continue from last session open tabs, does not requires nautilus to be opened
 		bContinue=true
-	elif [[ "$1" == "--justsave" || "$1" == "-s" ]];then #help just save current tabs session to be reused later (implies --persist ; disables --continue )
-		bJustSave=true
 	elif [[ "$1" == "--fixmissingdevices" || "$1" == "-f" ]];then #help will refresh nautilus devices list
 		bFixMissDev=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -89,8 +89,8 @@ fi
 
 echoc --info "Optional parameters can be a tab locations to be added to a running nautilus."
 echoc --info "Unexpectedly it is usefull to mix all nautilus windows in a single multi-tabs window!"
-echoc --alert "WARNING: This is extremely experimental code, the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
-echoc --alert "WARNING: the window typing is blind, if another window pops up the typing will happen on that window and not at nautilus!"
+echoc --alert "WARNING: This is extremely experimental code! @-n the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
+echoc --alert "WARNING: the window typing is blind! @-n if another window pops up the typing will happen on that window and not at nautilus!"
 
 function FUNCnautilusFocus() {
 	#the last ones seems the right one, still a blind guess anyway...
