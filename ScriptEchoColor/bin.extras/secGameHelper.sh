@@ -63,9 +63,12 @@ function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 	done
 }
 
+function GAMEFUNCuniquelyRunThisSubScript() {
+	GAMEFUNCcheckIfThisScriptCmdIsRunning --nodeprecationwarn "$@"
+}
 function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
-	#TODO integrate with SECFUNCfileLock, more than one lock for the same script; could be a file lock + id?
 	local lbWait=true
+	local lbDeprecationWarn=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help show this help
@@ -73,6 +76,8 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 			return 0
 		elif [[ "$1" == "--nowait" || "$1" == "-n" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help will not wait other exit, will just check for it
 			lbWait=false
+		elif [[ "$1" == "--nodeprecationwarn" ]];then #not an user option.
+			lbDeprecationWarn=false
 		elif [[ "$1" == "--" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help params after this are ignored as being these options
 			shift
 			break
@@ -87,63 +92,107 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 		shift
 	done
 	
-	# check if there is other pids than self tree
-	SECFUNCdelay $FUNCNAME --init
-	
-	strParams=""
-	if [[ -n "${1-}" ]];then
-		strParams="$@"
+	if $lbDeprecationWarn;then
+		SECFUNCechoWarnA "use instead 'GAMEFUNCuniquelyRunThisSubScript'"
 	fi
-	echoc --info "checking dup for this '$SECstrScriptSelfName${strParams}' pid=$$"
-	ps --no-headers -o cmd -p $$
 	
-	while true;do
-		echoc --info "check if this script is already running for `SECFUNCdelay $FUNCNAME --getpretty`"
-		
-		anPidList=(`pgrep -f "$SECstrScriptSelfName${strParams}"`) #all pids with this script command, including self
-		SECFUNCexecA -ce declare -p anPidList
-		
-		anPidSkipList=(`SECFUNCppidList --addself --child --pid $$`)
-		anPidSkipList+=(`SECFUNCppidList --pid $$`)
-		SECFUNCexecA -ce declare -p anPidSkipList
-		
-		#TODO wont work with secXtermDetached.sh
-		SECFUNCexecA -ce ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}" "${anPidSkipList[@]}"
-		
-		for((i1=${#anPidList[@]}-1;i1>=0;i1--));do
-			nPid="${anPidList[i1]}"
-			for((i2=0;i2<${#anPidSkipList[@]};i2++));do
-				nPidSkip="${anPidSkipList[i2]}"
-				if((nPid==nPidSkip));then
-					unset anPidList[i1] # unset only works from last to first
-				fi
-			done
-		done
-		SECFUNCexecA -ce declare -p anPidList
-		
-#		if [[ -n "${anPidList[@]}" ]];then
-		if((${#anPidList[@]}>0));then
-			if ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
-				if $lbWait;then
-					echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
-				else
-					return 0
-				fi
-				# DO NOT EXIT HERE TO NOT MESS USER SCRIPT! #exit 1 
-			else
-				if $lbWait;then
-					return 1
-				fi
-			fi
+	local lstrDaemonId="$SECstrScriptSelfName $@"
+	lstrDaemonId="`SECFUNCfixIdA --justfix "$lstrDaemonId"`"
+	
+	if $lbWait;then
+		SECFUNCuniqueLock --id "$lstrDaemonId" --waitbecomedaemon
+	else
+		if SECFUNCuniqueLock --id "$lstrDaemonId" --isdaemonrunning;then
+			return 0
 		else
-			break;
+			return 1
 		fi
-		
-		#sleep 60
-	done
+	fi
 	
-	return 1 #because it was not running and reached here
+	return 0
 }
+
+#function _GAMEFUNCcheckIfThisScriptCmdIsRunning_old() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
+#	#TODO use instead of this work, the SECFUNCuniqueLock daemon mode... silly me..
+#	local lbWait=true
+#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+#		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+#		if [[ "$1" == "--help" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help show this help
+#			SECFUNCshowHelp $FUNCNAME
+#			return 0
+#		elif [[ "$1" == "--nowait" || "$1" == "-n" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help will not wait other exit, will just check for it
+#			lbWait=false
+#		elif [[ "$1" == "--" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help params after this are ignored as being these options
+#			shift
+#			break
+#		else
+#			SECFUNCechoErrA "invalid option '$1'"
+#			SECFUNCshowHelp $FUNCNAME
+#			return 1
+##		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+##			SECFUNCechoErrA "invalid option '$1'"
+##			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+#		fi
+#		shift
+#	done
+#	
+#	# check if there is other pids than self tree
+#	SECFUNCdelay $FUNCNAME --init
+#	
+#	strParams=""
+#	if [[ -n "${1-}" ]];then
+#		strParams="$@"
+#	fi
+#	echoc --info "checking dup for this '$SECstrScriptSelfName${strParams}' pid=$$"
+#	ps --no-headers -o cmd -p $$
+#	
+#	while true;do
+#		echoc --info "check if this script is already running for `SECFUNCdelay $FUNCNAME --getpretty`"
+#		
+#		anPidList=(`pgrep -f "$SECstrScriptSelfName${strParams}"`) #all pids with this script command, including self
+#		SECFUNCexecA -ce declare -p anPidList
+#		
+#		anPidSkipList=(`SECFUNCppidList --addself --child --pid $$`)
+#		anPidSkipList+=(`SECFUNCppidList --pid $$`)
+#		SECFUNCexecA -ce declare -p anPidSkipList
+#		
+#		#TODO wont work with secXtermDetached.sh
+#		SECFUNCexecA -ce ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}" "${anPidSkipList[@]}"
+#		
+#		for((i1=${#anPidList[@]}-1;i1>=0;i1--));do
+#			nPid="${anPidList[i1]}"
+#			for((i2=0;i2<${#anPidSkipList[@]};i2++));do
+#				nPidSkip="${anPidSkipList[i2]}"
+#				if((nPid==nPidSkip));then
+#					unset anPidList[i1] # unset only works from last to first
+#				fi
+#			done
+#		done
+#		SECFUNCexecA -ce declare -p anPidList
+#		
+##		if [[ -n "${anPidList[@]}" ]];then
+#		if((${#anPidList[@]}>0));then
+#			if ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
+#				if $lbWait;then
+#					echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
+#				else
+#					return 0
+#				fi
+#				# DO NOT EXIT HERE TO NOT MESS USER SCRIPT! #exit 1 
+#			else
+#				if $lbWait;then
+#					return 1
+#				fi
+#			fi
+#		else
+#			break;
+#		fi
+#		
+#		#sleep 60
+#	done
+#	
+#	return 1 #because it was not running and reached here
+#}
 
 #function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
 function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
