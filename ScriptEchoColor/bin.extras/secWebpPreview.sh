@@ -30,13 +30,13 @@ strSetupFileName="secwebp.thumbnailer"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "generate .webp previews for thumbnailers like the ones used by nautilus"
-		SECFUNCshowHelp --colorize "required params <strInFile> <nMaxDimension> <strOutFile> "
+		SECFUNCshowHelp --colorize "\tGenerate .webp previews for thumbnailers like the ones used by nautilus."
+		SECFUNCshowHelp --colorize "\tWhen generating a thumbnail, these are the required main params: <strInFile> <nMaxDimension> <strOutFile> "
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--setup" || "$1" == "-s" ]];then #help setup the thumbnailers file
+	elif [[ "$1" == "--setup" || "$1" == "-s" ]];then #help setup the thumbnailers file, this option must be run without the required main params
 		bCreateThumbnailersFile=true
-	elif [[ "$1" == "--setupfilename" ]];then #help <strSetupFileName>
+	elif [[ "$1" == "--setupfilename" ]];then #help <strSetupFileName> to be used by --setup
 		shift
 		strSetupFileName="${1-}"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
