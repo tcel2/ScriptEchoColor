@@ -57,6 +57,7 @@ function SECFUNCbeforePromptCommand(){ #help
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
 		SECdtBeforeCommandSec="`date +"%s"`"
 		SECdtBeforeCommandNano="`date +"%N"`"
+		echo "CmdBeginAt: `date +"$formatFullDateTime"`"
 	fi
 }
 trap 'SECFUNCbeforePromptCommand;' DEBUG
