@@ -461,7 +461,7 @@ function FUNClsNot() { #synchronize like
 		echoc --info "File list that are not at Remote Backup Folder:"
 		echo "$listOfFiles"
 		
-		if echoc -t 3 -q "select what files you want to add?";then
+		if echoc -t 60 -q "select what files you want to add?";then
 			bAddFilesMode=true
 		fi
 		
