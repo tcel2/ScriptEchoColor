@@ -43,6 +43,7 @@ strReactWindNamesRegex=""
 bWaitResquestFixAllOnly=false
 bForcedHold=true
 bFixCompiz=false
+bFixCairoDock=false
 fDefaultDelay=60
 bListUnmappedWindows=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
@@ -71,6 +72,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		fDefaultDelay="${1-}"
 	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply restarting compiz.
 		bFixCompiz=true
+	elif [[ "$1" == "--fixcairodock" ]];then #help to fix cairo-dock (if it malfunction for any reason) by properly replacing it.
+		bFixCairoDock=true
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
@@ -97,13 +100,25 @@ if ! SECFUNCisNumber -n $fDefaultDelay;then
 	exit 1
 fi
 
+# run these and exit
 if $bFixCompiz;then
   secXtermDetached.sh metacity --replace;
   sleep 3; #this blind delay helps on properly fixing
   secXtermDetached.sh compiz --replace
   exit 0
-fi
-if $bListUnmappedWindows;then
+elif $bFixCairoDock;then
+	SECFUNCexecA -ce pkill cairo-dock&&:
+	SECFUNCexecA -ce pkill cairo-dock-unity-bridge&&:
+	
+	while SECFUNCexecA -ce pgrep cairo-dock;do
+		sleep 1
+	done
+	
+	#cairo-dock --log message
+	#cairo-dock >>/tmp/".`basename "$0"`.log"&disown
+	secXtermDetached.sh cairo-dock
+	exit 0
+elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);
 	echo -e "pid\twindowId\ttitle\tcmd";
 	for nWindowId in "${anWindowIdList[@]}";do 
