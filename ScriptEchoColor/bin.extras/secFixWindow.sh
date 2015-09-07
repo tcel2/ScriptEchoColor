@@ -46,6 +46,7 @@ bFixCompiz=false
 bFixCairoDock=false
 fDefaultDelay=60
 bListUnmappedWindows=false
+bFixYakuake=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -74,6 +75,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixCompiz=true
 	elif [[ "$1" == "--fixcairodock" ]];then #help to fix cairo-dock (if it malfunction for any reason) by properly replacing it.
 		bFixCairoDock=true
+	elif [[ "$1" == "--fixyakuake" ]];then #help to fix yakuake (if it malfunction for any reason) by properly replacing it.
+		bFixYakuake=true
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
@@ -106,6 +109,12 @@ if $bFixCompiz;then
   sleep 3; #this blind delay helps on properly fixing
   secXtermDetached.sh compiz --replace
   exit 0
+elif $bFixYakuake;then
+ 	SECFUNCexecA -ce killall -9 yakuake&&:
+	SECFUNCexecA -ce sleep 5 # does this help?
+	#secXtermDetached.sh --daemon --donotclose yakuake
+	secXtermDetached.sh --donotclose yakuake #yakuake returns the command prompt, but keeps running...
+	exit 0
 elif $bFixCairoDock;then
 	SECFUNCexecA -ce pkill cairo-dock&&:
 	SECFUNCexecA -ce pkill cairo-dock-unity-bridge&&:
@@ -116,7 +125,7 @@ elif $bFixCairoDock;then
 	
 	#cairo-dock --log message
 	#cairo-dock >>/tmp/".`basename "$0"`.log"&disown
-	secXtermDetached.sh cairo-dock
+	secXtermDetached.sh --daemon cairo-dock
 	exit 0
 elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);

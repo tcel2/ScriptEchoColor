@@ -36,7 +36,8 @@ eval `secinit`
 #	export SECbTermLog=false
 #fi
 
-bDoNotClose=false
+#bDoNotClose=false
+export SECXbDoNotClose=false
 bSkipCascade=false
 bWaitDBsymlink=true
 bKillSkip=false
@@ -86,7 +87,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--ontop" ]];then #help set xterm on top
 		bOnTop=true
 	elif [[ "$1" == "--donotclose" ]];then #help keep xterm running after execution completes
-		bDoNotClose=true
+		#bDoNotClose=true
+		SECXbDoNotClose=true
 	elif [[ "$1" == "--logonly" ]];then #help the shown xterm will be just a log monitoring, unable to interact with the application running on it, with options to manage it
 		SECXbLogOnly=true
 	elif [[ "$1" == "--nohup" ]];then #help the command will be executed with nohup, so will keep running even if terminal closes. It is more interesting to use --logonly as you will be able to manage that pid.
@@ -183,10 +185,11 @@ fi
 #	echoc --info "Log at: '$strLogFile'"
 #fi
 
-strDoNotClose=""
-if $bDoNotClose;then
-	strDoNotClose=";bash"
-fi
+#strCmdDoNotClose=""
+#if $bDoNotClose;then
+#	strCmdDoNotClose=";SECFUNCechoWarnA 'Will not close this terminal';bash"
+#	#strCmdDoNotClose=";bash"
+#fi
 
 # trick to avoid error message where function id may conflict (may already exist) #TODO unnecessary?
 strPseudoFunctionId="${strTitle}_pid$$_Title"
@@ -195,8 +198,10 @@ while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	strPseudoFunctionId="${strPseudoFunctionId}_"
 done
 #eval "function $strPseudoFunctionId () { local ln=0; };export -f $strPseudoFunctionId"
-#eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strDoNotClose}; };export -f $strPseudoFunctionId"
-eval "function $strPseudoFunctionId () { FUNCexecParams${strDoNotClose}; };export -f $strPseudoFunctionId"
+#eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strCmdDoNotClose}; };export -f $strPseudoFunctionId"
+#eval "function $strPseudoFunctionId () { eval \`secinit\`;FUNCexecParams${strCmdDoNotClose}; };export -f $strPseudoFunctionId"
+#eval "function $strPseudoFunctionId () { eval \`secinit\`;FUNCexecParams; };export -f $strPseudoFunctionId"
+eval "function $strPseudoFunctionId () { FUNCexecParams; };export -f $strPseudoFunctionId"
 #type $strPseudoFunctionId
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
@@ -214,7 +219,7 @@ if $SECXbDaemon;then
 	fi
 fi
 
-#params=`SECFUNCparamsToEval --escapequotes "$@"`"${strDoNotClose}${strSkipCascade}"
+#params=`SECFUNCparamsToEval --escapequotes "$@"`"${strCmdDoNotClose}${strSkipCascade}"
 ############# THIS FUNCTION MUST BE HERE AFTER OPTIONS #######
 export strFUNCexecMainCmd="$1"
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
@@ -223,10 +228,16 @@ function FUNCexecParams() {
 	
 	if $SECXbDaemon;then
 		while true;do
-			SECFUNCuniqueLock --setdbtodaemon $strTitle #SECFUNCdaemonUniqueLock $strTitle
-			if ! $SECbDaemonWasAlreadyRunning;then
-				break
-			fi
+			#SECFUNCuniqueLock --id "$strTitle" --isdaemonrunning
+			SECFUNCuniqueLock --id "$strTitle" --setdbtodaemon #SECFUNCdaemonUniqueLock $strTitle
+			
+			if $SECbDaemonWasAlreadyRunning;then
+				echoc --info "waiting other daemon exit"
+				sleep 1
+				continue;
+			fi	
+			
+			break
 		done
 	fi
 
@@ -241,7 +252,8 @@ function FUNCexecParams() {
 		# stdout must be redirected or the terminal wont let it be a detached child...
 		#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
 		#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
-		nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
+		#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
+		SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown
 		nPidCmd=$!
 		
 		while true;do
@@ -267,9 +279,9 @@ function FUNCexecParams() {
 		done
 	else
 		if $SECXbNoHup;then
-			nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
+			SECFUNCexecA -ce nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
 		else
-			bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
+			SECFUNCexecA -ce bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
 		fi
 		
 		if((nRet!=0));then
@@ -281,10 +293,16 @@ function FUNCexecParams() {
 	if((SECXnExitWait>0));then
 		echoc -w -t $SECXnExitWait #wait some time so any log can be read..
 	fi
+	
+	if $SECXbDoNotClose;then
+		echoc --info "This terminal will not be auto-closed!"
+		SECFUNCexecA -ce bash
+	fi
+	
 	#echoc -w -t 60
 };export -f FUNCexecParams
 #strExec="echo \"TEMP xterm...\"; xterm -e \"$params\"; read -n 1"
-#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strDoNotClose}${strSkipCascade}'\"; read -n 1"
+#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -e 'echo \"$1\";FUNCexecParams${strCmdDoNotClose}${strSkipCascade}'\"; read -n 1"
 
 #function FUNCwatchLog() {
 #	if $bLog;then
@@ -294,7 +312,7 @@ function FUNCexecParams() {
 #	fi
 #};export -f FUNCwatchLog
 
-#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
+#strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strCmdDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
 
 strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
