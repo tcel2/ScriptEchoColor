@@ -38,6 +38,7 @@ bHoldToggle=false
 nDelay=10
 bDebugging=false
 bMouseTrickMode=false
+bLockedCheckOnly=false
 astrSimpleCommandRegex=(
 	"^chromium-browser .*flashplayer.so"
 	"^/usr/bin/vlc "
@@ -74,6 +75,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--addregex" ]];then #help <strCmdRegex> when watching a movie, append a regex to match pid command for the current window being checked to prevent screensaver activation
 		shift
 		astrSimpleCommandRegex+=("${1-}");
+	elif [[ "$1" == "--islocked" ]];then #help exit 0 if screen is locked
+		bLockedCheckOnly=true
 	elif [[ "$1" == "--mousetrickmode" ]];then #help simulate mouse activity what will expectedly work with all screensavers but may have some side effects..
 		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
@@ -87,6 +90,42 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+function FUNCisLocked(){
+	# The lock may happen by other means than this script...
+	if [[ -f "${strUnityLog-}" ]];then
+		if grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+			return 0
+		fi
+	else
+		SECFUNCechoWarnA "unity log file strUnityLog='${strUnityLog-}' not available"
+	fi
+	
+	if xscreensaver-command -time |grep -q "screen locked since";then
+		return 0
+	fi
+	
+	if $bModeGnome;then #gnome has a bug (TODO explain what bug), so only check if its option was actually chosen
+		if gnome-screensaver-command --query |grep -q "The screensaver is active";then
+			# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
+			return 0
+		fi
+	fi
+	
+	return 1
+}
+
+varset strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
+
+if $bLockedCheckOnly;then
+	if ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;then
+		SECFUNCechoWarnA "daemon not running, unity log will not be available"
+	fi
+	SECFUNCvarReadDB strUnityLog
+	
+	FUNCisLocked&&:
+	exit $?
+fi
 
 echoc --info "THESE regex will be checked:"
 for strSimpleCommandRegex in "${astrSimpleCommandRegex[@]}";do
@@ -134,7 +173,6 @@ SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
 strDBusUnityDestination="com.canonical.Unity.Launcher"
 strDBusUnityObjPath="/com/canonical/Unity/Session"
-strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
 gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath" >"$strUnityLog"&
 
 nLightweightHackId=1
@@ -147,18 +185,21 @@ while true;do
 	
 	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
 	
-	# The lock may happen by other means than this script...
-	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+#	# The lock may happen by other means than this script...
+#	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+#		bIsLocked=true
+#	fi
+#	if ! $bIsLocked && xscreensaver-command -time |grep -q "screen locked since";then
+#		bIsLocked=true
+#	fi
+#	if $bModeGnome;then #gnome is bugged, so only check if its option was actually chosen
+#		if ! $bIsLocked && gnome-screensaver-command --query |grep -q "The screensaver is active";then
+#			# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
+#			bIsLocked=true
+#		fi
+#	fi
+	if ! $bIsLocked && FUNCisLocked;then
 		bIsLocked=true
-	fi
-	if ! $bIsLocked && xscreensaver-command -time |grep -q "screen locked since";then
-		bIsLocked=true
-	fi
-	if $bModeGnome;then #gnome is bugged, so only check if its option was actually chosen
-		if ! $bIsLocked && gnome-screensaver-command --query |grep -q "The screensaver is active";then
-			# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
-			bIsLocked=true
-		fi
 	fi
 	
 	if ! $bIsLocked;then

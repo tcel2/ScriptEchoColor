@@ -996,7 +996,7 @@ function SECFUNCvarWriteDB() { #help
 	SECFUNCdbgFuncOutA
 }
 
-function SECFUNCvarReadDB() { #help [varName] filter to load only one variable value
+function SECFUNCvarReadDB() { #help [varName] filter to load only the specified variable(s) value(s) like "var1"; for more than one use like "(var1|var2|var3)"
 	SECFUNCdbgFuncInA
 	
 	l_bSkip=false
@@ -1004,7 +1004,7 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only one variable v
 		if [[ "$1" == "--help" ]];then #SECFUNCvarReadDB_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return 0
-		elif [[ "$1" == "--skip" ]];then #SECFUNCvarReadDB_help to skip reading only the optionally specified variable 'varName'
+		elif [[ "$1" == "--skip" ]];then #SECFUNCvarReadDB_help to skip reading only the optionally specified variable(s) 'varName'
 			l_bSkip=true
 		else
 			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
@@ -1031,7 +1031,8 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only one variable v
 		fi
 		# can retrieve more than one line with same variable, what is ok as the last set will override all previous ones
 		while true;do
-			eval "`grep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+			#TODO warn about inexistance of variables on the var file? would require extra cpu time and more complex code.
+			eval "`egrep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"

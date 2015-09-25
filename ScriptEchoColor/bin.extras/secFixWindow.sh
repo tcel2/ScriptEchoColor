@@ -105,9 +105,13 @@ fi
 
 # run these and exit
 if $bFixCompiz;then
-  secXtermDetached.sh metacity --replace;
-  sleep 3; #this blind delay helps on properly fixing
-  secXtermDetached.sh compiz --replace
+	if ! secAutoScreenLock.sh --islocked;then
+		secXtermDetached.sh metacity --replace;
+		sleep 3; #this blind delay helps on properly fixing
+		secXtermDetached.sh compiz --replace
+	else
+		SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
+	fi
   exit 0
 elif $bFixYakuake;then
  	SECFUNCexecA -ce killall -9 yakuake&&:
