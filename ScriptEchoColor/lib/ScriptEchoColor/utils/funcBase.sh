@@ -849,6 +849,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	local lnScale=2
 	local lbRound=true
 	local lstrCaller=""
+	local lbCalcLog=false
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCbcPrettyCalc_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -866,6 +867,8 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 			lnScale=$1
 		elif [[ "$1" == "--trunc" ]];then #SECFUNCbcPrettyCalc_help default is to round the decimal value
 			lbRound=false
+		elif [[ "$1" == "--debug" ]];then #SECFUNCbcPrettyCalc_help shows calc debug info at stderr
+			lbCalcLog=true
 		else
 			SECFUNCechoErrA "lstrCaller='$lstrCaller' invalid option '$1'"
 			return 1
@@ -875,9 +878,21 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	local lstrOutput="$1"
 	local lstrOutputInitial="$lstrOutput"
 	
+	function SECFUNCbcPrettyCalc_bc() {
+		local lstrCalcTmp="$1"
+		if $lbCalcLog;then
+			echo "SECFUNCbcPrettyCalc_bc:CalcLog: '$lstrCalcTmp'" >>/dev/stderr;
+		fi
+		bc <<< "$lstrCalcTmp"
+	}
+	
 	if $lbRound;then
 		# NOTICE: bc does not exit with error on syntax error, but an empty output means there is error.
-		lstrOutput="`bc <<< "scale=$((lnScale+1));$lstrOutput"`"
+#		lstrCalcTmp="scale=$((lnScale+1));$lstrOutput"
+#		if $lbCalcLog;then echo "$lstrCalcTmp" >>/dev/stderr;fi
+#		lstrOutput="`bc <<< "$lstrCalcTmp"`"
+		lstrOutput="`SECFUNCbcPrettyCalc_bc \
+			"scale=$((lnScale+1));$lstrOutput"`"
 		if [[ -z "$lstrOutput" ]];then
 		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(1) lstrOutputInitial='$lstrOutputInitial'"
 		  return 1
@@ -887,8 +902,8 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 		if [[ "${lstrOutput:0:1}" == "-" ]];then
 			lstrSignal="-"
 		fi
-		lstrOutput="`bc <<< "scale=${lnScale};\
-			((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`"
+		lstrOutput="`SECFUNCbcPrettyCalc_bc \
+			"scale=${lnScale};((${lstrOutput}*(10^${lnScale})) ${lstrSignal}0.5) / (10^${lnScale})"`"
 		if [[ -z "$lstrOutput" ]];then
 		  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at round(2) lstrOutputInitial='$lstrOutputInitial'"
 		  return 1
@@ -899,7 +914,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 #		lstrOutput="`printf "%0.${lnScale}f" "${lstrOutput}"`"
 #		export LC_NUMERIC="$lstrLcNumericBkp"
 #	else
-#		lstrOutput="`bc <<< "scale=$lnScale;($lstrOutput)/1.0;"`"
+#		lstrOutput="`SECFUNCbcPrettyCalc_bc "scale=$lnScale;($lstrOutput)/1.0;"`"
 	fi
 	
 	local lstrZeroDotZeroes="0"
@@ -908,7 +923,11 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	fi
 	
 	# if it is less than 1.0 prints leading "0" like "0.123" instead of ".123"
-	lstrOutput="`bc <<< "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x";`"
+#	lstrOutput="`SECFUNCbcPrettyCalc_bc \
+#		"scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x"`"
+#	echo "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x" >>/dev/stderr
+#	lstrOutput="`SECFUNCbcPrettyCalc_bc	"scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x"`"
+	lstrOutput="`SECFUNCbcPrettyCalc_bc "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \\\"-\\\",0,-x else print x"`"
 	if [[ -z "$lstrOutput" ]];then
 	  SECFUNCechoErrA "lstrCaller='$lstrCaller' lstrOutput='$lstrOutput' syntax error at adding left zero lstrOutputInitial='$lstrOutputInitial'"
 	  return 1

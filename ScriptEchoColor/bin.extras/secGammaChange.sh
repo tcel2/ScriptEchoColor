@@ -34,9 +34,13 @@ eval `secinit`
 #	CFGafBaseGammaRGB[$liIndex]=($lfValue)
 #}
 
+function FUNCgetCurrentGammaRGB() {
+	xgamma 2>&1 |sed -r 's"-> Red[ ]*(.*), Green[ ]*(.*), Blue[ ]*(.*)"\1 \2 \3"'
+}
+
 bChange=false
-bUp=false
-bDown=false
+bChangeUp=false
+bChangeDown=false
 fStep=0.25
 bReset=false
 bRandom=false
@@ -62,10 +66,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #		shift
 #		FUNCchkSetBase 2 "${1-}"
 	elif [[ "$1" == "--up" ]];then #help
-		bUp=true
+		bChangeUp=true
 		bChange=true
 	elif [[ "$1" == "--down" ]];then #help
-		bDown=true
+		bChangeDown=true
 		bChange=true
 	elif [[ "$1" == "--step" ]];then #help the float step ammount when changing gamma
 		shift
@@ -115,7 +119,7 @@ if ! SECFUNCisNumber -dn "$nRgfMax"; then
 fi
 
 if $bSetBase;then
-	CFGafBaseGammaRGB=(`xgamma 2>&1 |sed -r 's"-> Red  (.*), Green  (.*), Blue  (.*)"\1 \2 \3"'`)
+	CFGafBaseGammaRGB=(`FUNCgetCurrentGammaRGB`)
 	declare -p CFGafBaseGammaRGB
 	SECFUNCcfgWriteVar CFGafBaseGammaRGB
 fi
@@ -224,16 +228,37 @@ elif $bRandom;then
 	
 	exit 0
 elif $bChange;then
-	fCurrentGamma="`xgamma 2>&1 |awk '{print $3}' |sed -r 's"(.*),"\1"'`";
-
 	strOperation=""
-	if $bUp;then
+	if $bChangeUp;then
 		strOperation="+"
-	elif $bDown;then
+	elif $bChangeDown;then
 		strOperation="-"
 	fi
 
-	fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}+(${strOperation}${fStep})"`"
-	xgamma -gamma "$fNewGamma"
+#	fCurrentGamma="`xgamma 2>&1 |awk '{print $3}' |sed -r 's"(.*),"\1"'`";
+#	fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}+(${strOperation}${fStep})"`"
+#	xgamma -gamma "$fNewGamma"
+	afBaseGammaRGBcurrent=(`FUNCgetCurrentGammaRGB`)
+	function FUNCchkGamma() {
+		local liIndex="$1"
+#		set -x
+#		echo "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})" >>/dev/stderr
+		local lfGammaComp="`SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"`"
+#		set +x
+#		echo "lfGammaComp='$lfGammaComp'" >>/dev/stderr
+		
+		if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
+			#echo "asdf" >>/dev/stderr
+			echo "0.1"
+		elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
+			echo "10.0"
+		else
+			echo "$lfGammaComp"
+		fi
+		
+		return 0
+	}
+	SECFUNCexecA -ce xgamma -rgamma "`FUNCchkGamma 0`" -ggamma "`FUNCchkGamma 1`" -bgamma "`FUNCchkGamma 2`"
+	#TODO store modification related to base, so values can be relatively applied in case limits are overflowed
 fi
 
