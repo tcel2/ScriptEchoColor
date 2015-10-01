@@ -24,20 +24,49 @@
 
 eval `secinit`
 
+#function FUNCchkSetBase() { # <index> <value>
+#	local liIndex="$1"
+#	local lfValue="$2"
+#	if SECFUNCisNumber -n "$lfValue";then 
+#		SECFUNCechoErrA "invalid floating number lfValue='$lfValue'"
+#		exit 1;
+#	fi;
+#	CFGafBaseGammaRGB[$liIndex]=($lfValue)
+#}
+
+bChange=false
 bUp=false
 bDown=false
 fStep=0.25
 bReset=false
 bRandom=false
+nRgfStep=1 #DEF step between gama changes
+nRgfDelay=0.1 #DEF gamma update delay, float seconds ex.: 0.2
+nRgfMin=80 #DEF min gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma, limit = 0.100 (10/100=0.1)
+nRgfMax=170 #DEF max gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma
+bSetBase=false
+#declare -a CFGafBaseGammaRGB
+#SECFUNCcfgReadDB CFGafBaseGammaRGB
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "up or down gamma"
+		SECFUNCshowHelp --colorize "Changes gamma from last setup value."
 		SECFUNCshowHelp
 		exit 0
+	elif [[ "$1" == "--setbase" ]];then #help the currently setup gamma components will be stored at default cofiguration file.
+		bSetBase=true
+#	elif [[ "$1" == "--setbase" ]];then #help <R> <G> <B> instead of 1.0 1.0 1.0. The specified base will be used at all calculations. Good to work with an old problematic CRT monitor...
+#		shift
+#		FUNCchkSetBase 0 "${1-}"
+#		shift
+#		FUNCchkSetBase 1 "${1-}"
+#		shift
+#		FUNCchkSetBase 2 "${1-}"
 	elif [[ "$1" == "--up" ]];then #help
 		bUp=true
+		bChange=true
 	elif [[ "$1" == "--down" ]];then #help
 		bDown=true
+		bChange=true
 	elif [[ "$1" == "--step" ]];then #help the float step ammount when changing gamma
 		shift
 		fStep="${1-}"
@@ -64,8 +93,41 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift&&:
 done
 
+if ! SECFUNCisNumber -n "${fStep}";then
+	echoc -p "invalid fStep='$fStep'"
+	exit 1
+fi
+if ! SECFUNCisNumber -dn "$nRgfStep"; then
+	echoc -p "invalid nRgfStep='$nRgfStep'"
+	exit 1
+fi
+if ! SECFUNCisNumber -n "$nRgfDelay"; then
+	echoc -p "invalid nRgfDelay='$nRgfDelay'"
+	exit 1
+fi
+if ! SECFUNCisNumber -dn "$nRgfMin"; then
+	echoc -p "invalid nRgfMin='$nRgfMin'"
+	exit 1
+fi
+if ! SECFUNCisNumber -dn "$nRgfMax"; then
+	echoc -p "invalid nRgfMax='$nRgfMax'"
+	exit 1
+fi
+
+if $bSetBase;then
+	CFGafBaseGammaRGB=(`xgamma 2>&1 |sed -r 's"-> Red  (.*), Green  (.*), Blue  (.*)"\1 \2 \3"'`)
+	declare -p CFGafBaseGammaRGB
+	SECFUNCcfgWriteVar CFGafBaseGammaRGB
+fi
+SECFUNCcfgReadDB CFGafBaseGammaRGB
+
 if $bReset;then
-	xgamma -gamma 1
+	if SECFUNCvarIsArray CFGafBaseGammaRGB;then
+		SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
+	else
+		SECFUNCexecA -ce xgamma -gamma 1
+	fi
+	
 	exit 0
 elif $bRandom;then
 	if $SECbRunLog;then
@@ -77,22 +139,6 @@ elif $bRandom;then
 	bReport=true
 	
 	###################################
-	if ! SECFUNCisNumber -dn "$nRgfStep"; then
-		echo "invalid nRgfStep='$nRgfStep'"
-		nRgfStep=1 #DEF step between gama changes
-	fi
-	if ! SECFUNCisNumber -n "$nRgfDelay"; then
-		echo "invalid nRgfDelay='$nRgfDelay'"
-		nRgfDelay=0.1 #DEF gamma update delay, float seconds ex.: 0.2
-	fi
-	if ! SECFUNCisNumber -dn "$nRgfMin"; then
-		echo "invalid nRgfMin='$nRgfMin'"
-		nRgfMin=80 #DEF min gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma, limit = 0.100 (10/100=0.1)
-	fi
-	if ! SECFUNCisNumber -dn "$nRgfMax"; then
-		echo "invalid nRgfMax='$nRgfMax'"
-		nRgfMax=170 #DEF max gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma
-	fi
 
 	# internal variables
 	nR=100
@@ -177,20 +223,17 @@ elif $bRandom;then
 	done	
 	
 	exit 0
+elif $bChange;then
+	fCurrentGamma="`xgamma 2>&1 |awk '{print $3}' |sed -r 's"(.*),"\1"'`";
+
+	strOperation=""
+	if $bUp;then
+		strOperation="+"
+	elif $bDown;then
+		strOperation="-"
+	fi
+
+	fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}+(${strOperation}${fStep})"`"
+	xgamma -gamma "$fNewGamma"
 fi
-
-if ! SECFUNCisNumber -n "${fStep}";then
-	echoc -p "invalid fStep='$fStep'"
-	exit 1
-fi
-
-fCurrentGamma="`xgamma 2>&1 |awk '{print $3}' |sed -r 's"(.*),"\1"'`";
-
-strOperation="+"
-if $bDown;then
-	strOperation="-"
-fi
-
-fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}${strOperation}${fStep}"`"
-xgamma -gamma "$fNewGamma"
 
