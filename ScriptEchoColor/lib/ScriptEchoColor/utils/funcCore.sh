@@ -405,11 +405,15 @@ if [[ ! -d "$SECstrUserHomeConfigPath" ]]; then
   mkdir "$SECstrUserHomeConfigPath"
 fi
 
-function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function but only in case the help is implemented as expected (see examples on scripts).\n\tOtherwise a help will be shown to the script itself in the same manner.
+function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function.
+#SECFUNCshowHelp_help \tOtherwise a help will be shown to the script file as a whole.
+#SECFUNCshowHelp_help \tMultiline help is supported.
+#SECFUNCshowHelp_help \tbasically help lines must begin with #help or #FunctionName_help, see examples on scripts.
 	SECFUNCdbgFuncInA;
 	local lbSort=false
 	local lstrScriptFile="$0"
 	local lstrColorizeEcho=""
+#	local lbAll=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
@@ -421,6 +425,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lbSort=true
 		elif [[ "${1-}" == "--nosort" ]];then #SECFUNCshowHelp_help skip sorting the help options (is default now)
 			lbSort=false
+#		elif [[ "${1-}" == "--all" || "${1-}" == "-a" ]];then #SECFUNCshowHelp_help will show every help commented line, not only for options or functions
+#			lbAll=true
 		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help <lstrScriptFile> set the script file to gather help data from
 			shift
 			lstrScriptFile="${1-}"
@@ -557,9 +563,17 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	if $lbSort;then
 		cmdSort="sort"
 	fi
-	local lgrepNoCommentedLines="^[[:blank:]]*#"
-	local lgrepMatchHelpToken="#${lstrFunctionNameToken}help"
-	local lsedOptionsAndHelpText='s,.*\[\[(.*)\]\].*(#'$lstrFunctionNameToken'help.*),\1\2,'
+	#local lgrepNoCommentedLines="^[[:blank:]]*#"
+	local lstrHelpToken="${lstrFunctionNameToken}help"
+	#local lgrepNoCommentedLines="^[[:blank:]]*#[^h][^e][^l][^p]"
+	local lgrepNoCommentedLines="^[[:blank:]]*#`echo "$lstrHelpToken" |sed 's"."[^&]"g'`" #negates each letter
+	#if $lbAll;then lgrepNoCommentedLines="";fi
+	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help" #will also include simplified special help lines
+	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help"
+	local lgrepMatchHelpToken="#${lstrHelpToken}"
+	local lsedOptionsText='.*\[\[(.*)\]\].*'
+#	if $lbAll;then lsedOptionsText=".*";fi
+	local lsedOptionsAndHelpText="s,${lsedOptionsText}(#${lstrFunctionNameToken}help.*),\1\2,"
 	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
 #	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g'
 	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
@@ -572,7 +586,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	cat "${lastrFile[@]}" \
 		|egrep -v "$lgrepNoCommentedLines" \
 		|egrep -v "$lgrepNoFunctions" \
-		|grep  -w "$lgrepMatchHelpToken" \
+		|egrep -w "$lgrepMatchHelpToken" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveHelpToken" \
