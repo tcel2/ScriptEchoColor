@@ -35,7 +35,70 @@ eval `secinit`
 #}
 
 function FUNCgetCurrentGammaRGB() {
-	xgamma 2>&1 |sed -r 's"-> Red[ ]*(.*), Green[ ]*(.*), Blue[ ]*(.*)"\1 \2 \3"'
+	# var init here
+	local lbForce=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #FUNCgetCurrentGammaRGB_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--force" || "$1" == "-f" ]];then #FUNCgetCurrentGammaRGB_help <lbForce> will use system current gamma componenets
+			shift
+			lbForce=true
+		elif [[ "$1" == "--" ]];then #FUNCgetCurrentGammaRGB_help params after this are ignored as being these options
+			shift
+			break
+#		else
+#			SECFUNCechoErrA "invalid option '$1'"
+#			SECFUNCshowHelp $FUNCNAME
+#			return 1
+		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+			SECFUNCechoErrA "invalid option '$1'"
+			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	if ! $lbForce;then
+		SECFUNCcfgReadDB CFGafModGammaRGB
+		if ! ${CFGafModGammaRGB+false};then # is set
+			if ! SECFUNCvarIsArray CFGafModGammaRGB;then
+				SECFUNCerrA "CFGafModGammaRGB='`declare -p CFGafModGammaRGB`' should be an array."
+				lbForce=true
+			fi
+		else # is not set
+			lbForce=true
+		fi
+	fi
+	
+	if $lbForce;then
+		xgamma 2>&1 |sed -r 's"-> Red[ ]*(.*), Green[ ]*(.*), Blue[ ]*(.*)"\1 \2 \3"'
+	else
+		echo "${CFGafModGammaRGB[@]}"
+	fi
+	
+	return 0
+}
+function FUNCchkFixGammaComponent() {
+	local lfGammaComp="$1"
+
+	if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
+		SECFUNCwarnA "gamma component lfGammaComp='$lfGammaComp' < 0.1, fixing"
+		echo "0.1"
+	elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
+		SECFUNCwarnA "gamma component lfGammaComp='$lfGammaComp' > 10.0, fixing"
+		echo "10.0"
+	else
+		echo "$lfGammaComp"
+	fi
+
+	return 0
+}
+function FUNCsetGamma() { #<fR> <fG> <fB>
+	SECFUNCexecA -ce xgamma \
+		-rgamma "`FUNCchkFixGammaComponent "$1"`" \
+		-ggamma "`FUNCchkFixGammaComponent "$2"`"	\
+		-bgamma "`FUNCchkFixGammaComponent "$3"`"
 }
 
 bChange=false
@@ -49,16 +112,30 @@ nRgfDelay=0.1 #DEF gamma update delay, float seconds ex.: 0.2
 nRgfMin=80 #DEF min gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma, limit = 0.100 (10/100=0.1)
 nRgfMax=170 #DEF max gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma
 bSetBase=false
+bKeep=false
+bSetCurrent=false
 #declare -a CFGafBaseGammaRGB
 #SECFUNCcfgReadDB CFGafBaseGammaRGB
+afModGammaRGB=()
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "Changes gamma from last setup value."
+		SECFUNCshowHelp --colorize "Controls gamma."
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--setbase" ]];then #help the currently setup gamma components will be stored at default cofiguration file.
+	elif [[ "$1" == "--set" ]];then #help <fR> <fG> <fB> will set and store the specified gamma componenets.
+		bSetCurrent=true
+		shift
+		afModGammaRGB[0]="${1-}"
+		shift
+		afModGammaRGB[1]="${1-}"
+		shift
+		afModGammaRGB[2]="${1-}"
+	elif [[ "$1" == "--setc" ]];then #help like --set, but will use current system gamma components
+		bSetCurrent=true
+		afModGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
+	elif [[ "$1" == "--setbase" ]];then #help the currently setup gamma components will be stored at default cofiguration file at CFGafBaseGammaRGB.
 		bSetBase=true
-#	elif [[ "$1" == "--setbase" ]];then #help <R> <G> <B> instead of 1.0 1.0 1.0. The specified base will be used at all calculations. Good to work with an old problematic CRT monitor...
+# elif [[ "$1" == "--setbase" ]];then #help <R> <G> <B> instead of 1.0 1.0 1.0. The specified base will be used at all calculations. Good to work with an old problematic CRT monitor.
 #		shift
 #		FUNCchkSetBase 0 "${1-}"
 #		shift
@@ -71,12 +148,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--down" ]];then #help
 		bChangeDown=true
 		bChange=true
-	elif [[ "$1" == "--step" ]];then #help the float step ammount when changing gamma
+	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma
 		shift
 		fStep="${1-}"
-	elif [[ "$1" == "--reset" ]];then #help gamma 1.0
+	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set).
 		bReset=true
-	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax] random gamma fade, fun effect
+	elif [[ "$1" == "--keep" ]];then #help (works with --set) a loop that keeps the last gamma setup here, useful in case some application changes it when you do not want.
+		bKeep=true
+	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax] a loop that does random gamma fade, fun effect
 		shift&&:
 		nRgfStep="${1-}"
 		shift&&:
@@ -117,6 +196,20 @@ if ! SECFUNCisNumber -dn "$nRgfMax"; then
 	echoc -p "invalid nRgfMax='$nRgfMax'"
 	exit 1
 fi
+if $bSetCurrent;then
+	if ! SECFUNCisNumber -n "${afModGammaRGB[0]}"; then
+		echoc -p "invalid afModGammaRGB[0]='${afModGammaRGB[0]}'"
+		exit 1
+	fi
+	if ! SECFUNCisNumber -n "${afModGammaRGB[1]}"; then
+		echoc -p "invalid afModGammaRGB[1]='${afModGammaRGB[1]}'"
+		exit 1
+	fi
+	if ! SECFUNCisNumber -n "${afModGammaRGB[2]}"; then
+		echoc -p "invalid afModGammaRGB[2]='${afModGammaRGB[2]}'"
+		exit 1
+	fi
+fi
 
 if $bSetBase;then
 	CFGafBaseGammaRGB=(`FUNCgetCurrentGammaRGB`)
@@ -127,12 +220,36 @@ SECFUNCcfgReadDB CFGafBaseGammaRGB
 
 if $bReset;then
 	if SECFUNCvarIsArray CFGafBaseGammaRGB;then
-		SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
+		#SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
+		SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
 	else
 		SECFUNCexecA -ce xgamma -gamma 1
 	fi
 	
 	exit 0
+elif $bSetCurrent;then
+	CFGafModGammaRGB=("${afModGammaRGB[@]}")
+	#FUNCsetGamma "${afModGammaRGB[@]}"
+	FUNCsetGamma "${CFGafModGammaRGB[@]}"
+	
+	#CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
+	declare -p CFGafModGammaRGB
+	SECFUNCcfgWriteVar CFGafModGammaRGB
+elif $bKeep;then
+#	if ! SECFUNCvarIsArray CFGafBaseGammaRGB;then
+#		SECFUNCwarnA "setting required base"
+#		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
+#	fi
+
+#	CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB`)
+#	declare -p CFGafModGammaRGB
+#	SECFUNCcfgWriteVar CFGafModGammaRGB
+	
+	while true;do
+		SECFUNCcfgReadDB CFGafModGammaRGB
+		SECFUNCexecA -ce xgamma -rgamma ${CFGafModGammaRGB[0]} -ggamma ${CFGafModGammaRGB[1]} -bgamma ${CFGafModGammaRGB[2]}
+		echoc -w -t 60 "keep gamma"
+	done
 elif $bRandom;then
 	if $SECbRunLog;then
 		echoc --alert "INT trap (to reset gamma to 1.0) wont work with SECbRunLog=true"
@@ -239,26 +356,32 @@ elif $bChange;then
 #	fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}+(${strOperation}${fStep})"`"
 #	xgamma -gamma "$fNewGamma"
 	afBaseGammaRGBcurrent=(`FUNCgetCurrentGammaRGB`)
-	function FUNCchkGamma() {
+#	function _FUNCchkFixGammaComponent() {
+#		local liIndex="$1"
+#		local lfGammaComp="`SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"`"
+#		
+#		FUNCchkFixGammaComponent "$lfGammaComp"
+##		if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
+##			#echo "asdf" >>/dev/stderr
+##			echo "0.1"
+##		elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
+##			echo "10.0"
+##		else
+##			echo "$lfGammaComp"
+##		fi
+#	
+#		return 0
+#	}
+	function _FUNCcalcComp() {
 		local liIndex="$1"
-#		set -x
-#		echo "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})" >>/dev/stderr
-		local lfGammaComp="`SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"`"
-#		set +x
-#		echo "lfGammaComp='$lfGammaComp'" >>/dev/stderr
-		
-		if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
-			#echo "asdf" >>/dev/stderr
-			echo "0.1"
-		elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
-			echo "10.0"
-		else
-			echo "$lfGammaComp"
-		fi
-		
+		SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"
 		return 0
 	}
-	SECFUNCexecA -ce xgamma -rgamma "`FUNCchkGamma 0`" -ggamma "`FUNCchkGamma 1`" -bgamma "`FUNCchkGamma 2`"
-	#TODO store modification related to base, so values can be relatively applied in case limits are overflowed
+#	SECFUNCexecA -ce xgamma \
+#		-rgamma "`_FUNCchkFixGammaComponent 0`" \
+#		-ggamma "`_FUNCchkFixGammaComponent 1`" \
+#		-bgamma "`_FUNCchkFixGammaComponent 2`"
+	#FUNCsetGamma "`_FUNCcalcComp 0`" "`_FUNCcalcComp 1`" "`_FUNCcalcComp 2`"
+	SECFUNCexecA -ce $SECstrScriptSelfName --set "`_FUNCcalcComp 0`" "`_FUNCcalcComp 1`" "`_FUNCcalcComp 2`"
 fi
 
