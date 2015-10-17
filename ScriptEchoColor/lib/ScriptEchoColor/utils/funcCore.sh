@@ -433,7 +433,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
 			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
 			SECFUNCdbgFuncOutA;return
-		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help [lstrScriptFile] <lbSort> this is not an actual option, it is just to show self tests only...
+		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help ([lstrScriptFile] <lbSort> this is not an actual option, it is just to show self tests only...)
+			#SECFUNCshowHelp_help (This is the multiline test at an option.)
 			:
 		else
 			SECFUNCechoErrA "invalid option '$1'"
@@ -566,11 +567,12 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	#local lgrepNoCommentedLines="^[[:blank:]]*#"
 	local lstrHelpToken="${lstrFunctionNameToken}help"
 	#local lgrepNoCommentedLines="^[[:blank:]]*#[^h][^e][^l][^p]"
-	local lgrepNoCommentedLines="^[[:blank:]]*#`echo "$lstrHelpToken" |sed 's"."[^&]"g'`" #negates each letter
+	#local lgrepNoCommentedLines="^[[:blank:]]*#`echo "$lstrHelpToken" |sed 's"."[^&]"g'`" #negates each letter
 	#if $lbAll;then lgrepNoCommentedLines="";fi
 	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help" #will also include simplified special help lines
 	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help"
 	local lgrepMatchHelpToken="#${lstrHelpToken}"
+	local lgrepNoInvalidHelps="[[:blank:]]*#.*#${lstrHelpToken}" #preceding a help comment, must be working (non commented) code
 	local lsedOptionsText='.*\[\[(.*)\]\].*'
 #	if $lbAll;then lsedOptionsText=".*";fi
 	local lsedOptionsAndHelpText="s,${lsedOptionsText}(#${lstrFunctionNameToken}help.*),\1\2,"
@@ -583,10 +585,11 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 #	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'
 #	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcharEsc}'[0m'${SECcharEsc}'[96m[\2]'${SECcharEsc}'[0m,g'
 	#local lsedAddNewLine='s".*"&\n"'
+#		|egrep -v "$lgrepNoCommentedLines" \
+#		|egrep -v "$lgrepNoFunctions" \
 	cat "${lastrFile[@]}" \
-		|egrep -v "$lgrepNoCommentedLines" \
-		|egrep -v "$lgrepNoFunctions" \
 		|egrep -w "$lgrepMatchHelpToken" \
+		|egrep -v "$lgrepNoInvalidHelps" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveHelpToken" \

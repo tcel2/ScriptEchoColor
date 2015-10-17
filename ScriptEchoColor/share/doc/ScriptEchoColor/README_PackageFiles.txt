@@ -1,10 +1,8 @@
 Tested on Ubuntu: 
- It also works if installed at user $HOME. No need to be system wide.
+ The script `secSingleUserInstall.sh` found here, 
+  can be used to keep a git clone single user installation updated.
 
-Git Clone:
- Alternatively you can also keep a git clone installation udpated using:
-  secEnableWithoutInstalling.sh
-
-Untested: 
- The .deb packages, can also be extrated and installed directly on any OS that is able to run bash (and all the other required applications).
+Pending reports/confirmation: 
+ ScriptEchoColor may probably work on any OS that is able to run bash,
+  and all the other required applications.
 
