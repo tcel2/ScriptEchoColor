@@ -247,7 +247,9 @@ elif $bKeep;then
 	
 	while true;do
 		SECFUNCcfgReadDB CFGafModGammaRGB
-		SECFUNCexecA -ce xgamma -rgamma ${CFGafModGammaRGB[0]} -ggamma ${CFGafModGammaRGB[1]} -bgamma ${CFGafModGammaRGB[2]}
+		#SECFUNCexecA -ce xgamma -rgamma ${CFGafModGammaRGB[0]} -ggamma ${CFGafModGammaRGB[1]} -bgamma ${CFGafModGammaRGB[2]}
+		declare -p CFGafModGammaRGB
+		SECFUNCexecA -ce FUNCsetGamma "${CFGafModGammaRGB[@]}"
 		echoc -w -t 60 "keep gamma"
 	done
 elif $bRandom;then
