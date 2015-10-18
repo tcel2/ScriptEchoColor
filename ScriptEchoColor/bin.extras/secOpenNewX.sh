@@ -437,18 +437,18 @@ function FUNCscript() {
 	  FUNCnvidiaCicle 1
   elif [[ "$lscriptName" == "nvidiaCicleBack" ]]; then #FUNCscript_help cicle through nvidia pre-setups
 	  FUNCnvidiaCicle -1
-  elif [[ "$lscriptName" == "cicleGamma" ]]; then #FUNCscript_help cicle gamma value
-#  	while true;do
-#  		if ! ps -A -o pid,comm,command |grep -v "^[ ]*$$" |grep "^[ ]*[[:digit:]]* openNewX.sh.*cicleGamma$" |grep -v grep; then
-#  			break
-#  		fi
-#  		echoc -w -t 1 "already running, waiting other exit"
-#  	done
-#	  FUNCcicleGamma 1
-	  secGammaChange.sh --say --up
-  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
-#  	FUNCcicleGamma -1
-  	secGammaChange.sh --say --down
+#  elif [[ "$lscriptName" == "cicleGamma" ]]; then #FUNCscript_help cicle gamma value
+##  	while true;do
+##  		if ! ps -A -o pid,comm,command |grep -v "^[ ]*$$" |grep "^[ ]*[[:digit:]]* openNewX.sh.*cicleGamma$" |grep -v grep; then
+##  			break
+##  		fi
+##  		echoc -w -t 1 "already running, waiting other exit"
+##  	done
+##	  FUNCcicleGamma 1
+#	  secGammaChange.sh --say --up
+#  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
+##  	FUNCcicleGamma -1
+#  	secGammaChange.sh --say --down
   elif [[ "$lscriptName" == "sayTemperature" ]]; then #FUNCscript_help say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
@@ -940,7 +940,18 @@ if $useJWM; then
   	#@@@R <Key mask="S4" key="G">exec:'"xterm -e \"$cmdNvidiaNormal\""'</Key>
     #@@@R <Key mask="4" key="G">exec:'"xterm -e \"FUNCnvidiaCicle\""'</Key>
     #@@@R      <Key mask="4" key="L">exec:bash -c "FUNCCHILDScreenLockNow"</Key>
+#          <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
+#          <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
     
+    # DOCUMENTATION FROM JWM:
+		#	A - Alt (mod1)
+		#	C - Control
+		#	S - Shift
+		#	1 - mod1
+		#	2 - mod2
+		#	3 - mod3
+		#	4 - mod4 (meta/super)
+		#	5 - mod5
     echo -e '
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
@@ -952,8 +963,9 @@ if $useJWM; then
           <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
           <Key mask="4" key="L">exec:'"xterm -e \"bash -c FUNCCHILDScreenLockNow\" #kill=skip"'</Key>
-          <Key mask="4" key="M">exec:'"xterm -e \"$0 --script cicleGamma\" #kill=skip"'</Key>
-          <Key mask="S4" key="M">exec:'"xterm -e \"$0 --script cicleGammaBack\" #kill=skip"'</Key>
+          <Key mask="4"  key="M">exec:'"xterm -e \"secGammaChange.sh --say --up\" #kill=skip"'</Key>
+          <Key mask="S4" key="M">exec:'"xterm -e \"secGammaChange.sh --say --down\" #kill=skip"'</Key>
+          <Key mask="C4" key="M">exec:'"xterm -e \"secGammaChange.sh --say --reset\" #kill=skip"'</Key>
           <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
           <Key mask="4" key="T">exec:xterm -e "FUNCsayTime #kill=skip"</Key>
           <Key mask="4" key="X">exec:xterm -e "FUNCechocInitBashInteractive #kill=skip"</Key>
