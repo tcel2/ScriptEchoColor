@@ -30,6 +30,44 @@ eval `secinit`
 
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
+strExample="DefaultValue"
+bCfgTest=false
+CFGstrTest="Test"
+strParamWithOptionalValue="OptinalValue"
+astrRemainingParams=()
+SECFUNCcfgReadDB #after default variables value setup above
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+	SECFUNCsingleLetterOptionsA;
+	if [[ "$1" == "--help" ]];then #help show this help
+		SECFUNCshowHelp --colorize "Updates one or more symlinks to its relative target location, as long it is at same or child recursive path."
+		SECFUNCshowHelp --colorize "Works at commandline or from nautilus."
+		SECFUNCshowHelp
+		exit 0
+#	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
+#		shift
+#		strExample="${1-}"
+#	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
+#		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
+#			shift
+#			CFGstrTest="$1"
+#		fi
+#		
+#		bCfgTest=true
+	elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at astrRemainingParams
+		shift #astrRemainingParams=("$@")
+		while ! ${1+false};do	# checks if param is set
+			astrRemainingParams+=("$1")
+			shift #will consume all remaining params
+		done
+	else
+		echoc -p "invalid option '$1'"
+		$0 --help
+		exit 1
+	fi
+	shift&&:
+done
+
+
 function FUNCloop() {
 	local lbCommandLineByUser=false
 	if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
