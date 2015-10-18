@@ -31,11 +31,16 @@ eval `secinit`
 #xterm -e "bash -i -c \"echo '$strFile';read\"";exit
 
 function FUNCloop() {
-	if [[ -z "$1" ]];then
+	local lbCommandLineByUser=false
+	if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
 		IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
 	else
 		astrFiles=("$@")
+		lbCommandLineByUser=true
 	fi
+	
+	echo "NAUTILUS_SCRIPT_SELECTED_FILE_PATHS='${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}'"
+	echo "PARAMS: @=`SECFUNCparamsToEval "$@"`"
 	
 	pwd
 	declare -p astrFiles
@@ -49,9 +54,12 @@ function FUNCloop() {
 			break;
 		fi
 	done
+	
+	if ! $lbCommandLineByUser;then
 #	if $lbFoundProblem;then
 		echoc -w -t 60
 #	fi
+	fi
 };export -f FUNCloop
 
 function FUNCmakeRelativeSymlink() {
@@ -59,6 +67,20 @@ function FUNCmakeRelativeSymlink() {
 	if [[ ! -L "$lstrFile" ]];then
 		zenity --info --text "File is not a symlink: '$lstrFile'"
 	else
+		local lstrFilePath="`dirname "$lstrFile"`"
+		if [[ "$lstrFilePath" == "." ]];then #is current path
+			lstrFilePath="`pwd`/"
+		elif [[ "${lstrFilePath:0:1}" != "/" ]];then #is child of current path
+			lstrFilePath="`pwd`/$lstrFilePath"
+		fi
+		lstrFilePath="`readlink -e "$lstrFilePath"`/" #real canonical path
+		echo "lstrFilePath='$lstrFilePath'"
+		
+		# update file with canonical
+		echo "lstrFile='$lstrFile'"
+		lstrFile="${lstrFilePath}`basename "$lstrFile"`"
+		echo "lstrFile='$lstrFile'"
+		
 #		echoc --alert "TODO: this functionality is still limited to symlinks pointing to files at the same directory!!! "
 		local lstrFullTarget="`readlink -f "$lstrFile"`"
 		echo "lstrFullTarget='$lstrFullTarget'"
@@ -66,36 +88,50 @@ function FUNCmakeRelativeSymlink() {
 #			echoc --info "Skipping: already relative symlink '$lstrFile' points to '$lstrFullTarget'."
 #			return 0
 #		fi
-		local lstrDirname="`dirname "$lstrFullTarget"`" #the path can be symlinked, the lstrFullTarget will work ok when matching for lstrDirname removal
-		echo "lstrDirname='$lstrDirname'"
+
+#		local lstrDirname="`dirname "$lstrFullTarget"`" #the path can be symlinked, the lstrFullTarget will work ok when matching for lstrDirname removal
+#		echo "lstrDirname='$lstrDirname'"
+		
 #		local lstrNewSymlinkTarget="`basename "$lstrFullTarget"`"
 #		local lstrNewSymlinkTarget="./${lstrFullTarget#$lstrDirname}"
-		local lstrNewSymlinkTarget="${lstrFullTarget#$lstrDirname}"
+#		local lstrNewSymlinkTarget="${lstrFullTarget#$lstrDirname}"
+		local lstrNewSymlinkTarget="${lstrFullTarget#$lstrFilePath}"
+		echo "lstrNewSymlinkTarget='$lstrNewSymlinkTarget'"
 		while [[ "${lstrNewSymlinkTarget:0:1}" == "/" ]];do
 			lstrNewSymlinkTarget="${lstrNewSymlinkTarget:1}"
+			echo "lstrNewSymlinkTarget='$lstrNewSymlinkTarget'"
 		done
 		echo "lstrNewSymlinkTarget='$lstrNewSymlinkTarget'"
-#		if [[ -a "`dirname "$lstrFile"`/$lstrNewSymlinkTarget" ]];then
-		if [[ -a "$lstrDirname/$lstrNewSymlinkTarget" ]];then
-			#echoc -x "rm -v '$lstrFile'"
-			if ! echoc -x "ln -vsfT '$lstrNewSymlinkTarget' '$lstrFile'";then
+		
+		( # work on working file path
+			SECFUNCexecA -ce cd "$lstrFilePath"
+	#		if [[ -a "`dirname "$lstrFile"`/$lstrNewSymlinkTarget" ]];then
+	#		if [[ -a "$lstrDirname/$lstrNewSymlinkTarget" ]];then
+			if [[ -a "$lstrNewSymlinkTarget" ]];then
+				#echoc -x "rm -v '$lstrFile'"
+				if ! echoc -x "ln -vsfT '$lstrNewSymlinkTarget' '$lstrFile'";then
+					return 1
+				fi
+			else
+	#			zenity --info --text "Symlink '$lstrFile' points to missing file '$lstrNewSymlinkTarget'"
+				echoc -p "unable to make symlink '$lstrFile' point to missing '$lstrNewSymlinkTarget'"
 				return 1
 			fi
-		else
-#			zenity --info --text "Symlink '$lstrFile' points to missing file '$lstrNewSymlinkTarget'"
-			echoc -p "unable to make symlink '$lstrFile' point to missing '$lstrNewSymlinkTarget'"
-			return 1
-		fi
+		)
 	fi
 	return 0
 };export -f FUNCmakeRelativeSymlink
 
-#cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
-#xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
-secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
-#for strFile in "${astrFiles[@]}";do 
-#	if ! xterm -e "bash -i -c \"FUNCmakeRelativeSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
-#		break;
-#	fi
-#done
+if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+	#cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
+	#xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
+	secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
+	#for strFile in "${astrFiles[@]}";do 
+	#	if ! xterm -e "bash -i -c \"FUNCmakeRelativeSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
+	#		break;
+	#	fi
+	#done
+else
+	SECFUNCexecA -ce FUNCloop "$@" #user is using commandline 
+fi
 
