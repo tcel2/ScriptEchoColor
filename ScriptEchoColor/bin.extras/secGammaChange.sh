@@ -94,6 +94,7 @@ function FUNCchkFixGammaComponent() {
 
 	return 0
 }
+
 function FUNCsetGamma() { #<fR> <fG> <fB>
 	SECFUNCexecA -ce xgamma \
 		-rgamma "`FUNCchkFixGammaComponent "$1"`" \
@@ -117,11 +118,16 @@ bSetCurrent=false
 #declare -a CFGafBaseGammaRGB
 #SECFUNCcfgReadDB CFGafBaseGammaRGB
 afModGammaRGB=()
+bSpeak=false
+bGetc=false
+astrRunParams=("$@")
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "Controls gamma."
 		SECFUNCshowHelp
 		exit 0
+	elif [[ "$1" == "--getc" ]];then #help will show current gamma components values in a simple way
+		bGetc=true
 	elif [[ "$1" == "--set" ]];then #help <fR> <fG> <fB> will set and store the specified gamma componenets.
 		bSetCurrent=true
 		shift
@@ -148,11 +154,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--down" ]];then #help @UniqueLock darken screen (uses --set)
 		bChangeDown=true
 		bChange=true
-	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma
+	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma (below 1.0 gamma component, step is halved)
 		shift
 		fStep="${1-}"
 	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set).
 		bReset=true
+	elif [[ "$1" == "--say" ]];then #help will speak current gamma components
+		bSpeak=true
+#	elif [[ "$1" == "--speakc" ]];then #help will speak current gamma components
+#		bSpeak=true
+#		bSpeakCurrent=true
 	elif [[ "$1" == "--keep" ]];then #help @daemon (works with --set) a loop that keeps the last gamma setup here,
 		#help useful in case some application changes it when you do not want.
 		#help incompatible with --random.
@@ -162,13 +173,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#help will not modify configuration file.
 		#help incompatible with --keep.
 		shift&&:
-		nRgfStep="${1-}"
+		nRgfStep="${1-$nRgfStep}"
 		shift&&:
-		nRgfDelay="${1-}"
+		nRgfDelay="${1-$nRgfDelay}"
 		shift&&:
-		nRgfMin="${1-}"
+		nRgfMin="${1-$nRgfMin}"
 		shift&&:
-		nRgfMax="${1-}"
+		nRgfMax="${1-$nRgfMax}"
 		
 		bRandom=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -230,8 +241,10 @@ if $bReset;then
 	else
 		SECFUNCexecA -ce xgamma -gamma 1
 	fi
-	
-	exit 0
+elif $bGetc;then
+	FUNCgetCurrentGammaRGB --force
+#elif $bSpeakCurrent;then
+#	FUNCspeak
 elif $bSetCurrent;then
 	CFGafModGammaRGB=("${afModGammaRGB[@]}")
 	#FUNCsetGamma "${afModGammaRGB[@]}"
@@ -259,12 +272,17 @@ elif $bKeep;then
 		echoc -w -t 60 "keep gamma"
 	done
 elif $bRandom;then
+	if $SECbRunLog;then
+		echoc --alert "INT trap (to reset gamma to 1.0) wont work with SECbRunLog=true, restoring default outputs"
+		SECFUNCexecA -ce SECFUNCcheckActivateRunLog --restoredefaultoutputs
+#		echoc --info "re-running with SECbRunLog=false"
+#		SECbRunLog=false SECFUNCexecA -ce $SECstrScriptSelfName "${astrRunParams[@]}"
+#		exit 0
+	fi
+	
 	SECFUNCuniqueLock --daemonwait
 	
-	if $SECbRunLog;then
-		echoc --alert "INT trap (to reset gamma to 1.0) wont work with SECbRunLog=true"
-	fi
-	trap '{ echo "(ctrl+c pressed, exiting...)";xgamma -gamma 1; exit 1; }' INT
+	trap '{ echo "(ctrl+c pressed, resetting gamma and exiting...)";$SECstrScriptSelfName --reset; exit 1; }' INT
 
 	# params
 	bReport=true
@@ -402,5 +420,14 @@ elif $bChange;then
 	SECFUNCexecA -ce $SECstrScriptSelfName --set "`_FUNCcalcComp 0`" "`_FUNCcalcComp 1`" "`_FUNCcalcComp 2`"
 
 	SECFUNCuniqueLock --release --pid $$ --id "$strLockChangeGammaId"
+fi
+
+# independent of other options
+if $bSpeak;then
+	afGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
+	# sed to make it less tedious
+	strSay="`echo "gamma red ${afGammaRGB[0]} green ${afGammaRGB[1]} blue ${afGammaRGB[2]} " \
+		|sed -e "s'0 ' 'g" -e "s'0 ' 'g" -e "s'0 ' 'g" -e "s'[.] ' 'g"`"
+	echoc --say "$strSay"
 fi
 
