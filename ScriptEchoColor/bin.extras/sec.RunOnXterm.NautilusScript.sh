@@ -22,13 +22,41 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#sedUrlDecoder='s % \\\\x g'
-#path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
-eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
-#for((n=0;n<${#astrFiles[@]};n++));do
-	#strFile="${astrFiles[n]}"
-	strFile="${astrFiles[0]}"
-	#xterm -e "$strFile"
-	xterm -e "bash -i -c \"$strFile\"" # -i required to force it work on ubuntu 12.10
-#done
+eval `secinit --extras`
+
+function FUNCdoIt() {
+	#sedUrlDecoder='s % \\\\x g'
+	#path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
+	#eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
+	IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+	#for((n=0;n<${#astrFiles[@]};n++));do
+	for strFile in "${astrFiles[@]}";do
+		echo "will run: $strFile"
+	done
+	local lbFirstDone=false
+	for strFile in "${astrFiles[@]}";do
+		if $lbFirstDone;then
+			echoc -w "any key to run next"
+		fi
+		
+		#strFile="${astrFiles[n]}"
+		#strFile="${astrFiles[0]}"
+		#xterm -e "$strFile"
+		#xterm -e "bash -i -c \"$strFile\"" # -i required to force it work on ubuntu 12.10
+		(
+			cd "`dirname "${strFile}"`"
+			SECFUNCexecA -ce secXtermDetached.sh "$strFile"
+		)
+		lbFirstDone=true
+		
+		echoc -w -t 60 "check command output above"
+	done
+};export -f FUNCdoIt
+
+#echo "NAUTILUS_SCRIPT_CURRENT_URI='$NAUTILUS_SCRIPT_CURRENT_URI'"
+#if [[ -n "$NAUTILUS_SCRIPT_CURRENT_URI" ]];then
+	SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@"
+#else
+#	SECFUNCexecA -ce FUNCdoIt "$@" #user at commandline
+#fi
 

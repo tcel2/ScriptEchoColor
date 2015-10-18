@@ -35,6 +35,10 @@ bCfgTest=false
 CFGstrTest="Test"
 strParamWithOptionalValue="OptinalValue"
 astrRemainingParams=()
+bSkipNautilus=false
+if [[ -z "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+	bSkipNautilus=true
+fi
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -43,9 +47,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCshowHelp --colorize "Works at commandline or from nautilus."
 		SECFUNCshowHelp
 		exit 0
-#	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
-#		shift
-#		strExample="${1-}"
+	elif [[ "$1" == "--skipnautilus" || "$1" == "-s" ]];then #help even if there is nautilus variables, they will be ignored and command line params will be used
+		bSkipNautilus=true
 #	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 #		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
 #			shift
@@ -70,7 +73,8 @@ done
 
 function FUNCloop() {
 	local lbCommandLineByUser=false
-	if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+#	if ! $bSkipNautilus && [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+	if ! $bSkipNautilus;then
 		IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
 	else
 		astrFiles=("$@")
@@ -160,7 +164,8 @@ function FUNCmakeRelativeSymlink() {
 	return 0
 };export -f FUNCmakeRelativeSymlink
 
-if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+#if ! $bSkipNautilus && [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+if ! $bSkipNautilus;then
 	#cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
 	#xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
 	secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
