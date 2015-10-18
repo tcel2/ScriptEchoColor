@@ -121,6 +121,7 @@ afModGammaRGB=()
 bSpeak=false
 bGetc=false
 astrRunParams=("$@")
+bChangeWait=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "Controls gamma."
@@ -154,7 +155,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--down" ]];then #help @UniqueLock darken screen (uses --set)
 		bChangeDown=true
 		bChange=true
-	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma (below 1.0 gamma component, step is halved)
+	elif [[ "$1" == "--wait" ]];then #help will wait for @UniqueLock and wont skip gamma change requests.
+		#help If the requests stack is too big and slow, and --say option was used, it may be annoying.
+		bChangeWait=true
+	elif [[ "$1" == "--step" ]];then #help <fStep> the float step amount when changing gamma (below 1.0 gamma component, step is halved)
 		shift
 		fStep="${1-}"
 	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set).
@@ -376,6 +380,10 @@ elif $bChange;then
 	strLockChangeGammaId="${SECstrScriptSelfName}_bChange"
 	strSECFUNCtrapErrCustomMsg="$strLockChangeGammaId"
 	while ! SECFUNCuniqueLock --pid $$ --id "$strLockChangeGammaId";do
+		if ! $bChangeWait;then
+			echoc --info "skipping gamma change request..."
+			exit 0
+		fi
 		echo "waiting strLockChangeGammaId='$strLockChangeGammaId' be released..."
 		sleep 1
 	done
@@ -390,10 +398,10 @@ elif $bChange;then
 #	fCurrentGamma="`xgamma 2>&1 |awk '{print $3}' |sed -r 's"(.*),"\1"'`";
 #	fNewGamma="`SECFUNCbcPrettyCalcA "${fCurrentGamma}+(${strOperation}${fStep})"`"
 #	xgamma -gamma "$fNewGamma"
-	afBaseGammaRGBcurrent=(`FUNCgetCurrentGammaRGB`)
+	afGammaRGBcurrent=(`FUNCgetCurrentGammaRGB`)
 #	function _FUNCchkFixGammaComponent() {
 #		local liIndex="$1"
-#		local lfGammaComp="`SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"`"
+#		local lfGammaComp="`SECFUNCbcPrettyCalcA "${afGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"`"
 #		
 #		FUNCchkFixGammaComponent "$lfGammaComp"
 ##		if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
@@ -409,7 +417,12 @@ elif $bChange;then
 #	}
 	function _FUNCcalcComp() {
 		local liIndex="$1"
-		SECFUNCbcPrettyCalcA "${afBaseGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"
+		if SECFUNCbcPrettyCalcA --cmpquiet \
+				"${afGammaRGBcurrent[$liIndex]} < 1.0 || ${afGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep}) < 1.0";then
+			SECFUNCbcPrettyCalcA --scale 3 "${afGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep}/2.0)"
+		else
+			SECFUNCbcPrettyCalcA --scale 3 "${afGammaRGBcurrent[$liIndex]}+(0${strOperation}${fStep})"
+		fi
 		return 0
 	}
 #	SECFUNCexecA -ce xgamma \
