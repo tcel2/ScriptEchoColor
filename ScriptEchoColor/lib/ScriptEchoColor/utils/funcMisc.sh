@@ -418,11 +418,32 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	SECFUNCdbgFuncOutA;return 0
 }
 
-function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[cfgIdentifier], if not set will default to `basename "$0"`
-	if [[ "${1-}" == "--help" ]];then
-		SECFUNCshowHelp ${FUNCNAME}
-		return
-	fi
+function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[SECcfgFileName], if not set will default to `basename "$0"`
+	# var init here
+	local lbGetFilename=false
+	local lbShow=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCcfgFileName_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--get" || "$1" == "-g" ]];then #SECFUNCcfgFileName_help get the config filename.
+			lbGetFilename=true
+		elif [[ "$1" == "--show" || "$1" == "-s" ]];then #SECFUNCcfgFileName_help show config file contents
+			lbShow=true
+		elif [[ "$1" == "--" ]];then #SECFUNCcfgFileName_help params after this are ignored as being these options
+			shift
+			break
+#		else
+#			SECFUNCechoErrA "invalid option '$1'"
+#			SECFUNCshowHelp $FUNCNAME
+#			return 1
+		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+			SECFUNCechoErrA "invalid option '$1'"
+			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
 	
 	local lpath="$SECstrUserHomeConfigPath/SEC.ScriptsConfigurationFiles"
 	#if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then mv -v "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >>/dev/stderr;	ln -sv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >>/dev/stderr; fi 
@@ -446,8 +467,15 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[c
 		SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
 	fi
 	
+	if $lbGetFilename;then
+		SECFUNCexecA -ce echo "$SECcfgFileName"
+	elif $lbShow;then
+		SECFUNCexecA -ce cat "$SECcfgFileName"
+	fi
+	
 	#echo "$lpath/${SECcfgFileName}.cfg"
 	#echo "$SECcfgFileName"
+	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars at current env
 	SECFUNCdbgFuncInA;
