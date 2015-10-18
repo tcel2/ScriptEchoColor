@@ -63,7 +63,8 @@ echo
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
 	local lstrExample="DefaultValue"
-	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
 			SECFUNCshowHelp $FUNCNAME
@@ -74,6 +75,12 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options
 			shift
 			break
+		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCshowHelp $FUNCNAME
@@ -93,8 +100,9 @@ strExample="DefaultValue"
 bCfgTest=false
 CFGstrTest="Test"
 strParamWithOptionalValue="OptinalValue"
+astrRemainingParams=()
 SECFUNCcfgReadDB #after default variables value setup above
-while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
@@ -110,9 +118,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		fi
 		
 		bCfgTest=true
-	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
-		shift
-		break
+	elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at astrRemainingParams
+		shift #astrRemainingParams=("$@")
+		while ! ${1+false};do	# checks if param is set
+			astrRemainingParams+=("$1")
+			shift #will consume all remaining params
+		done
 	else
 		echoc -p "invalid option '$1'"
 		$0 --help

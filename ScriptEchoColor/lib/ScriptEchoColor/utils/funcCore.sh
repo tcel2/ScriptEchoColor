@@ -48,10 +48,13 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	lstrErrorTrap+="SECERROR(trap);"
 	lstrErrorTrap+="strSECFUNCtrapErrCustomMsg='$strSECFUNCtrapErrCustomMsg';"
 	lstrErrorTrap+="SECstrRunLogFile='${SECstrRunLogFile-}';"
-	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName}',LINENO='${lstrLineNo}';"
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand}';"
 	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap});"
+	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
+	lstrErrorTrap+="SECstrDbgLastCaller='`   echo "${SECstrDbgLastCaller-}'"    |tr ';' ' '`;"
+	lstrErrorTrap+="SECstrDbgLastCallerIn='` echo "${SECstrDbgLastCallerIn-}'"  |tr ';' ' '`;"
+	lstrErrorTrap+="SECstrDbgLastCallerOut='`echo "${SECstrDbgLastCallerOut-}'" |tr ';' ' '`;"
 
 #	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 #	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd&&:`';"
@@ -860,10 +863,11 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	local SEClstrFuncCaller=""
 	local lbFuncIn=false
 	local lbFuncOut=false
-	local lbStopParams=false
+	#local lbStopParams=false
 	#declare -A lastrVarId=() #will be local
-	local lastrVarId=()
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+	#local lastrVarId=()
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do # checks if param is set
 		if [[ "$1" == "--help" ]];then #SECFUNCechoDbg_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
@@ -877,25 +881,33 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 			lbFuncIn=true
 		elif [[ "$1" == "--funcout" ]];then #SECFUNCechoDbg_help just to tell it was placed on the end of a function
 			lbFuncOut=true
-		elif [[ "$1" == "--vars" ]];then #SECFUNCechoDbg_help show variables values, must be last option, all remaining params will be used...
+#		elif [[ "$1" == "--vars" ]];then #SECFUNCechoDbg_help show variables values, must be last option, all remaining params will be used...
+#			shift
+#			while [[ -n "${1-}" ]];do
+#				lastrVarId+=("$1")
+#				shift #will consume all remaining params
+#			done
+		elif [[ "$1" == "--" ]];then #SECFUNCechoDbg_help remaining params after this are considered as not being options
 			shift
-			while [[ -n "${1-}" ]];do
-				lastrVarId+=("$1")
+			while ! ${1+false};do	#lastrRemainingParams=("$@")
+				lastrRemainingParams+=("$1")
 				shift #will consume all remaining params
 			done
-		elif [[ "$1" == "--" ]];then #SECFUNCechoDbg_help remaining params after this are considered as not being options
-			lbStopParams=true;
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
 		fi
 		shift
-		if $lbStopParams;then
-			break;
-		fi
+#		if $lbStopParams;then
+#			break;
+#		fi
 	done
 	
 	###### main code
+	if [[ -n "$lstrCaller" ]];then #this is a generic spot to be a bit more helpful
+		SECstrDbgLastCaller="${lstrCaller} ${lastrRemainingParams[@]-}"
+	fi
+	
 	local lnLength=0
 	local lstrLastFuncId=""
 	function SECFUNCechoDbg_updateStackVars(){
@@ -916,11 +928,17 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	strFuncInOut=""
 	declare -g -A _dtSECFUNCdebugTimeDelayArray
 	if $lbFuncIn;then
+		if [[ -n "$lstrCaller" ]];then
+			SECstrDbgLastCallerIn="${lstrCaller} ${lastrRemainingParams[@]-}"
+		fi
 		_dtSECFUNCdebugTimeDelayArray[$SEClstrFuncCaller]="`date +"%s.%N"`"
 		strFuncInOut="Func-IN: "
 		SECastrFunctionStack+=($SEClstrFuncCaller)
 		SECFUNCechoDbg_updateStackVars
 	elif $lbFuncOut;then
+		if [[ -n "$lstrCaller" ]];then
+			SECstrDbgLastCallerOut="${lstrCaller} ${lastrRemainingParams[@]-}"
+		fi
 		local ldtNow="`date +"%s.%N"`"
 		local ldtFuncDelay="-1"
 		if [[ "${_dtSECFUNCdebugTimeDelayArray[$SEClstrFuncCaller]-0}" != "0" ]];then
@@ -1002,9 +1020,9 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	
 	if $lbDebug;then
 		local lstrText=""
-		if((`SECFUNCarraySize lastrVarId`>0));then
-			for lstrVarId in ${lastrVarId[@]};do
-				lstrText+="$lstrVarId='${!lstrVarId-}' "
+		if((`SECFUNCarraySize lastrRemainingParams`>0));then
+			for lstrParam in ${lastrRemainingParams[@]};do
+				lstrText+="$lstrParam='${!lstrParam-}' "
 			done
 		else
 			lstrText="$@"

@@ -63,7 +63,7 @@ function FUNCgetCurrentGammaRGB() {
 		SECFUNCcfgReadDB CFGafModGammaRGB
 		if ! ${CFGafModGammaRGB+false};then # is set
 			if ! SECFUNCvarIsArray CFGafModGammaRGB;then
-				SECFUNCerrA "CFGafModGammaRGB='`declare -p CFGafModGammaRGB`' should be an array."
+				SECFUNCechoErrA "CFGafModGammaRGB='`declare -p CFGafModGammaRGB`' should be an array."
 				lbForce=true
 			fi
 		else # is not set
@@ -83,10 +83,10 @@ function FUNCchkFixGammaComponent() {
 	local lfGammaComp="$1"
 
 	if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
-		SECFUNCwarnA "gamma component lfGammaComp='$lfGammaComp' < 0.1, fixing"
+		SECFUNCechoWarnA "gamma component lfGammaComp='$lfGammaComp' < 0.1, fixing"
 		echo "0.1"
 	elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
-		SECFUNCwarnA "gamma component lfGammaComp='$lfGammaComp' > 10.0, fixing"
+		SECFUNCechoWarnA "gamma component lfGammaComp='$lfGammaComp' > 10.0, fixing"
 		echo "10.0"
 	else
 		echo "$lfGammaComp"
@@ -142,10 +142,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #		FUNCchkSetBase 1 "${1-}"
 #		shift
 #		FUNCchkSetBase 2 "${1-}"
-	elif [[ "$1" == "--up" ]];then #help lighten screen (uses --set)
+	elif [[ "$1" == "--up" ]];then #help @UniqueLock lighten screen (uses --set)
 		bChangeUp=true
 		bChange=true
-	elif [[ "$1" == "--down" ]];then #help darken screen (uses --set)
+	elif [[ "$1" == "--down" ]];then #help @UniqueLock darken screen (uses --set)
 		bChangeDown=true
 		bChange=true
 	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma
@@ -243,7 +243,7 @@ elif $bSetCurrent;then
 elif $bKeep;then
 	SECFUNCuniqueLock --daemonwait
 #	if ! SECFUNCvarIsArray CFGafBaseGammaRGB;then
-#		SECFUNCwarnA "setting required base"
+#		SECFUNCechoWarnA "setting required base"
 #		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
 #	fi
 
@@ -355,6 +355,12 @@ elif $bRandom;then
 	
 	exit 0
 elif $bChange;then
+	strLockChangeGammaId="${SECstrScriptSelfName}_bChange"
+	strSECFUNCtrapErrCustomMsg="$strLockChangeGammaId"
+	SECFUNCuniqueLock --pid $$ --id "$strLockChangeGammaId"
+#	SECFUNCexecA -ce ls 123&&:
+#	SECFUNCexecA -ce ls 1234
+	
 	strOperation=""
 	if $bChangeUp;then
 		strOperation="+"
@@ -393,5 +399,7 @@ elif $bChange;then
 #		-bgamma "`_FUNCchkFixGammaComponent 2`"
 	#FUNCsetGamma "`_FUNCcalcComp 0`" "`_FUNCcalcComp 1`" "`_FUNCcalcComp 2`"
 	SECFUNCexecA -ce $SECstrScriptSelfName --set "`_FUNCcalcComp 0`" "`_FUNCcalcComp 1`" "`_FUNCcalcComp 2`"
+
+	SECFUNCuniqueLock --release --pid $$ --id "$strLockChangeGammaId"
 fi
 

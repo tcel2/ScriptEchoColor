@@ -172,7 +172,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	SECFUNCdbgFuncOutA; return 0;
 }
 
-function SECFUNCuniqueLock() { #help Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it.
+function SECFUNCuniqueLock() { #help Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it and return 1.
 	SECFUNCdbgFuncInA;
 	#set -x
 	local l_bRelease=false
@@ -392,6 +392,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			fi
 			SECFUNCdbgFuncOutA;return 0
 		else
+			# this unique lock is in use, output the pid and return failure
 			if ! ${lbQuiet:?};then
 				echo "$SECnDaemonPid"
 			fi

@@ -811,7 +811,12 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	fi
 	
 	if((lnSECFUNCexecReturnValue>0));then
-		strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@"
+		strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@" # do NOT append if it is set, will stack with all other calls to this function...
+#		if [[ -z "${strSECFUNCtrapErrCustomMsg-}" ]];then
+#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@"
+#		else
+#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@ ($strSECFUNCtrapErrCustomMsg)"
+#		fi
 	fi
 	
   return $lnSECFUNCexecReturnValue
