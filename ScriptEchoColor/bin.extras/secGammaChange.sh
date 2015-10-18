@@ -142,10 +142,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #		FUNCchkSetBase 1 "${1-}"
 #		shift
 #		FUNCchkSetBase 2 "${1-}"
-	elif [[ "$1" == "--up" ]];then #help
+	elif [[ "$1" == "--up" ]];then #help lighten screen (uses --set)
 		bChangeUp=true
 		bChange=true
-	elif [[ "$1" == "--down" ]];then #help
+	elif [[ "$1" == "--down" ]];then #help darken screen (uses --set)
 		bChangeDown=true
 		bChange=true
 	elif [[ "$1" == "--step" ]];then #help <fStep> the float step ammount when changing gamma
@@ -153,9 +153,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		fStep="${1-}"
 	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set).
 		bReset=true
-	elif [[ "$1" == "--keep" ]];then #help (works with --set) a loop that keeps the last gamma setup here, useful in case some application changes it when you do not want.
+	elif [[ "$1" == "--keep" ]];then #help @daemon (works with --set) a loop that keeps the last gamma setup here,
+		#help useful in case some application changes it when you do not want.
+		#help incompatible with --random.
 		bKeep=true
-	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax] a loop that does random gamma fade, fun effect
+	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
+		#help @daemon a loop that does random gamma fade, fun effect.
+		#help will not modify configuration file.
+		#help incompatible with --keep.
 		shift&&:
 		nRgfStep="${1-}"
 		shift&&:
@@ -236,6 +241,7 @@ elif $bSetCurrent;then
 	declare -p CFGafModGammaRGB
 	SECFUNCcfgWriteVar CFGafModGammaRGB
 elif $bKeep;then
+	SECFUNCuniqueLock --daemonwait
 #	if ! SECFUNCvarIsArray CFGafBaseGammaRGB;then
 #		SECFUNCwarnA "setting required base"
 #		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
@@ -253,6 +259,8 @@ elif $bKeep;then
 		echoc -w -t 60 "keep gamma"
 	done
 elif $bRandom;then
+	SECFUNCuniqueLock --daemonwait
+	
 	if $SECbRunLog;then
 		echoc --alert "INT trap (to reset gamma to 1.0) wont work with SECbRunLog=true"
 	fi
