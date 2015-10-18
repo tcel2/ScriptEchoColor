@@ -227,106 +227,106 @@ function FUNCclearCache() {
 #	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileReal"
 #}
 
-export strCicleGammaId="OpenNewX_CicleGammaDaemon"
-function FUNCkeepGamma() { # some games reset the gamma on each restart
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
-	
-	SECFUNCuniqueLock --id "$strCicleGammaId" --daemonwait
-	
-	while true; do
-		SECFUNCvarReadDB
-		xgamma -gamma ${fGamma-}
-		echo "keep gamma at ${fGamma-}"
-		sleep 60
-	done
-};export -f FUNCkeepGamma
-
-function FUNCcicleGamma() {
-	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
-	
-	eval `secinit --log` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
-	echo "0=$0"
-	echo "PATH='$PATH'"
-	echo "$FUNCNAME" #@@@R to help on debug
-	
-	while ! SECFUNCuniqueLock --id "$strCicleGammaId" --setdbtodaemononly;do
-		echoc -p "waiting strCicleGammaId='$strCicleGammaId'"
-		sleep 3
-	done
-			
-	SECFUNCdbgFuncInA;
-	#set -x
-	local nDirection=$1 #1 or -1
-	
-	#@@@R to help on debug
-	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
-	ls -l $SECvarFile #@@@R to help on debug
-	echo "pid=$$,PPID=$PPID" #@@@R to help on debug
-	SECFUNCppidList --comm -s "\n" -r #@@@R to help on debug
-	
-	SECFUNCvarSet --show --default fGamma 1.0
-	echo "pidOpenNewX=`SECFUNCvarGet pidOpenNewX`"
-	#SECFUNCvarGet fGamma
-	
-#	local lockFileGamma="/tmp/openNewX.gamma.lock"
-#	local lockFileGammaReal="${lockFileGamma}.$pidOpenNewX"
-#	while ! ln -s "$lockFileGammaReal" "$lockFileGamma"; do #create the symlink
-#		local realFile=`readlink "$lockFileGamma"`
-#		pidForRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
-#		if ! ps -p $pidForRealFile;then
-#			rm -vf "$realFile"
-#		fi
-#		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
+#export strCicleGammaId="OpenNewX_CicleGammaDaemon"
+#function FUNCkeepGamma() { # some games reset the gamma on each restart
+#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	
+#	SECFUNCuniqueLock --id "$strCicleGammaId" --daemonwait
+#	
+#	while true; do
+#		SECFUNCvarReadDB
+#		xgamma -gamma ${fGamma-}
+#		echo "keep gamma at ${fGamma-}"
+#		sleep 60
 #	done
-#	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileGammaReal"
-	local lockGammaId="openNewX.gamma"
-#	FUNClockFile "$lockGammaId" $pidOpenNewX
-#	SECFUNCuniqueLock --pid $pidOpenNewX --id "$lockGammaId"
-	SECFUNCuniqueLock --pid $$ --id "$lockGammaId"
+#};export -f FUNCkeepGamma
 
-#	SECFUNCvarSet --default gammaLock 0
-#	SECFUNCvarWaitValue gammaLock 0
-#	SECFUNCvarSet gammaLock $$
-	
-	local nIncrement="0.25"
-	local nMin="0.25"
-	local nMax="10.0"
-	
-	SECFUNCvarSet --show fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
-	if ((`bc <<< "$fGamma<$nMin"`)); then
-		SECFUNCvarSet --show fGamma=$nMax
-	fi
-	if ((`bc <<< "$fGamma>$nMax"`)); then
-		SECFUNCvarSet --show fGamma=$nMin
-	fi
-	
-#	if [[ "$fGamma" == "0.5" ]];then
-#		SECFUNCvarSet fGamma=0.75
-#	elif [[ "$fGamma" == "0.75" ]];then
-#		SECFUNCvarSet fGamma=1.0
-#	elif [[ "$fGamma" == "1.0" ]];then
-#		SECFUNCvarSet fGamma=1.25
-#	elif [[ "$fGamma" == "1.25" ]];then
-#		SECFUNCvarSet fGamma=1.5
-#	elif [[ "$fGamma" == "1.5" ]];then
-#		SECFUNCvarSet fGamma=1.75
-#	elif [[ "$fGamma" == "1.75" ]];then
-#		SECFUNCvarSet fGamma=2.0
-#	elif [[ "$fGamma" == "2.0" ]];then
-#		SECFUNCvarSet fGamma=0.5
+#function FUNCcicleGamma() {
+#	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
+#	
+#	eval `secinit --log` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	echo "0=$0"
+#	echo "PATH='$PATH'"
+#	echo "$FUNCNAME" #@@@R to help on debug
+#	
+#	while ! SECFUNCuniqueLock --id "$strCicleGammaId" --setdbtodaemononly;do
+#		echoc -p "waiting strCicleGammaId='$strCicleGammaId'"
+#		sleep 3
+#	done
+#			
+#	SECFUNCdbgFuncInA;
+#	#set -x
+#	local nDirection=$1 #1 or -1
+#	
+#	#@@@R to help on debug
+#	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
+#	ls -l $SECvarFile #@@@R to help on debug
+#	echo "pid=$$,PPID=$PPID" #@@@R to help on debug
+#	SECFUNCppidList --comm -s "\n" -r #@@@R to help on debug
+#	
+#	SECFUNCvarSet --show --default fGamma 1.0
+#	echo "pidOpenNewX=`SECFUNCvarGet pidOpenNewX`"
+#	#SECFUNCvarGet fGamma
+#	
+##	local lockFileGamma="/tmp/openNewX.gamma.lock"
+##	local lockFileGammaReal="${lockFileGamma}.$pidOpenNewX"
+##	while ! ln -s "$lockFileGammaReal" "$lockFileGamma"; do #create the symlink
+##		local realFile=`readlink "$lockFileGamma"`
+##		pidForRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
+##		if ! ps -p $pidForRealFile;then
+##			rm -vf "$realFile"
+##		fi
+##		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
+##	done
+##	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileGammaReal"
+#	local lockGammaId="openNewX.gamma"
+##	FUNClockFile "$lockGammaId" $pidOpenNewX
+##	SECFUNCuniqueLock --pid $pidOpenNewX --id "$lockGammaId"
+#	SECFUNCuniqueLock --pid $$ --id "$lockGammaId"
+
+##	SECFUNCvarSet --default gammaLock 0
+##	SECFUNCvarWaitValue gammaLock 0
+##	SECFUNCvarSet gammaLock $$
+#	
+#	local nIncrement="0.25"
+#	local nMin="0.25"
+#	local nMax="10.0"
+#	
+#	SECFUNCvarSet --show fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
+#	if ((`bc <<< "$fGamma<$nMin"`)); then
+#		SECFUNCvarSet --show fGamma=$nMax
 #	fi
-	
-	xgamma -gamma $fGamma
-#	SECFUNCvarSet gammaLock 0
-#	rm -vf "$lockFileGamma"
-#	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
-#	SECFUNCuniqueLock --release --pid $pidOpenNewX --id "$lockGammaId"
-	echoc --say "gamma $fGamma" #must say before releasing the lock!
-	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
-	#set +x
-	echoc -w -t 60 #@@@R to help on debug
-	SECFUNCdbgFuncOutA;
-};export -f FUNCcicleGamma
+#	if ((`bc <<< "$fGamma>$nMax"`)); then
+#		SECFUNCvarSet --show fGamma=$nMin
+#	fi
+#	
+##	if [[ "$fGamma" == "0.5" ]];then
+##		SECFUNCvarSet fGamma=0.75
+##	elif [[ "$fGamma" == "0.75" ]];then
+##		SECFUNCvarSet fGamma=1.0
+##	elif [[ "$fGamma" == "1.0" ]];then
+##		SECFUNCvarSet fGamma=1.25
+##	elif [[ "$fGamma" == "1.25" ]];then
+##		SECFUNCvarSet fGamma=1.5
+##	elif [[ "$fGamma" == "1.5" ]];then
+##		SECFUNCvarSet fGamma=1.75
+##	elif [[ "$fGamma" == "1.75" ]];then
+##		SECFUNCvarSet fGamma=2.0
+##	elif [[ "$fGamma" == "2.0" ]];then
+##		SECFUNCvarSet fGamma=0.5
+##	fi
+#	
+#	xgamma -gamma $fGamma
+##	SECFUNCvarSet gammaLock 0
+##	rm -vf "$lockFileGamma"
+##	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
+##	SECFUNCuniqueLock --release --pid $pidOpenNewX --id "$lockGammaId"
+#	echoc --say "gamma $fGamma" #must say before releasing the lock!
+#	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
+#	#set +x
+#	echoc -w -t 60 #@@@R to help on debug
+#	SECFUNCdbgFuncOutA;
+#};export -f FUNCcicleGamma
 
 function FUNCnvidiaCicle() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
@@ -444,9 +444,11 @@ function FUNCscript() {
 #  		fi
 #  		echoc -w -t 1 "already running, waiting other exit"
 #  	done
-	  FUNCcicleGamma 1
+#	  FUNCcicleGamma 1
+	  secGammaChange.sh --up
   elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
-  	FUNCcicleGamma -1
+#  	FUNCcicleGamma -1
+  	secGammaChange.sh --down
   elif [[ "$lscriptName" == "sayTemperature" ]]; then #FUNCscript_help say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
@@ -1124,7 +1126,8 @@ fi
 #fi
 
 #xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
+#secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "secGammaChange.sh --keep"
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 
