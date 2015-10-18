@@ -445,10 +445,10 @@ function FUNCscript() {
 #  		echoc -w -t 1 "already running, waiting other exit"
 #  	done
 #	  FUNCcicleGamma 1
-	  secGammaChange.sh --up
+	  secGammaChange.sh --say --up
   elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
 #  	FUNCcicleGamma -1
-  	secGammaChange.sh --down
+  	secGammaChange.sh --say --down
   elif [[ "$lscriptName" == "sayTemperature" ]]; then #FUNCscript_help say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
