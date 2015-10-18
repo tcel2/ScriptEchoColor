@@ -357,9 +357,10 @@ elif $bRandom;then
 elif $bChange;then
 	strLockChangeGammaId="${SECstrScriptSelfName}_bChange"
 	strSECFUNCtrapErrCustomMsg="$strLockChangeGammaId"
-	SECFUNCuniqueLock --pid $$ --id "$strLockChangeGammaId"
-#	SECFUNCexecA -ce ls 123&&:
-#	SECFUNCexecA -ce ls 1234
+	while ! SECFUNCuniqueLock --pid $$ --id "$strLockChangeGammaId";do
+		echo "waiting strLockChangeGammaId='$strLockChangeGammaId' be released..."
+		sleep 1
+	done
 	
 	strOperation=""
 	if $bChangeUp;then
