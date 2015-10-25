@@ -122,6 +122,8 @@ bSpeak=false
 bGetc=false
 astrRunParams=("$@")
 bChangeWait=false
+SECFUNCcfgFileName --show
+SECFUNCexecA -ce xgamma
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "Controls gamma."
