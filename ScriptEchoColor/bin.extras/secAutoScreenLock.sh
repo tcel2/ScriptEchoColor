@@ -44,6 +44,7 @@ astrSimpleCommandRegex=(
 	"^/usr/bin/vlc "
 	"^totem "
 	"^s{0,1}mplayer "
+	"\\\\VLC\\\\vlc.exe "
 )
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -346,6 +347,7 @@ while true;do
 					if echo "$strActiveWindowCmd" |egrep "$strSimpleCommandRegex";then
 						bSimulateActivity=true
 						bFound=true
+						break
 					fi
 				done
 				if ! $bFound;then
