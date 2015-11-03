@@ -1139,8 +1139,8 @@ fi
 
 #xterm -bg darkblue -geometry $strOptXtermGeom -display :1 -e "FUNCkeepGamma; #kill=skip"&
 #secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "FUNCkeepGamma"
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "secGammaChange.sh --reset" #this one will exit
-secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" "secGammaChange.sh --keep"
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" secGammaChange.sh --reset #this one will exit
+secXtermDetached.sh --killskip --display :1 --xtermopts "-bg darkblue -geometry $strOptXtermGeom" secGammaChange.sh --keep
 
 # setxkbmap is good for games that have console access!; bash is to keep console open!
 
