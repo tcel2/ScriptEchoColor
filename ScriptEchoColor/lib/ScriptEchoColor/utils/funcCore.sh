@@ -270,11 +270,11 @@ fi
 # MAIN CODE
 #export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"
 
-function SECFUNCarraySize() { #help usefull to prevent unbound variable error message; returns 1 if var is not an array and output 0; output to stdout the array size value
+function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound variable error message; returns 1 if var is not an array and output 0; output to stdout the array size value
 	# var init here
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCarraySize_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
 		elif [[ "$1" == "--" ]];then #SECFUNCarraySize_help params after this are ignored as being these options
@@ -292,8 +292,13 @@ function SECFUNCarraySize() { #help usefull to prevent unbound variable error me
 	done
 	local lstrArrayId="${1-}"
 	
-	if [[ -z "$lstrArrayId" ]];then
-		SECFUNCechoWarnA "invalid lstrArrayId='$lstrArrayId'"
+#	if [[ -z "$lstrArrayId" ]];then
+#		SECFUNCechoWarnA "invalid lstrArrayId='$lstrArrayId'"
+#		echo "0"
+#		return 1
+#	fi
+	if ! declare -p "$lstrArrayId" >>/dev/null;then
+		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
 		echo "0"
 		return 1
 	fi
@@ -314,6 +319,74 @@ function SECFUNCarraySize() { #help usefull to prevent unbound variable error me
 	eval 'echo "${#'$lstrArrayId'[@]}"'
 	
 	return 0
+}
+
+function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cleaning array elements. If lstrMatch is empty, will clean empty elements (default behavior)
+	# var init here
+	local lstrArrayId=""
+	local lstrMatch=""
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCarrayClean_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayClean_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCarrayClean_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			SECFUNCshowHelp $FUNCNAME
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	# code here
+	lstrArrayId="${1-}"
+	shift
+	lstrMatch="${1-}"
+	
+	if ! declare -p "$lstrArrayId" >>/dev/null;then
+		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+		echo "0"
+		return 1
+	fi
+	
+	local lstrArrayAllElements="${lstrArrayId}[@]"
+	#local lstrArraySize="#${lstrArrayId}[@]"
+	#local lnSize="${!lstrArraySize}"
+	local lnIndex=0
+	for strTmp in "${!lstrArrayAllElements}";do
+#			echo "strTmp='$strTmp' $lnIndex" >>/dev/stderr
+#			declare -p "$lstrArrayId" >>/dev/stderr
+			
+		local lbUnset=false
+		if [[ -z "$lstrMatch" ]];then
+			if [[ -z "$strTmp" ]];then
+				lbUnset=true
+			fi
+		elif [[ "$strTmp" =~ $lstrMatch ]];then
+			lbUnset=true
+		fi
+		
+		if $lbUnset;then
+			eval "unset $lstrArrayId[$lnIndex]"
+#			declare -p "$lstrArrayId" >>/dev/stderr
+		fi
+		((lnIndex++))&&:
+	done
+	
+	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 : ${SECstrBashSourceFiles:=}

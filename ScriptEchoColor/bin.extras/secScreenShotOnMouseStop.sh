@@ -28,6 +28,7 @@ bParamsAreScrotOptions=false
 nTimeLimit=3
 bKeepAlways=false
 bShowAfter=true
+bLoop=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -40,6 +41,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--keep" || "$1" == "-k" ]];then #help do not ask to delete screenshot
 		bKeepAlways=true
 	elif [[ "$1" == "--hidden" || "$1" == "-h" ]];then #help do not show the screenshot after taken
+		bShowAfter=false
+	elif [[ "$1" == "--loop" || "$1" == "-l" ]];then #help loop implies --keep and --hidden, so you can take several screenshots, just keep moving the mouse
+		bLoop=true
+		bKeepAlways=true
 		bShowAfter=false
 	elif [[ "$1" == "--" ]];then #help params after this are scrot options
 		bParamsAreScrotOptions=true
@@ -58,46 +63,55 @@ if ! SECFUNCisNumber -dn $nTimeLimit;then
 	exit 1
 fi
 
-astrParams=()
+astrBaseParams=()
 if $bParamsAreScrotOptions;then
-	astrParams=("$@")	
-	echoc --info "astrParams[\@]=(${astrParams[@]})"
+	astrBaseParams=("$@")	
+	echoc --info "astrBaseParams[\@]=(${astrBaseParams[@]})"
 fi
 
 strSaveTo="$HOME/Pictures"
 cd "$strSaveTo";echoc -x "pwd"
 
-echoc --info "stop moving the mouse for $nTimeLimit seconds and the screenshot will be taken"
-SECFUNCdelay strMouseStatus --init
 while true;do
-	strMouseStatus="`xdotool getmouselocation`"
-	echo -en "strMouseStatus='$strMouseStatus', `SECFUNCdelay strMouseStatus --get`s\r"
-	if [[ "${strMouseStatusPrevious-}" == "$strMouseStatus" ]];then
-		if(( $(SECFUNCdelay strMouseStatus --getsec) >= nTimeLimit ));then
-			break
+	echoc --info "stop moving the mouse for $nTimeLimit seconds and the screenshot will be taken"
+	SECFUNCdelay strMouseStatus --init
+	while true;do
+		strMouseStatus="`xdotool getmouselocation`"
+		echo -en "strMouseStatus='$strMouseStatus', `SECFUNCdelay strMouseStatus --get`s\r"
+		if [[ "${strMouseStatusPrevious-}" == "$strMouseStatus" ]];then
+			if(( $(SECFUNCdelay strMouseStatus --getsec) >= nTimeLimit ));then
+				break
+			fi
+		else
+			SECFUNCdelay strMouseStatus --init
+		fi
+		strMouseStatusPrevious="$strMouseStatus"
+		sleep 0.5
+	done
+
+	strFile="$strSaveTo/ScreenShot-`SECFUNCdtFmt --filename`.png"
+	astrParamsThisStep=("${astrBaseParams[@]-}" "$strFile")
+	SECFUNCarrayClean astrParamsThisStep
+	echoc --say "screenshot now"
+	if SECFUNCexecA -c --echo scrot "${astrParamsThisStep[@]}";then
+		echoc -x "ls -l \"$strFile\""
+
+		echoc --info --say "screenshot taken"
+		if $bShowAfter;then
+			echoc -x "eog '$strFile'"
+		fi
+
+		if ! $bKeepAlways;then
+			if echoc -q "delete it?";then
+				echoc -x "trash '$strFile'"
+			fi
 		fi
 	else
-		SECFUNCdelay strMouseStatus --init
+		echo "<> <> <> aborted by user?"
 	fi
-	strMouseStatusPrevious="$strMouseStatus"
-	sleep 0.5
+	
+	if ! $bLoop;then
+		break;
+	fi
 done
-
-strFile="$strSaveTo/ScreenShot-`SECFUNCdtFmt --filename`.png"
-astrParams+=("$strFile")
-echoc --say "screenshot now"
-SECFUNCexecA -c --echo scrot "${astrParams[@]}"
-
-echoc -x "ls -l \"$strFile\""
-
-echoc --info --say "screenshot taken"
-if $bShowAfter;then
-	echoc -x "eog '$strFile'"
-fi
-
-if ! $bKeepAlways;then
-	if echoc -q "delete it?";then
-		echoc -x "trash '$strFile'"
-	fi
-fi
 

@@ -72,9 +72,6 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
 			shift
 			lstrExample="${1-}"
-		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options
-			shift
-			break
 		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
