@@ -47,6 +47,9 @@ bFixCairoDock=false
 fDefaultDelay=60
 bListUnmappedWindows=false
 bFixYakuake=false
+bActivateUnmappedWindow=false
+strActivateUnmappedWindowNameId=""
+bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as it will be overriden at boolean check...
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -79,6 +82,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixYakuake=true
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
+	elif [[ "$1" == "--activateunmapped" ]];then #help @Daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
+		shift&&:
+		bActivateUnmappedAskAndWait="${1-}"
+		if [[ "$bActivateUnmappedAskAndWait" != "true" ]];then bActivateUnmappedAskAndWait=false;fi
+		shift&&:
+		strActivateUnmappedWindowNameId="${1-}"
+		
+		bActivateUnmappedWindow=true
 	elif [[ "$1" == "--secvarsset" ]];then #help sets variables at SEC DB, use like: var=value var=value ...
 		shift
 		sedVarValue="^([[:alnum:]]*)=(.*)"
@@ -113,6 +124,44 @@ if $bFixCompiz;then
 		SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
 	fi
   exit 0
+elif $bActivateUnmappedWindow;then
+	if [[ -z "$strActivateUnmappedWindowNameId" ]];then
+		echoc -p "invalid strActivateUnmappedWindowNameId='$strActivateUnmappedWindowNameId'"
+		exit 1
+	fi
+	if ((fDefaultDelay>5));then
+		echoc --alert "fDefaultDelay='$fDefaultDelay' > 5, suggested is 3, less may cause trouble."	
+	fi
+	
+	#nPPID="`ps --no-headers -o ppid -p $PPID`"
+	#ps -o pid,cmd -p $nPPID
+	#ps -o pid,ppid,comm,cmd -A |egrep --color=always -C 10 "$$|$PPID|$nPPID"
+	while true;do
+		bDoItNow=false
+		strInfo="to the window matching '@s@g$strActivateUnmappedWindowNameId@S' be activated."
+		if $bActivateUnmappedAskAndWait;then
+			echoc -w "Hit a key $strInfo"
+			bDoItNow=true
+		else
+			echoc --info "Activate this terminal $strInfo"
+			#if [[ $(xdotool getwindowpid $(xdotool getactivewindow)) == $nPPID ]];then 
+			nPidCheck=$(xdotool getwindowpid $(xdotool getactivewindow))&&:
+			if [[ -n "$nPidCheck" ]];then
+				if SECFUNCppidList --checkpid $nPidCheck;then
+					bDoItNow=true
+				fi
+			fi
+		fi
+		
+		if $bDoItNow;then
+			xdotool windowactivate $(xdotool search "$strActivateUnmappedWindowNameId");
+		fi;
+		
+		if ! $bActivateUnmappedAskAndWait;then
+			sleep $fDefaultDelay;
+		fi
+	done
+	exit 0
 elif $bFixYakuake;then
  	SECFUNCexecA -ce killall -9 yakuake&&:
 	SECFUNCexecA -ce sleep 5 # does this help?
