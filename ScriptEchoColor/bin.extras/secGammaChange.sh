@@ -170,12 +170,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #	elif [[ "$1" == "--speakc" ]];then #help will speak current gamma components
 #		bSpeak=true
 #		bSpeakCurrent=true
-	elif [[ "$1" == "--keep" ]];then #help @daemon (works with --set) a loop that keeps the last gamma setup here,
+	elif [[ "$1" == "--keep" ]];then #help ~daemon (works with --set) a loop that keeps the last gamma setup here,
 		#help useful in case some application changes it when you do not want.
 		#help incompatible with --random.
 		bKeep=true
 	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
-		#help @daemon a loop that does random gamma fade, fun effect.
+		#help ~daemon a loop that does random gamma fade, fun effect.
 		#help will not modify configuration file.
 		#help incompatible with --keep.
 		shift&&:

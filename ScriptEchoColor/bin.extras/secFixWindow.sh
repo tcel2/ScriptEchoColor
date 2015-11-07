@@ -82,7 +82,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixYakuake=true
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
-	elif [[ "$1" == "--activateunmapped" ]];then #help @Daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
+	elif [[ "$1" == "--activateunmapped" ]];then #help ~daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
 		shift&&:
 		bActivateUnmappedAskAndWait="${1-}"
 		if [[ "$bActivateUnmappedAskAndWait" != "true" ]];then bActivateUnmappedAskAndWait=false;fi
@@ -132,6 +132,9 @@ elif $bActivateUnmappedWindow;then
 	if ((fDefaultDelay>5));then
 		echoc --alert "fDefaultDelay='$fDefaultDelay' > 5, suggested is 3, less may cause trouble."	
 	fi
+	
+	# only one per window match
+	SECFUNCuniqueLock --waitbecomedaemon --id "$strActivateUnmappedWindowNameId"
 	
 	#nPPID="`ps --no-headers -o ppid -p $PPID`"
 	#ps -o pid,cmd -p $nPPID
