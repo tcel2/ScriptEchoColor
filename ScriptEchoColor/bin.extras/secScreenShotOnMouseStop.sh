@@ -107,7 +107,7 @@ while true;do
 			fi
 		fi
 	else
-		echo "<> <> <> aborted by user?"
+		echoc --info --say "screenshot aborted?"
 	fi
 	
 	if ! $bLoop;then
