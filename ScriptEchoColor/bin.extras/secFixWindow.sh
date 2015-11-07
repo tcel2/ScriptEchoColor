@@ -157,7 +157,7 @@ elif $bActivateUnmappedWindow;then
 		fi
 		
 		if $bDoItNow;then
-			xdotool windowactivate $(xdotool search "$strActivateUnmappedWindowNameId");
+			xdotool windowactivate $(xdotool search "$strActivateUnmappedWindowNameId")&&:
 		fi;
 		
 		if ! $bActivateUnmappedAskAndWait;then
