@@ -158,7 +158,7 @@ elif $bActivateUnmappedWindow;then
 		fi;
 		
 		if ! $bActivateUnmappedAskAndWait;then
-			sleep $fDefaultDelay;
+			echoc -w -t $fDefaultDelay "do it now";
 		fi
 	done
 	exit 0
