@@ -98,7 +98,6 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 strExample="DefaultValue"
 bCfgTest=false
 CFGstrTest="Test"
-strParamWithOptionalValue="OptinalValue"
 astrRemainingParams=()
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
