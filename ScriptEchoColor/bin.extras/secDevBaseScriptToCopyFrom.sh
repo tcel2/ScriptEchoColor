@@ -24,40 +24,42 @@
 
 eval `secinit`
 
-echo
-SECFUNCdrawLine "`echoc " @{lb}CODING GUIDE LINES@w @{lw}>>@{-ty}---@{ly}> "`" "~"
-echoc "@{lw}Environment variables used as these types below, will begin with ->
-  @cString\t@y->\t@g'str'
-  @cDecimal\t@y->\t@g'n'
-  @cFloating\t@y->\t@g'f'
-  @cBoolean\t@y->\t@g'b'
-  @cArray \t@y->\t@g'a' @{-tw}(prefix all other types with 'a' like 'astr' 'af' 'an' 'ab')
- @{lw}Aliases ends with @g'A'
- @wFunctions begins with @g'FUNC'
- 
- @wWords on identifiers are captalized like: @gstrThisIsAnExampleAndATest
- @wThis helps with one or another piece of code that expects for this way of coding like @bSECFUNCseparateInWords@y()
- @wmaking it useful for ex.: @c\`echoc --say\`@w."
-#SECFUNCexec --echo --colorize SECFUNCseparateInWords --notype strThisIsAnExampleAndATest
-echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
-echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'
+function FUNCcodingGuide(){
+	echo
+	SECFUNCdrawLine "`echoc " @{lb}CODING GUIDE LINES@w @{lw}>>@{-ty}---@{ly}> "`" "~"
+	echoc "@{lw}Environment variables used as these types below, will begin with ->
+		@cString\t@y->\t@g'str'
+		@cDecimal\t@y->\t@g'n'
+		@cFloating\t@y->\t@g'f'
+		@cBoolean\t@y->\t@g'b'
+		@cArray \t@y->\t@g'a' @{-tw}(prefix all other types with 'a' like 'astr' 'af' 'an' 'ab')
+	 @{lw}Aliases ends with @g'A'
+	 @wFunctions begins with @g'FUNC'
+	 
+	 @wWords on identifiers are captalized like: @gstrThisIsAnExampleAndATest
+	 @wThis helps with one or another piece of code that expects for this way of coding like @bSECFUNCseparateInWords@y()
+	 @wmaking it useful for ex.: @c\`echoc --say\`@w."
+	#SECFUNCexec --echo --colorize SECFUNCseparateInWords --notype strThisIsAnExampleAndATest
+	echoc -x "SECFUNCseparateInWords --notype strThisIsAnExampleAndATest"
+	echoc " @{lw}All publics coded at @{Bow} Script @{lk}Echo @rC@go@bl@co@yr @-b @ware prefixed with @g'SEC'
 
- @{wu}Coding Tips:@{-u}
-  @wBecause of 'trap ERR', commands that can fail may simply end with '&&:' ex.: @gln -s a b&&:
-  @wBecause of 'set -u', if a variable is not set, do set it up. Or use this: @g\${variable-} @{rn}#TODO <-- the missing example here requires a fix at scripteechocolor@{-n}
- 
- @{wu}Exit/Return values shall not be these:@{-u}
-	@y1      @wCatchall for general errors (this is actually ok for unspecified errors tho...)
-	@y2      @wMisuse of shell builtins (according to Bash documentation) (but seems to be only returned by bash builtins...)
-	@r126    @wCommand invoked cannot execute
-	@r127    @wcommand not found
-	@r128+n  @wFatal error signal n
-	@r130    @wScript terminated by Ctrl-C
-	@r255*   @wExit status out of range
-  @wSo basically you can safely go from @g0 @wto @g125@w!
-  "
-SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
-echo
+	 @{wu}Coding Tips:@{-u}
+		@wBecause of 'trap ERR', commands that can fail may simply end with '&&:' ex.: @gln -s a b&&:
+		@wBecause of 'set -u', if a variable is not set, do set it up. Or use this: @g\${variable-} @{rn}#TODO <-- the missing example here requires a fix at scripteechocolor@{-n}
+	 
+	 @{wu}Exit/Return values shall not be these:@{-u}
+		@y1      @wCatchall for general errors (this is actually ok for unspecified errors tho...)
+		@y2      @wMisuse of shell builtins (according to Bash documentation) (but seems to be only returned by bash builtins...)
+		@r126    @wCommand invoked cannot execute
+		@r127    @wcommand not found
+		@r128+n  @wFatal error signal n
+		@r130    @wScript terminated by Ctrl-C
+		@r255*   @wExit status out of range
+		@wSo basically you can safely go from @g0 @wto @g125@w!
+		"
+	SECFUNCdrawLine "`echoc " @{ly}<@{-ty}---@{lw}<< @{lb}CODING GUIDE LINES@w "`" "~"
+	echo
+}
 
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
@@ -80,7 +82,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 			done
 		else
 			SECFUNCechoErrA "invalid option '$1'"
-			SECFUNCshowHelp $FUNCNAME
+			$FUNCNAME --help
 			return 1
 #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
 #			SECFUNCechoErrA "invalid option '$1'"
@@ -115,7 +117,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		fi
 		
 		bCfgTest=true
-	elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at astrRemainingParams
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
 			astrRemainingParams+=("$1")
@@ -123,7 +125,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		done
 	else
 		echoc -p "invalid option '$1'"
-		$0 --help
+		"$SECstrScriptSelfName" --help
 		exit 1
 	fi
 	shift&&:
@@ -132,8 +134,8 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-SECFUNCexec -c --echo FUNCexample --help
-SECFUNCexec -c --echo FUNCexample -e
+SECFUNCexec -ce FUNCcodingGuide
+SECFUNCexec -ce FUNCexample --help
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 
