@@ -30,6 +30,7 @@ astrRemainingParams=()
 strRegexMatch=""
 strReplaceWith=""
 strFileFilter="*.java"
+strBkpSuffix=".bkp"
 bWrite=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -43,6 +44,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strFileFilter="${1-}"
 	elif [[ "$1" == "--write" ]];then #help this option will actually make `sed` write to files
 		bWrite=true
+	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
+		shift
+		strBkpSuffix="${1-}"
 	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
 			shift
@@ -86,8 +90,14 @@ for strFile in "${astrFileList[@]}";do
 	if egrep -q "$strRegexMatch" "$strFile";then
 		egrep -Hc "$strRegexMatch" "$strFile"
 		if $bWrite;then
-			SECFUNCexec -ce sed -i "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
-			SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
+			SECFUNCexec -ce sed -i${strBkpSuffix} "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
+			strBkpFile="${strFile}${strBkpSuffix}"
+			if [[ -f "$strBkpFile" ]];then
+				SECFUNCexec -ce ls -l "$strBkpFile"
+				SECFUNCexec -ce colordiff "$strFile" "$strBkpFile"&&:
+			else
+				SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
+			fi
 		else
 			SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |egrep --color=always "${strReplaceWith}"&&:
 		fi
