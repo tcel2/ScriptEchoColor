@@ -125,7 +125,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		done
 	else
 		echoc -p "invalid option '$1'"
-		"$SECstrScriptSelfName" --help
+		#"$SECstrScriptSelfName" --help
+		$0 --help #$0 considers ./, works best anyway..
 		exit 1
 	fi
 	shift&&:
