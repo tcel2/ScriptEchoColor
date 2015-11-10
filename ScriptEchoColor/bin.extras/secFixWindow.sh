@@ -181,7 +181,8 @@ elif $bFixCairoDock;then
 	
 	#cairo-dock --log message
 	#cairo-dock >>/tmp/".`basename "$0"`.log"&disown
-	secXtermDetached.sh --daemon cairo-dock
+	#secXtermDetached.sh --daemon cairo-dock
+	secXtermDetached.sh --skipchilddb --daemon cairo-dock
 	exit 0
 elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);
