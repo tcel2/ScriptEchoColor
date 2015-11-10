@@ -50,6 +50,7 @@ bFixYakuake=false
 bActivateUnmappedWindow=false
 strActivateUnmappedWindowNameId=""
 bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as it will be overriden at boolean check...
+bFixPSensor=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -74,12 +75,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help <fDefaultDelay> delay at main loop, beware that too low value may cause trouble/problems, can be float.
 		shift
 		fDefaultDelay="${1-}"
-	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply restarting compiz.
+	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply directly replacing compiz.
 		bFixCompiz=true
-	elif [[ "$1" == "--fixcairodock" ]];then #help to fix cairo-dock (if it malfunction for any reason) by properly replacing it.
+	elif [[ "$1" == "--fixcairodock" ]];then #help to fix cairo-dock (if it stops responding to mouse clicks) by properly replacing it.
 		bFixCairoDock=true
-	elif [[ "$1" == "--fixyakuake" ]];then #help to fix yakuake (if it malfunction for any reason) by properly replacing it.
+	elif [[ "$1" == "--fixyakuake" ]];then #help to fix yakuake (if its hotkey stops working) by properly replacing it.
 		bFixYakuake=true
+	elif [[ "$1" == "--fixpsensor" ]];then #help to fix psensor window (on system startup, its maximized state may be ignored).
+		bFixPSensor=true
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
 	elif [[ "$1" == "--activateunmapped" ]];then #help ~daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
@@ -183,6 +186,9 @@ elif $bFixCairoDock;then
 	#cairo-dock >>/tmp/".`basename "$0"`.log"&disown
 	#secXtermDetached.sh --daemon cairo-dock
 	secXtermDetached.sh --skipchilddb --daemon cairo-dock
+	exit 0
+elif $bFixPSensor;then
+	SECFUNCexecA -ce SECFUNCCwindowCmd --maximize "Psensor - Temperature Monitor"
 	exit 0
 elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);
