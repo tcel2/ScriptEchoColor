@@ -39,6 +39,7 @@ nDelay=10
 bDebugging=false
 bMouseTrickMode=false
 bLockedCheckOnly=false
+bIgnoreDaemon=false
 astrSimpleCommandRegex=(
 	"^chromium-browser .*flashplayer.so"
 	"^/usr/bin/vlc "
@@ -78,6 +79,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		astrSimpleCommandRegex+=("${1-}");
 	elif [[ "$1" == "--islocked" ]];then #help exit 0 if screen is locked
 		bLockedCheckOnly=true
+	elif [[ "$1" == "--skipdaemon" ]];then #help ignore daemon check where it would be required
+		bIgnoreDaemon=true
 	elif [[ "$1" == "--mousetrickmode" ]];then #help simulate mouse activity what will expectedly work with all screensavers but may have some side effects..
 		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
@@ -119,9 +122,13 @@ function FUNCisLocked(){
 varset strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
 
 if $bLockedCheckOnly;then
-	if ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;then
-		SECFUNCechoWarnA "daemon not running, unity log will not be available"
-	fi
+	while ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;do
+		if $bIgnoreDaemon;then
+			SECFUNCechoWarnA "daemon not running, unity log will not be available"
+			break;
+		fi
+		echoc -w -t 3 "waiting for daemon..."
+	done
 	SECFUNCvarReadDB strUnityLog
 	
 	FUNCisLocked&&:
