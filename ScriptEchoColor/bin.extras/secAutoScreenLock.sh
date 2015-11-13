@@ -49,7 +49,7 @@ astrSimpleCommandRegex=(
 )
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		#SECFUNCshowHelp --colorize "Works with unity, xscreensaver and gnome-screensaver."
+		SECFUNCshowHelp --colorize "This script should be started as soon as possible, to monitor unity gdbus and make available the log that is used to detect unity screenlock."
 		SECFUNCshowHelp
 		echoc --info "\tVideo players detection: "
 		echo -en "\t";declare -p astrSimpleCommandRegex
