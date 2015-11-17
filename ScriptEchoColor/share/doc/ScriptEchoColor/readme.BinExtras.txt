@@ -1,6 +1,6 @@
-The extras package is optional and depends on main ScriptEchoColor one.
+The extras package, of experimental scripts, is optional and depends on main ScriptEchoColor one.
 
-Status:
+Status: (needs updating)
 
 [beta]	secAutoScreenLock.sh
 [beta]	secAutoUnmount.sh

@@ -30,6 +30,7 @@ bValidateOnly=false
 bCheckInternet=false
 bListNetworkFiles=false
 bToggle=false
+nCoolDownDelay=15
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
@@ -49,6 +50,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bValidateOnly=true
 	elif [[ "$1" == "--listnetworkfiles" || "$1" == "-l" ]];then #help lsof -i
 		bListNetworkFiles=true
+	elif [[ "$1" == "--cooldown" || "$1" == "-d" ]];then #help <nCoolDownDelay> a hardware cooldown delay time to wait before changing network state. Some hardware may stop working and require a computer reboot if its state is changed too fast.
+		shift
+		nCoolDownDelay="${1-}"
 	elif [[ "$1" == "--toggle" || "$1" == "-t" ]];then #help toggle network on/off
 		bToggle=true
 	else
@@ -58,13 +62,61 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
+function FUNCcheckInternet() {
+  if ip route ls |grep --color=always "192.168.0." >/dev/null;then
+  	return 0
+  fi
+  return 1
+}
+
+if $bCheckInternet;then
+	if FUNCcheckInternet;then
+		echoc --info "Internet is ON"
+		exit 0
+	fi
+	echoc --info "Internet is OFF"
+	exit 1
+elif $bListNetworkFiles;then
+	lsof -i
+	exit 0
+fi
+
+# required before toggling too
+SECFUNCuniqueLock --daemonwait
+
 function FUNCsetEnable(){
+	SECFUNCcfgReadDB
+	if SECFUNCisNumber -dn "${CFGnLastStateRequestTime-}";then
+#		while true;do
+			local lnCurrentTime="`SECFUNCdtFmt --nonano`"
+			local lnElapsed=$(($lnCurrentTime-$CFGnLastStateRequestTime))&&:
+			local lnRemaining=$(($nCoolDownDelay-$lnElapsed))
+#			if(($lnElapsed<$nCoolDownDelay));then
+			if((lnRemaining>0));then
+				local lstrTitle="$SECstrScriptSelfName: cooldown"
+				
+				local lstrText="lnRemaining='$lnRemaining', waiting cooldown before changing state..."
+				echoc --info "$lstrTitle: $lstrText"
+				
+				SECFUNCCwindowOnTop -d 1 "^$lstrTitle$"
+				#SECFUNCexecA -ce zenity --timeout $lnRemaining --info --title "$lstrTitle" --text "$lstrText"
+				( for((iProgress=0;iProgress<lnRemaining;iProgress++));do echo $((iProgress*100/lnRemaining));sleep 1;done) \
+					| SECFUNCexecA -ce zenity --progress --percentage=0 --auto-close --no-cancel --title "$lstrTitle" --text "$lstrText"
+#				continue
+			fi
+#			break;
+#		done
+	else
+		SECFUNCechoWarnA "invalid CFGnLastStateRequestTime='${CFGnLastStateRequestTime-}', will be fixed..."
+	fi
+	
 	strRet="`nmcli nm enable $1 2>&1`"
 	strErr="Not authorized to enable/disable networking"
 	if echo "$strRet" |grep -q "$strErr";then
 		echoc --say "$strErr"
 		return 1
 	fi
+	SECFUNCcfgWriteVar CFGnLastStateRequestTime="`SECFUNCdtFmt --nonano`"
 	return 0
 }
 
@@ -101,27 +153,8 @@ if $bToggle;then
 	exit $?
 fi
 
-function FUNCcheckInternet() {
-  if ip route ls |grep --color=always "192.168.0." >/dev/null;then
-  	return 0
-  fi
-  return 1
-}
-
-if $bCheckInternet;then
-	if FUNCcheckInternet;then
-		echoc --info "Internet is ON"
-		exit 0
-	fi
-	echoc --info "Internet is OFF"
-	exit 1
-elif $bListNetworkFiles;then
-	lsof -i
-	exit 0
-fi
-
 # Main code
-SECFUNCuniqueLock --daemonwait
+#SECFUNCuniqueLock --daemonwait
 
 function FUNCexecParam() {
 	local lbValidateOnly=false

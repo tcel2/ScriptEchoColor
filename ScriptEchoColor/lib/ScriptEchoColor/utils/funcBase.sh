@@ -109,7 +109,9 @@ function SECFUNCarraysExport() { #help export all arrays
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoch; otherwise current (now) is used
+function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch; otherwise current (now) is used
+	#SECFUNCdtFmt_help If no format option is selected, the default simplest format seconds.nano (%s.%N), will be used, mainly to be reused at param lfTime with --delay.
+
 	#local lastrParams=("$@") #backup before consuming with shift
 	local lfTime=""
 	local lbPretty=false
@@ -122,6 +124,7 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 	local lbAlternative=false;
 	local lbShowNano=true
 	local lbShowFormat=false
+#	local lbGetSimple=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCdtFmt_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
@@ -136,12 +139,14 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 			lbLogMessages=true
 		elif [[ "$1" == "--nodate" ]];then #SECFUNCdtFmt_help show only time, not the date
 			lbShowDate=false
-		elif [[ "$1" == "--delay" ]];then #SECFUNCdtFmt_help show as a delay, so days are counted and time starts at '0 00:00:0.0'; only works if time param is specified
+		elif [[ "$1" == "--delay" ]];then #SECFUNCdtFmt_help show as a delay, so days are counted and time starts at '0 00:00:0.0'; only works if param lfTime is specified. The value used at param lfTime must be a delay time, not a date, ex.: if it is 3600 with --pretty, will show as one hour.
 			lbDelayMode=true
 		elif [[ "$1" == "--nozero" ]];then #SECFUNCdtFmt_help only show date, hour, minute and nano if it is not zero (or has not only zeros to the left, except nano), only works with --delay 
 			lbShowZeros=false
 		elif [[ "$1" == "--nonano" ]];then #SECFUNCdtFmt_help do not show nano for seconds
 			lbShowNano=false
+#		elif [[ "$1" == "--get" ]];then #SECFUNCdtFmt_help the simplest format seconds.nano (%s.%N), mainly to be reused at param lfTime with --delay 
+#			lbGetSimple=true
 		elif [[ "$1" == "--fmt" ]];then #SECFUNCdtFmt_help <format> specify a custom format
 			shift
 			lstrFmtCustom="${1-}"
@@ -163,7 +168,7 @@ function SECFUNCdtFmt() { #help [paramTime] in seconds (or with nano) since epoc
 	if [[ -z "$lfTime" ]];then
 		lfTime="`date +"$lstrFormatSimplest"`" #now
 		if $lbDelayMode;then
-			SECFUNCechoWarnA "lbDelayMode='$lbDelayMode' requires 'paramTime' to be set, disabling option.."
+			SECFUNCechoWarnA "lbDelayMode='$lbDelayMode' requires 'lfTime' to be set, disabling option.."
 			lbDelayMode=false
 		fi
 	else
