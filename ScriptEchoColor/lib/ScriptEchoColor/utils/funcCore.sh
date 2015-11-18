@@ -297,7 +297,9 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 #		echo "0"
 #		return 1
 #	fi
-	if ! declare -p "$lstrArrayId" >>/dev/null;then
+
+#	if ! declare -p "$lstrArrayId" >>/dev/null;then
+	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
 		echo "0"
 		return 1
@@ -472,7 +474,12 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 	shift
 	lstrMatch="${1-}"
 	
-	if ! declare -p "$lstrArrayId" >>/dev/null;then
+#	if ! declare -p "$lstrArrayId" >>/dev/null;then
+#		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+#		echo "0"
+#		return 1
+#	fi
+	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
 		echo "0"
 		return 1
