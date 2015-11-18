@@ -594,6 +594,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbDetachedList=false
 	local lbStopLog=false
 	local lbColorize=false
+	local lbEnvVar=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -645,6 +646,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lbDetach=true;
 		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help show list of detached pids at log
 			lbDetachedList=true;
+		elif [[ "$1" == "--envvarset" || "$1" == "-v" ]];then #SECFUNCexec_help will basically prepend the command with `declare -g`
+			lbEnvVar=true;
 		else
 			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option $1"
 			return 1
@@ -733,8 +736,13 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		return
 	fi
 	
-  local strExec="`SECFUNCparamsToEval "$@"`"
-	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $strExec"
+	local lastrParamsToExec=("$@")
+	if $lbEnvVar;then
+		lastrParamsToExec=("declare" "-g" "${lastrParamsToExec[@]}")
+	fi
+	
+  local lstrExec="`SECFUNCparamsToEval "${lastrParamsToExec[@]}"`"
+	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $lstrExec"
 	
 	if $bExecEcho; then
 		local lstrColorPrefix=""
@@ -743,7 +751,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
 			lstrColorSuffix="\E[0m"
 		fi
-		echo -e "${lstrColorPrefix}[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $strExec${lstrColorSuffix}" >>/dev/stderr
+		echo -e "${lstrColorPrefix}[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $lstrExec${lstrColorSuffix}" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
@@ -752,37 +760,37 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	
 	if $SECbExecJustEcho;then
 		if $bJustEcho;then
-			echo "$strExec"
+			echo "$lstrExec"
 			return 0
 		fi
 		if $bJustEchoNoQuotes;then
-			echo "`SECFUNCparamsToEval --noquotes "$@"`"
+			echo "`SECFUNCparamsToEval --noquotes "${lastrParamsToExec[@]}"`"
 			return 0
 		fi
 	fi
 	
 	local lnSECFUNCexecReturnValue=0
 	if $bShowElapsed;then local ini=`SECFUNCdtFmt`;fi
-  #eval "$strExec" $omitOutput;lnSECFUNCexecReturnValue=$?
-  #"$@" $omitOutput;lnSECFUNCexecReturnValue=$?
+  #eval "$lstrExec" $omitOutput;lnSECFUNCexecReturnValue=$?
+  #"${lastrParamsToExec[@]}" $omitOutput;lnSECFUNCexecReturnValue=$?
   if $lbDoLog && [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
   	if $lbDetach;then
-	  	#"$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
-			#(exec 2>>"$SEClstrLogFileSECFUNCexec";exec 1>&2;"$@") & disown
-		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
+	  	#"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
+			#(exec 2>>"$SEClstrLogFileSECFUNCexec";exec 1>&2;"${lastrParamsToExec[@]}") & disown
+		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
 		  local lnPidDetached=$!
-		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';$@" >>"$SEClstrLogFileSECFUNCexec"
+		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
 		else
-		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;$@" >>"$SEClstrLogFileSECFUNCexec"
-		  "$@" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
-		  #"$@" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
+		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+		  #"${lastrParamsToExec[@]}" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
 		fi
   else
   	if $bOmitOutput;then
-		  #"$@" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
-		  "$@" >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+		  #"${lastrParamsToExec[@]}" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
+		  "${lastrParamsToExec[@]}" >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
   	else
-  		"$@";lnSECFUNCexecReturnValue=$?
+  		"${lastrParamsToExec[@]}";lnSECFUNCexecReturnValue=$?
   	fi
   fi
 	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
@@ -812,18 +820,18 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	else
 		lstrReturned="RETURN=$lnSECFUNCexecReturnValue: "
 	fi
-  SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$strExec"
+  SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$lstrExec"
   
 	if $bShowElapsed;then
 		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
 	fi
 	
 	if((lnSECFUNCexecReturnValue>0));then
-		strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@" # do NOT append if it is set, will stack with all other calls to this function...
+		strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}" # do NOT append if it is set, will stack with all other calls to this function...
 #		if [[ -z "${strSECFUNCtrapErrCustomMsg-}" ]];then
-#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@"
+#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}"
 #		else
-#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: $@ ($strSECFUNCtrapErrCustomMsg)"
+#			strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]} ($strSECFUNCtrapErrCustomMsg)"
 #		fi
 	fi
 	

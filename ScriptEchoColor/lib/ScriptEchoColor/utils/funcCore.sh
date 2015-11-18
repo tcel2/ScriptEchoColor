@@ -485,6 +485,10 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 		return 1
 	fi
 	
+#	echo "TST:$lstrArrayId" >>/dev/stderr
+#	declare -p $lstrArrayId >>/dev/stderr
+	
+	#set -x
 	local lstrArrayAllElements="${lstrArrayId}[@]"
 	#local lstrArraySize="#${lstrArrayId}[@]"
 	#local lnSize="${!lstrArraySize}"
@@ -508,6 +512,10 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 		fi
 		((lnIndex++))&&:
 	done
+	#set +x
+	
+	# the remaining elements index values will be kept (ex.: 1 8 12 13 15), this fixed it
+	eval "$lstrArrayId=(\"\${$lstrArrayId[@]}\")"
 	
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
