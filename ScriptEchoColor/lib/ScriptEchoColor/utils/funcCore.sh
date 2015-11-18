@@ -321,6 +321,122 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 	return 0
 }
 
+function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment variable is an array, return 0 (true)
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCarrayCheck_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayCheck_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCarrayCheck_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	# code here
+	local lstrArrayId="${1-}"
+	
+	# valid env var
+	if ! declare -p "$lstrArrayId" >>/dev/null;then
+		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+		return 1;
+	fi
+	
+	# export it to easy tests below
+	# THIS DOES NOT WORK...: eval "declare -x $lstrArrayId"&&:
+	# THIS DOES NOT WORK...: declare -x $lstrArrayId&&:
+	export "$lstrArrayId"&&: #eval "export $lstrArrayId"&&:
+	if (($? != 0));then
+		SECFUNCechoErrA "problem exporting env var related to lstrArrayId='$lstrArrayId'"
+		return 1
+	fi
+	
+	# declare is a much slower than export #local l_strTmp=`declare |grep "^$1=("`; 
+	local lstrTmp="`export |grep "^declare -[Aa]x ${lstrArrayId}='("`";
+ 	if [[ -z "$lstrTmp" ]]; then
+ 		return 1;
+ 	fi;
+ 	
+ 	return 0;
+}
+#function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment variable is an array
+#	# var init here
+#	local lstrExample="DefaultValue"
+#	local lastrRemainingParams=()
+#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+#		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+#		if [[ "$1" == "--help" ]];then #SECFUNCarrayCheck_help show this help
+#			SECFUNCshowHelp $FUNCNAME
+#			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayCheck_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+#		elif [[ "$1" == "--" ]];then #SECFUNCarrayCheck_help params after this are ignored as being these options, and stored at lastrRemainingParams
+#			shift #lastrRemainingParams=("$@")
+#			while ! ${1+false};do	# checks if param is set
+#				lastrRemainingParams+=("$1")
+#				shift #will consume all remaining params
+#			done
+#		else
+#			SECFUNCechoErrA "invalid option '$1'"
+#			$FUNCNAME --help
+#			return 1
+##		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+##			SECFUNCechoErrA "invalid option '$1'"
+##			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+#		fi
+#		shift&&:
+#	done
+#	
+#	# code here
+#	local lstrArrayId="$1"
+#	
+#	# valid env var
+#	if ! declare -p "$lstrArrayId" >>/dev/null;then
+#		return 1;
+#	fi
+
+#	#local l_strTmp=`declare |grep "^$1=("`; #declare is a bit slower than export
+#	#eval "export $lstrArrayId"
+#	# export it to easy tests below
+#	if ! declare -x $lstrArrayId;then
+#		return 1
+#	fi
+#	
+#	#export |grep "${lstrArrayId}=" >>/dev/stderr #@@@R
+#	#export >>/dev/stderr #@@@R
+#	
+#	local l_strTmp="`export |grep "^declare -[Aa]x ${lstrArrayId}='("`";
+# 	#if(($?==0));then
+# 	if [[ -z "$l_strTmp" ]]; then
+# 		return 1;
+# 	fi;
+# 	
+# 	return 0;
+##  local l_arrayCount=`eval 'echo ${#'$1'[*]}'`
+##  if((l_arrayCount>1));then
+##  	return 0;
+## 	fi
+## 	return 1
+#}
+
 function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cleaning array elements. If lstrMatch is empty, will clean empty elements (default behavior)
 	# var init here
 	local lstrArrayId=""
@@ -1661,6 +1777,7 @@ export SECnRunLogTeePid
 : ${SECbRunLogPidTree:=true}
 export SECbRunLogPidTree
 
+#TODO !!!! complete this escaped colors list!!!! to, one day, improve main echoc
 export SECcharTab=$'\t' #$(printf '\011') # this speeds up instead of using `echo -e "\t"`
 export SECcharNewLine=$'\n' # this speeds up instead of using `echo -e "\n"`
 export SECcharNL=$'\n' # this speeds up instead of using `echo -e "\n"`

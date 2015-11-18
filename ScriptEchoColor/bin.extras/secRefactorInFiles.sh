@@ -32,6 +32,8 @@ strReplaceWith=""
 strFileFilter="*.java"
 strBkpSuffix=".bkp"
 bWrite=false
+strWorkPath="."
+bAskSkip=true
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -47,6 +49,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
 		shift
 		strBkpSuffix="${1-}"
+	elif [[ "$1" == "--workpath" || "$1" == "-w" ]];then #help <strWorkPath> used with `find`
+		shift
+		strWorkPath="${1-}"
+	elif [[ "$1" == "--noaskskip" || "$1" == "-n" ]];then #help when --write, will ask if current file must be skipped, this disables it
+		bAskSkip=false
 	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
 			shift
@@ -85,11 +92,26 @@ if [[ -z "$strReplaceWith" ]];then
 fi
 
 # Main code
-IFS=$'\n' read -d '' -r -a astrFileList < <(find "src/" -iname "${strFileFilter}")&&:
-for strFile in "${astrFileList[@]}";do
+function _FUNCreportMatches() {
+	echoc --info "BEFORE strFile='$strFile'"
+	SECFUNCexec -ce egrep --color=always "${strRegexMatch}|${strReplaceWith}" "$strFile"&&:
+	echoc --info "AFTER  strFile='$strFile'"
+	SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |egrep --color=always "${strReplaceWith}"&&:
+}
+
+IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${strFileFilter}")&&:
+for strFile in "${astrFileList[@]-}";do
 	if egrep -q "$strRegexMatch" "$strFile";then
 		egrep -Hc "$strRegexMatch" "$strFile"
+		
 		if $bWrite;then
+			if $bAskSkip;then
+				_FUNCreportMatches
+				if echoc -q "skip above strFile='$strFile'?";then
+					continue
+				fi
+			fi
+			
 			SECFUNCexec -ce sed -i${strBkpSuffix} "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
 			strBkpFile="${strFile}${strBkpSuffix}"
 			if [[ -f "$strBkpFile" ]];then
@@ -99,7 +121,7 @@ for strFile in "${astrFileList[@]}";do
 				SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
 			fi
 		else
-			SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |egrep --color=always "${strReplaceWith}"&&:
+			_FUNCreportMatches
 		fi
 	fi
 done

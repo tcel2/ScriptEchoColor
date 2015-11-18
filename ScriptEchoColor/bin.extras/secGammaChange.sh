@@ -62,7 +62,7 @@ function FUNCgetCurrentGammaRGB() {
 	if ! $lbForce;then
 		SECFUNCcfgReadDB CFGafModGammaRGB
 		if ! ${CFGafModGammaRGB+false};then # is set
-			if ! SECFUNCvarIsArray CFGafModGammaRGB;then
+			if ! SECFUNCarrayCheck CFGafModGammaRGB;then
 				SECFUNCechoErrA "CFGafModGammaRGB='`declare -p CFGafModGammaRGB`' should be an array."
 				lbForce=true
 			fi
@@ -243,7 +243,7 @@ fi
 SECFUNCcfgReadDB CFGafBaseGammaRGB
 
 if $bReset;then
-	if SECFUNCvarIsArray CFGafBaseGammaRGB;then
+	if SECFUNCarrayCheck CFGafBaseGammaRGB;then
 		#SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
 		SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
 	else
@@ -263,7 +263,7 @@ elif $bSetCurrent;then
 	SECFUNCcfgWriteVar CFGafModGammaRGB
 elif $bKeep;then
 	SECFUNCuniqueLock --daemonwait
-#	if ! SECFUNCvarIsArray CFGafBaseGammaRGB;then
+#	if ! SECFUNCarrayCheck CFGafBaseGammaRGB;then
 #		SECFUNCechoWarnA "setting required base"
 #		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
 #	fi

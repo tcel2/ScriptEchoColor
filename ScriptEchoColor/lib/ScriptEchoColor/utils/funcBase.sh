@@ -571,6 +571,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 	echo "$lstrOptions"
 }
 
+: ${SECbExecJustEcho:=true}
 function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
 	local bOmitOutput=false
 	local bShowElapsed=false
@@ -617,7 +618,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			bShowElapsed=true;
 		elif [[ "$1" == "--echo" || "$1" == "-e" ]];then #SECFUNCexec_help echo the command that will be executed, output goes to /dev/stderr
 			bExecEcho=true;
-		elif [[ "$1" == "--justecho" ]];then #SECFUNCexec_help wont execute, will just echo what would be executed without any format to be easily reused as command anywhere; this output goes to /dev/stdout
+		elif [[ "$1" == "--justecho" || "$1" == "-j" ]];then #SECFUNCexec_help if global SECbExecJustEcho is false (default is true), command will be run normally, not just echoed. Basically: wont execute, will just echo what would be executed without any format to be easily reused as command anywhere; this output goes to /dev/stdout
 			bJustEcho=true;
 		elif [[ "$1" == "--justechonoquotes" ]];then #SECFUNCexec_help like --justecho but will not use quotes
 			bJustEchoNoQuotes=true;
@@ -749,13 +750,15 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
 	fi
 	
-	if $bJustEcho;then
-		echo "$strExec"
-		return 0
-	fi
-	if $bJustEchoNoQuotes;then
-		echo "`SECFUNCparamsToEval --noquotes "$@"`"
-		return 0
+	if $SECbExecJustEcho;then
+		if $bJustEcho;then
+			echo "$strExec"
+			return 0
+		fi
+		if $bJustEchoNoQuotes;then
+			echo "`SECFUNCparamsToEval --noquotes "$@"`"
+			return 0
+		fi
 	fi
 	
 	local lnSECFUNCexecReturnValue=0

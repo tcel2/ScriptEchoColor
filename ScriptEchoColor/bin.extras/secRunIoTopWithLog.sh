@@ -120,7 +120,7 @@ function FUNCcheckHogs() {
 		SECFUNCcfgWriteVar astrLvmPvInfoListA
 	else
 		# may have been read from cfg file
-		if SECFUNCvarIsArray astrLvmPvInfoListA;then
+		if SECFUNCarrayCheck astrLvmPvInfoListA;then
 			bLvmAlert=true
 			bLvmInfo=true
 		fi
