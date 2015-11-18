@@ -490,10 +490,12 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 	
 	#set -x
 	local lstrArrayAllElements="${lstrArrayId}[@]"
+	local lstrArrayCopyTmp=("${!lstrArrayAllElements}")
 	#local lstrArraySize="#${lstrArrayId}[@]"
+#	echo "TST: ${lstrArrayCopyTmp[@]}" >>/dev/stderr
 	#local lnSize="${!lstrArraySize}"
 	local lnIndex=0
-	for strTmp in "${!lstrArrayAllElements}";do
+	for strTmp in "${lstrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
 #			echo "strTmp='$strTmp' $lnIndex" >>/dev/stderr
 #			declare -p "$lstrArrayId" >>/dev/stderr
 			
@@ -507,15 +509,23 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 		fi
 		
 		if $lbUnset;then
-			eval "unset $lstrArrayId[$lnIndex]"
+			#eval "unset $lstrArrayId[$lnIndex]"
+			unset lstrArrayCopyTmp[$lnIndex]
 #			declare -p "$lstrArrayId" >>/dev/stderr
 		fi
 		((lnIndex++))&&:
 	done
 	#set +x
 	
-	# the remaining elements index values will be kept (ex.: 1 8 12 13 15), this fixed it
-	eval "$lstrArrayId=(\"\${$lstrArrayId[@]}\")"
+	#declare -p lstrArrayCopyTmp >>/dev/stderr #@@@R
+	if((${#lstrArrayCopyTmp[@]}==0));then
+		eval "$lstrArrayId"'=()'
+	else
+		# the remaining elements index values will be kept (ex.: 1 8 12 13 15), this fixed it
+		#eval "$lstrArrayId=(\"\${$lstrArrayId[@]-}\")"
+		eval "$lstrArrayId"'=("${lstrArrayCopyTmp[@]}")'
+	#	eval "$lstrArrayId=(\"\${${!lstrArrayAllElements}}\")"
+	fi
 	
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
