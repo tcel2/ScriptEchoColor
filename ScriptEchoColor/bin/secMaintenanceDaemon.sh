@@ -67,12 +67,14 @@ bLogsList=false
 bShowErrors=false
 bListPids=false
 bShowCriticalErrors=false
+nPidToDump=0
+bPidDump=false
 #bSetStatusLine=false
 varset --default bShowStatusLine=false
 while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --nosort
-		exit
+		exit 0
 	elif [[ "$1" == "--kill" ]];then #help kill the daemon, avoid using this...
 		bKillDaemon=true
 	elif [[ "$1" == "--restart" ]];then #help restart the daemon, avoid using this...
@@ -83,6 +85,11 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 #	elif [[ "$1" == "--hidestatus" ]];then #help at --logmon, hide the status line
 #		bSetStatusLine=true
 #		varset --show bShowStatusLine=false
+	elif [[ "$1" == "--dump" ]];then #help <nPidToDump> show info and dump log about pid
+		shift
+		nPidToDump="${1-}"
+		
+		bPidDump=true
 	elif [[ "$1" == "--logmon" ]];then #help log monitor for activities of this script and also shows a status line
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
@@ -203,7 +210,7 @@ function FUNClistSecPids() {
 strFileErrorLog="${SEC_TmpFolder}/.SEC.Error.log"
 if $bKillDaemon;then
 	FUNCkillDaemon
-	exit
+	exit 0
 elif $bRestartDaemon;then
 	FUNCkillDaemon
 	
@@ -211,11 +218,11 @@ elif $bRestartDaemon;then
 	# nohup or disown alone did not work...
 	$0 >>/dev/stderr &
 	sleep 3 #wait a bit just to try to avoid messing the terminal output...
-	exit
+	exit 0
 elif $bLogMonitor;then
 	echo "Maintenance Daemon Pid: $nPidDaemon, log file '$strDaemonLogFile'"
 	tail -F "$strDaemonLogFile"
-	exit
+	exit 0
 elif $bLockMonitor;then
 	while true;do
 		FUNClocksList --all
@@ -224,10 +231,10 @@ elif $bLockMonitor;then
 		SECFUNCdrawLine " nLocks='$nLocks' nLocksI='$nLocksI' ";
 		sleep $fMonitorDelay;
 	done
-	exit
+	exit 0
 elif $bListPids;then
 	FUNClistSecPids
-	exit
+	exit 0
 elif $bPidsMonitor;then
 	while true;do
 #		secMessagesControl.sh --list
@@ -235,21 +242,21 @@ elif $bPidsMonitor;then
 		#sleep $fMonitorDelay;
 		echoc -w -t $fMonitorDelay
 	done
-	exit
+	exit 0
 elif $bShowCriticalErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
 	while ! echoc -x "less '$SECstrFileCriticalErrorLog'"&&:;do
 		echoc -w -t 60 "No critical errors on log."
 	done
-	exit
+	exit 0
 elif $bShowErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
 	while ! echoc -x "less '$strFileErrorLog'"&&:;do
 		echoc -w -t 60 "No errors on log."
 	done
-	exit
+	exit 0
 elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 	#tail -F "$strFileErrorLog"
 	echoc --info "strFileErrorLog='$strFileErrorLog'"
@@ -270,7 +277,7 @@ elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 		
 		echoc -w "Log for SECERROR(s), `SECFUNCdtFmt --pretty`"
 	done
-	exit
+	exit 0
 elif $bLogsList;then
 #	bRunningPidsOnly=true
 #	if echoc -q -t 3 "show log files for all pids (default is only running pids)?";then
@@ -285,7 +292,17 @@ elif $bLogsList;then
 			echo " log='`ls -1 "$SECstrTmpFolderLog/"*"${nLogPid}.log"`';cmd='`ps --no-headers -o cmd -p $nLogPid`';"
 		fi
 	done
-	exit
+	exit 0
+elif $bPidDump;then
+	if ! SECFUNCisNumber -dn "$nPidToDump";then
+		SECFUNCechoErrA "invalid nPidToDump='$nPidToDump'"
+		exit 1
+	fi
+	
+	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec cat '{}' \;
+	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec ls --color -ld '{}' \;
+	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
+	exit 0
 fi
 
 ####################### MAIN CODE

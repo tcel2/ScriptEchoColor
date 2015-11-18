@@ -40,6 +40,7 @@ bDebugging=false
 bMouseTrickMode=false
 bLockedCheckOnly=false
 bIgnoreDaemon=false
+bSpeak=true
 astrSimpleCommandRegex=(
 	"^chromium-browser .*flashplayer.so"
 	"^/usr/bin/vlc "
@@ -49,7 +50,7 @@ astrSimpleCommandRegex=(
 )
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		SECFUNCshowHelp --colorize "This script should be started as soon as possible, to monitor unity gdbus and make available the log that is used to detect unity screenlock."
+		SECFUNCshowHelp --colorize "This script should be started as soon as possible, to monitor unity gdbus and make available the log that is used to detect unity screenlock. It will speak when it is ready."
 		SECFUNCshowHelp
 		echoc --info "\tVideo players detection: "
 		echo -en "\t";declare -p astrSimpleCommandRegex
@@ -85,6 +86,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
 		bDebugging=true
+	elif [[ "$1" == "--nospeak" ]];then #help will not speak
+		bSpeak=false
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -179,9 +182,13 @@ fi
 
 SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
 
+# after this, user can safely screen lock
 strDBusUnityDestination="com.canonical.Unity.Launcher"
 strDBusUnityObjPath="/com/canonical/Unity/Session"
 gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath" >"$strUnityLog"&
+if $bSpeak;then
+	echoc --info --say "`SECFUNCseparateInWords --notype "${SECstrScriptSelfName%.sh}"` log started."
+fi
 
 nLightweightHackId=1
 bWasLockedByThisScript=false
