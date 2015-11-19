@@ -457,7 +457,7 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 	local l_value="${2-}" #no need to be set as $1 can be var=value
 
 	#if [[ -z "$l_value" ]]; then
-	# if begins with valid variable name and also has value set
+	# if begins with valid variable name and also has value set after =
 	if echo "$l_varPlDoUsThVaNaPl" |grep -q "^[[:alnum:]_]*="; then
 		#sedVar='s"\(.*\)=.*"\1"'
 		sedVar='s"\([[:alnum:]_]*\)=.*"\1"'
@@ -474,9 +474,17 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 		SECFUNCdbgFuncOutA;return 1
 	fi
 	
-	if `SECFUNCarrayCheck $l_varPlDoUsThVaNaPl`; then
-		lbArray=true
-		l_value=""
+	# set it, in case it is not already.. ALREADY DONE BELOW!!!
+	#eval "$l_varPlDoUsThVaNaPl=\"$l_value\""
+	
+	#if `SECFUNCarrayCheck $l_varPlDoUsThVaNaPl`; then
+	local lbVarIsSet=false
+	if ! ${!l_varPlDoUsThVaNaPl+false};then #if the variable is set
+		lbVarIsSet=true
+		if SECFUNCarrayCheck "$l_varPlDoUsThVaNaPl" 2>&1 >>/dev/null; then
+			lbArray=true
+			l_value=""
+		fi
 	fi
 	
 	# check if value is compatible
@@ -536,6 +544,7 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 		else
 			l_bSetVarValue=true
 		fi
+		
 		if $l_bSetVarValue; then
 			#eval "export $l_varPlDoUsThVaNaPl=\"$l_value\""
 			eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
@@ -939,18 +948,23 @@ function SECFUNCvarWriteDB() { #help
 	
 	SECFUNCechoDbgA "'$SECvarFile'"
 	
-	local l_filter=${1-}; #l_filter="" #@@@TODO FIX FILTER FUNCTIONALITY THAT IS STILL BUGGED!
+	local l_filter="${1-}"; #l_filter="" #@@@TODO FIX FILTER FUNCTIONALITY THAT IS STILL BUGGED!
 	local l_allVars=()
 	
 #  if $SECvarOptWriteDBUseFullEnv;then
   	#declare >"$SECvarFile" #I believe was not too safe
   	
 	local lstrDeclareAssociativeArray=""
-	if [[ -n "$l_filter" ]];then
-		# this way (without cleaning the DB file), it will just append one variable to it; so in the DB file there will have 2 instances of such variable but, of course, only the last one will be valid; is this messy? #TODO update the specific variable with sed -i
-		if declare -p "$l_filter" |grep -q "^declare -A";then
-			lstrDeclareAssociativeArray="declare -Ag $l_filter;"
-		fi
+	if [[ -n "$l_filter" ]];then	# this way (without cleaning the DB file), it will just append one variable to it; so in the DB file there will have 2 instances of such variable but, of course, only the last one will be valid; is this messy? #TODO update the specific variable with sed -i
+		
+#		if declare -p "$l_filter" |grep -q "^declare -A";then
+##			lstrDeclareAssociativeArray="declare -Axg $l_filter;"
+#			lstrDeclareAssociativeArray="declare -Axg \\"
+#		fi
+#		if declare -p "$l_filter" |grep -q "^declare -a";then # normal array too
+##			lstrDeclareAssociativeArray="declare -axg $l_filter;"
+#			lstrDeclareAssociativeArray="declare -axg \\"
+#		fi
 		
 		l_allVars=($l_filter)
 		#TODO for some reason this sed is breaking the db file data; without it the new var value will be appended and the next db read will ensure the last var value be the right one (what a mess..)
@@ -972,12 +986,16 @@ function SECFUNCvarWriteDB() { #help
 		echo -n >"$SECvarFile" #clean db file
 	fi
 	
-	local l_sedRemoveArrayPliqs="s;(^.*=)'(\(.*)'$;\1\2;"
-	if [[ -n "$lstrDeclareAssociativeArray" ]];then
-		echo "$lstrDeclareAssociativeArray" >>"$SECvarFile"
-	fi
+	#local l_sedRemoveArrayPliqs="s;(^.*=)'(\(.*)'$;\1\2;"
+#	if [[ -n "$lstrDeclareAssociativeArray" ]];then
+#		echo "$lstrDeclareAssociativeArray" >>"$SECvarFile"
+#	fi
 	chmod o-rwx "$SECvarFile" #some security helps..
-	declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' -e "$l_sedRemoveArrayPliqs" >>"$SECvarFile"
+	#declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' -e "$l_sedRemoveArrayPliqs" >>"$SECvarFile"
+#	declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' >>"$SECvarFile"
+	#declare -p ${l_allVars[@]} 2>/dev/null >>"$SECvarFile"
+	#pSECFUNCprepareEnvVarsToWriteDB "${l_allVars[@]}" >>/dev/stderr
+	pSECFUNCprepareEnvVarsToWriteDB "${l_allVars[@]}" 2>/dev/null >>"$SECvarFile"
 #  else
 #	  echo >"$SECvarFile" #clean
 #	  
@@ -1044,7 +1062,9 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 		# can retrieve more than one line with same variable, what is ok as the last set will override all previous ones
 		while true;do
 			#TODO warn about inexistance of variables on the var file? would require extra cpu time and more complex code.
-			eval "`egrep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+#			eval "`egrep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+#			eval "`egrep $l_paramInvert "^declare [^ ] ${l_filter}=" "$SECvarFile" |tail -n 1`" >/dev/null 2>&1
+			eval "`egrep $l_paramInvert "^declare [^ ] ${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"

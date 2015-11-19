@@ -355,9 +355,10 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	# code here
 	local lstrArrayId="${1-}"
 	
-	# valid env var
+	# valid env var check
 	if ! declare -p "$lstrArrayId" >>/dev/null;then
-		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+		# I opted to ommit this message, as when a var is just being set like varset str=abc, it is not a problem at all..
+		# SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
 		return 1;
 	fi
 	

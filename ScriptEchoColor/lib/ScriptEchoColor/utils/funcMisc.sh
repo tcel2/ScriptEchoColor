@@ -492,8 +492,14 @@ function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars a
 	
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
+  	#sedFixStoredArray="s,^([^=]*)=(\(.*\));$,declare -ax \\\\\n\1='\2';," # arrays stored just like `astr=();`, should be `declare -a astr='()';`, my bad... now I have to fix it...
+		#sed -i.bkp -r -e "$sedFixStoredArray" $SECcfgFileName
+  	#sed -r -e "$sedFixStoredArray" $SECcfgFileName
 		while true;do
-			eval "`cat "$SECcfgFileName"`"
+			#eval "`cat "$SECcfgFileName"`"
+			#eval "`sed -r -e "$sedFixStoredArray" $SECcfgFileName`"
+			#source "$SECcfgFileName"
+			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file?
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
@@ -506,6 +512,10 @@ function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars a
   fi
   SECFUNCdbgFuncOutA;
   #set -x
+}
+function pSECFUNCprepareEnvVarsToWriteDB() { #private: store in a way that when being read will be considered global by adding -g
+	#declare -p "$@" |sed -r "s'^(declare )([^ ]*) '\1\2g '"
+	declare -p "$@" |sed -r "s'^(declare )([^ ]*)( .*)'\1\2g\3;'"
 }
 function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config file
 	#TODO make SECFUNCvarSet use this and migrate all from there to here?
@@ -524,7 +534,7 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	done
 	
 	# if var is being set, eval (do) it
-	local lbIsArray=false
+#	local lbIsArray=false
 	if echo "$1" |grep -q "^[[:alnum:]_]*=";then # here the var will never be array
 		eval "`echo "$1" |sed -r 's,^([[:alnum:]_]*)=(.*),\
 			\1="\2";\
@@ -539,27 +549,39 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 		SECFUNCcfgFileName
 	fi
 	
-	if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
+	#if [[ -z "`declare |grep "^${lstrVarId}="`" ]];then
+	if ! declare -p "${lstrVarId}" >>/dev/null;then
 		SECFUNCechoErrA "invalid var '$lstrVarId' to write at cfg file '$SECcfgFileName'"
 		return 1
 	fi
 	
-	# `declare` must be stripped off or the evaluation of the cfg file will fail!!!
-	if declare -p "${lstrVarId}" |grep -q "^declare -[aA]";then
-		lbIsArray=true
-	fi
+	eval "export $lstrVarId" #make it sure it is exported
 	
-	local lstrPliqForArray=""
-	if $lbIsArray;then
-		lstrPliqForArray="'"
-	fi
+#	# `declare` must be stripped off or the evaluation of the cfg file will fail!!!
+#	if declare -p "${lstrVarId}" |grep -q "^declare -[aA]";then
+#		lbIsArray=true
+#	fi
 	
-	local lstrDeclareAssociativeArray=""
-	if declare -p "$lstrVarId" |grep -q "^declare -A";then
-		lstrDeclareAssociativeArray="declare -Ag $lstrVarId;"
-	fi
+#	local lstrPliqForArray=""
+#	if $lbIsArray;then
+#		lstrPliqForArray="'"
+#	fi
 	
-	local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
+#	local lstrDeclareAssociativeArray=""
+#	if declare -p "$lstrVarId" |grep -q "^declare -A";then
+##		lstrDeclareAssociativeArray="declare -Axg $lstrVarId;"
+#		lstrDeclareAssociativeArray="declare -Axg \\"
+#	fi
+#	if declare -p "$lstrVarId" |grep -q "^declare -a";then # normal array too
+##		lstrDeclareAssociativeArray="declare -axg $lstrVarId;"
+#		lstrDeclareAssociativeArray="declare -axg \\"
+#	fi
+	
+	#local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
+	#local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=(.*)$,\1=\2,"`
+	#local lstrToWrite="`declare -p ${lstrVarId}`"
+	#local lstrToWrite="`declare -p ${lstrVarId} |sed -r "s'^(declare )([^ ]*)( ${lstrVarId}=.*)'\1\2g\3'"`" # store in a way that when being read will be considered global
+	local lstrToWrite="`pSECFUNCprepareEnvVarsToWriteDB ${lstrVarId}`"
 	
 	if [[ ! -f "$SECcfgFileName" ]];then
 		echo -n >"$SECcfgFileName"
@@ -568,14 +590,16 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	SECFUNCfileLock "$SECcfgFileName"
 #	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
 #	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName" #will remove the variable line
-	sed -i "/declare -A ${lstrVarId}/d" "$SECcfgFileName" #will remove the variable declaration
-	sed -i "/${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable line
+#	sed -i "/declare -A ${lstrVarId}/d" "$SECcfgFileName" #will remove the variable declaration
+#	sed -i "/${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable line
+	sed -i "/^declare [^ ]* ${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable declaration
 	if ! $lbRemoveVar;then
-		if [[ -n "$lstrDeclareAssociativeArray" ]];then
-			# must come before the array values set
-			echo "$lstrDeclareAssociativeArray" >>"$SECcfgFileName"
-		fi
-		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
+#		if [[ -n "$lstrDeclareAssociativeArray" ]];then
+#			# must come before the array values set
+#			echo "$lstrDeclareAssociativeArray" >>"$SECcfgFileName"
+#		fi
+#		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
+		echo "${lstrToWrite}" >>"$SECcfgFileName" #append new line with var
 	fi
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 	

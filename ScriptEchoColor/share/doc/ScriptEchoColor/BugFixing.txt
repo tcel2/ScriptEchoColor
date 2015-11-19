@@ -1,0 +1,12 @@
+
+1) BugFixing_SingleQuoteAtValues: env vars used to be stored without `declare` prepended. It caused quote duplication concerning arrays whose elements value contains single quote(s) '.
+The automatic cfg files can be fixed with:
+1.A) Check the problem:
+	egrep "^([^=]*)=(\(.*\));$" ~/.ScriptEchoColor/SEC.ScriptsConfigurationFiles/*.cfg
+1.B) Fix the problem (this prepares for associative arrays, but normal ones may be required...):
+	sed -i.bkp -r -e "s,^([^=]*)=(\(.*\));$,declare -Axg \1='\2';," ~/.ScriptEchoColor/SEC.ScriptsConfigurationFiles/*.cfg
+1.C) check the changes
+	function FUNCtmp() { echoc --info "$1";colordiff "$1" "${1%.bkp}"; };export -f FUNCtmp;find ~/.ScriptEchoColor/SEC.ScriptsConfigurationFiles/ -iname "*.bkp" -exec bash -c 'FUNCtmp {}' \;
+Ps.: secRefactorInFiles.sh may also help.
+
+
