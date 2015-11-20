@@ -1063,8 +1063,8 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 		while true;do
 			#TODO warn about inexistance of variables on the var file? would require extra cpu time and more complex code.
 #			eval "`egrep $l_paramInvert "^${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
-#			eval "`egrep $l_paramInvert "^declare [^ ] ${l_filter}=" "$SECvarFile" |tail -n 1`" >/dev/null 2>&1
-			eval "`egrep $l_paramInvert "^declare [^ ] ${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
+#			eval "`egrep $l_paramInvert "^declare [^ ]* ${l_filter}=" "$SECvarFile" |tail -n 1`" >/dev/null 2>&1
+			eval "`egrep $l_paramInvert "^declare [^ ]* ${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"
