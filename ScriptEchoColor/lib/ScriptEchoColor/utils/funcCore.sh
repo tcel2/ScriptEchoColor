@@ -356,9 +356,9 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	local lstrArrayId="${1-}"
 	
 	# valid env var check
-	if ! declare -p "$lstrArrayId" >>/dev/null;then
-		# I opted to ommit this message, as when a var is just being set like varset str=abc, it is not a problem at all..
-		# SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+	if ! declare -p "$lstrArrayId" >>/dev/null 2>&1;then
+		# I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
+		SECFUNCechoDbgA "env var lstrArrayId='$lstrArrayId' not declared yet."
 		return 1;
 	fi
 	

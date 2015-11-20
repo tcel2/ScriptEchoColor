@@ -281,7 +281,7 @@ function SECFUNCvarIsArray() {
 }
 
 function SECFUNCvarGet() { #help <varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
-  if `SECFUNCarrayCheck $1`;then
+  if SECFUNCarrayCheck "$1";then
   	if [[ -n "${2-}" ]]; then
   		eval 'echo "${'$1'['$2']}"'
   	else
@@ -342,7 +342,7 @@ function SECFUNCvarShow() { #help show var
 		return 1
 	fi
 
-	if `SECFUNCarrayCheck "$lstrVarId"`;then
+	if SECFUNCarrayCheck "$lstrVarId";then
   	#TODO support to "'"?
 		#TODO (what about declare -g global option?) IMPORTANT: arrays set inside functions cannot have export or they will be ignored!
 		echo "$lstrVarId=`SECFUNCvarGet $lstrVarId`;";
@@ -477,7 +477,7 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 	# set it, in case it is not already.. ALREADY DONE BELOW!!!
 	#eval "$l_varPlDoUsThVaNaPl=\"$l_value\""
 	
-	#if `SECFUNCarrayCheck $l_varPlDoUsThVaNaPl`; then
+	#if SECFUNCarrayCheck "$l_varPlDoUsThVaNaPl"; then
 	local lbVarIsSet=false
 	if ! ${!l_varPlDoUsThVaNaPl+false};then #if the variable is set
 		lbVarIsSet=true
@@ -714,7 +714,7 @@ function pSECFUNCvarPrepareArraysToExport() { #private:
 	local l_varPlDoUsThVaNaPl #PleaseDontUseThisVarNamePlease
 	#export SECexportedArraysList="" #would break in case of single array var export...
 	for l_varPlDoUsThVaNaPl in $l_list; do
-		if `SECFUNCarrayCheck $l_varPlDoUsThVaNaPl`;then
+		if SECFUNCarrayCheck "$l_varPlDoUsThVaNaPl";then
 			# just prepare to be shown with `declare` below
 			eval "export $l_varPlDoUsThVaNaPl"
 			# collect exportable array in string mode
