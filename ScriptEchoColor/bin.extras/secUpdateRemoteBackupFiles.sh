@@ -178,6 +178,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	
 	shift
 done
+SECFUNCvarReadDB #;SECFUNCexecA -ce cat $SECvarFile
+
+varset --default bNextRunShowFullLog=false
 
 if ! SECFUNCisNumber -dn $nBackgroundSleep;then
 	echoc -p "invalid nBackgroundSleep='$nBackgroundSleep'"
@@ -421,19 +424,43 @@ function FUNCunison(){
 #	)
 	
 	# -ignorearchives will help on avoiding corrupted files
-	SECFUNCexecA --echo -c unison \
-		"$SECstrUserScriptCfgPath/Home" \
-		"${pathBackupsToRemote}/" \
-		-links false \
-		-fastcheck true \
-		-times -retry 2 \
-		-follow "Regex .*" \
-		-ignorearchives \
-		-force "$SECstrUserScriptCfgPath/Home" \
-		-nodeletion "$SECstrUserScriptCfgPath/Home" \
-		-nodeletion "${pathBackupsToRemote}/" \
-		-batch \
-		-ui text&&: #TODO return 1 but works, why? because there were skipped files?
+	strLastUnisonOutput="`SECFUNCexecA --echo -c unison \
+		"$SECstrUserScriptCfgPath/Home" 									\
+		"${pathBackupsToRemote}/" 												\
+		-links false 																			\
+		-fastcheck true 																	\
+		-times -retry 2 																	\
+		-follow "Regex .*" 																\
+		-ignorearchives 																	\
+		-force "$SECstrUserScriptCfgPath/Home" 						\
+		-nodeletion "$SECstrUserScriptCfgPath/Home" 			\
+		-nodeletion "${pathBackupsToRemote}/" 						\
+		-batch 																						\
+		-ui text 2>&1 &&:`" #TODO return 1 but works, why? because there were skipped files?
+	
+	if $bNextRunShowFullLog;then
+		echo "$strLastUnisonOutput"
+	else
+		#####
+		# this removes all lines with 'missing' or 'absent' errors 
+		# (like when there are missing mounts) (obs.: \r may happen before \n, so sed 'g' option is necessary)
+		# also removes all that were skipped
+		#####
+		local lstrErrMatch="( error |\[ERROR\] Skipping )";
+#		echo "$strLastUnisonOutput" \
+#			|sed -r \
+#				-e "/${lstrErrMatch}/ {N;s'[\r\n]' 'g}" \
+#				-e "/.* <=[?]=> .*/ {N;s'[\r\n]' 'g;N;s'[\r\n]' 'g}" \
+#			|egrep -v "${lstrErrMatch}.* is marked 'follow' but its target is missing| <=[?]=> file .* absent "
+		echo "$strLastUnisonOutput" \
+			|sed -r \
+				-e "/${lstrErrMatch}/ {N;s'[\r\n]' 'g}" \
+				-e "/.* <=[?]=> .*/ {N;s'[\r\n]' 'g;N;s'[\r\n]' 'g}" \
+			|egrep -v "${lstrErrMatch}.* is marked 'follow' but its target is missing" \
+			|egrep -v " <=[?]=> file .* absent " \
+			|egrep -v " skipped: " \
+			|egrep -v "^\[CONFLICT\] Skipping "
+	fi
 		
 	return 0
 };export -f FUNCunison
@@ -737,6 +764,8 @@ elif $bLookForChanges;then
 	SECFUNCvarSet --default --show saidChangedAt=0
 	delayMinBetweenSays=10
 	while true; do
+		SECFUNCvarReadDB #;SECFUNCexecA -ce cat $SECvarFile
+	
 		if $bDoItConfirmed || $bConfirmAlways; then
 			bDoIt=true
 		fi
@@ -804,12 +833,18 @@ elif $bLookForChanges;then
 		
 		bGoFastOnce=false #controlled by FUNCinterruptAsk
 		echo `SECFUNCdelay --getpretty`
-		SECFUNCvarReadDB
+#		SECFUNCvarReadDB #TODO why it is only read here!?!? should be just after the begin of the loop.
 		
 		echoc --info " Changed=$nFilesChangedCount / total=$nFilesCount "
 		
 		if $bConfirmAlways;then
-			echoc -w -t $nWaitDelay "ended at `SECFUNCdtFmt --pretty`, sleeping..."
+			#echoc -w -t $nWaitDelay "ended at `SECFUNCdtFmt --pretty`, sleeping..."
+			echoc --info "ended at `SECFUNCdtFmt --pretty`"
+			if echoc -q -t $nWaitDelay "run next showing full log?";then
+				varset bNextRunShowFullLog=true
+			else
+				varset bNextRunShowFullLog=false
+			fi
 			exit 0
 		else
 			if $bDoItConfirmed; then

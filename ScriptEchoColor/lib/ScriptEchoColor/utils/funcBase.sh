@@ -1150,6 +1150,9 @@ function SECFUNCcleanEnvironment() { #help clean environment from everything rel
 	fi
 }
 
+function SECFUNCsplitInWords() {
+	SECFUNCseparateInWords "$@"
+}
 function SECFUNCseparateInWords() { #help <string> ex.: 'abcDefHgi_jkl' becomes 'abc def hgi jkl', good to use with variables and options, also to be spoken
 	lbShowType=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
