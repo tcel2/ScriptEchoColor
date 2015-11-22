@@ -459,7 +459,7 @@ function FUNCunison(){
 			|egrep -v "${lstrErrMatch}.* is marked 'follow' but its target is missing" \
 			|egrep -v " <=[?]=> file .* absent " \
 			|egrep -v " skipped: " \
-			|egrep -v "^\[CONFLICT\] Skipping "
+			|egrep -v "\[CONFLICT\] Skipping "
 	fi
 		
 	return 0
