@@ -121,14 +121,21 @@ fi
 
 # run these and exit
 if $bFixCompiz;then
-	if ! secAutoScreenLock.sh --islocked;then
-		secXtermDetached.sh metacity --replace;
-		sleep 3; #this blind delay helps on properly fixing
-		secXtermDetached.sh compiz --replace
-	else
+	if secAutoScreenLock.sh --islocked;then
 		echoc -p --say "cant fix compiz, screen is locked..."
 		SEC_WARN=true SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
+		
+		SECFUNCCwindowCmd --ontop "^$SECstrScriptSelfName$"
+		if ! zenity --question --title "$SECstrScriptSelfName" --text="screen was locked, fix compiz now?";then
+			echoc -w -t 3
+			exit 1
+		fi
 	fi
+	
+	secXtermDetached.sh metacity --replace;
+	sleep 3; #this blind delay helps on properly fixing
+	secXtermDetached.sh compiz --replace
+	
   exit 0
 elif $bActivateUnmappedWindow;then
 	if [[ -z "$strActivateUnmappedWindowNameId" ]];then
