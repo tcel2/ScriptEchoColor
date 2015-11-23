@@ -117,6 +117,8 @@ if ! SECFUNCisNumber -n $fDefaultDelay;then
 	exit 1
 fi
 
+#if ! secAutoScreenLock.sh --islocked;then	SEC_WARN=true SECFUNCechoWarnA "test!";fi #@@@R
+
 # run these and exit
 if $bFixCompiz;then
 	if ! secAutoScreenLock.sh --islocked;then
@@ -124,7 +126,8 @@ if $bFixCompiz;then
 		sleep 3; #this blind delay helps on properly fixing
 		secXtermDetached.sh compiz --replace
 	else
-		SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
+		echoc -p --say "cant fix compiz, screen is locked..."
+		SEC_WARN=true SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
 	fi
   exit 0
 elif $bActivateUnmappedWindow;then

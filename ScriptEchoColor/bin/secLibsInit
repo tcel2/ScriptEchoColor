@@ -28,6 +28,14 @@ bBase=false
 bMisc=false
 bVars=false
 bExtras=false
+
+bHelpFast=false
+bHelpCore=false
+bHelpBase=false
+bHelpMisc=false
+bHelpVars=false
+bHelpExtras=false
+
 bRunLogForce=false
 bRunLogDisable=false
 bMaintenanceDaemon=true
@@ -44,30 +52,25 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		eval `secinit`;SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
 		exit
+	elif [[ "$1" == "--help-all" ]];then #help help for all libs at once
+		bHelpFast=true
+		bHelpCore=true
+		bHelpBase=true
+		bHelpMisc=true
+		bHelpVars=true
+		bHelpExtras=true
 	elif [[ "$1" == "--help-fast" ]];then #help help for fast lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcFast.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcFast.sh --help'
-		exit
+		bHelpFast=true
 	elif [[ "$1" == "--help-core" ]];then #help help for core lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcCore.sh --help'
-		exit
+		bHelpCore=true
 	elif [[ "$1" == "--help-base" ]];then #help help for base lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcBase.sh --help'
-		exit
+		bHelpBase=true
 	elif [[ "$1" == "--help-misc" ]];then #help help for misc lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcMisc.sh --help'
-		exit
+		bHelpMisc=true
 	elif [[ "$1" == "--help-vars" ]];then #help help for vars lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcVars.sh --help'
-		exit
+		bHelpVars=true
 	elif [[ "$1" == "--help-extras" ]];then #help help for extras lib
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcExtras.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/funcExtras.sh --help'
-		exit
+		bHelpExtras=true
 	elif [[ "$1" == "--help-summary" ]];then #help summary of functions on all libs
 		eval `secinit`
 		#sedOnlyFunctions="s'^.*/func(.*)[.]sh:function (SECFUNC[[:alnum:]_]*).*'\1:\2'"
@@ -112,6 +115,34 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if $bHelpFast || $bHelpCore || $bHelpBase || $bHelpMisc || $bHelpVars || $bHelpExtras;then
+	function FUNChelp(){
+		echo
+		echo -e "\E[0m\E[34m\E[106m               help for \E[0m\E[31m\E[106m $1 \E[0m\E[34m\E[106m lib               \E[0m"
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help'
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help'
+	}
+	if $bHelpFast;then
+		FUNChelp Fast
+	fi
+	if $bHelpCore;then
+		FUNChelp Core
+	fi
+	if $bHelpBase;then
+		FUNChelp Base
+	fi
+	if $bHelpMisc;then
+		FUNChelp Misc
+	fi
+	if $bHelpVars;then
+		FUNChelp Vars
+	fi
+	if $bHelpExtras;then
+		FUNChelp Extras
+	fi
+	exit 0
+fi
 
 if $bFast;then
 	if ${SECinstallPath+false};then

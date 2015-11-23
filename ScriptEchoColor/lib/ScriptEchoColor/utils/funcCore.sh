@@ -140,6 +140,29 @@ function SECFUNCgetUserName(){ #help this is not an atomic function.
 	fi
 	echo "$lstrUserName"
 }
+function SECFUNCdefaultBoolValue(){
+	local lstrId="$1";
+	local lstrValue="$2"
+	
+	if [[ "$lstrValue" != "true" && "$lstrValue" != "false" ]];then
+		SECFUNCechoErrA "lstrValue='$lstrValue' must be \"boolean like\""
+		_SECFUNCcriticalForceExit
+	fi
+	
+	if ! ${!lstrId+false};then # if it is set, just fix if needed
+		if [[ "${!lstrId}" != "true" && "${!lstrId}" != "false" ]];then
+			SECFUNCechoWarnA "fixing lstrId='$lstrId' of value '${!lstrId}' should be \"boolean like\""
+			declare -xg $lstrId="$lstrValue"
+		fi
+	else
+		declare -xg $lstrId="$lstrValue"
+	fi
+	
+#	: ${!${lstrId}:=$lstrValue}
+#	if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
+#		export SEC_DEBUG=false # of course, np if already "false"
+#	fi
+}
 
 #function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
 #	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
@@ -208,34 +231,41 @@ fi
 : ${SECstrScriptSelfName=}
 : ${SECstrScriptSelfNameParent=}
 
+############################################
 # IMPORTANT!!!!!!! do not use echoc or ScriptEchoColor on functions here, may become recursive infinite loop...
+#############################################
 
 ######### EXTERNAL VARIABLES can be set by user #########
-: ${SEC_DEBUG:=false}
-if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
-	export SEC_DEBUG=false # of course, np if already "false"
-fi
+#: ${SEC_DEBUG:=false}
+#if [[ "$SEC_DEBUG" != "true" ]]; then #compare to inverse of default value
+#	export SEC_DEBUG=false # of course, np if already "false"
+#fi
+SECFUNCdefaultBoolValue SEC_DEBUG false
 
-# this lets -x fully works
-: ${SEC_DEBUGX:=false}
-if [[ "$SEC_DEBUGX" != "true" ]]; then #compare to inverse of default value
-	export SEC_DEBUGX=false # of course, np if already "false"
-fi
+## this lets -x fully works
+#: ${SEC_DEBUGX:=false}
+#if [[ "$SEC_DEBUGX" != "true" ]]; then #compare to inverse of default value
+#	export SEC_DEBUGX=false # of course, np if already "false"
+#fi
+SECFUNCdefaultBoolValue SEC_DEBUGX false # this lets -x fully works
 
-: ${SEC_WARN:=false}
-if [[ "$SEC_WARN" != "true" ]]; then #compare to inverse of default value
-	export SEC_WARN=false # of course, np if already "false"
-fi
+#: ${SEC_WARN:=true}
+#if [[ "$SEC_WARN" != "false" ]]; then #compare to inverse of default value
+#	export SEC_WARN=true # of course, np if already "false"
+#fi
+SECFUNCdefaultBoolValue SEC_WARN false
 
-: ${SEC_BUGTRACK:=false}
-if [[ "$SEC_BUGTRACK" != "true" ]]; then #compare to inverse of default value
-	export SEC_BUGTRACK=false # of course, np if already "false"
-fi
+#: ${SEC_BUGTRACK:=false}
+#if [[ "$SEC_BUGTRACK" != "true" ]]; then #compare to inverse of default value
+#	export SEC_BUGTRACK=false # of course, np if already "false"
+#fi
+SECFUNCdefaultBoolValue SEC_BUGTRACK false
 
-: ${SEC_MsgColored:=true}
-if [[ "$SEC_MsgColored" != "false" ]];then
-	export SEC_MsgColored=true
-fi
+#: ${SEC_MsgColored:=true}
+#if [[ "$SEC_MsgColored" != "false" ]];then
+#	export SEC_MsgColored=true
+#fi
+SECFUNCdefaultBoolValue SEC_MsgColored true
 
 : ${SEC_DEBUG_FUNC:=}
 export SEC_DEBUG_FUNC #help this variable can be a function name to be debugged, only debug lines on that funcion will be shown
@@ -1069,7 +1099,7 @@ function SECFUNCmsgCtrl() {
 function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DEBUG
 	# Log is stopped on the alias #set +x
 	SECFUNCmsgCtrl DEBUG
-	if [[ "$SEC_DEBUG" != "true" ]];then # to not loose more time
+	if [[ "$SEC_DEBUG" != "true" ]];then # to not lose more time, THIS MUST BE BEFORE HELP CODE only for debug!!!
 		return 0
 	fi
 	
@@ -1266,16 +1296,7 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	fi
 }
 
-function SECFUNCechoWarn() { #help
-#	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
-#		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
-#		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
-#	fi
-	SECFUNCmsgCtrl WARN
-	if [[ "$SEC_WARN" != "true" ]];then # to not loose time
-		return 0
-	fi
-	
+function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is true
 	###### options
 	local lstrCaller=""
 	local SEClstrFuncCaller=""
@@ -1297,6 +1318,15 @@ function SECFUNCechoWarn() { #help
 		shift
 	done
 	
+#	if [[ -f "${SECstrFileMessageToggle}.WARN.$$" ]];then
+#		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
+#		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
+#	fi
+	SECFUNCmsgCtrl WARN
+	if [[ "$SEC_WARN" != "true" ]];then # to not lose time
+		return 0
+	fi
+	
 	###### main code
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
@@ -1306,16 +1336,7 @@ function SECFUNCechoWarn() { #help
 	fi
 }
 
-function SECFUNCechoBugtrack() { #help
-#	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
-#		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
-#		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
-#	fi
-	SECFUNCmsgCtrl BUGTRACK
-	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not loose time
-		return 0
-	fi
-	
+function SECFUNCechoBugtrack() { #help bugtrack messages will only show if SEC_BUGTRACK is true
 	###### options
 	local lstrCaller=""
 	local SEClstrFuncCaller=""
@@ -1336,6 +1357,15 @@ function SECFUNCechoBugtrack() { #help
 		fi
 		shift
 	done
+	
+#	if [[ -f "${SECstrFileMessageToggle}.BUGTRACK.$$" ]];then
+#		rm "${SECstrFileMessageToggle}.BUGTRACK.$$" 2>/dev/null
+#		if $SEC_BUGTRACK;then SEC_BUGTRACK=false;	else SEC_BUGTRACK=true; fi
+#	fi
+	SECFUNCmsgCtrl BUGTRACK
+	if [[ "$SEC_BUGTRACK" != "true" ]];then # to not lose time
+		return 0
+	fi
 	
 	###### main code
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECBUGTRACK: ${lstrCaller}$@"
