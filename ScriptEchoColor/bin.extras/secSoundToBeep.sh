@@ -132,8 +132,10 @@ echo "MinFreq:`echo "${astrFrequencies[@]}" |tr ' ' '\n' |sort -n |head -n 1`"
 echo "MaxFreq:`echo "${astrFrequencies[@]}" |tr ' ' '\n' |sort -n |tail -n 1`"
 astrBeepParams=(`echo "${astrFrequencies[@]}" |tr ' ' '\n' |sed -r "s'.*'-n -l 1 -f &'"`)
 
-echo -e "beep ${astrBeepParams[@]:0:100}" |sed 's"-n"\n"g';echo
-echo "(First 100 sample) beep ${astrBeepParams[@]:0:100}"
+nShowHead=10
+nParamCountForEachFreq=5
+echo -e "beep (1st $nShowHead) ${astrBeepParams[@]:0:$((nShowHead*nParamCountForEachFreq))}" |sed 's"-n"\n"g';echo
+echo "(1st $nShowHead cmd) beep ${astrBeepParams[@]:0:$((nShowHead*nParamCountForEachFreq))}"
 
 #echo "beeps count: `bc <<< "${#astrBeepParams[@]}/5"`"
 echo "beeps count: ${#astrFrequencies[@]}"
