@@ -40,7 +40,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		echoc --alert "STILL NOT WORKING!!!"
-		SECFUNCshowHelp --colorize "..."
+		SECFUNCshowHelp --colorize "(?) seems to require electromagnectic internal speakers, while most computers have piezoelectric ones.."
+		SECFUNCshowHelp --colorize "(?) 1bit sounds could tried but how to create them?"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--nobeep" || "$1" == "-B" ]];then #help just to make quiet tests..
