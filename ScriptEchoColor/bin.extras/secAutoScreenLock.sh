@@ -187,7 +187,11 @@ strDBusUnityDestination="com.canonical.Unity.Launcher"
 strDBusUnityObjPath="/com/canonical/Unity/Session"
 gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath" >"$strUnityLog"&
 if $bSpeak;then
-	echoc --info --say "`SECFUNCseparateInWords --notype "${SECstrScriptSelfName%.sh}"` log started."
+	strSayLogStarted="`SECFUNCseparateInWords --notype "${SECstrScriptSelfName%.sh}"` log started."
+	echoc --info --say "$strSayLogStarted"
+	
+	SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
+	SECFUNCexecA -c --echo zenity --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
 fi
 
 nLightweightHackId=1
