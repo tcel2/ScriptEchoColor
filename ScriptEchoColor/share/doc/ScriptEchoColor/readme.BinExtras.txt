@@ -47,3 +47,6 @@ Status: (needs updating)
 [alpha]	sec.SymlinkRelative.NautilusScript.sh
 [beta]	sec.TouchFileDateTimeToNow.NautilusScript.sh
 
+PS.: pretty list all with
+cd `secGetInstallPath`/bin.extras;ls sec* -1 |LC_ALL="C.UTF-8" sort -n |column -c `tput cols` |column -t |sed "s'.*' &'"
+
