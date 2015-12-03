@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+eval `secinit --extras`
 
 export SEC_SAYVOL=20
 #echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
