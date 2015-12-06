@@ -52,7 +52,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--workpath" || "$1" == "-w" ]];then #help <strWorkPath> used with `find`
 		shift
 		strWorkPath="${1-}"
-	elif [[ "$1" == "--noaskskip" || "$1" == "-n" ]];then #help when --write, will ask if current file must be skipped, this disables it
+	elif [[ "$1" == "--noaskskip" || "$1" == "-n" ]];then #help when --write is used, it will ask if current file must be skipped, this disables that question.
 		bAskSkip=false
 	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
@@ -93,10 +93,16 @@ fi
 
 # Main code
 function _FUNCreportMatches() {
-	echoc --info "BEFORE strFile='$strFile'"
-	SECFUNCexec -ce egrep --color=always "${strRegexMatch}|${strReplaceWith}" "$strFile"&&:
-	echoc --info "AFTER  strFile='$strFile'"
-	SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |egrep --color=always "${strReplaceWith}"&&:
+	SECFUNCdrawLine --left "strFile='$strFile'"
+	
+	echoc --info "BEFORE"
+	SECFUNCexec -ce egrep --color=always "${strRegexMatch}" "$strFile"&&:
+	
+	strBeware="`SECFUNCexec -ce fgrep --color=always "${strReplaceWith}" "$strFile"&&:`"
+	if [[ -n "$strBeware" ]];then echoc --alert "Beware, replace already exists!!"; echo "$strBeware";fi
+	
+	echoc --info "AFTER"
+	SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |fgrep --color=always "${strReplaceWith}"&&:
 }
 
 IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${strFileFilter}")&&:

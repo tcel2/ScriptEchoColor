@@ -7,31 +7,58 @@ Pending reports/confirmation:
   and all the other required applications.
 
 Currently available experimental scripts:
- sec.Bluetooth.SendFile.NautilusScript.sh              secGetParentestWindow.sh
- sec.OpenLocationOnYakuake.NautilusScript.sh           secGitHelper.sh
- sec.OpenMidnightCommanderOnYakuake.NautilusScript.sh  secHiPriFoWi.sh
- sec.RemBkp.AddCopy.NautilusScript.sh                  secHighTmprMon.sh
- sec.RemBkp.LsFilesNotThere.NautilusScript.sh          secLogSessionLock.sh
- sec.RunOnXterm.NautilusScript.sh                      secLyricsForBanshee.sh
- sec.Symlink.Edit.NautilusScript.sh                    secMountAsSambaShare.sh
- sec.Symlink.MakeRelative.NautilusScript.sh            secNautilusRestartAndRestoreTabs.sh
- sec.TouchFileDateTimeToNow.NautilusScript.sh          secNetMon.sh
- secAutoScreenLock.sh                                  secNetworkControl.sh
- secAutoUnmount.sh                                     secOpenNewX.sh
- secBashForScriptEchoColorDevelopment.sh               secOrganizeXterminals.sh
- secChromiumTabWindowFocus.sh                          secRefactorInFiles.sh
- secDaemonsControl.sh                                  secRemoteInfo.sh
- secDelayedExec.sh                                     secReplaceWindowManager.sh
- secDevBaseScriptToCopyFrom.sh                         secResizetexture.sh
- secDevTestGeneric.sh                                  secRunAtYakuake.sh
- secDmesgCheckDaemon.sh                                secRunIoTopWithLog.sh
- secExec.sh                                            secRunUnison.sh
- secExecControl.sh                                     secScreenShotOnMouseStop.sh
- secExportArray.sh                                     secSoundToBeep.sh
- secFastFileAccess.sh                                  secToDoList2txt.sh
- secFixConkySimpleClock.sh                             secTrashManager.sh
- secFixDropboxCpulimit.sh                              secUpdateRemoteBackupFiles.sh
- secFixWindow.sh                                       secVisualMacro.sh
- secGameHelper.sh                                      secWebpPreview.sh
- secGammaChange.sh                                     secXtermDetached.sh
+ sec.Bluetooth.SendFile.NautilusScript.sh
+ sec.OpenLocationOnYakuake.NautilusScript.sh
+ sec.OpenMidnightCommanderOnYakuake.NautilusScript.sh
+ sec.RemBkp.AddCopy.NautilusScript.sh
+ sec.RemBkp.LsFilesNotThere.NautilusScript.sh
+ sec.RunOnXterm.NautilusScript.sh
+ sec.Symlink.Edit.NautilusScript.sh
+ sec.Symlink.MakeRelative.NautilusScript.sh
+ sec.TouchFileDateTimeToNow.NautilusScript.sh
+ secAutoScreenLock.sh
+ secAutoUnmount.sh
+ secBashForScriptEchoColorDevelopment.sh
+ secChromiumTabWindowFocus.sh
+ secDaemonsControl.sh
+ secDelayedExec.sh
+ secDevBaseScriptToCopyFrom.sh
+ secDevTestGeneric.sh
+ secDmesgCheckDaemon.sh
+ secExec.sh
+ secExecControl.sh
+ secExportArray.sh
+ secFastFileAccess.sh
+ secFixConkySimpleClock.sh
+ secFixDropboxCpulimit.sh
+ secFixWindow.sh
+ secGameHelper.sh
+ secGammaChange.sh
+ secGetParentestWindow.sh
+ secGitHelper.sh
+ secHiPriFoWi.sh
+ secHighTmprMon.sh
+ secLogSessionLock.sh
+ secLyricsForBanshee.sh
+ secMountAsSambaShare.sh
+ secNautilusRestartAndRestoreTabs.sh
+ secNetMon.sh
+ secNetworkControl.sh
+ secOpenNewX.sh
+ secOrganizeXterminals.sh
+ secRefactorInFiles.sh
+ secRemoteInfo.sh
+ secReplaceWindowManager.sh
+ secResizetexture.sh
+ secRunAtYakuake.sh
+ secRunIoTopWithLog.sh
+ secRunUnison.sh
+ secScreenShotOnMouseStop.sh
+ secSoundToBeep.sh
+ secToDoList2txt.sh
+ secTrashManager.sh
+ secUpdateRemoteBackupFiles.sh
+ secVisualMacro.sh
+ secWebpPreview.sh
+ secXtermDetached.sh
 
