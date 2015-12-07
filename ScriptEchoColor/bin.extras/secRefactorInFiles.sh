@@ -34,6 +34,7 @@ strBkpSuffix=".bkp"
 bWrite=false
 strWorkPath="."
 bAskSkip=true
+bRevertToBackups=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -44,7 +45,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--filefilter" || "$1" == "-f" ]];then #help <strFileFilter> it is a `find` param
 		shift
 		strFileFilter="${1-}"
-	elif [[ "$1" == "--write" ]];then #help this option will actually make `sed` write to files
+	elif [[ "$1" == "--write" ]];then #help this option will actually make `sed` write to files. Or --revertbkps actually do the undo.
 		bWrite=true
 	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
 		shift
@@ -54,13 +55,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strWorkPath="${1-}"
 	elif [[ "$1" == "--noaskskip" || "$1" == "-n" ]];then #help when --write is used, it will ask if current file must be skipped, this disables that question.
 		bAskSkip=false
-	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
-		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
-			shift
-			CFGstrTest="$1"
-		fi
-		
-		bCfgTest=true
+#	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
+#		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
+#			shift
+#			CFGstrTest="$1"
+#		fi
+#		
+#		bCfgTest=true
+	elif [[ "$1" == "--revertbkps" ]];then #help undo/revert to backuped files
+		bRevertToBackups=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
@@ -82,6 +85,31 @@ shift&&:
 strReplaceWith="${1-}"
 shift&&:
 
+if $bRevertToBackups;then
+	export SECbExecJustEcho=true
+	if $bWrite;then
+		SECbExecJustEcho=false
+	fi
+	
+	IFS=$'\n' read -d '' -r -a astrBkpFileList < <(find "${strWorkPath}/" -iname "*${strFileFilter}${strBkpSuffix}")&&:
+	for strBkpFile in "${astrBkpFileList[@]}";do
+		SECFUNCdrawLine --left "strBkpFile='$strBkpFile'"
+		strFile="${strBkpFile%.bkp}"
+		if [[ -f "$strFile" ]];then
+			SECFUNCexecA -jce mv -vT "$strFile" "${strFile}.RefactoredWrong.`SECFUNCdtFmt --filename`.bkp"
+			SECFUNCexecA -jce mv -vT "$strBkpFile" "${strFile}"
+		else
+			echoc -p "unable to find strFile='$strFile'"
+		fi
+	done
+#	declare -p astrBkpFileList
+#	if ! SECFUNCexec -ce find "${strWorkPath}/" -iname "*${strBkpSuffix}" -exec ls -l "{}" \; ; then
+#		echoc -p "no backup found..."
+#		exit 1
+#	fi
+	exit 0
+fi
+
 if [[ -z "$strRegexMatch" ]];then
 	echoc -p "invalid strRegexMatch='$strRegexMatch'"
 	exit 1
@@ -95,14 +123,19 @@ fi
 function _FUNCreportMatches() {
 	SECFUNCdrawLine --left "strFile='$strFile'"
 	
-	echoc --info "BEFORE"
-	SECFUNCexec -ce egrep --color=always "${strRegexMatch}" "$strFile"&&:
+	echoc --info "color diff prevision"
 	
-	strBeware="`SECFUNCexec -ce fgrep --color=always "${strReplaceWith}" "$strFile"&&:`"
-	if [[ -n "$strBeware" ]];then echoc --alert "Beware, replace already exists!!"; echo "$strBeware";fi
+	#echoc --info "BEFORE"
+	local lstrBefore="`SECFUNCexec -ce egrep --color=always "${strRegexMatch}" "$strFile"&&:`"
 	
-	echoc --info "AFTER"
-	SECFUNCexec -ce sed "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile" |fgrep --color=always "${strReplaceWith}"&&:
+	# this check may not work if sed replacing string is too complex to be ready to fgrep
+	local lstrBeware="`SECFUNCexec -ce fgrep --color=always "${strReplaceWith}" "$strFile"&&:`"
+	if [[ -n "$lstrBeware" ]];then echoc --alert "Beware, replace already exists!!"; echo "$lstrBeware";fi
+	
+	#echoc --info "AFTER"
+	local lstrAfter="`SECFUNCexec -ce sed -n -r "s@${strRegexMatch}@${strReplaceWith}@gp" "$strFile"&&:`" #|SECFUNCexec -ce fgrep --color=always "${strReplaceWith}"&&:
+	
+	if SECFUNCexec -ce colordiff <(echo "$lstrBefore") <(echo "$lstrAfter");then :;fi #TODO why &&: didnt work?
 }
 
 IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${strFileFilter}")&&:
@@ -113,16 +146,17 @@ for strFile in "${astrFileList[@]-}";do
 		if $bWrite;then
 			if $bAskSkip;then
 				_FUNCreportMatches
+				# default answer is to skip, so user have to think/check more to help on preventing trouble
 				if echoc -q "skip above strFile='$strFile'?";then
 					continue
 				fi
 			fi
 			
-			SECFUNCexec -ce sed -i${strBkpSuffix} "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
+			SECFUNCexec -ce sed -i${strBkpSuffix} -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
 			strBkpFile="${strFile}${strBkpSuffix}"
 			if [[ -f "$strBkpFile" ]];then
 				SECFUNCexec -ce ls -l "$strBkpFile"
-				SECFUNCexec -ce colordiff "$strFile" "$strBkpFile"&&:
+				SECFUNCexec -ce colordiff "$strBkpFile" "$strFile"&&:
 			else
 				SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
 			fi
