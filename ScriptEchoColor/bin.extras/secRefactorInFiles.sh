@@ -152,6 +152,10 @@ for strFile in "${astrFileList[@]-}";do
 				fi
 			fi
 			
+			if [[ -f "${strFile}${strBkpSuffix}" ]];then
+				echoc --info "backup already exists, moving it to old"
+				SECFUNCexec -ce mv -vT "${strFile}${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`${strBkpSuffix}"
+			fi
 			SECFUNCexec -ce sed -i${strBkpSuffix} -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
 			strBkpFile="${strFile}${strBkpSuffix}"
 			if [[ -f "$strBkpFile" ]];then
