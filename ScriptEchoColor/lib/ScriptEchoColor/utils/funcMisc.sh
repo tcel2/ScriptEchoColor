@@ -644,7 +644,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 		for lstrCfgVar in "${lastrAllCfgVars[@]-}";do
 			SECFUNCcfgWriteVar $lstrCfgVar
 			if $lbShowAll;then
-				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar}'" >>/dev/stderr
+				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar-}'" >>/dev/stderr
 			fi
 		done
 	fi
