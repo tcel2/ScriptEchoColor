@@ -38,6 +38,7 @@ export astrRemainingParams=()
 declare -Ax CFGastrAssigned=()
 SECFUNCcfgReadDB #after default variables value setup above
 declare -p CFGastrAssigned&&:
+
 #strFileToOpen=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -91,12 +92,13 @@ if [[ -n "$strExtension" ]];then
 	SECFUNCexecA -ce SECFUNCcfgFileName --show
 	exit 0
 fi
-
+#zenity --info --text=$LINENO
 SECFUNCarraysExport
 declare -p astrRemainingParams
 declare -p SECcmdExportedAssociativeArrays
 #declare |grep SEC_EXPORTED_ARRAY_
 declare -p SEC_EXPORTED_ARRAY_astrRemainingParams
+#zenity --info --text=$LINENO
 function FUNCopen() {
 	#declare |grep SEC_EXPORTED_ARRAY_
 	SECFUNCarraysRestore
@@ -129,6 +131,7 @@ function FUNCopen() {
 		#break; #TODO this is just to prevent opening more than one file, could open tho...
 	done
 };export -f FUNCopen
+#zenity --info --text=$LINENO
 #TODO this is not accepting the exported arrays: secXtermDetached.sh --waitonexit 60 bash -c FUNCopen
 xterm -e "bash -c FUNCopen;echoc -w -t 60"
 
