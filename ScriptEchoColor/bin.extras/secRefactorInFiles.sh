@@ -30,11 +30,12 @@ astrRemainingParams=()
 strRegexMatch=""
 strReplaceWith=""
 strFileFilter="*.java"
-strBkpSuffix=".bkp"
+strBkpSuffix="bkp"
 bWrite=false
 strWorkPath="."
 bAskSkip=true
 bRevertToBackups=false
+bBkpTrash=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -50,6 +51,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
 		shift
 		strBkpSuffix="${1-}"
+	elif [[ "$1" == "--trashbkp" || "$1" == "-t" ]];then #help ~single will remove the backup files and exit
+		bBkpTrash=true
 	elif [[ "$1" == "--workpath" || "$1" == "-w" ]];then #help <strWorkPath> used with `find`
 		shift
 		strWorkPath="${1-}"
@@ -80,6 +83,41 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+function FUNCfindBkpWork(){
+	local astrParams=(find "$strWorkPath" -type f -iname "*.$strBkpSuffix")
+	
+	if [[ "$1" == "--report" ]];then
+		echoc --info "bkp files size:"
+		"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1
+	else
+		astrParams+=("$@")
+		
+		if [[ "$1" == "-exec" ]];then
+			astrParams+=(";")
+		fi
+		
+#		echoc --info "EXEC: ${astrParams[@]}"
+		SECFUNCexecA -ce "${astrParams[@]}"
+	
+	fi
+	
+	return 0
+}
+
+if $bBkpTrash;then
+	strOutput="`FUNCfindBkpWork -exec ls -l '{}'`"&&:
+	if [[ -n "$strOutput" ]];then
+		echo "$strOutput"
+		FUNCfindBkpWork --report
+		if echoc -q "trash all backup files?";then
+			FUNCfindBkpWork -exec trash -v '{}'
+		fi
+	else
+		echoc --info "no bkp files"
+	fi
+	exit 0
+fi
+
 strRegexMatch="${1-}"
 shift&&:
 strReplaceWith="${1-}"
@@ -91,7 +129,7 @@ if $bRevertToBackups;then
 		SECbExecJustEcho=false
 	fi
 	
-	IFS=$'\n' read -d '' -r -a astrBkpFileList < <(find "${strWorkPath}/" -iname "*${strFileFilter}${strBkpSuffix}")&&:
+	IFS=$'\n' read -d '' -r -a astrBkpFileList < <(find "${strWorkPath}/" -iname "*${strFileFilter}.${strBkpSuffix}")&&:
 	for strBkpFile in "${astrBkpFileList[@]}";do
 		SECFUNCdrawLine --left "strBkpFile='$strBkpFile'"
 		strFile="${strBkpFile%.bkp}"
@@ -103,7 +141,7 @@ if $bRevertToBackups;then
 		fi
 	done
 #	declare -p astrBkpFileList
-#	if ! SECFUNCexec -ce find "${strWorkPath}/" -iname "*${strBkpSuffix}" -exec ls -l "{}" \; ; then
+#	if ! SECFUNCexec -ce find "${strWorkPath}/" -iname "*.${strBkpSuffix}" -exec ls -l "{}" \; ; then
 #		echoc -p "no backup found..."
 #		exit 1
 #	fi
@@ -152,12 +190,12 @@ for strFile in "${astrFileList[@]-}";do
 				fi
 			fi
 			
-			if [[ -f "${strFile}${strBkpSuffix}" ]];then
+			if [[ -f "${strFile}.${strBkpSuffix}" ]];then
 				echoc --info "backup already exists, moving it to old"
-				SECFUNCexec -ce mv -vT "${strFile}${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`${strBkpSuffix}"
+				SECFUNCexec -ce mv -vT "${strFile}.${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`.${strBkpSuffix}"
 			fi
-			SECFUNCexec -ce sed -i${strBkpSuffix} -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
-			strBkpFile="${strFile}${strBkpSuffix}"
+			SECFUNCexec -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
+			strBkpFile="${strFile}.${strBkpSuffix}"
 			if [[ -f "$strBkpFile" ]];then
 				SECFUNCexec -ce ls -l "$strBkpFile"
 				SECFUNCexec -ce colordiff "$strBkpFile" "$strFile"&&:
@@ -172,6 +210,10 @@ done
 if ! $bWrite;then
 	echoc --alert "nothing was changed!"
 fi
+#echoc --info ""
+#SECFUNCexecA -ce du --exclude "$strFileFilter" -hs "`readlink -f "$strWorkPath"`"&&:
+echoc --info "Backup files size (see --trashbkp): "
+FUNCfindBkpWork --report
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 

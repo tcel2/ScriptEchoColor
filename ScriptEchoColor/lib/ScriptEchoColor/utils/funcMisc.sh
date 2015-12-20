@@ -520,9 +520,12 @@ function pSECFUNCprepareEnvVarsToWriteDB() { #private: store in a way that when 
 function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config file
 	#TODO make SECFUNCvarSet use this and migrate all from there to here?
 	local lbRemoveVar=false
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
+	local lbReport=false;
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--remove" ]];then #SECFUNCcfgWriteVar_help remove the variable from config file
 			lbRemoveVar=true
+		elif [[ "$1" == "--report" || "$1" == "-r" ]];then #SECFUNCcfgWriteVar_help output the variable being written
+			lbReport=true
 		elif [[ "${1-}" == "--help" ]];then
 			SECFUNCshowHelp ${FUNCNAME}
 			return 0
@@ -604,6 +607,10 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	SECFUNCfileLock --unlock "$SECcfgFileName"
 	
 	chmod u+rw,go-rw "$SECcfgFileName" #permissions for safety
+	
+	if $lbReport;then
+		echo "$lstrToWrite" >>/dev/stderr
+	fi
 	
 	return 0
 }
