@@ -87,8 +87,7 @@ function FUNCfindBkpWork(){
 	local astrParams=(find "$strWorkPath" -type f -iname "*.$strBkpSuffix")
 	
 	if [[ "$1" == "--report" ]];then
-		echoc --info "bkp files size:"
-		"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1
+		echoc --info "bkp files size: @r`"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1 |tr '\t' ' '` "
 	else
 		astrParams+=("$@")
 		
