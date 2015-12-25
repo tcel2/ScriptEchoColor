@@ -73,7 +73,17 @@ while true;do
 		#ps -o pid,cmd -p `pgrep -f "/dropbox "`&&:
 		renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "` # several pids, do not surround with "
 		#echoc -x "cpulimit -v -p $nPidDropbox -l $nCpuLimitPercentual"
-		echoc -x "cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"&&:
+		strCmd="cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"
+		echoc -x "$strCmd"&&:&
+		while ! nCpuLimitPid="`pgrep -fx "$strCmd"`";do echoc -w -t 1;done
+		SECFUNCexecA -ce ps -o ppid,pid,cmd -p `pgrep cpulimit`
+		if echoc -q "suspend limitation?";then
+			SECFUNCexecA -ce kill -SIGKILL "$nCpuLimitPid"
+			SECFUNCexecA -ce ps -o ppid,pid,cmd -p `pgrep cpulimit`
+			if echoc -q "resume limitation?";then
+				continue;
+			fi
+		fi
 	fi
 	
 	echoc -t 60 -w "waiting for dropbox to start"
