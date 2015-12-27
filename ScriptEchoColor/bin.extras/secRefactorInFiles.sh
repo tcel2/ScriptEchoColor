@@ -84,7 +84,7 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 function FUNCfindBkpWork(){
-	local astrParams=(find "$strWorkPath" -type f -iname "*.$strBkpSuffix")
+	local astrParams=(find "$strWorkPath" -type f -iname "${strFileFilter}*.${strBkpSuffix}")
 	
 	if [[ "$1" == "--report" ]];then
 		echoc --info "bkp files size: @r`"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1 |tr '\t' ' '` "
