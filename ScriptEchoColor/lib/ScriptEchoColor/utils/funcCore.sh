@@ -353,6 +353,79 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 	return 0
 }
 
+function SECFUNCarrayCmp() { #help <lstrArrayIdA> <lstrArrayIdB> return 0 if both arrays are identical
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCarrayCmp_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayCmp_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCarrayCmp_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	local lstrArrayIdA="${1-}"
+	shift
+	local lstrArrayIdB="${1-}"
+	shift 
+	
+	if ! SECFUNCarrayCheck "$lstrArrayIdA";then
+		SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
+		return 1
+	fi
+	
+	if ! SECFUNCarrayCheck "$lstrArrayIdB";then
+		SECFUNCechoErrA "invalid array lstrArrayIdB='$lstrArrayIdB'"
+		return 1
+	fi
+	
+	local lstrArrayIdValA="`declare -p ${lstrArrayIdA} |sed -r "s'$lstrArrayIdA''"`"
+	local lstrArrayIdValB="`declare -p ${lstrArrayIdB} |sed -r "s'$lstrArrayIdB''"`"
+	
+	if [[ "$lstrArrayIdValA" != "$lstrArrayIdValB" ]];then
+		return 1
+	fi
+	
+	return 0
+	
+#	local lstrArrayIdValA="${lstrArrayIdA}[@]"
+#	local lstrArrayIdValB="${lstrArrayIdB}[@]"
+#	
+#	local lbIsEqual=true
+#	for strA in "${!lstrArrayIdValA}";do
+#		for strB in "${!lstrArrayIdValB}";do
+#			if [[ "$strA" != "$strB" ]];then
+#				lbIsEqual=false;
+#				break;
+#			fi
+#		done 
+#	done
+#	
+#	if $lbIsEqual;then 
+#		return 0; 
+#	else 
+#		return 1;
+#	fi
+}
+
 function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment variable is an array, return 0 (true)
 	# var init here
 	local lstrExample="DefaultValue"

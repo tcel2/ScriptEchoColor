@@ -113,6 +113,7 @@ nRgfDelay=0.1 #DEF gamma update delay, float seconds ex.: 0.2
 nRgfMin=80 #DEF min gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma, limit = 0.100 (10/100=0.1)
 nRgfMax=170 #DEF max gamma, integer where 100 = 1.0 gamma, 150 = 1.5 gamma
 bSetBase=false
+bSetBaseAlt=false
 bKeep=false
 bSetCurrent=false
 #declare -a CFGafBaseGammaRGB
@@ -146,6 +147,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		afModGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
 	elif [[ "$1" == "--setbase" ]];then #help the currently setup gamma components will be stored at default cofiguration file at CFGafBaseGammaRGB.
 		bSetBase=true
+	elif [[ "$1" == "--setbasealt" ]];then #help like --setbase but will be an alternative value
+		bSetBaseAlt=true
 # elif [[ "$1" == "--setbase" ]];then #help <R> <G> <B> instead of 1.0 1.0 1.0. The specified base will be used at all calculations. Good to work with an old problematic CRT monitor.
 #		shift
 #		FUNCchkSetBase 0 "${1-}"
@@ -165,7 +168,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--step" ]];then #help <fStep> the float step amount when changing gamma (below 1.0 gamma component, step is halved)
 		shift
 		fStep="${1-}"
-	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set).
+	elif [[ "$1" == "--reset" ]];then #help will reset gamma to 1.0 or to CFGafBaseGammaRGB (if it was set) or CFGafAltBaseGammaRGB (if it was CFGafBaseGammaRGB).
 		bReset=true
 	elif [[ "$1" == "--say" ]];then #help will speak current gamma components
 		bSpeak=true
@@ -241,14 +244,37 @@ if $bSetBase;then
 	SECFUNCcfgWriteVar CFGafBaseGammaRGB
 fi
 SECFUNCcfgReadDB CFGafBaseGammaRGB
+if $bSetBaseAlt;then
+	CFGafAltBaseGammaRGB=(`FUNCgetCurrentGammaRGB`)
+	declare -p CFGafAltBaseGammaRGB
+	SECFUNCcfgWriteVar CFGafAltBaseGammaRGB
+fi
+SECFUNCcfgReadDB CFGafAltBaseGammaRGB
 
 if $bReset;then
-	if SECFUNCarrayCheck CFGafBaseGammaRGB;then
-		#SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
-		SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
-	else
-		SECFUNCexecA -ce xgamma -gamma 1
+	astrCurrentGammaRGB=(`FUNCgetCurrentGammaRGB`)
+	bDoReset=true
+	if SECFUNCarrayCheck CFGafAltBaseGammaRGB;then
+		if SECFUNCarrayCmp astrCurrentGammaRGB CFGafBaseGammaRGB;then
+			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafAltBaseGammaRGB[@]}"
+			bDoReset=false
+		elif SECFUNCarrayCmp astrCurrentGammaRGB CFGafAltBaseGammaRGB;then
+			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
+			bDoReset=false
+		fi
 	fi
+	
+	if $bDoReset;then
+		if SECFUNCarrayCheck CFGafBaseGammaRGB;then
+			#SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
+			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
+		else
+			SECFUNCexecA -ce xgamma -gamma 1
+		fi
+	fi
+	
+	CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB`)
+	SECFUNCcfgWriteVar CFGafModGammaRGB
 elif $bGetc;then
 	FUNCgetCurrentGammaRGB --force
 #elif $bSpeakCurrent;then
