@@ -296,7 +296,7 @@ function FUNCexecParams() {
 	
 	if $SECXbDoNotClose;then
 		echoc --info "This terminal will not be auto-closed!"
-		SECFUNCexecA -ce bash
+		SECFUNCexecA -ce bash #this is better than `xterm -hold` as terminal can still be used for other commands
 	fi
 	
 	#echoc -w -t 60

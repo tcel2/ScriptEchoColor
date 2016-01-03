@@ -442,22 +442,38 @@ if $bCheckIfAlreadyRunning;then
 	done
 fi
 
-# do RUN
-FUNClog RUN
-SECFUNCdelay RUN --init
-# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
-# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
-	SECFUNCcleanEnvironment; #all SEC environment will be cleared
-	"$@";
-)&&:;nRet=$?
-if((nRet!=0));then
-	FUNClog Err "nRet='$nRet'"
-fi
-if $bStay;then
-	FUNClog Sne "Should not have exited..."
-fi
+nRunTimes=0
+while true;do
+	((nRunTimes++))&&:
+	
+	# do RUN
+	FUNClog RUN "$nRunTimes time(s)"
+	SECFUNCdelay RUN --init
+	# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
+	# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+	( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+		SECFUNCcleanEnvironment; #all SEC environment will be cleared
+		"$@";
+	)&&:;nRet=$?
+	if((nRet!=0));then
+		FUNClog Err "nRet='$nRet'"
+	fi
+	if $bStay;then
+		FUNClog Sne "Should not have exited..."
+	fi
 
-# end Log
-FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
+	# end Log
+	FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
+	
+	if $bStay;then
+		strTxt="(Sne) should not have exited!\n"
+		strTxt+="re-run?\n";
+		strTxt+="cmd: $@\n"
+		if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
+			break;
+		fi
+	else
+		break;
+	fi
+done
 
