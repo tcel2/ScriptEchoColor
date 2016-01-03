@@ -121,7 +121,7 @@ function FUNCopen() {
 			if [[ -f "$strExec" ]];then
 				SECFUNCexecA -ce "$strExec" "$strFile"
 			else
-				echoc -p "unassigned strExtension='$strExtension'"
+				echoc -p "unassigned strExtension='$strExtension', or missing executable strExec='$strExec'"
 				exit 1
 			fi
 		else
