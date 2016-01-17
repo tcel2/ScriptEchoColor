@@ -467,7 +467,9 @@ while true;do
 	
 	if $bStay;then
 		strTxt="(Sne) should not have exited!\n"
+		strTxt+="\n";
 		strTxt+="re-run?\n";
+		strTxt+="\n";
 		strTxt+="cmd: $@\n"
 		if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
 			break;

@@ -126,41 +126,45 @@ if [[ -n "$strDeviceIdLastChosen" ]];then
 fi
 
 if ! $bUseLastChosenDevice;then
-	bRescan=false
-	if ! $bRescan && [[ -z "${astrDeviceList[@]-}" ]];then
-		bRescan=true
-	fi
-	if ! $bRescan && echoc -q -t 3 "re-scan bluetooth devices?";then
-		bRescan=true
-	fi
+	strDeviceId=""
+	while [[ -z "$strDeviceId" ]];do
+		bRescan=false
+		if ! $bRescan && [[ -z "${astrDeviceList[@]-}" ]];then
+			bRescan=true
+		fi
+		if ! $bRescan && echoc -q -t 3 "re-scan bluetooth devices (exit ctrl+c)?";then
+			bRescan=true
+		fi
 
-	if $bRescan;then
-		while true;do
-			if FUNCrescan;then
-				break;
-			fi
+		if $bRescan;then
+			while true;do
+				if FUNCrescan;then
+					break;
+				fi
 			
-			if ! echoc -q "no devices found, re-scan bluetooth devices?";then
-				exit 0
-			fi
+				if ! echoc -q "no devices found, re-scan bluetooth devices?";then
+					exit 0
+				fi
+			done
+		fi
+
+		astrZenityValues=()
+		nIndex=0
+		for strDeviceId in "${!astrDeviceList[@]}";do
+			astrZenityValues+=("$((nIndex++))")
+			astrZenityValues+=("$strDeviceId")
+			astrZenityValues+=("${astrDeviceList[$strDeviceId]}")
 		done
-	fi
+	
+		strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
+			--text="Select one Bluetooth device." \
+			--column="Index" --column="ID" --column="Name" \
+			"${astrZenityValues[@]}")&&:
 
-	astrZenityValues=()
-	nIndex=0
-	for strDeviceId in "${!astrDeviceList[@]}";do
-		astrZenityValues+=("$((nIndex++))")
-		astrZenityValues+=("$strDeviceId")
-		astrZenityValues+=("${astrDeviceList[$strDeviceId]}")
+		if [[ -n "$strDeviceId" ]];then
+			SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"
+		fi
 	done
-	strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
-		--text="Select one Bluetooth device." \
-		--column="Index" --column="ID" --column="Name" \
-		"${astrZenityValues[@]}")&&:
-
-	if [[ -n "$strDeviceId" ]];then
-		SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"
-	fi
 fi
 
 echoc --info "strDeviceIdLastChosen='$strDeviceIdLastChosen' Device Name='${astrDeviceList[$strDeviceIdLastChosen]-}'"

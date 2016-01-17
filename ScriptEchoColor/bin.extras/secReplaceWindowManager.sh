@@ -120,11 +120,15 @@ while true;do
 	echoc -t 10 -Q "replace window manager@O_compiz/_metacity"&&:;
 	case "`secascii $?`" in 
 		c)
-			SECFUNCexecA -ce compiz --replace >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			if [[ "$strCurrent" == "compiz" ]];then
+				secFixWindow.sh --fixcompiz #this safely replaces compiz
+			else
+				SECFUNCexecA -ce secXtermDetached.sh compiz --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			fi
 			strPreferedWM="compiz"
 			;; 
 		m)
-			SECFUNCexecA -ce metacity --replace >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			SECFUNCexecA -ce secXtermDetached.sh metacity --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="metacity"
 			;; 
 	esac

@@ -75,7 +75,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help <fDefaultDelay> delay at main loop, beware that too low value may cause trouble/problems, can be float.
 		shift
 		fDefaultDelay="${1-}"
-	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit. Compiz may startup ignoring corners. Also, yakuake may stop working by simply directly replacing compiz.
+	elif [[ "$1" == "--fixcompiz" ]];then #help Fix compiz and exit, as compiz may startup ignoring corners. Also, yakuake may stop working by simply directly replacing compiz, so this method workaround these issues.
 		bFixCompiz=true
 	elif [[ "$1" == "--fixcairodock" ]];then #help to fix cairo-dock (if it stops responding to mouse clicks) by properly replacing it.
 		bFixCairoDock=true
