@@ -306,7 +306,7 @@ elif $bPidDump;then
 	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
 	
 	if [[ -d "/proc/$nPidToDump" ]];then
-		SECFUNCexecA -ce ps --forest -p `SECFUNCppidList -a --pid 98993`
+		SECFUNCexecA -ce ps --forest -p `SECFUNCppidList -a --pid $nPidToDump`
 		echoc --info "nPidToDump='$nPidToDump' still running!"
 	fi
 	
