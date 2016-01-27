@@ -471,6 +471,8 @@ while true;do
 		strTxt+="re-run?\n";
 		strTxt+="\n";
 		strTxt+="cmd: $@\n"
+		strTxt+="\n";
+		strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$";
 		if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
 			break;
 		fi
