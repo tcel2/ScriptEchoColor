@@ -64,6 +64,7 @@ bResume=false
 strDaemonSays="Say stack daemon initialized."
 bClearCache=false
 strSndEffects=""
+bStdoutFilename=false
 
 function FUNCechoDbgSS() { 
 	SECFUNCechoDbgA --caller "$_SECSAYselfBaseName" "$1"; 
@@ -276,6 +277,9 @@ function FUNCplay() {
 		fi
 	fi
 	
+	if $bStdoutFilename;then
+		echo "$fileAudio"
+	fi
 	SECFUNCexecA play -v "$lsayVol" "$fileAudio" $lstrSndEffects #lstrSndEffects no quotes to become params (work?)
 };export -f FUNCplay;
 
@@ -305,6 +309,8 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	  strSndEffects="$1"
 	elif [[ "$1" == "--nomp3" ]];then #help do not use mp3 format, but cache files will be about 10x bigger...
 		SEC_SAYMP3=false
+	elif [[ "$1" == "--stdout" ]];then #help output the full sound filename to stdout
+		bStdoutFilename=true
 	elif [[ "$1" == "--clearcache" ]];then #help all audio files on cache will be removed
 		bClearCache=true
 	elif [[ "$1" == "--daemon" ]];then #help keeps running and takes care of all speak requests with log
