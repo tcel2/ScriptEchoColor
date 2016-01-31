@@ -140,11 +140,15 @@ function SECFUNCaddToRcFile() {
 	function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
 		# Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
 		local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
-		echo "$lstrBanner"
+		
+		local lstrInternetConn="[INET:OFF]"
+		if [[ "`nmcli -f STATE -t nm`" == "connected" ]];then lstrInternetConn="[INET:ON]";fi
+
+		echo "${lstrBanner}${lstrInternetConn}"
 		#echo -e \"$lstrBanner\"
 	}
 	function SECFUNCpromptCommand_CustomUserCommand(){
-		#good way to avoid bash completion not working well :)
+		#good way to avoid bash completion problem, but why it happens?
 		if $SECDEVbUnboundErr;then 
 			set -u;
 		else 

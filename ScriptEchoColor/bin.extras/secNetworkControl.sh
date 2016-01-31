@@ -120,19 +120,62 @@ function FUNCsetEnable(){
 	return 0
 }
 
+function FUNCisInternetOn(){
+	[[ "`nmcli -f STATE -t nm`" == "connected" ]]
+}
+
+function FUNCwaitConnectDialog(){
+	local lbEnable="$1"
+	shift
+	local lstrTitle="$1"
+	shift
+	local lstrText="$1"
+	shift
+	local lstrTextEnd="$1"
+	
+	for((i=0;i<100;i++));do
+		if((i<98));then
+			local lbEnd=false
+			if $lbEnable;then
+				if FUNCisInternetOn;then
+					lbEnd=true;
+				fi
+			else
+				if ! FUNCisInternetOn;then
+					lbEnd=true;
+				fi
+			fi
+			
+			if $lbEnd;then
+				i=98 #just to stay for more 2 seconds
+			fi
+		fi;
+		echo $i;
+		sleep 1;
+	done |zenity --progress --auto-close --title "$lstrTitle" --text "$lstrText"
+	echoc --say --info "$lstrTextEnd"
+}
+
 if $bToggle;then
 	bEnable=true
-	strText="Internet ON"
-	if nmcli nm |tail -n 1 |grep -q connected;then 
+	strText="Internet going ON"
+	strTextEnd="Internet ON"
+#	if nmcli nm |tail -n 1 |grep -q connected;then 
+	if FUNCisInternetOn;then
 		bEnable=false
-		strText="Internet OFF"
+		strText="Internet going OFF"
+		strTextEnd="Internet OFF"
 	fi
 	
 	if FUNCsetEnable $bEnable;then
 		strTitle="$SECstrScriptSelfName: Info Internet Status"
 		SECFUNCCwindowOnTop -d 1 "^$strTitle$"
-		SECFUNCexecA -ce zenity --timeout 3 --info --title "$strTitle" --text "$strText"&
 		echoc --say --info "$strText"
+#		if $bEnable;then
+			FUNCwaitConnectDialog $bEnable "$strTitle" "$strText" "$strTextEnd"
+#		else
+#			SECFUNCexecA -ce zenity --timeout 3 --info --title "$strTitle" --text "$strText"&
+#		fi
 	fi
 	
 #	if nmcli nm |tail -n 1 |grep -q connected;then 
