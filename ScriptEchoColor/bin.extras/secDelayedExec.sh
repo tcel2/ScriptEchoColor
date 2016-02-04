@@ -171,7 +171,7 @@ if $bWaitCheckPoint;then
 fi
 export strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
 
-function FUNClog() { #help <type with 3 letters> [comment]
+function FUNClog() { #params: <type with 3 letters> [comment]
 	local lstrType="$1"
 	local lstrLogging=" $lstrType -> `date "+%Y%m%d+%H%M%S.%N"`;$strToLog"
 	local lstrComment="${@:2}" #"${2-}" fails to '$@' as param when calling this function
