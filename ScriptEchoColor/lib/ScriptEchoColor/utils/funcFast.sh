@@ -29,6 +29,8 @@ if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is st
 
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
+set -E #ERR trap is inherited by shell functions
+set -T #DEBUG trap is inherited by shell functions
 
 # environment must have been already initialized on parent
 function SECFUNCfastInitCheck() {

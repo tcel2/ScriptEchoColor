@@ -36,6 +36,7 @@ strWorkPath="."
 bAskSkip=true
 bRevertToBackups=false
 bBkpTrash=false
+astrFileIgnore=()
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -46,8 +47,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--filefilter" || "$1" == "-f" ]];then #help <strFileFilter> it is a `find` param
 		shift
 		strFileFilter="${1-}"
+	elif [[ "$1" == "--ignore" || "$1" == "-i" ]];then #help <strFileToIgnore> it is a `find` param
+		shift
+		astrFileIgnore+=("${1-}")
 	elif [[ "$1" == "--write" ]];then #help this option will actually make `sed` write to files. Or --revertbkps actually do the undo.
 		bWrite=true
+#	elif [[ "$1" == "--makewritable" ]];then #help if t
+#		bMakeWritable=true
 	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
 		shift
 		strBkpSuffix="${1-}"
@@ -82,6 +88,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+
+#astrParamIgnore=()
+#for strIgnore in "${#astrFileIgnore[@]}";do
+#	astrParamIgnore+=();
+#done
 
 function FUNCfindBkpWork(){
 	local astrParams=(find "$strWorkPath" -type f -iname "${strFileFilter}*.${strBkpSuffix}")
@@ -179,6 +190,10 @@ IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${str
 for strFile in "${astrFileList[@]-}";do
 	if egrep -q "$strRegexMatch" "$strFile";then
 		egrep -Hc "$strRegexMatch" "$strFile"
+		if SECFUNCarrayContains astrFileIgnore "$strFile";then
+			echoc --info "@s@rIgnoring file:@S strFile='$strFile'"
+			continue;
+		fi
 		
 		if $bWrite;then
 			if $bAskSkip;then

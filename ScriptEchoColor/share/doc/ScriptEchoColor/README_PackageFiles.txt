@@ -8,6 +8,7 @@ Pending reports/confirmation:
 
 Currently available experimental scripts:
  sec.Bluetooth.SendFile.NautilusScript.sh
+ sec.OpenByCustom.NautilusScript.sh
  sec.OpenLocationOnYakuake.NautilusScript.sh
  sec.OpenMidnightCommanderOnYakuake.NautilusScript.sh
  sec.RemBkp.AddCopy.NautilusScript.sh
@@ -19,7 +20,7 @@ Currently available experimental scripts:
  secAutoScreenLock.sh
  secAutoUnmount.sh
  secBashForScriptEchoColorDevelopment.sh
- secChromiumTabWindowFocus.sh
+ secChromTabWindowFocus.sh
  secDaemonsControl.sh
  secDelayedExec.sh
  secDevBaseScriptToCopyFrom.sh
@@ -30,7 +31,7 @@ Currently available experimental scripts:
  secExportArray.sh
  secFastFileAccess.sh
  secFixConkySimpleClock.sh
- secFixDropboxCpulimit.sh
+ secFixDrpbxCpulimit.sh
  secFixWindow.sh
  secGameHelper.sh
  secGammaChange.sh
@@ -38,6 +39,7 @@ Currently available experimental scripts:
  secGitHelper.sh
  secHiPriFoWi.sh
  secHighTmprMon.sh
+ secIoProblemWarn.sh
  secLogSessionLock.sh
  secLyricsForBanshee.sh
  secMountAsSambaShare.sh
@@ -61,4 +63,4 @@ Currently available experimental scripts:
  secVisualMacro.sh
  secWebpPreview.sh
  secXtermDetached.sh
-
+ 

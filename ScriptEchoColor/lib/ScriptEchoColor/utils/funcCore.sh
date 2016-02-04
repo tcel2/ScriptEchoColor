@@ -353,6 +353,60 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 	return 0
 }
 
+function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> return 0 if it contains element
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCarrayContains_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayContains_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCarrayContains_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	local lstrArrayIdA="${1-}"
+	shift
+	local lstrElementToMatch="${1-}"
+	shift 
+	
+	if ! SECFUNCarrayCheck "$lstrArrayIdA";then
+		SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
+		return 1
+	fi
+	
+	if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
+		return 4 #empty array
+	fi
+	
+	local lstrArrayIdValA="${lstrArrayIdA}[@]"
+	for lstrCheck in "${!lstrArrayIdValA}";do
+#		echo "($lstrCheck) == ($lstrElementToMatch)" >>/dev/stderr
+		if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
+			return 0
+		fi
+	done
+	
+	return 3 #a non conflicting return value indicating array does not contain element
+}
+
 function SECFUNCarrayCmp() { #help <lstrArrayIdA> <lstrArrayIdB> return 0 if both arrays are identical
 	# var init here
 	local lstrExample="DefaultValue"

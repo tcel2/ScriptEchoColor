@@ -30,6 +30,7 @@ strExample="DefaultValue"
 bCfgTest=false
 CFGstrTest="Test"
 astrRemainingParams=()
+bFlashScreen=true
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -37,9 +38,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCshowHelp --colorize "If IO has problems and is not responding, this will warn the user about it."
 		SECFUNCshowHelp
 		exit 0
-#	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
-#		shift
-#		strExample="${1-}"
+	elif [[ "$1" == "--no-flash" || "$1" == "-F" ]];then #help disables screen flashing (gamma)
+		bFlashScreen=false
 #	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 #		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
 #			shift
@@ -64,18 +64,28 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+# This first play seems to store the file in memory, what make it works after?
 strAudioFile="`SEC_SAYVOL=0 secSayStack.sh --stdout "problem with IO"`"
 nPidDaemon=$$
 nMainSleep=10
 echo "nPidDaemon='$nPidDaemon'"
 
 function FUNCCchecker(){
-	echo "FUNCCchecker pid '$BASHPID'"
+	echo "FUNCCchecker pid '$BASHPID' #test: kill -SIGSTOP $BASHPID;sleep 30;kill -SIGCONT $BASHPID"
 	while true;do
 		echo "`SECFUNCdtFmt --logmessages`: checking IO..."
 		echo "$RANDOM" >"/tmp/.$SECstrScriptSelfName.IO-check.tmp"
 		kill -SIGUSR1 "$nPidDaemon"
 		sleep $((nMainSleep/2))
+	done
+}
+
+function FUNCflashScreen(){
+	for((i=0;i<3;i++));do 
+		xgamma -gamma 5;
+		sleep 0.1;
+		xgamma -gamma 1;
+		sleep 0.1;
 	done
 }
 
@@ -91,6 +101,9 @@ while true;do
 	if $bPlayWarning;then
 		echo "`SECFUNCdtFmt --logmessages`: play IO warning message strAudioFile='$strAudioFile'"
 		play "$strAudioFile"
+		if $bFlashScreen;then
+			FUNCflashScreen
+		fi
 	else
 		echo "`SECFUNCdtFmt --logmessages`: IO seems ok..."
 	fi

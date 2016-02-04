@@ -30,7 +30,7 @@ echo " SECstrRunLogFile='$SECstrRunLogFile'" >>/dev/stderr
 echo " \$@='$@'" >>/dev/stderr
 
 #strFullSelfCmd="`basename $0` $@"
-strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
+export strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
 
 SECFUNCcfgReadDB
@@ -38,19 +38,21 @@ echo "SECcfgFileName='$SECcfgFileName'"
 
 SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false #this grants startup always obbeying sleep
 varset bCheckPoint=false
-bWaitCheckPoint=false
-nDelayAtLoops=1
-bCheckPointDaemon=false
-bCheckIfAlreadyRunning=true
-nSleepFor=0
-bListAlreadyRunningAndNew=false
-bListIniCommands=false
-bStay=false
-bListWaiting=false
-bCheckPointDaemonHold=false
-bRunAllNow=false
-bRespectedSleep=false
+export bWaitCheckPoint=false
+export nDelayAtLoops=1
+export bCheckPointDaemon=false
+export bCheckIfAlreadyRunning=true
+export nSleepFor=0
+export bListAlreadyRunningAndNew=false
+export bListIniCommands=false
+export bStay=false
+export bListWaiting=false
+export bCheckPointDaemonHold=false
+export bRunAllNow=false
+export bRespectedSleep=false
+export bXterm=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
 		SECFUNCshowHelp --nosort
@@ -84,6 +86,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListIniCommands=true
 	elif [[ "$1" == "--listwaiting" ]];then #help list commands that entered (ini) the log file but havent RUN yet
 		bListWaiting=true
+	elif [[ "$1" == "--xterm" || "$1" == "-x" ]];then #help use xterm to run the command
+		bXterm=true
 	elif [[ "$1" == "--SECCFGbOverrideRunAllNow" ]];then #help <SECCFGbOverrideRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
@@ -93,8 +97,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-strItIsAlreadyRunning="IT IS ALREADY RUNNING"
-strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
+export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
 
 function FUNCcheckIfWaitCmdsHaveRun() {
 	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \
@@ -161,11 +165,11 @@ elif((nDelayAtLoops<1));then
 	nDelayAtLoops=1
 fi
 
-strWaitCheckPointIndicator=""
+export strWaitCheckPointIndicator=""
 if $bWaitCheckPoint;then
 	strWaitCheckPointIndicator="w+"
 fi
-strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
+export strToLog="${strWaitCheckPointIndicator}${nSleepFor}s;pid='$$';`SECFUNCparamsToEval "$@"`"
 
 function FUNClog() { #help <type with 3 letters> [comment]
 	local lstrType="$1"
@@ -190,7 +194,7 @@ function FUNClog() { #help <type with 3 letters> [comment]
 	
 	echo "$lstrLogging" >>/dev/stderr
 	echo "$lstrLogging" >>"$strExecGlobalLogFile"
-}
+};export -f FUNClog
 
 if $bListWaiting;then
 	FUNCcheckIfWaitCmdsHaveRun&&:
@@ -442,42 +446,54 @@ if $bCheckIfAlreadyRunning;then
 	done
 fi
 
-nRunTimes=0
-while true;do
-	((nRunTimes++))&&:
+export astrRunParams=("$@")
+function FUNCrun(){
+#	eval `secinit`
+#	SECFUNCarraysRestore
+	nRunTimes=0
+	while true;do
+		((nRunTimes++))&&:
 	
-	# do RUN
-	FUNClog RUN "$nRunTimes time(s)"
-	SECFUNCdelay RUN --init
-	# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
-	# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-	( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
-		SECFUNCcleanEnvironment; #all SEC environment will be cleared
-		"$@";
-	)&&:;nRet=$?
-	if((nRet!=0));then
-		FUNClog Err "nRet='$nRet'"
-	fi
-	if $bStay;then
-		FUNClog Sne "Should not have exited..."
-	fi
+		# do RUN
+		FUNClog RUN "$nRunTimes time(s)"
+		SECFUNCdelay RUN --init
+		# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
+		# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+		( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+			SECFUNCcleanEnvironment; #all SEC environment will be cleared
+			#"$@";
+			"${astrRunParams[@]}"
+		)&&:;nRet=$?
+		if((nRet!=0));then
+			FUNClog Err "nRet='$nRet'"
+		fi
+		if $bStay;then
+			FUNClog Sne "Should not have exited..."
+		fi
 
-	# end Log
-	FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
+		# end Log
+		FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
 	
-	if $bStay;then
-		strTxt="(Sne) should not have exited!\n"
-		strTxt+="\n";
-		strTxt+="re-run?\n";
-		strTxt+="\n";
-		strTxt+="cmd: $@\n"
-		strTxt+="\n";
-		strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$";
-		if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
+		if $bStay;then
+			strTxt="(Sne) should not have exited!\n"
+			strTxt+="\n";
+			strTxt+="re-run?\n";
+			strTxt+="\n";
+			strTxt+="cmd: $@\n"
+			strTxt+="\n";
+			strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$";
+			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
+				break;
+			fi
+		else
 			break;
 		fi
-	else
-		break;
-	fi
-done
+	done
+};export -f FUNCrun
+
+if $bXterm;then
+	SECFUNCarraysExport;SECFUNCexecA -ce xterm -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+else
+	SECFUNCexecA -ce FUNCrun
+fi
 

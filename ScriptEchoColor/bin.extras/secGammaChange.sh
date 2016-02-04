@@ -125,10 +125,10 @@ astrRunParams=("$@")
 bChangeWait=false
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
+afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
+echoc --info "TypeHelper: xgamma -rgamma ${afCurrentGamma[0]} -ggamma ${afCurrentGamma[1]} -bgamma ${afCurrentGamma[2]};secGammaChange.sh --setc;secGammaChange.sh --setbase"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
-		afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
-		echoc --info "TypeHelper: xgamma -rgamma ${afCurrentGamma[0]} -ggamma ${afCurrentGamma[1]} -bgamma ${afCurrentGamma[2]};secGammaChange.sh --setc;secGammaChange.sh --setbase"
 		SECFUNCshowHelp --colorize "Controls gamma."
 		SECFUNCshowHelp
 		exit 0

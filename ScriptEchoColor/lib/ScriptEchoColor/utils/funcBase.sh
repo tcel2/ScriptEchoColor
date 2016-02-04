@@ -63,10 +63,40 @@ function SECFUNCrealFile(){ #help
 
 function SECFUNCarraysExport() { #help export all arrays
 	SECFUNCdbgFuncInA;
+	
+	# var init here
+	local lbVerbose=false
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCarraysExport_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--verbose" || "$1" == "-v" ]];then #SECFUNCarraysExport_help show everything being done
+			lbVerbose=true
+		elif [[ "$1" == "--" ]];then #SECFUNCarraysExport_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	
 	local lsedArraysIds='s"^([[:alnum:]_]*)=\(.*"\1";tfound;d;:found' #this avoids using grep as it will show only matching lines labeled 'found' with 't'
 	# this is a list of arrays that are set by the system or bash, not by SEC
 	local lastrArraysToSkip=(`env -i bash -i -c declare 2>/dev/null |sed -r "$lsedArraysIds"`)
 	local lastrArrays=(`declare |sed -r "$lsedArraysIds"`)
+	if $lbVerbose;then declare -p lastrArrays >>/dev/stderr;fi
 	lastrArraysToSkip+=(
 		BASH_REMATCH 
 		FUNCNAME 
@@ -76,19 +106,22 @@ function SECFUNCarraysExport() { #help export all arrays
 	) #TODO how to automatically list all arrays to be skipped? 'BASH_REMATCH' and 'FUNCNAME', I had to put by hand, at least now it only exports arrays already marked to be exported what may suffice...
 	export SECcmdExportedAssociativeArrays=""
 	for lstrArrayName in ${lastrArrays[@]};do
-		local lbSkip=false
+#		local lbSkip=false
 		for lstrArrayNameToSkip in ${lastrArraysToSkip[@]};do
 			if [[ "$lstrArrayName" == "$lstrArrayNameToSkip" ]];then
-				lbSkip=true
-				break;
+#				lbSkip=true
+				if $lbVerbose;then echo "SKIP: $lstrArrayName" >>/dev/stderr;fi
+				continue 2; #continues outer loop
+#				break; # breaks this inner loop
 			fi
 		done
-		if $lbSkip;then
-			continue;
-		fi
+#		if $lbSkip;then
+#			continue;
+#		fi
 		
 		# only export already exported arrays...
 		if ! declare -p "$lstrArrayName" |grep -q "^declare -.x";then
+			if $lbVerbose;then echo "SKIP: $lstrArrayName" >>/dev/stderr;fi
 			continue
 		fi
 		
@@ -102,10 +135,18 @@ function SECFUNCarraysExport() { #help export all arrays
 		fi
 		
 		# creates the variable to be restored on a child shell
-		eval "export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
+		local lstrToExport="export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
+		if $lbVerbose;then echo "$lstrToExport" >>/dev/stderr;fi
+		eval "$lstrToExport"
 		
 		export SECbHasExportedArrays=true
 	done
+	
+	if $lbVerbose;then
+		declare -p SECcmdExportedAssociativeArrays >>/dev/stderr
+		declare -p SECbHasExportedArrays >>/dev/stderr
+	fi
+	
 	SECFUNCdbgFuncOutA;
 }
 

@@ -299,9 +299,18 @@ elif $bPidDump;then
 		exit 1
 	fi
 	
+	function FUNCcat(){
+		echoc --info "DumpLog: '$1'"
+		cat "$1"
+	};export -f FUNCcat
+	
 	SECFUNCexecA -ce grep "pid='${nPidToDump}'" "/tmp/.secDelayedExec.sh.$USER.log"&&:
-	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec cat '{}' \;
+	
+	SECFUNCdrawLine " begin dump log "
+	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec bash -c "FUNCcat '{}'" \;
 	echo
+	SECFUNCdrawLine " end dump log "
+	
 	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec ls --color -ld '{}' \;
 	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
 	
