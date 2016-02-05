@@ -153,7 +153,8 @@ function SECFUNCaddToRcFile() {
 			set -u;
 		else 
 			set +u;
-		fi 
+		fi
+		set +E #this is causing trouble too with bash auto completion
 	}
 	#export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$lstrBanner\"; ";
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
