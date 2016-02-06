@@ -50,7 +50,7 @@ varset strTitle="$strTitleDefault"
 strTitleForce=""
 #export bLog=$SECbTermLog
 #export strLogFile=""
-echoc --info "Options: $@"
+echoc --info "Options: ${@-}"
 export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""

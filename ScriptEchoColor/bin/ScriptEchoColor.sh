@@ -2442,7 +2442,7 @@ function FUNCColorCMD(){
 					fi
 				fi
 			
-				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))
+				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				bRecognized=true
 				continue
 			fi
@@ -2480,7 +2480,7 @@ function FUNCColorCMD(){
 			if $bRecognized; then
 				nSize=$(( ${#str} -2 ))
 				str="${str:0:nSize}"
-				((nRecognizedCharCount+=2))
+				((nRecognizedCharCount+=2))&&:
 				continue
 			fi
 				
@@ -2492,7 +2492,7 @@ function FUNCColorCMD(){
 				if [[ "$strGfxMode" == "$optGfxE294char"     ]]; then bGfxE294=true; fi
 				bGfxModeOn=true
 				
-				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))
+				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				bRecognized=true
 				continue
 			fi
@@ -2504,13 +2504,13 @@ function FUNCColorCMD(){
 				else
 					nLin="$nLin$char"
 				fi
-				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))
+				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				bRecognized=true
 				continue
 			elif [[ "$char" == '.' ]]; then
 				bGetLineNum=true
 			
-				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))
+				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				bRecognized=true
 				continue
 			fi
@@ -2544,7 +2544,7 @@ function FUNCColorCMD(){
 				L) bRecognized=true;strTypeBgL="light";;
 			esac
 			if $bRecognized; then
-				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))
+				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				continue
 			fi
 		done	
@@ -2685,13 +2685,16 @@ function FUNCColorCMD(){
 					nSaveLine=$nLine
 					nSaveColumn=$nColumn
 				fi
-				((nRecognizedCharCount++))
+				((nRecognizedCharCount++))&&:
 			fi
 		done
 
 		strFUNCColorCMD=${strPosition}${strFUNCColorCMD}${strFgBg}${strTypes}${strGfxTputmacs}
 	fi
-	(( nUnrecognizedCharCount += nAllChars -nRecognizedCharCount ))
+	
+	(( nUnrecognizedCharCount += nAllChars -nRecognizedCharCount ))&&:
+	
+	return 0 # means all went ok
 }
 
 # prevent undesired formatting
