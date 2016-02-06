@@ -89,7 +89,7 @@ function FUNClist() {
 			fi
 			
 			echo -e "$nCount\t$strStatus\t$nPid\t$strDaemonId";
-			((nCount++))
+			((nCount++))&&:
 		else
 			unset aDaemonsPid[$strDaemonId]
 			SECFUNCcfgWriteVar aDaemonsPid

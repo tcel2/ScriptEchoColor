@@ -1668,7 +1668,7 @@ function SECFUNCppidList() { #help [separator] between pids
 	if [[ -n "${1-}" ]];then
 	  lstrSeparator="$1"
 	fi
-  shift
+  shift&&:
   
   if [[ "$lnPidCheck" != "0" ]];then
   	if ! SECFUNCisNumber -dn "$lnPidCheck";then

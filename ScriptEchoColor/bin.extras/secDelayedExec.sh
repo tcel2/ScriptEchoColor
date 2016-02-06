@@ -492,7 +492,9 @@ function FUNCrun(){
 };export -f FUNCrun
 
 if $bXterm;then
-	SECFUNCarraysExport;SECFUNCexecA -ce xterm -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+	strTitle="${astrRunParams[@]}"
+	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
 else
 	SECFUNCexecA -ce FUNCrun
 fi
