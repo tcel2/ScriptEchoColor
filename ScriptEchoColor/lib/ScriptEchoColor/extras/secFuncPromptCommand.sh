@@ -56,15 +56,20 @@ function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this func
 	:
 }
 
-function SECFUNCbeforePromptCommand(){ #help 
-	SECFUNCbeforePromptCommand_CustomUserCommand;
-	
+function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so the uninitialized variable below will control it to happen only once
+#	echo -n "@I" >>/dev/stderr #TODO what is happening?? why this function is not run properly just once!??!?!?!
+
 	# will initialize if it is unset, can be with Sec or Nano
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
+#		echo "@K" >>/dev/stderr # OK
+		SECFUNCbeforePromptCommand_CustomUserCommand;
+		
 		SECdtBeforeCommandSec="`date +"%s"`"
 		SECdtBeforeCommandNano="`date +"%N"`"
-		echo "CmdBeginAt: `date +"$formatFullDateTime"`"
+		
+		echo "CmdBeginAt: `date +"$formatFullDateTime"`" >>/dev/stderr
 	fi
+#	echo -n "@O" >>/dev/stderr #TODO what is happening?? why this function is not run properly just once!??!?!?!
 }
 trap 'SECFUNCbeforePromptCommand;' DEBUG
 function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh" ]];then source "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh";fi
@@ -95,10 +100,15 @@ function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetI
 	#echo -e "${lstrOutput}"
 	echo -e "${lstrPadChars}${lstrText}${lstrPadCharsRight}"
 	
-	unset SECdtBeforeCommandSec
+	SECFUNCpromptCommand_CustomUserCommand
+	
 	unset SECdtBeforeCommandNano
 	
-	SECFUNCpromptCommand_CustomUserCommand
+	##########################################
+	### IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!! ###
+	##########################################
+	# as this is the control variable while unset, it MUST be unset as the very LAST command!!!!
+	unset SECdtBeforeCommandSec 
 }
 export PROMPT_COMMAND=SECFUNCpromptCommand
 #export PS1="\`FUNCsudoOn\`$PS1" #use this or PROMPT_COMMAND
