@@ -137,6 +137,21 @@ function SECFUNCaddToRcFile() {
 	export SECbRunLog=false #to make it sure it wont mess in case .bashrc has it 'true'
 	
 	source "$SECDEVstrProjectPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh"
+	function FUNCcleanTraps(){
+		set +E #without this, causes trouble too with bash auto completion
+		trap -- ERR #trap ERR must be disabled to avoid problems while typing commands that return false...
+		
+#		declare -p SECDEVbUnboundErr
+		# good way to avoid bash completion problem, but why it happens?
+		if $SECDEVbUnboundErr;then 
+			set -u;
+		else 
+			set +u;
+		fi
+	}
+	function SECFUNCbeforePromptCommand_CustomUserCommand(){
+		:
+	}
 	function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
 		# Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
 		local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
@@ -148,14 +163,9 @@ function SECFUNCaddToRcFile() {
 		#echo -e \"$lstrBanner\"
 	}
 	function SECFUNCpromptCommand_CustomUserCommand(){
-		#good way to avoid bash completion problem, but why it happens?
-		if $SECDEVbUnboundErr;then 
-			set -u;
-		else 
-			set +u;
-		fi
-		set +E #this is causing trouble too with bash auto completion
+		FUNCcleanTraps #put here to avoid segfaulting current bash with user commands
 	}
+	
 	#export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$lstrBanner\"; ";
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
 	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
@@ -199,6 +209,8 @@ function SECFUNCaddToRcFile() {
 	
 	echo
 	echo " SECstrTmpFolderLog='$SECstrTmpFolderLog'"
+	echo
+	ps -o pid,cmd
 	echo
 	
 	if $SECDEVbCdDevPath;then
@@ -248,6 +260,7 @@ function SECFUNCaddToRcFile() {
 #history -a
 SECFUNCarraysExport
 #set |grep "^SEC_EX"
-bash --rcfile <(echo 'SECFUNCaddToRcFile;')
-
+if ! bash --rcfile <(echo 'SECFUNCaddToRcFile;');then
+	SECFUNCechoErrA "exited with problem, what is happening?"
+fi
 

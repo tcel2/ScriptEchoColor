@@ -44,7 +44,7 @@ function SECFUNCcheckIfSudoIsActive() { #help
 	fi; 
 }
 
-function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh
+function SECFUNCbeforePromptCommand_CustomUserCommand(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh, will run as first thing
 	:
 }
 
@@ -52,7 +52,13 @@ function SECFUNCpromptCommand_CustomUserCommand(){ #help you can redefine this f
 	:
 }
 
+function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this function, see its example at secBashForScriptEchoColorDevelopment.sh
+	:
+}
+
 function SECFUNCbeforePromptCommand(){ #help 
+	SECFUNCbeforePromptCommand_CustomUserCommand;
+	
 	# will initialize if it is unset, can be with Sec or Nano
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
 		SECdtBeforeCommandSec="`date +"%s"`"

@@ -181,7 +181,7 @@ function FUNClistSecPids() {
 				if [[ "`cat /proc/$lnPid/comm`" != "echoc" ]];then # just skip it...
 #					ps --no-headers --forest -o pid,ppid,cmd -p "$lnPid"
 					lanActivePids+=($lnPid)
-					((lnPidsCount++))
+					((lnPidsCount++))&&:
 				fi
 			fi
 		done
@@ -325,7 +325,7 @@ fi
 ####################### MAIN CODE
 
 function FUNCvalidateDaemon() {
-	local lnPidDaemon="`cat "$strDaemonPidFile" 2>/dev/null`"
+	local lnPidDaemon="`cat "$strDaemonPidFile" 2>/dev/null`"&&:
 	if((lnPidDaemon==$$));then
 		return
 	fi
