@@ -33,6 +33,32 @@ source "$SECstrFileLibFast";
 
 # FUNCTIONS
 
+function SECFUNCerrCodeExplained(){
+	local lnErrCode="${1-}"
+	
+	local lstrMsg=""
+	case "$lnErrCode" in
+		1) lstrMsg="generic error";;
+		2) lstrMsg="shell builtins usage error, ex.: permission, or some keyword is missing etc.";;
+		126) lstrMsg="command is not executable, or permission problem";;
+		127) lstrMsg="command not found";;
+		129) lstrMsg="SIGHUP";; #128+n where n>=1
+    130) lstrMsg="SIGINT";;
+    131) lstrMsg="SIGQUIT";;
+    132) lstrMsg="SIGILL";; #        4       Core    Illegal Instruction
+    134) lstrMsg="SIGABRT";; #       6       Core    Abort signal from abort(3)
+    136) lstrMsg="SIGFPE";; #        8       Core    Floating point exception
+    137) lstrMsg="SIGKILL";; #       9       Term    Kill signal
+    139) lstrMsg="SIGSEGV";; #      11       Core    Invalid memory reference
+    141) lstrMsg="SIGPIPE";; #      13       Term    Broken pipe: write to pipe with no readers
+    142) lstrMsg="SIGALRM";; #      14       Term    Timer signal from alarm(2)
+    143) lstrMsg="SIGTERM";; #      15       Term    Termination signal
+		255) lstrMsg="invalid exit value, should have been in the range of 0 to 255";;
+		*) lstrMsg="User error code?";;
+	esac
+	echo "($lnErrCode) $lstrMsg"
+}
+
 strSECFUNCtrapErrCustomMsg="" # see SECFUNCexec for usage
 function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMAND-}"> <"${BASH_SOURCE[@]-}">
 	local lnRetTrap="$1";shift
@@ -52,6 +78,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand-}';"
 	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap-});"
 	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
+	lstrErrorTrap+="ErrorDesc='`SECFUNCerrCodeExplained "$lnRetTrap"`';"
 	lstrErrorTrap+="SECstrDbgLastCaller='`   echo "${SECstrDbgLastCaller-}'"    |tr ';' ' '`;"
 	lstrErrorTrap+="SECstrDbgLastCallerIn='` echo "${SECstrDbgLastCallerIn-}'"  |tr ';' ' '`;"
 	lstrErrorTrap+="SECstrDbgLastCallerOut='`echo "${SECstrDbgLastCallerOut-}'" |tr ';' ' '`;"

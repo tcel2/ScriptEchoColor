@@ -137,5 +137,12 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 SECFUNCexec -ce FUNCcodingGuide
 SECFUNCexec -ce FUNCexample --help
 
+# last thing:
+echo
+if echoc -q "test error trap?";then
+	#false
+	(exit -1)
+fi
+
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 

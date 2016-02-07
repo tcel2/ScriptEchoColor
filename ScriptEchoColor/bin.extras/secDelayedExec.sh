@@ -495,33 +495,41 @@ function FUNCrun(){
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
 		
+		local lbErr=false
+		local lstrTxt=""
 		if((lnRet!=0));then
 			FUNClog Err "lnRet='$lnRet'"
+			lbErr=true
+			lstrTxt="(Err) exited with error!\n"
+			lstrTxt+="\n";
+			lstrTxt+="ExitValue:\n\t$lnRet\n";
 		fi
 		if $bStay;then
 			FUNClog Sne "Should not have exited..."
+			lstrTxt="(Sne) should not have exited!\n"
 		fi
-
+		
 		# end Log
 		FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
-	
-		if $bStay;then
-			strTxt="(Sne) should not have exited!\n"
-			strTxt+="\n";
-			strTxt+="re-run?\n";
-			strTxt+="\n";
-			strTxt+="cmd: ${astrRunParams[@]}\n"
-			strTxt+="\n";
-			strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$\n";
-			strTxt+="\n";
-			strTxt+="DEBUG: TERM=$TERM, \n";
-			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
+		
+		if $bStay || $lbErr;then
+			lstrTxt+="\n";
+			lstrTxt+="RunCommand:\n\t${astrRunParams[@]}\n"
+			lstrTxt+="\n";
+			lstrTxt+="LogInfoDbgCmd:\n\tsecMaintenanceDaemon.sh --dump $$\n";
+			lstrTxt+="\n";
+			lstrTxt+="DbgInfo:\n\tTERM=$TERM, \n";
+			lstrTxt+="\n";
+			lstrTxt+="QUESTION:\n\tDo you want to try to run it again?\n";
+			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 				break;
 			fi
 		else
 			break;
 		fi
 	done
+	
+	return $lnRet
 };export -f FUNCrun
 
 #if $bXterm;then
@@ -532,7 +540,9 @@ function FUNCrun(){
 #	SECFUNCexecA -ce FUNCrun
 #fi
 #SECFUNCexecA -ce FUNCrun #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
-SECFUNCexecA -ce FUNCrun
+if ! SECFUNCexecA -ce FUNCrun;then
+	SECFUNCechoErrA "exited with error..."
+fi
 #nohup SECFUNCexecA -ce FUNCrun </dev/null >/dev/null 2>&1 & # completely detached from terminal 
 #sleep 10
 
