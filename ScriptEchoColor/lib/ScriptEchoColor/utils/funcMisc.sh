@@ -87,7 +87,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	fi
 	
 	if $lbListLocksWithPids;then
-		ls -1 "$SEC_TmpFolder/.SEC.FileLock."*".lock."* 2>/dev/null		
+		ls -1 "$SEC_TmpFolder/.SEC.FileLock."*".lock."* &&: 2>/dev/null		
 		SECFUNCdbgFuncOutA; return 0;
 	fi
 	
