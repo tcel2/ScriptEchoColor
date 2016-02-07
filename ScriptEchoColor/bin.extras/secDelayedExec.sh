@@ -51,6 +51,7 @@ export bCheckPointDaemonHold=false
 export bRunAllNow=false
 export bRespectedSleep=false
 export bXterm=false
+export astrXtermOpts=()
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
@@ -88,6 +89,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListWaiting=true
 	elif [[ "$1" == "--xterm" || "$1" == "-x" ]];then #help use xterm to run the command
 		bXterm=true
+	elif [[ "$1" == "--xtermopts" ]];then #help "<astrXtermOpts>" options to xterm like background color etc.
+		shift
+		astrXtermOpts=(${1-})
 	elif [[ "$1" == "--SECCFGbOverrideRunAllNow" ]];then #help <SECCFGbOverrideRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
@@ -485,7 +489,7 @@ function FUNCrun(){
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			SECFUNCarraysExport
 			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
-			SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c FUNCrunAtom'
+			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e 'bash -c FUNCrunAtom'
 		else
 			SECFUNCexecA -ce FUNCrunAtom
 		fi		
