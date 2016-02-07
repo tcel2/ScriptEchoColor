@@ -823,15 +823,15 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
 		else
 		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
 		  #"${lastrParamsToExec[@]}" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
 		fi
   else
   	if $bOmitOutput;then
 		  #"${lastrParamsToExec[@]}" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
-		  "${lastrParamsToExec[@]}" >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+		  "${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
   	else
-  		"${lastrParamsToExec[@]}";lnSECFUNCexecReturnValue=$?
+  		"${lastrParamsToExec[@]}" &&: ; lnSECFUNCexecReturnValue=$?
   	fi
   fi
 	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi

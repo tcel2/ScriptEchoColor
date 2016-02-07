@@ -79,7 +79,7 @@ function FUNCwindowList() {
 	#xdotool search --class xterm |sort
 	
 	local windowId=""
-	local listWindowIds=(`(xdotool search --class xterm;xdotool search --class rxvt) |sort -n`)
+	local listWindowIds=(`(xdotool search --class xterm;xdotool search --class rxvt) |sort -n`)&&:
 
 	local lnSystemPidMax=`cat /proc/sys/kernel/pid_max`
 	local listWindowIdsSorted=()

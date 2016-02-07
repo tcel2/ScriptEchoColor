@@ -371,7 +371,7 @@ function FUNClogMisc() {
 		# misc info
 		
 		# "^D" means "uninterruptable sleep". that is probably the case of a process waiting for IO
-		ps -A -o state,pid,cmd | grep "^D" >>"$strLogFileMisc"
+		ps -A -o state,pid,cmd | grep "^D" >>"$strLogFileMisc" &&:
 		
 		sleep $nDelay
 	done

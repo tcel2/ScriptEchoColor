@@ -457,15 +457,41 @@ function FUNCrun(){
 		# do RUN
 		FUNClog RUN "$nRunTimes time(s)"
 		SECFUNCdelay RUN --init
-		# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
-		# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-		( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
-			SECFUNCcleanEnvironment; #all SEC environment will be cleared
-			#"$@";
-			"${astrRunParams[@]}"
-		)&&:;nRet=$?
-		if((nRet!=0));then
-			FUNClog Err "nRet='$nRet'"
+		
+#		# also `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
+#		# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+#		( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+#			SECFUNCcleanEnvironment; #all SEC environment will be cleared
+#			#"$@";
+#			"${astrRunParams[@]}"
+#		)&&:;nRet=$?
+		
+		export strFileRetVal=$(mktemp)
+		function FUNCrunAtom(){
+			eval `secinit` #this will apply the exported arrays
+			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
+			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+			( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+				SECFUNCcleanEnvironment; #all SEC environment will be cleared
+				#"$@";
+				echo "Running Command: ${astrRunParams[@]}"
+				"${astrRunParams[@]}"
+			)&&:;local lnRetAtom=$?
+			echo "$lnRetAtom" >"$strFileRetVal";
+		};export -f FUNCrunAtom
+		if $bXterm;then
+			strTitle="${astrRunParams[@]}"
+			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+			SECFUNCarraysExport
+			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."
+			SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c FUNCrunAtom'
+		else
+			SECFUNCexecA -ce FUNCrunAtom
+		fi		
+		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
+		
+		if((lnRet!=0));then
+			FUNClog Err "lnRet='$lnRet'"
 		fi
 		if $bStay;then
 			FUNClog Sne "Should not have exited..."
@@ -479,7 +505,7 @@ function FUNCrun(){
 			strTxt+="\n";
 			strTxt+="re-run?\n";
 			strTxt+="\n";
-			strTxt+="cmd: $@\n"
+			strTxt+="cmd: ${astrRunParams[@]}\n"
 			strTxt+="\n";
 			strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$";
 			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
@@ -491,11 +517,15 @@ function FUNCrun(){
 	done
 };export -f FUNCrun
 
-if $bXterm;then
-	strTitle="${astrRunParams[@]}"
-	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
-	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
-else
-	SECFUNCexecA -ce FUNCrun
-fi
+#if $bXterm;then
+#	strTitle="${astrRunParams[@]}"
+#	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+#else
+#	SECFUNCexecA -ce FUNCrun
+#fi
+#SECFUNCexecA -ce FUNCrun #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+SECFUNCexecA -ce FUNCrun
+#nohup SECFUNCexecA -ce FUNCrun </dev/null >/dev/null 2>&1 & # completely detached from terminal 
+#sleep 10
 
