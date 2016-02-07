@@ -92,7 +92,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
 	else
-		echo "invalid option '$1'" >>/dev/stderr
+		SECFUNCechoErrA "invalid option '$1'" >>/dev/stderr
+		exit 1
 	fi
 	shift
 done
