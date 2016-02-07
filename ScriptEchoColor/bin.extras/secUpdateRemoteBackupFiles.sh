@@ -436,7 +436,7 @@ function FUNCunison(){
 		-nodeletion "$SECstrUserScriptCfgPath/Home" 			\
 		-nodeletion "${pathBackupsToRemote}/" 						\
 		-batch 																						\
-		-ui text 2>&1 &&:`" #TODO return 1 but works, why? because there were skipped files?
+		-ui text 2>&1`"&&: #TODO return 1 but works, why? because there were skipped files?
 	
 	if $bNextRunShowFullLog;then
 		echo "$strLastUnisonOutput"
