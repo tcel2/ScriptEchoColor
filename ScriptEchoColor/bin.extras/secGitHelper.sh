@@ -52,7 +52,29 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 done
 
 if [[ ! -d "$strDevPath" ]];then
-	echoc -p "invalid strDevPath='$strDevPath'"
+	# if being run just after login, do not use $USER on paths at command line parameters, it may not expand. No idea why...
+	echoc -p "invalid strDevPath='$strDevPath'" #, $USER"
+	
+#	# TODO -d failed just after login time, why?
+#	
+#	ls -ld "$strDevPath" &&: >>/dev/stderr
+#	if test -a "$strDevPath";then echo a >>/dev/stderr;fi
+#	if test -d "$strDevPath";then echo d >>/dev/stderr;fi
+#	if test -e "$strDevPath";then echo e >>/dev/stderr;fi
+#	if test -r "$strDevPath";then echo r >>/dev/stderr;fi
+#	if test -s "$strDevPath";then echo s >>/dev/stderr;fi
+#	if test -w "$strDevPath";then echo w >>/dev/stderr;fi
+#	if test -x "$strDevPath";then echo x >>/dev/stderr;fi
+#	if test -O "$strDevPath";then echo O >>/dev/stderr;fi
+#	if test -G "$strDevPath";then echo G >>/dev/stderr;fi
+#	SECFUNCdrawLine >>/dev/stderr
+#	
+#	strFormat="`stat --help |egrep "%." |head -n 30 |sed -r 's"[ ]*%(.)[ ]*(.*)"\1 #\2"' |tr -d "%" |sed -r "s'.*'%&'"`"&&:
+#	stat -c "$strFormat" "$strDevPath" &&: >>/dev/stderr
+#	SECFUNCdrawLine >>/dev/stderr
+#	
+#	strace bash -c "[[ -d '$strDevPath' ]]" &&: >>/dev/stderr
+	
 	exit 1
 fi
 strDevPath="`readlink -f "$strDevPath"`"

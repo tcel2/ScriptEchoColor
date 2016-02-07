@@ -1891,7 +1891,13 @@ function SECFUNCcheckActivateRunLog() {
 				exec > >(tee "$SECstrRunLogFile")
 				exec 2>&1
 				
-				SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`"
+				# waits tee to properly start...
+				while ! SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`";do 
+					SECFUNCechoWarnA "waiting 'tee $SECstrRunLogFile'..."
+					sleep 0.1;
+				done #synchronization
+#				SECFUNCechoWarnA "SECnRunLogTeePid='$SECnRunLogTeePid'"
+				
 				SECstrRunLogPipe="`readlink /proc/$$/fd/1`" #Must be updated because it was redirected.
 			
 				if $SECbRunLogPidTree;then
