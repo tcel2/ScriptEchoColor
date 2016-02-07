@@ -483,7 +483,7 @@ function FUNCrun(){
 			strTitle="${astrRunParams[@]}"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			SECFUNCarraysExport
-			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."
+			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c FUNCrunAtom'
 		else
 			SECFUNCexecA -ce FUNCrunAtom
@@ -507,7 +507,9 @@ function FUNCrun(){
 			strTxt+="\n";
 			strTxt+="cmd: ${astrRunParams[@]}\n"
 			strTxt+="\n";
-			strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$";
+			strTxt+="MoreInfoCmd: secMaintenanceDaemon.sh --dump $$\n";
+			strTxt+="\n";
+			strTxt+="DEBUG: TERM=$TERM, \n";
 			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$strTxt";then
 				break;
 			fi

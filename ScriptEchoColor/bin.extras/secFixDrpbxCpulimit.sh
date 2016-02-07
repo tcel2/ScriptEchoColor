@@ -60,7 +60,7 @@ fi
 
 nPidCurrent="`pgrep -fx "cpulimit -p $(pgrep dropbox) -l .*"`"&&:
 if [[ -n "$nPidCurrent" ]];then
-	ps -p "$nPidCurrent"
+	ps -p "$nPidCurrent"&&:
 fi
 
 SECFUNCuniqueLock --daemonwait
