@@ -37,7 +37,7 @@ Currently available experimental scripts:
  secGammaChange.sh
  secGetParentestWindow.sh
  secGitHelper.sh
- secHiPriFoWi.sh
+ secHiPriFoWi.sh (High priority to focused window)
  secHighTmprMon.sh
  secIoProblemWarn.sh
  secLogSessionLock.sh

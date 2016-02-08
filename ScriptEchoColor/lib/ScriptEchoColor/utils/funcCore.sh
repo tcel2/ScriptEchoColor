@@ -795,11 +795,12 @@ function SECFUNCexportFunctions() { #help
 		|sed 's".*"&;"' \
 		|grep "export -f SECFUNC"
 	
+	# private ones may not be present yet
 	declare -F \
 		|grep "pSECFUNC" \
 		|sed 's"declare .* pSECFUNC"export -f pSECFUNC"' \
 		|sed 's".*"&;"' \
-		|grep "export -f pSECFUNC"
+		|grep "export -f pSECFUNC" &&:
 }
 
 export SECstrUserHomeConfigPath="$HOME/.ScriptEchoColor"
