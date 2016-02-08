@@ -274,8 +274,10 @@ function FUNCorganize() {
 			fi
 	
 			# adjust position
-			#xdotool fails to dethermine viewport, use wmctrl
-			eval `wmctrl -d |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
+			# xdotool fails to dethermine viewport, use wmctrl
+			# metacity will output 4 lines, filter by the current (*) even if it actually does nothing yet
+			# TODO support metacity mode (workspaces instead of viewports)
+			eval `wmctrl -d |grep "[*] DG" |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 				viewportX=\1;\
 				viewportY=\2;"'`
 			SECFUNCexecA --echo xdotool windowmap $windowId	#why some windows get unmapped?
