@@ -70,18 +70,31 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	#local lstrBashSourceListTrap="${BASH_SOURCE[@]-}";
 	local lstrBashSourceListTrap="${lastrBashSource[@]}";
 	
+	strLnTab="`echo -e "\n\t"`";
 	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
 	lstrErrorTrap+="SECERROR(trap);"
+	lstrErrorTrap+="$strLnTab";
+#	local lstrSECFUNCtrapErrCustomMsgSimple="`echo "$strSECFUNCtrapErrCustomMsg" |tr ";" ":"`" # this is useful to avoid the ; translation to \n
 	lstrErrorTrap+="strSECFUNCtrapErrCustomMsg='${strSECFUNCtrapErrCustomMsg-}';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="SECstrRunLogFile='${SECstrRunLogFile-}';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName-}',LINENO='${lstrLineNo-}';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand-}';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap-});"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="ErrorDesc='`SECFUNCerrCodeExplained "$lnRetTrap"`';"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="SECstrDbgLastCaller='`   echo "${SECstrDbgLastCaller-}'"    |tr ';' ' '`;"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="SECstrDbgLastCallerIn='` echo "${SECstrDbgLastCallerIn-}'"  |tr ';' ' '`;"
+	lstrErrorTrap+="$strLnTab";
 	lstrErrorTrap+="SECstrDbgLastCallerOut='`echo "${SECstrDbgLastCallerOut-}'" |tr ';' ' '`;"
+	lstrErrorTrap+="$strLnTab";
 
 #	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 #	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd&&:`';"
@@ -91,7 +104,9 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	while((lnPid>0));do
 		#lstrErrorTrap+="pid[$lnPidIndex]='$lnPid';"
 		#lstrErrorTrap+="CMD[$lnPidIndex]='`ps --no-header -p $lnPid -o cmd&&:`';"
-		lstrErrorTrap+="pidCMD[$lnPidIndex]='`ps --no-header -o pid,cmd -p $lnPid&&:`';"
+		lstrErrorTrap+="pidCMD[`printf "%02d" $lnPidIndex`]='`ps --no-header -o pid,cmd -p $lnPid&&:`';"
+		lstrErrorTrap+="$strLnTab";
+		
 		lnPid="`grep PPid /proc/$lnPid/status |cut -f2&&:`"
 		((lnPidIndex++))&&:
 	done
@@ -101,7 +116,8 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	 	if [[ -f "${SECstrFileErrorLog-}" ]];then #SECstrFileErrorLog not set may happen once..
 			echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
 		fi
-		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >>/dev/stderr;
+#		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >>/dev/stderr;
+		echo "$lstrErrorTrap" >>/dev/stderr;
 		return 1;
 	fi;
 }

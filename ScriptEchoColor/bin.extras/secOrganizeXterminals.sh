@@ -283,7 +283,7 @@ function FUNCorganize() {
 			SECFUNCexecA --echo xdotool windowmap $windowId	#why some windows get unmapped?
 			SECFUNCexecA --echo xdotool windowmove --sync $windowId \
 				$(( (basePosX-viewportX)+x )) \
-				$(( (basePosY-viewportY)+y )) 2>/dev/null; 
+				$(( (basePosY-viewportY)+y )) &&: 2>/dev/null; # this can return error, but may not fail on next run...
 		fi
 		
 		((x+=addX))&&: 

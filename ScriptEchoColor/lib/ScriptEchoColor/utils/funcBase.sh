@@ -867,8 +867,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
 	fi
 	
-	if((lnSECFUNCexecReturnValue>0));then
-		strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}" # do NOT append if it is set, will stack with all other calls to this function...
+	if((lnSECFUNCexecReturnValue!=0));then
+		strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}; CallerInfo: $lstrCaller" # do NOT append if it is set, will stack with all other calls to this function...
 #		if [[ -z "${strSECFUNCtrapErrCustomMsg-}" ]];then
 #			strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}"
 #		else
