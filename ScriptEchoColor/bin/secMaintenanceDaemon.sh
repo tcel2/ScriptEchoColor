@@ -270,7 +270,11 @@ elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 			strErrsToOutput="`echo "$strErrsToOutput" |grep "(trap)"`"&&:
 		fi
 		if [[ -n "$strErrsToOutput" ]];then # split the line into several easily readable lines!
-			echo "$strErrsToOutput" |sed -r -e "s'(\(trap\))'`echo -e "\E[31m"`\1`echo -e "\E[0m"`'" -e 's";";\n\t"g' -e 's".*"&\n"'
+			echo "$strErrsToOutput" \
+				|sed -r \
+					-e "s@';@';\n\t@g" \
+					-e "s@('trap')@${SECcolorRed}\1${SECcolorCancel}@"
+#					-e 's".*"&\n"' \
 		fi
 		
 		nLineCount=$nLineCountCurrent

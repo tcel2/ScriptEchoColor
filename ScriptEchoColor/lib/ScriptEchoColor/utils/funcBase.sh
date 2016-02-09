@@ -613,6 +613,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 }
 
 : ${SECbExecJustEcho:=true}
+#: ${SECbExecDefaultOptions:=""}
 function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
 	local bOmitOutput=false
 	local bShowElapsed=false
@@ -636,6 +637,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbStopLog=false
 	local lbColorize=false
 	local lbEnvVar=false
+	local lbDateTimeShow=true;
+	local lbFunctionInfoShow=true;
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -643,7 +646,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCexec_help is the name of the function calling this one
 			shift
-			lstrCaller="${1}: "
+#			lstrCaller="${1}: "
+			lstrCaller="${1}"
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCexec_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
@@ -679,6 +683,10 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lbStopLog=true;
 		elif [[ "$1" == "--nolog" ]];then #SECFUNCexec_help after log is set once, it will automatically log with other calls to this function, so this prevent a specific exec being logged at SEClstrLogFileSECFUNCexec
 			lbDoLog=false;
+		elif [[ "$1" == "--nodt" || "$1" == "-D" ]];then #SECFUNCexec_help removes the default datetime
+			lbDateTimeShow=false;
+		elif [[ "$1" == "--nofunc" || "$1" == "-F"  ]];then #SECFUNCexec_help removes the default function info
+			lbFunctionInfoShow=false;
 		elif [[ "$1" == "--logquota" ]];then #SECFUNCexec_help <nMaxLines> limit logfile size by nMaxLines, implies --log
 			shift
 			lnLogQuota=${1-};
@@ -789,10 +797,22 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		local lstrColorPrefix=""
 		local lstrColorSuffix=""
 		if $lbColorize;then
-			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
-			lstrColorSuffix="\E[0m"
+#			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
+			lstrColorPrefix="${SECcolorCancel}${SECcolorWhite}\E[46m\E[1m"
+			lstrColorSuffix="${SECcolorCancel}"
 		fi
-		echo -e "${lstrColorPrefix}[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: $lstrExec${lstrColorSuffix}" >>/dev/stderr
+		
+		local lstrDateTime="";
+		if $lbDateTimeShow;then
+			lstrDateTime="[`SECFUNCdtTimeForLogMessages`] "
+		fi
+		
+		local lstrFunctionInfo=""
+		if $lbFunctionInfoShow;then
+			lstrFunctionInfo="$FUNCNAME: lstrCaller=${lstrCaller}: "
+		fi
+		
+		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}$lstrExec${lstrColorSuffix}" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
@@ -868,7 +888,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	fi
 	
 	if((lnSECFUNCexecReturnValue!=0));then
-		strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}; CallerInfo: $lstrCaller" # do NOT append if it is set, will stack with all other calls to this function...
+#		strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}; CallerInfo: $lstrCaller" # do NOT append if it is set, will stack with all other calls to this function...
+		strSECFUNCtrapErrCustomMsg="Cmd: ${lstrExec}; CallerInfo: $lstrCaller" # do NOT append if it is set, will stack with all other calls to this function...
 #		if [[ -z "${strSECFUNCtrapErrCustomMsg-}" ]];then
 #			strSECFUNCtrapErrCustomMsg="ExecutedCmd: ${lastrParamsToExec[@]}"
 #		else

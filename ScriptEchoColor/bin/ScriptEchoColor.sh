@@ -2771,11 +2771,11 @@ FUNCdoTheEcho(){
 #    FUNCargset "$strTermEmulator;"
 	fi
 	
+	#local strFmted=`FUNCtranslateFormatColor "$str"`
+	eval   echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strFUNCformatColor}${strResetAtEnd}\"" $output
 	if $bOptEscapedChars; then
+		echo
 		echo "echo -e \"${strFUNCformatColor}${strResetAtEnd}\"" |sed 's"\d27"\\E"g'
-	else
-		#local strFmted=`FUNCtranslateFormatColor "$str"`
-		eval   echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strFUNCformatColor}${strResetAtEnd}\"" $output
 	fi
 	if ! $SEC_LOG_AVOID && [[ -n "$strUnformattedFileNameLog" ]]; then
 		eval echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strUnformatted}\"" >>"$strUnformattedFileNameLog"

@@ -70,32 +70,27 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	#local lstrBashSourceListTrap="${BASH_SOURCE[@]-}";
 	local lstrBashSourceListTrap="${lastrBashSource[@]}";
 	
-	strLnTab="`echo -e "\n\t"`";
-	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`]"
-	lstrErrorTrap+="SECERROR(trap);"
-	lstrErrorTrap+="$strLnTab";
+	function _SECFUNCtrapErr_addLine(){
+		lstrErrorTrap+="${SECcharTab}${1}${SECcharNL}"
+	}
+	
+#	strLnTab="`echo -e "\n\t"`";
+	local lstrErrorTrap="[`date +"%Y%m%d+%H%M%S.%N"`] SECERROR='trap';${SECcharNL}"
 #	local lstrSECFUNCtrapErrCustomMsgSimple="`echo "$strSECFUNCtrapErrCustomMsg" |tr ";" ":"`" # this is useful to avoid the ; translation to \n
-	lstrErrorTrap+="strSECFUNCtrapErrCustomMsg='${strSECFUNCtrapErrCustomMsg-}';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="SECstrRunLogFile='${SECstrRunLogFile-}';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName-}',LINENO='${lstrLineNo-}';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="BASH_COMMAND='${lstrBashCommand-}';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="BASH_SOURCE[@]=(${lstrBashSourceListTrap-});"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="lnRetTrap='$lnRetTrap';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="ErrorDesc='`SECFUNCerrCodeExplained "$lnRetTrap"`';"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="SECstrDbgLastCaller='`   echo "${SECstrDbgLastCaller-}'"    |tr ';' ' '`;"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="SECstrDbgLastCallerIn='` echo "${SECstrDbgLastCallerIn-}'"  |tr ';' ' '`;"
-	lstrErrorTrap+="$strLnTab";
-	lstrErrorTrap+="SECstrDbgLastCallerOut='`echo "${SECstrDbgLastCallerOut-}'" |tr ';' ' '`;"
-	lstrErrorTrap+="$strLnTab";
-
+	_SECFUNCtrapErr_addLine "strSECFUNCtrapErrCustomMsg='${strSECFUNCtrapErrCustomMsg-}';"
+	_SECFUNCtrapErr_addLine "SECstrRunLogFile='${SECstrRunLogFile-}';"
+	_SECFUNCtrapErr_addLine "SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName-},LINENO=${lstrLineNo-}';"
+	_SECFUNCtrapErr_addLine "BASH_COMMAND='${lstrBashCommand-}';"
+	_SECFUNCtrapErr_addLine "BASH_SOURCE[@]='(${lstrBashSourceListTrap-})';"
+	_SECFUNCtrapErr_addLine "lnRetTrap='$lnRetTrap';"
+	_SECFUNCtrapErr_addLine "ErrorDesc='`SECFUNCerrCodeExplained "$lnRetTrap"`';"
+#	_SECFUNCtrapErr_addLine "SECstrDbgLastCaller='`   echo "${SECstrDbgLastCaller-}'"    |tr ';' ' '`;"
+#	_SECFUNCtrapErr_addLine "SECstrDbgLastCallerIn='` echo "${SECstrDbgLastCallerIn-}'"  |tr ';' ' '`;"
+#	_SECFUNCtrapErr_addLine "SECstrDbgLastCallerOut='`echo "${SECstrDbgLastCallerOut-}'" |tr ';' ' '`;"
+	_SECFUNCtrapErr_addLine "SECstrDbgLastCaller='${SECstrDbgLastCaller-}';"
+	_SECFUNCtrapErr_addLine "SECstrDbgLastCallerIn='${SECstrDbgLastCallerIn-}';"
+	_SECFUNCtrapErr_addLine "SECstrDbgLastCallerOut='${SECstrDbgLastCallerOut-}';"
+	
 #	lstrErrorTrap+="pid='$$';PPID='$PPID';"
 #	lstrErrorTrap+="pidCommand='`ps --no-header -p $$ -o cmd&&:`';"
 #	lstrErrorTrap+="ppidCommand='`ps --no-header -p $PPID -o cmd&&:`';"
@@ -104,19 +99,24 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	while((lnPid>0));do
 		#lstrErrorTrap+="pid[$lnPidIndex]='$lnPid';"
 		#lstrErrorTrap+="CMD[$lnPidIndex]='`ps --no-header -p $lnPid -o cmd&&:`';"
-		lstrErrorTrap+="pidCMD[`printf "%02d" $lnPidIndex`]='`ps --no-header -o pid,cmd -p $lnPid&&:`';"
-		lstrErrorTrap+="$strLnTab";
+		_SECFUNCtrapErr_addLine "pidCMD[`printf "%02d" $lnPidIndex`]='`ps --no-header -o pid,cmd -p $lnPid&&:`';"
 		
 		lnPid="`grep PPid /proc/$lnPid/status |cut -f2&&:`"
 		((lnPidIndex++))&&:
 	done
+#	lstrErrorTrap+="`echo`"
 	
 	if [[ -n "$lstrBashSourceListTrap" ]] && [[ "${lstrBashSourceListTrap}" != *bash_completion ]];then
 	 	# if "${BASH_SOURCE[@]-}" has something, it is running from a script, otherwise it is a command on the shell beying typed by user, and wont mess development...
 	 	if [[ -f "${SECstrFileErrorLog-}" ]];then #SECstrFileErrorLog not set may happen once..
-			echo "$lstrErrorTrap" >>"$SECstrFileErrorLog";
+#			echo "$lstrErrorTrap" |tr -d '\n\t' >>"$SECstrFileErrorLog";
+			local lstrCleanedLine="`echo "$lstrErrorTrap" |tr -d "${SECcharTab}${SECcharNL}"`"
+			echo "$lstrCleanedLine" >>"$SECstrFileErrorLog"; # removed \n \t therefore one for the whole line must be re-added
 		fi
+#		echo "$lstrErrorTrap" |tr -d "${SECcharTab}${SECcharNL}" >>/dev/stderr;echo
+#		echo "$lstrErrorTrap" |tr -d "\n\t" >>/dev/stderr;echo
 #		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >>/dev/stderr;
+#		echo "$lstrErrorTrap" |tr -d '\n\t'
 		echo "$lstrErrorTrap" >>/dev/stderr;
 		return 1;
 	fi;
@@ -1309,6 +1309,7 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 				lastrRemainingParams+=("$1")
 				shift #will consume all remaining params
 			done
+			break # to skip main loop's shift
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -2018,8 +2019,45 @@ export SECcharCr=$'\r' # carriage return
 #export SECcolorEscapeChar=$'\e' #$(printf '\033') # Escape char to provide colors on sed on terminal
 export SECcharEsc=$'\e' #$(printf '\033') # Escape char to provide colors on sed on terminal
 # so now, these are the terminal escaped codes (not the string to be interpreted)
-export SECcolorLightRed="$SECcharEsc[91m"
+
+# foregrounds
+export SECcolorRed="$SECcharEsc[31m";export SECcR="$SECcolorRed"
+export SECcolorGreen="$SECcharEsc[32m"
+export SECcolorBlue="$SECcharEsc[34m"
+export SECcolorCyan="$SECcharEsc[36m"
+export SECcolorMagenta="$SECcharEsc[35m"
+export SECcolorYellow="$SECcharEsc[33m"
+export SECcolorBlack="$SECcharEsc[39m"
+export SECcolorWhite="$SECcharEsc[37m"
+# light foregrounds
+export SECcolorLightRed="$SECcharEsc[91m";export SECcLR="$SECcolorLightRed"
+export SECcolorLightGreen="$SECcharEsc[92m"
+export SECcolorLightBlue="$SECcharEsc[94m"
+export SECcolorLightCyan="$SECcharEsc[96m"
+export SECcolorLightMagenta="$SECcharEsc[95m"
 export SECcolorLightYellow="$SECcharEsc[93m"
+export SECcolorLightBlack="$SECcharEsc[90m"
+export SECcolorLightWhite="$SECcharEsc[97m"
+
+# backgrounds
+export SECcolorBackgroundRed="$SECcharEsc[41m";export SECcBR="$SECcolorBackgroundRed"
+export SECcolorBackgroundGreen="$SECcharEsc[42m"
+export SECcolorBackgroundBlue="$SECcharEsc[44m"
+export SECcolorBackgroundCyan="$SECcharEsc[46m"
+export SECcolorBackgroundMagenta="$SECcharEsc[45m"
+export SECcolorBackgroundYellow="$SECcharEsc[43m"
+export SECcolorBackgroundBlack="$SECcharEsc[40m" #yes it is 40...
+export SECcolorBackgroundWhite="$SECcharEsc[47m"
+# light backgrounds
+export SECcolorLightBackgroundRed="$SECcharEsc[101m";export SECcLBR="$SECcolorLightBackgroundRed"
+export SECcolorLightBackgroundGreen="$SECcharEsc[102m"
+export SECcolorLightBackgroundBlue="$SECcharEsc[104m"
+export SECcolorLightBackgroundCyan="$SECcharEsc[106m"
+export SECcolorLightBackgroundMagenta="$SECcharEsc[105m"
+export SECcolorLightBackgroundYellow="$SECcharEsc[103m"
+export SECcolorLightBackgroundBlack="$SECcharEsc[100m" #yes it is 40...
+export SECcolorLightBackgroundWhite="$SECcharEsc[107m"
+
 export SECcolorCancel="$SECcharEsc[0m"
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
