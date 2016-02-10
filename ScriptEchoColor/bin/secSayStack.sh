@@ -22,24 +22,35 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
-export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"
-export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache" #cant be at /tmp that is erased (everytime?) on boot..
-
-if [[ "$SEC_SAYMP3" != "false" ]]; then #compare to inverse of default value
-	export SEC_SAYMP3=true # of course, np if already "false"
-fi
-if [[ -z "$SEC_SAYVOL" ]]; then
-	export SEC_SAYVOL=100
-fi
-if [[ -z "$SEC_SAYID" ]]; then
-	export SEC_SAYID="SecSayStackDefaultId"
-fi
-
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 #source "`secGetInstallPath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 eval `secinit --ilog --misc`
 
+export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
+export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"
+export _SECSAYcacheFolder="$HOME/.ScriptEchoColor/SEC.SayStack.cache" #cant be at /tmp that is erased (everytime?) on boot..
+
+#: ${SECbSayMp3Mode:=true}
+export SECbSayMp3Mode #help use mp3 to store created speech files
+SECFUNCdefaultBoolValue SECbSayMp3Mode true
+#: ${SEC_SAYMP3:=$SECbSayMp3Mode} # backwards compatibility, keep this!
+export SEC_SAYMP3 # backwards compatibility, keep this!
+SECFUNCdefaultBoolValue SEC_SAYMP3 true # backwards compatibility, keep this!
+#if [[ "$SEC_SAYMP3" != "false" ]]; then #compare to inverse of default value
+#	export SEC_SAYMP3=true # of course, np if already "false"
+#fi
+
+: ${SECnSayVolume:=100}
+export SECnSayVolume #help modify this to change speech volume. Integer 100 means 100%
+SECFUNCisNumber --assert -dn "$SECnSayVolume"
+: ${SEC_SAYVOL:=$SECnSayVolume} # backwards compatibility, keep this!
+export SEC_SAYVOL # backwards compatibility, keep this!
+SECFUNCisNumber --assert -dn "$SEC_SAYVOL"
+
+: ${SECstrSayId:="SecSayStackDefaultId"}
+export SECstrSayId #help default say id
+: ${SEC_SAYID:=$SECstrSayId} # backwards compatibility, keep this!
+export SEC_SAYID # backwards compatibility, keep this!
 if [[ -z "${1-}" ]]; then
 	#(*1)
 	if [[ "`basename "$0"`" != "$_SECSAYselfBaseName" ]];then
@@ -54,12 +65,10 @@ lockFile="${_SECSAYfileSayStack}.lock"
 suspendFile="${_SECSAYfileSayStack}.suspend"
 strSuspendAtKey="SayStackSuspendedAtPid"
 strSuspendByKey="SayStackSuspendedByPid"
-#export SEC_SAYVOL=100
-#export SEC_SAYMP3=true
 sleepDelay=0.1
 bDaemon=false
 bWaitSay=false
-strSayId="$SEC_SAYID"
+strSayId="$SECstrSayId"
 bResume=false
 strDaemonSays="Say stack daemon initialized."
 bClearCache=false
@@ -303,7 +312,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		exit 0
 	elif [[ "$1" == "--sayvol" ]];then #help set volume to be used at festival
 		shift
-	  SEC_SAYVOL="$1"
+	  SECnSayVolume="$1"
 	elif [[ "$1" == "--effects" ]];then #help <strSndEffects> set volume to be used at festival
 		shift
 	  strSndEffects="$1"
@@ -336,7 +345,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 #				SECFUNCexecA rm $_SECdbgVerboseOpt "${_SECSAYfileSayStack}"
 #			fi
 #			exit 0 #exit_FUNCsayStack: wont put empty lines
-	elif [[ "$1" == "--clearbuffer" ]];then #help clear SayStack buffer for all speeches requested by all applications til now; Though if SEC_SAYID, or --id, is set, will only clear matching lines..
+	elif [[ "$1" == "--clearbuffer" ]];then #help clear SayStack buffer for all speeches requested by all applications til now; Though if SECstrSayId, or --id, is set, will only clear matching lines..
 		if [[ -f "${_SECSAYfileSayStack}" ]];then
 			if [[ -n "$strSayId" ]];then
 				SECFUNCexecA sed -i "/SECsayId '$strSayId/d" "${_SECSAYfileSayStack}"
@@ -380,8 +389,7 @@ if [[ -z "$sayText" ]]; then
 fi
 
 #echo "$sayText" >>"$_SECSAYfileSayStack"
-#echo "SEC_SAYVOL='$SEC_SAYVOL'"
-sayVol="`echo "scale=2;$SEC_SAYVOL/100" |bc -l`"
+sayVol="`echo "scale=2;$SECnSayVolume/100" |bc -l`"
 #echo "sayVol='$sayVol'"
 paramSortOrder="(Parameter.set 'SECsortOrder '`date +"%s.%N"`)" # I created this param with a var name SECsortOrder that I believe wont conflict with pre-existant ones on festival
 paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached voiced files instead of always generating them with festival

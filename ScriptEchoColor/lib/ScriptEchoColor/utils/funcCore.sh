@@ -1135,6 +1135,7 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 function SECFUNCisNumber(){ #help "is float" check by default
 	local bDecimalCheck=false
 	local bNotNegativeCheck=false
+	local lbAssert=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCisNumber_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
@@ -1143,6 +1144,8 @@ function SECFUNCisNumber(){ #help "is float" check by default
 			bDecimalCheck=true
 		elif [[ "$1" == "--notnegative" || "$1" == "-n" ]];then #SECFUNCisNumber_help if negative, return false (1)
 			bNotNegativeCheck=true
+		elif [[ "$1" == "--assert" ]];then #SECFUNCisNumber_help if check fail will use critical message exit
+			lbAssert=true
 		elif [[ "$1" == "-dn" || "$1" == "-nd" ]];then #just to keep this function fast...
 			bDecimalCheck=true
 			bNotNegativeCheck=true
@@ -1157,41 +1160,57 @@ function SECFUNCisNumber(){ #help "is float" check by default
 
 	local lnValue="${1-}"
 	
+	function SECFUNCisNumber_assertMsg(){
+		if ! $lbAssert;then return ;fi	
+		
+		SECFUNCechoErrA "invalid lnValue='$lnValue'"
+		_SECFUNCcriticalForceExit
+	}
+	
 	if [[ -z "${lnValue}" ]];then
+		SECFUNCisNumber_assertMsg
 		return 1
 	fi
 	
 	if [[ -n "`echo "${lnValue}" |tr -d '[:digit:].+-'`" ]];then
+		SECFUNCisNumber_assertMsg
 		return 1
 	fi
 	
 	local lstrTmp="${lnValue//[^.]}"
 	if $bDecimalCheck;then
 		if((${#lstrTmp}>0));then
+			SECFUNCisNumber_assertMsg
 			return 1
 		fi
 	else
 		if((${#lstrTmp}>1));then
+			SECFUNCisNumber_assertMsg
 			return 1
 		fi
 	fi
 	
 	local lstrTmp="${lnValue//[^+]}"
 	if((${#lstrTmp}>1));then
+		SECFUNCisNumber_assertMsg
 		return 1
 	elif((${#lstrTmp}==1)) && [[ "${lnValue:0:1}" != "+" ]];then
+		SECFUNCisNumber_assertMsg
 		return 1
 	fi
 	
 	local lstrTmp="${lnValue//[^-]}"
 	if $bNotNegativeCheck;then
 		if((${#lstrTmp}>0));then
+			SECFUNCisNumber_assertMsg
 			return 1
 		fi
 	else
 		if((${#lstrTmp}>1));then
+			SECFUNCisNumber_assertMsg
 			return 1
 		elif((${#lstrTmp}==1)) && [[ "${lnValue:0:1}" != "-" ]];then
+			SECFUNCisNumber_assertMsg
 			return 1
 		fi
 	fi

@@ -113,7 +113,7 @@ case "${SEC_CASESENS-}"    in true | false         );; *)SEC_CASESENS="false"   
 case "${SEC_IGNORE_LIMITATIONS-}" in true | false  );; *)SEC_IGNORE_LIMITATIONS="true";; esac
 case "${SEC_SAYALWAYS-}"   in true | false         );; *)SEC_SAYALWAYS="false"   ;; esac
 #if((SEC_SAYVOL<0 || SEC_SAYVOL>100)) | [[ -z "$SEC_SAYVOL" ]];then SEC_SAYVOL=100;fi
-if [[ -z "${SEC_SAYVOL-}" ]] || ((SEC_SAYVOL<0));then SEC_SAYVOL=100;fi
+#if [[ -z "${SEC_SAYVOL-}" ]] || ((SEC_SAYVOL<0));then SEC_SAYVOL=100;fi
 if [[ -z "${SEC_NICE-}" ]] || ((SEC_NICE<0)) || ((SEC_NICE>19));then SEC_NICE=0;fi
 
 renice -n $SEC_NICE -p $$ >/dev/null 2>&1
@@ -1642,8 +1642,7 @@ if $bOptHelpExtended; then
 		echo "    Say text always:"
 		echo "     export SEC_SAYALWAYS=\"true\""
 		echo
-		echo "    Say text volume:"
-		echo "     export SEC_SAYVOL=100 #from 0 to 100 (or more, amplified)"
+		echo "    Say text, see: secSayStack.sh --help"
 		echo
 		echo "    Default nice:"
 		echo "     export SEC_NICE=0 #from 0 to 19"
@@ -2793,7 +2792,8 @@ FUNCdoTheEcho(){
 		if $bWaitSay; then
 			strOptWaitSay="--waitsay"
 		fi
-		nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} --sayvol $SEC_SAYVOL "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
+#		nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} --sayvol $SEC_SAYVOL "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
+		nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
 		if $bWaitSay; then
 			wait $!
 		fi
