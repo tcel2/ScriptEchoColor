@@ -29,6 +29,19 @@ bCfgTest=false
 CFGstrTest="Test"
 astrRemainingParams=()
 bEnable=true
+
+strDriver="`ls /usr/lib/ladspa/dyson_compress_*.so`";
+strDriver="`basename "$strDriver"`";
+strDriver="${strDriver%.so}";
+echo "strDriver='$strDriver'"
+strDriverOpt="0,1,0.5,0.99"
+
+strDriverFLL="`ls /usr/lib/ladspa/fast_lookahead_limiter_*.so`"
+strDriverFLL="`basename "$strDriverFLL"`"
+strDriverFLL="${strDriverFLL%.so}"
+echo "strDriverFLL='$strDriverFLL'"
+strDriverFLLOpt="10,0,0.8"
+
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -39,6 +52,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
 	elif [[ "$1" == "--remove" || "$1" == "-r" ]];then #help remove the sink from pulseaudio
 		bEnable=false
+	elif [[ "$1" == "--driveropt" ]];then #help <strDriverOpt> options for strDriver
+		shift
+		strDriverOpt="${1-}"
+	elif [[ "$1" == "--driverfllopt" ]];then #help <strDriverFLLOpt> options for strDriverFLL
+		shift
+		strDriverFLLOpt="${1-}"
 #	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
 #		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
 #			shift
@@ -64,9 +83,6 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 strAudioOutput="`pacmd list-sinks |egrep "[[:blank:]]*name: " |sed -r 's".*<(.*)>"\1"'`";
-strDriver="`ls /usr/lib/ladspa/dyson_compress_*.so`";
-strDriver="`basename "$strDriver"`";
-strDriver="${strDriver%.so}";
 
 strPrefixName="ladspa_"
 strSinkName="${strPrefixName}sink"
@@ -82,7 +98,7 @@ if $bEnable;then
 				master="$strAudioOutput" \
 				plugin="${strDriver}" \
 				label=dysonCompress \
-				control=0,1,0.5,0.99
+				control="$strDriverOpt"
 
 		SECFUNCexecA -ce \
 			pacmd \
@@ -90,9 +106,9 @@ if $bEnable;then
 				module-ladspa-sink \
 				sink_name="$strNormSinkName" \
 				master="$strSinkName" \
-				plugin=fast_lookahead_limiter_1913 \
+				plugin="$strDriverFLL" \
 				label=fastLookaheadLimiter \
-				control=10,0,0.8
+				control="$strDriverFLLOpt"
 	else
 		echoc --info "already setup"
 	fi

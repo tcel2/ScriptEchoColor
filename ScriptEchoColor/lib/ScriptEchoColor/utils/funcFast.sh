@@ -56,11 +56,13 @@ alias SECFUNCsingleLetterOptionsA='
  fi'
 
 : ${SEC_ShortFuncsAliases:=true}
+export SEC_ShortFuncsAliases #help enable short function aliases
 if [[ "$SEC_ShortFuncsAliases" != "false" ]]; then
-	export SEC_ShortFuncsAliases=true
+	SEC_ShortFuncsAliases=true
 fi
-: ${SECfuncPrefix:=sec} #this prefix can be setup by the user
-export SECfuncPrefix #help function aliases for easy coding
+
+: ${SECfuncPrefix:=sec}
+export SECfuncPrefix #help this can be modified to allow remapping custom function aliases for this lib
 if $SEC_ShortFuncsAliases; then 
 	#TODO validate if such aliases or executables exist before setting it here and warn about it
 	#TODO for all functions, create these aliases automatically
@@ -141,6 +143,7 @@ SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent 
 if [[ "$0" == */funcFast.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
+			SECFUNCshowHelp --onlyvars
 			SECFUNCshowFunctionsHelp
 			exit
 		fi

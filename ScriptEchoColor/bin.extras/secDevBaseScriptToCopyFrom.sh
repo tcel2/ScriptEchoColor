@@ -95,6 +95,10 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+: ${strEnvVarUserCanModify:="test"}
+export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+export strEnvVarUserCanModify2 #help test
+ 
 strExample="DefaultValue"
 bCfgTest=false
 CFGstrTest="Test"

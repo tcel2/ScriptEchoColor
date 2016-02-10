@@ -832,6 +832,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	local lbSort=false
 	local lstrScriptFile="$0"
 	local lstrColorizeEcho=""
+	local lbOnlyVars=false
 #	local lbAll=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "${1-}" == "--help" ]];then #SECFUNCshowHelp_help show this help
@@ -849,6 +850,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		elif [[ "${1-}" == "--file" ]];then #SECFUNCshowHelp_help <lstrScriptFile> set the script file to gather help data from
 			shift
 			lstrScriptFile="${1-}"
+		elif [[ "${1-}" == "--onlyvars" ]];then #SECFUNCshowHelp_help show help only about the exported variables safely modifyiable by users
+			lbOnlyVars=true
 		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
 			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
 			SECFUNCdbgFuncOutA;return
@@ -889,7 +892,9 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		#if ! ${!lstrVarId+false};then
 		if $lbShowValue;then
 			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcharEsc}[5m${!lstrVarId}${SECcharEsc}[25m'\3,"
-			echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId}${SECcolorLightRed}'\3,"
+#			echo "$lstrLine">>/dev/stderr
+#			echo "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3," >>/dev/stderr
+			echo "$lstrLine" |sed -r "s${SECsedTk}$lstrMatch${SECsedTk}\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3${SECsedTk}"
 		else
 			echo "$lstrLine"
 		fi
@@ -944,7 +949,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		IFS=$'\n' declare -a lastrFile=(`printf "%s\n" "${lastrFile[@]}" |sort -u`) #the declare is to force IFS be set only for this line of code
 	fi
 	
-	local lgrepNoFunctions="^[[:blank:]]*function .*"
+#	local lgrepNoFunctions="^[[:blank:]]*function .*"
+	local lbFunctionMode=false
 	if [[ -n "$lstrFunctionNameToken" ]];then
 		if [[ -n `echo "$lstrFunctionNameToken" |tr -d '[:alnum:]_'` ]];then
 			SECFUNCechoErrA "invalid prefix '$lstrFunctionNameToken'"
@@ -973,8 +979,45 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
-		lgrepNoFunctions="^$" #will actually "help?" by removing empty lines
-	else
+#		lgrepNoFunctions="^$" #will actually "help?" by removing empty lines
+		
+		lbFunctionMode=true;
+	fi
+	
+	#################### environment variables that user can modify safely
+	# only if the help is being shown to the entire script file
+	local lstrRegexMatchEnvVars="^(export)[[:blank:]]*([[:alnum:]_]*).*#help (.*)"
+	if ! $lbFunctionMode;then
+		IFS=$'\n' read -d '' -r -a lastrUserEnvVarList < <(
+			sed -n -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\2${SECsedTk} p" "$lstrScriptFile")&&:
+#		declare -p lastrUserEnvVarList
+		
+		if((`SECFUNCarraySize lastrUserEnvVarList`>0));then
+			local lstrUserEnvVarsOutput="`
+				egrep "$lstrRegexMatchEnvVars" "$lstrScriptFile" \
+					|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\1 \2 \3${SECsedTk}"`"
+#					|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\t${SECcolorYellow}\1 ${SECcolorCyan}\2 ${SECcolorGreen}\3${SECcolorCancel}${SECsedTk}"`"
+#						-e "s${SECsedTk}.*${SECsedTk}\t&${SECsedTk}" \
+#						-e "s${SECsedTk}.*${SECsedTk}&${SECcolorCancel}${SECsedTk}"
+#						-e "s${SECsedTk}(.*)[[:blank:]]*(#help)[[:blank:]]*(.*)${SECsedTk}\1 ${SECcolorGreen}\3${SECsedTk}" \
+#						-e "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2 \3${SECsedTk}" \
+
+#						-e "s${SECsedTk}(export)[ ]*([[:alnum:]_]*)${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2${SECsedTk}" \
+			
+			echo "Help about external variables accepted by this script:"
+			for lstrUserEnvVar in "${lastrUserEnvVarList[@]}";do
+				local lstrOutEnvVarHelp="`echo "$lstrUserEnvVarsOutput" \
+					|sed -n -r "s${SECsedTk}^export $lstrUserEnvVar (.*)${SECsedTk}\1${SECsedTk} p"`"
+				
+				echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}$lstrOutEnvVarHelp${SECcolorCancel}"
+			done
+			echo
+		fi
+		
+		if $lbOnlyVars;then
+			SECFUNCdbgFuncOutA;return 0
+		fi
+		
 		echo "Help options for `basename "$lstrScriptFile"`:"
 	fi
 	
@@ -992,6 +1035,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help"
 	local lgrepMatchHelpToken="#${lstrHelpToken}"
 	local lgrepNoInvalidHelps="[[:blank:]]*#.*#${lstrHelpToken}" #preceding a help comment, must be working (non commented) code
+	local lgrepNoUserEnvVars="$lstrRegexMatchEnvVars"
+	local lgrepNoFunctions="^[[:blank:]]*function .*"
 	local lsedOptionsText='.*\[\[(.*)\]\].*'
 #	if $lbAll;then lsedOptionsText=".*";fi
 	local lsedOptionsAndHelpText="s,${lsedOptionsText}(#${lstrFunctionNameToken}help.*),\1\2,"
@@ -1009,6 +1054,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	cat "${lastrFile[@]}" \
 		|egrep -w "$lgrepMatchHelpToken" \
 		|egrep -v "$lgrepNoInvalidHelps" \
+		|egrep -v "$lgrepNoUserEnvVars" \
+		|egrep -v "$lgrepNoFunctions" \
 		|sed -r "$lsedOptionsAndHelpText" \
 		|sed -r "$lsedRemoveTokenOR" \
 		|sed -r "$lsedRemoveHelpToken" \
@@ -1023,7 +1070,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
 		#|sed -r "$lsedAddNewLine"
 		
-	SECFUNCdbgFuncOutA;
+	SECFUNCdbgFuncOutA;return 0
 }
 function SECFUNCshowFunctionsHelp() { #help [script filename] show functions specific help for self script or supplied filename
 	#set -x
@@ -1984,32 +2031,34 @@ export SECstrUserScriptCfgPath="${SECstrUserHomeConfigPath}/${SECstrScriptSelfNa
 export SECstrTmpFolderLog="$SEC_TmpFolder/log"
 mkdir -p "$SECstrTmpFolderLog"
 
-: ${SECbRunLogForce:=false} # the override default, only actually used at secLibsInit.sh
-export SECbRunLogForce
+: ${SECbRunLogForce:=false} 
+export SECbRunLogForce # the override default, only actually used at secLibsInit.sh
 
-: ${SECbRunLog:=false} # user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
-export SECbRunLog
+: ${SECbRunLog:=false} 
+export SECbRunLog #help user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
 
 : ${SECbRunLogParentInherited:=false}
 export SECbRunLogParentInherited
 
-export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log" #this is named based on current script name; but the log may be happening already from its parent...
+export SECstrRunLogFileDefault="$SECstrTmpFolderLog/$SECstrScriptSelfName.$$.log" # this is named based on current script name; but the log may be happening already from its parent...
 : ${SECstrRunLogFile:="$SECstrRunLogFileDefault"}
-export SECstrRunLogFile
+export SECstrRunLogFile #help if not set, will be the default
 
 : ${SECbRunLogDisable:=false} #DO NOT EXPORT THIS ONE as subshells may have trouble to start logging... #TODO review this...
 
 : ${SECbRunLogEnabled:=false}
-export SECbRunLogEnabled
+export SECbRunLogEnabled 
 
 : ${SECstrRunLogPipe:=}
-export SECstrRunLogPipe
+export SECstrRunLogPipe 
 
 : ${SECnRunLogTeePid:=0}
-export SECnRunLogTeePid
+export SECnRunLogTeePid 
 
 : ${SECbRunLogPidTree:=true}
-export SECbRunLogPidTree
+export SECbRunLogPidTree 
+
+export SECsedTk=$'\x01'; # this is important to use with sed commands that will help on avoiding cohincidence of the delimiter token
 
 #TODO !!!! complete this escaped colors list!!!! to, one day, improve main echoc
 export SECcharTab=$'\t' #$(printf '\011') # this speeds up instead of using `echo -e "\t"`
@@ -2067,6 +2116,7 @@ SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive
 if [[ "$0" == */funcCore.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
+			SECFUNCshowHelp --onlyvars
 			SECFUNCshowFunctionsHelp
 			exit
 		fi

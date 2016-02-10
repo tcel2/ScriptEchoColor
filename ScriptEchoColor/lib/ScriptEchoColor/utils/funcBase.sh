@@ -1407,6 +1407,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 if [[ `basename "$0"` == "funcBase.sh" ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
+			SECFUNCshowHelp --onlyvars
 			SECFUNCshowFunctionsHelp
 			exit
 		fi

@@ -743,6 +743,7 @@ function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a fil
 if [[ "$0" == */funcMisc.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then
+			SECFUNCshowHelp --onlyvars
 			SECFUNCshowFunctionsHelp
 			exit
 		fi
