@@ -991,7 +991,11 @@ if $useJWM; then
           
         </JWM>' \
       >>"$HOME/.jwmrc"
-    
+
+	#TODO volume up and down? find keycodes with xev
+	#          <Key key="XF86AudioRaiseVolume">exec:'"xterm -e \"\" #kill=skip"'</Key>
+	#          <Key key="XF86AudioLowerVolume">exec:'"xterm -e \"\" #kill=skip"'</Key>
+
     SECFUNCexecA -c --echo jwm -p&&:
     strJwmMessages="`jwm -p 2>&1`"&&:
     # ignore non problematic messages

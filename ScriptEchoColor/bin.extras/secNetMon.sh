@@ -24,11 +24,34 @@
 
 eval `secinit`
 
+function FUNCchkVersion(){
+	strNethogsMinVersion="0.8.1"
+	strNethogsVersion="`nethogs -V 2>&1 |sed -r 's"^[^[:digit:]]*([[:digit:]][[:digit:].]*).*"\1"'`"
+	if [[ "$strNethogsMinVersion" != "$strNethogsVersion" ]];then 
+		strMinVersion="`echo -e "${strNethogsMinVersion}\n${strNethogsVersion}" |sort -V |head -n 1`"
+		if [[ "$strMinVersion" != "$strNethogsMinVersion" ]];then
+			SECFUNCechoErrA "strNethogsVersion='$strNethogsVersion' < strNethogsMinVersion='$strNethogsMinVersion', try installing nethogs from its source: https://github.com/raboof/nethogs"
+			echoc --info "After getting the sources, this example may work (note, the license and versions must match nethogs ones):"
+			echo 'make && sudo -k checkinstall --pkgsource="https://github.com/raboof/nethogs/" --pkglicense="GPL2" --deldesc=no --nodoc --maintainer="$USER\\<$USER@$HOSTNAME\\>" --pkgarch=$(dpkg --print-architecture) --pkgversion="0.8.2" --pkgrelease="SNAPSHOT" --pkgname=nethogs make install'
+			exit 1
+		fi
+	fi
+}
+
+function FUNClazyMan(){
+	FUNCchkVersion
+	echo 'needs fixing/improving"'
+	echo 'for now just use: `sudo -k nethogs -v 3 -d 3`'
+	exit 1
+}
+FUNClazyMan
+
 strSelfName="`basename "$0"`"
 
-bDaemon=false
-bRestart=false
-nDelay=0
+export bDaemon=false
+export bRestart=false
+export nDelay=0
+export CFGbHumanReadable=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "Using nethogs, reports a total of sent and received network data for each application."
@@ -61,20 +84,11 @@ if((nDelay==0));then
 	fi
 fi
 
-strNethogsMinVersion="0.8.1"
-strNethogsVersion="`nethogs -V 2>&1 |sed -r 's"^[^[:digit:]]*([[:digit:]][[:digit:].]*).*"\1"'`"
-if [[ "$strNethogsMinVersion" != "$strNethogsVersion" ]];then 
-	strMinVersion="`echo -e "${strNethogsMinVersion}\n${strNethogsVersion}" |sort -V |head -n 1`"
-	if [[ "$strMinVersion" != "$strNethogsMinVersion" ]];then
-		SECFUNCechoErrA "strNethogsVersion='$strNethogsVersion' < strNethogsMinVersion='$strNethogsMinVersion', try installing nethogs from its CVS"
-		exit 1
-	fi
-fi
 SECFUNCechoDbgA "strNethogsVersion='$strNethogsVersion', strNethogsMinVersion='$strNethogsMinVersion'"
 
 strNethogsLogFile="/tmp/.$strSelfName.nethogs.log"
 if $bDaemon;then
-	strCmdNetHogs="`type -P nethogs` -b -v 2"
+	strCmdNetHogs="sudo -k `type -P nethogs` -b -v 2"
 	
 	while true;do
 		if $bRestart;then
@@ -97,7 +111,7 @@ if $bDaemon;then
 	done
 
 	# shows sent and received in total of bytes
-	if ! $strCmdNetHogs -d $nDelay >>"$strNethogsLogFile";then
+	if ! SECFUNCexecA -ce $strCmdNetHogs -d $nDelay >>"$strNethogsLogFile";then
 		SECFUNCechoErrA "\`$strCmdNetHogs\` execution failed or was terminated..."
 		exit 1
 	fi
@@ -163,12 +177,12 @@ else
 		#				echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >>/dev/stderr
 						if((lnPrevious>lnCurrent));then
 							SECFUNCechoDbgA "lnPrevious='$lnPrevious' > lnCurrent='$lnCurrent'"
-							((lnTotal+=lnPrevious))
+							((lnTotal+=lnPrevious))&&:
 						fi
 						lnPrevious="$lnCurrent"
 					done
 					SECFUNCechoDbgA "lnTotal='$lnTotal' += lnPrevious='$lnPrevious'"
-					((lnTotal+=lnPrevious))
+					((lnTotal+=lnPrevious))&&:
 					echo "$lnTotal:$lnPrevious"
 		#			echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >>/dev/stderr
 				}
@@ -214,7 +228,10 @@ else
 #			strPrependLines="`echo "$strPrependLines" |tail -n +2`"
 #		done
 		
-		echoc -w -t $nDelay
+		ScriptEchoColor -t $nDelay -Q "any other key to refresh now@O_restartDaemon/_humanReadableToggle"&&:; case "`secascii $?`" in 
+			r)$SECstrScriptSelfName --restart;; 
+			h)SECFUNCvarToggle CFGbHumanReadable;;
+		esac
 	done
 fi
 
