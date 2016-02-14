@@ -38,13 +38,23 @@ function FUNCchkVersion(){
 	fi
 }
 
-function FUNClazyMan(){
+function FUNCtodoLater(){
 	FUNCchkVersion
 	echo 'needs fixing/improving"'
-	echo 'for now just use: `sudo -k nethogs -v 3 -d 3`'
-	exit 1
+	
+	strCmd="sudo -k nethogs -v 3 -d 3"
+	echo "for now just running: $strCmd"
+	
+	SECFUNCcheckActivateRunLog --restoredefaultoutputs
+	(
+		SECFUNCcleanEnvironment;
+		export COLUMNS=200
+		COLUMNS=210 $strCmd
+	)
+	
+	exit 0
 }
-FUNClazyMan
+FUNCtodoLater
 
 strSelfName="`basename "$0"`"
 

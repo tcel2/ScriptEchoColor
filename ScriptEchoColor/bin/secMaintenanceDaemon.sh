@@ -258,6 +258,7 @@ elif $bShowErrors;then
 	done
 	exit 0
 elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
+	strTrapToken="SECERROR='trap'"
 	#tail -F "$strFileErrorLog"
 	echoc --info "strFileErrorLog='$strFileErrorLog'"
 	nLineCount=0
@@ -267,13 +268,13 @@ elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 		#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
 		strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"&&:
 		if $bErrorsMonitorOnlyTraps;then
-			strErrsToOutput="`echo "$strErrsToOutput" |grep "(trap)"`"&&:
+			strErrsToOutput="`echo "$strErrsToOutput" |grep "$strTrapToken" -w`"&&:
 		fi
 		if [[ -n "$strErrsToOutput" ]];then # split the line into several easily readable lines!
 			echo "$strErrsToOutput" \
 				|sed -r \
 					-e "s@';@';\n\t@g" \
-					-e "s@('trap')@${SECcolorRed}\1${SECcolorCancel}@"
+					-e "s@${strTrapToken}@${SECcolorRed}&${SECcolorCancel}@"
 #					-e 's".*"&\n"' \
 		fi
 		
