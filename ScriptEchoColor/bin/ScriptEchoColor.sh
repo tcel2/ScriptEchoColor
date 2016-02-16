@@ -976,7 +976,7 @@ if [[   -f "$strUserCfgFile" ]]; then
 		# Ask user to do the import
 		_hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
 		FUNCread -n 1 strResp&&:;echo >>/dev/stderr; #`echo` to append a new line as read wont do that after we type a key
-		if [[ "$strResp" != "y" ]]; then
+		if [[ "${strResp-}" != "y" ]]; then
 			_hi "Creating '$strUserCfgFile' with default values."
 			strUserCfgFilePreviousVersion=""
 		fi
@@ -2930,17 +2930,17 @@ elif $bStringQuestion; then
 		
 	strAnswer=""
 	if ! $bCollectAnswerTimedMode; then # this accepts empty answers
-		if [[ -z "$strResp" ]]; then
+		if [[ -z "${strResp-}" ]]; then
 			strResp="$strStringAnswerDefault"
 			if $bHideStringQuestion; then
 				strAnswer="ANSWER: "
 			fi
 		fi
 	fi
-	eval echo -n "\"$strResp\"" $stdout # send answer string to stdout to be grabbed by external application
+	eval echo -n "\"${strResp-}\"" $stdout # send answer string to stdout to be grabbed by external application
 
 	if ! $SEC_LOG_AVOID && [[ -n "$strUnformattedFileNameLog" ]]; then
-		echo "$strAnswer$strResp" >>"$strUnformattedFileNameLog"
+		echo "$strAnswer${strResp-}" >>"$strUnformattedFileNameLog"
 	fi
 	
 	exit 0
@@ -2950,18 +2950,18 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 	while FUNCread -s -n 1 $strNWaitTime -p "" strResp; do
 		strNWaitTime="" # to wait only the begin of typing
 		
-		if [[ -z "$strResp" ]]; then # Enter/Space
+		if [[ -z "${strResp-}" ]]; then # Enter/Space
 			break
 		fi
 		
-		asciicode=`$SECinstallPath/bin/secasciicode $strResp`
+		asciicode=`$SECinstallPath/bin/secasciicode ${strResp-}`
 		if [[ $asciicode == '\47' ]]; then # backspace
 			continue
 		elif [[ $asciicode == '\33' ]]; then # escape chars
 			if ! FUNCread -s -t 1 -n 2 -p "" strResp; then #esc key
 				nEQMCurrent=$((-1))
 			fi
-			asciicode=`$SECinstallPath/bin/secasciicode $strResp`
+			asciicode=`$SECinstallPath/bin/secasciicode ${strResp-}`
 			if   [[ $asciicode == '\133\101' ]]; then # Up key
 				FUNCWalkEQM begin
 			elif [[ $asciicode == '\133\102' ]]; then # Down key
@@ -2975,7 +2975,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 			fi
 			FUNCdoTheEcho GoToBeginOfLine
 		else
-			eval echo -n "$strResp" $output
+			eval echo -n "${strResp-}" $output
 			break
 		fi  
 	done
@@ -2987,11 +2987,11 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 
 	nRet=0
 	if $bAddYesNoQuestion; then
-		if [[ -z "$strResp" ]]; then # Enter/Space
+		if [[ -z "${strResp-}" ]]; then # Enter/Space
 			strResp="$strStringAnswerDefault"
 		fi
 	
-		if FUNCmatchStr "$strResp" "y" || ((nEQMCurrent==0)); then
+		if FUNCmatchStr "${strResp-}" "y" || ((nEQMCurrent==0)); then
 			nRet=0
 ##    	exit 0
 		else
@@ -3000,7 +3000,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 		fi
 	elif $bExtendedQuestionMode; then
 		b=false
-		if [[ -z "$strResp" ]]; then # enter/space/time out
+		if [[ -z "${strResp-}" ]]; then # enter/space/time out
 			if((nEQMCurrent!=-1));then
 				char=${strEQMList:nEQMCurrent:1} # List char index is equal to current option index
 				if [[ -n "$char" ]]; then
@@ -3023,13 +3023,13 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 		
 		if $b; then
 			if ! $SEC_CASESENS; then
-				strResp=`echo    "$strResp"    |tr "[:upper:]" "[:lower:]"`
+				strResp=`echo    "${strResp-}"    |tr "[:upper:]" "[:lower:]"`
 				strEQMList=`echo "$strEQMList" |tr "[:upper:]" "[:lower:]"`
 			fi
-			if ((`expr index "$strEQMList" "$strResp"` != 0)); then
-				strResp="'$strResp'"
-				nRet=`printf "%d" "$strResp"`
-##        exit `printf "%d" "$strResp"`
+			if ((`expr index "$strEQMList" "${strResp-}"` != 0)); then
+				strResp="'${strResp-}'"
+				nRet=`printf "%d" "${strResp-}"`
+##        exit `printf "%d" "${strResp-}"`
 			else
 				nRet=0
 ##        exit 0
@@ -3038,7 +3038,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 	fi
 
 	if ! $SEC_LOG_AVOID && [[ -n "$strUnformattedFileNameLog" ]]; then
-		echo "ANSWER: $strResp" >>"$strUnformattedFileNameLog"
+		echo "ANSWER: ${strResp-}" >>"$strUnformattedFileNameLog"
 	fi
 	
 	exit $nRet

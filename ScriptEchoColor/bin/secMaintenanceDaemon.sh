@@ -253,7 +253,9 @@ elif $bShowCriticalErrors;then
 elif $bShowErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
-	while ! echoc -x "less '$strFileErrorLog'"&&:;do
+	grep --color "unbound variable" `find "/run/shm/.SEC.$USER/log/" -maxdepth 1 -type f -xtype f`
+	echoc -w "see run log next"
+	while ! SECFUNCexecA -ce less "$strFileErrorLog"&&:;do
 		echoc -w -t 60 "No errors on log."
 	done
 	exit 0
@@ -312,12 +314,12 @@ elif $bPidDump;then
 	SECFUNCexecA -ce grep "pid='${nPidToDump}'" "/tmp/.secDelayedExec.sh.$USER.log"&&:
 	
 	SECFUNCdrawLine " begin dump log "
-	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec bash -c "FUNCcat '{}'" \;
+	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "*.${nPidToDump}.log" -exec bash -c "FUNCcat '{}'" \;
 	echo
 	SECFUNCdrawLine " end dump log "
 	
-	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "*.${nPidToDump}.log" -exec ls --color -ld '{}' \;
-	SECFUNCexecA -ce find /run/shm/.SEC.teique/log/ -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
+	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "*.${nPidToDump}.log" -exec ls --color -ld '{}' \;
+	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
 	
 	if [[ -d "/proc/$nPidToDump" ]];then
 		SECFUNCexecA -ce ps --forest -p `SECFUNCppidList -a --pid $nPidToDump`
