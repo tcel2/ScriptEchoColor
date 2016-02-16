@@ -40,12 +40,12 @@ SECFUNCdefaultBoolValue SEC_SAYMP3 true # backwards compatibility, keep this!
 #	export SEC_SAYMP3=true # of course, np if already "false"
 #fi
 
-: ${SECnSayVolume:=100}
-export SECnSayVolume #help modify this to change speech volume. Integer 100 means 100%
-SECFUNCisNumber --assert -dn "$SECnSayVolume"
-: ${SEC_SAYVOL:=$SECnSayVolume} # backwards compatibility, keep this!
+: ${SEC_SAYVOL:=100} # backwards compatibility, keep this!
 export SEC_SAYVOL # backwards compatibility, keep this!
 SECFUNCisNumber --assert -dn "$SEC_SAYVOL"
+: ${SECnSayVolume:=$SEC_SAYVOL}
+export SECnSayVolume #help modify this to change speech volume. Integer 100 means 100%
+SECFUNCisNumber --assert -dn "$SECnSayVolume"
 
 : ${SECstrSayId:="SecSayStackDefaultId"}
 export SECstrSayId #help default say id
