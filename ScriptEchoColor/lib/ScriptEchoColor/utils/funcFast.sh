@@ -33,7 +33,7 @@ set -E #ERR trap is inherited by shell functions
 set -T #DEBUG trap is inherited by shell functions
 
 # environment must have been already initialized on parent
-function SECFUNCfastInitCheck() {
+function SECFUNCfastInitCheck() { #help
 	if ${SECinstallPath+false};then
 		echo "SECERROR: the 'Fast' lib can only work after at least the 'Core' lib has been loaded already..." >>/dev/stderr
 		exit 1 # this must be `exit` and not `return` as this is critical and script MUST exit

@@ -33,7 +33,35 @@ source "$SECstrFileLibFast";
 
 # FUNCTIONS
 
-function SECFUNCerrCodeExplained(){
+function SECFUNCerrCodeExplained() { #help
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCerrCodeExplained_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCerrCodeExplained_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCerrCodeExplained_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
 	local lnErrCode="${1-}"
 	
 	local lstrMsg=""
@@ -56,7 +84,7 @@ function SECFUNCerrCodeExplained(){
 		255) lstrMsg="invalid exit value, should have been in the range of 0 to 255";;
 		*) lstrMsg="User error code?";;
 	esac
-	echo "($lnErrCode) $lstrMsg"
+	echo "($lnErrCode) $lstrMsg" #stdout to be easily capturable
 }
 
 strSECFUNCtrapErrCustomMsg="" # see SECFUNCexec for usage
@@ -183,7 +211,7 @@ function SECFUNCgetUserName(){ #help this is not an atomic function.
 	fi
 	echo "$lstrUserName"
 }
-function SECFUNCdefaultBoolValue(){
+function SECFUNCdefaultBoolValue(){ #help
 	local lstrId="$1";
 	local lstrValue="$2"
 	
@@ -741,7 +769,7 @@ export SECbBashSourceFilesShow
 : ${SECbBashSourceFilesForceShowOnce:=false}
 export SECbBashSourceFilesForceShowOnce
 
-function SECFUNCbashSourceFiles() {
+function SECFUNCbashSourceFiles() { #help
 	if ! $SECbBashSourceFilesForceShowOnce;then
 		if ! $SECbBashSourceFilesShow;then
 			return
@@ -1303,7 +1331,7 @@ function SECFUNCechoErr() { #help echo error messages
 	echo "${l_output}" >>"$SECstrFileErrorLog"
 }
 
-function SECFUNCmsgCtrl() {
+function SECFUNCmsgCtrl() { #help
 	local lstrMsgMode="$1"
 	if [[ -f "${SECstrFileMessageToggle}.$lstrMsgMode.$$" ]];then
 		local lstrForceMessage="`cat "${SECstrFileMessageToggle}.$lstrMsgMode.$$"`"
@@ -1908,7 +1936,7 @@ function SECFUNCppidList() { #help [separator] between pids
   return 0
 }
 
-function SECFUNCcheckActivateRunLog() {
+function SECFUNCcheckActivateRunLog() { #help
 	local lbRestoreDefaults=false
 	local lbInheritParentLog=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
@@ -2036,7 +2064,7 @@ function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this fu
 	done
 }
 
-function SECFUNCrestoreAliases() {
+function SECFUNCrestoreAliases() { #help
 	source "$SECstrFileLibFast";
 }
 

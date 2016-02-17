@@ -251,7 +251,7 @@ function SECFUNCvarInit() { #help generic vars initializer
 function SECFUNCvarEnd() { #help generic vars finalizer
 	SECFUNCvarEraseDB
 }
-function SECFUNCvarIsArray() {
+function SECFUNCvarIsArray() { #help
 	SECFUNCechoWarnA "~deprecated, use SECFUNCarrayCheck instead"
 	SECFUNCarrayCheck "$@"
 #	local lstrArrayId="$1"

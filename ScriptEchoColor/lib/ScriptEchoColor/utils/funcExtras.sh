@@ -221,7 +221,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 	return 0
 }
 
-function SECFUNCCwindowOnTop() {
+function SECFUNCCwindowOnTop() { #help
 	SECFUNCCwindowCmd --ontop "$@"
 }
 

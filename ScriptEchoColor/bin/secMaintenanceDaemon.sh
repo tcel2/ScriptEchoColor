@@ -307,14 +307,15 @@ elif $bPidDump;then
 	fi
 	
 	function FUNCcat(){
-		echoc --info "DumpLog: '$1'"
+		echoc --info "@s@r DumpLog:@S '$1'"
 		cat "$1"
 	};export -f FUNCcat
 	
 	SECFUNCexecA -ce grep "pid='${nPidToDump}'" "/tmp/.secDelayedExec.sh.$USER.log"&&:
 	
 	SECFUNCdrawLine " begin dump log "
-	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "*.${nPidToDump}.log" -exec bash -c "FUNCcat '{}'" \;
+	# files at top log folder have a symlink at the pid tree. Will only dump these symlink ones to avoid duplicity.
+	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -mindepth 2 -iname "*.${nPidToDump}.log" -exec bash -c "FUNCcat '{}'" \;
 	echo
 	SECFUNCdrawLine " end dump log "
 	

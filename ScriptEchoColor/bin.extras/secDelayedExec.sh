@@ -497,30 +497,44 @@ function FUNCrun(){
 		
 		local lbErr=false
 		local lstrTxt=""
-		if((lnRet!=0));then
-			FUNClog Err "lnRet='$lnRet'"
-			lbErr=true
-			lstrTxt="(Err) exited with error!\n"
+		if $bStay;then
+			lstrTxt+="(Sne) should not have exited! (daemon)\n"
 			lstrTxt+="\n";
-			lstrTxt+="ExitValue:\n\t$lnRet\n";
 		fi
+		
+		if((lnRet!=0));then
+			lbErr=true
+			
+			FUNClog Err "lnRet='$lnRet', `SECFUNCerrCodeExplained $lnRet`"
+			
+			lstrTxt+="(Err) exited with error!\n"
+#			lstrTxt+="\n";
+			lstrTxt+="\tExitValue:$lnRet\n";
+			lstrTxt+="\t`SECFUNCerrCodeExplained $lnRet`\n";
+			lstrTxt+="\n";
+		fi
+		
 		if $bStay;then
 			FUNClog Sne "Should not have exited..."
-			lstrTxt="(Sne) should not have exited!\n"
 		fi
 		
 		# end Log
 		FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
 		
 		if $bStay || $lbErr;then
+			lstrTxt+="RunCommand:\n"
+			lstrTxt+="\t${astrRunParams[@]}\n";
 			lstrTxt+="\n";
-			lstrTxt+="RunCommand:\n\t${astrRunParams[@]}\n"
+			lstrTxt+="LogInfoDbgCmd:\n";
+			lstrTxt+="\tsecMaintenanceDaemon.sh --dump $$\n";
 			lstrTxt+="\n";
-			lstrTxt+="LogInfoDbgCmd:\n\tsecMaintenanceDaemon.sh --dump $$\n";
+			lstrTxt+="DbgInfo:\n";
+			lstrTxt+="\tTERM=$TERM\n";
+			lstrTxt+="\tPATH='$PATH'\n";
 			lstrTxt+="\n";
-			lstrTxt+="DbgInfo:\n\tTERM=$TERM, \n";
+			lstrTxt+="QUESTION:\n";
+			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";
-			lstrTxt+="QUESTION:\n\tDo you want to try to run it again?\n";
 			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 				break;
 			fi
