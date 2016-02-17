@@ -852,6 +852,8 @@ if [[ ! -d "$SECstrUserHomeConfigPath" ]]; then
   mkdir "$SECstrUserHomeConfigPath"
 fi
 
+export SECbShowHelpSummaryOnly #help shows only summary when calling SECFUNCshowHelp
+: ${SECbShowHelpSummaryOnly:=false}
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function.
 #SECFUNCshowHelp_help \tOtherwise a help will be shown to the script file as a whole.
 #SECFUNCshowHelp_help \tMultiline help is supported.
@@ -1012,92 +1014,94 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		lbFunctionMode=true;
 	fi
 	
-	#################### environment variables that user can modify safely
-	# only if the help is being shown to the entire script file
-	local lstrRegexMatchEnvVars="^(export)[[:blank:]]*([[:alnum:]_]*).*#help (.*)"
-	if ! $lbFunctionMode;then
-		IFS=$'\n' read -d '' -r -a lastrUserEnvVarList < <(
-			sed -n -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\2${SECsedTk} p" "$lstrScriptFile")&&:
-#		declare -p lastrUserEnvVarList
+	if ! $SECbShowHelpSummaryOnly;then
+		#################### environment variables that user can modify safely
+		# only if the help is being shown to the entire script file
+		local lstrRegexMatchEnvVars="^(export)[[:blank:]]*([[:alnum:]_]*).*#help (.*)"
+		if ! $lbFunctionMode;then
+			IFS=$'\n' read -d '' -r -a lastrUserEnvVarList < <(
+				sed -n -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\2${SECsedTk} p" "$lstrScriptFile")&&:
+	#		declare -p lastrUserEnvVarList
 		
-		if((`SECFUNCarraySize lastrUserEnvVarList`>0));then
-			local lstrUserEnvVarsOutput="`
-				egrep "$lstrRegexMatchEnvVars" "$lstrScriptFile" \
-					|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\1 \2 \3${SECsedTk}"`"
-#					|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\t${SECcolorYellow}\1 ${SECcolorCyan}\2 ${SECcolorGreen}\3${SECcolorCancel}${SECsedTk}"`"
-#						-e "s${SECsedTk}.*${SECsedTk}\t&${SECsedTk}" \
-#						-e "s${SECsedTk}.*${SECsedTk}&${SECcolorCancel}${SECsedTk}"
-#						-e "s${SECsedTk}(.*)[[:blank:]]*(#help)[[:blank:]]*(.*)${SECsedTk}\1 ${SECcolorGreen}\3${SECsedTk}" \
-#						-e "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2 \3${SECsedTk}" \
+			if((`SECFUNCarraySize lastrUserEnvVarList`>0));then
+				local lstrUserEnvVarsOutput="`
+					egrep "$lstrRegexMatchEnvVars" "$lstrScriptFile" \
+						|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\1 \2 \3${SECsedTk}"`"
+	#					|sed -r "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}\t${SECcolorYellow}\1 ${SECcolorCyan}\2 ${SECcolorGreen}\3${SECcolorCancel}${SECsedTk}"`"
+	#						-e "s${SECsedTk}.*${SECsedTk}\t&${SECsedTk}" \
+	#						-e "s${SECsedTk}.*${SECsedTk}&${SECcolorCancel}${SECsedTk}"
+	#						-e "s${SECsedTk}(.*)[[:blank:]]*(#help)[[:blank:]]*(.*)${SECsedTk}\1 ${SECcolorGreen}\3${SECsedTk}" \
+	#						-e "s${SECsedTk}${lstrRegexMatchEnvVars}${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2 \3${SECsedTk}" \
 
-#						-e "s${SECsedTk}(export)[ ]*([[:alnum:]_]*)${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2${SECsedTk}" \
+	#						-e "s${SECsedTk}(export)[ ]*([[:alnum:]_]*)${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2${SECsedTk}" \
 			
-			echo "Help about external variables accepted by this script:"
-			for lstrUserEnvVar in "${lastrUserEnvVarList[@]}";do
-				local lstrOutEnvVarHelp="`echo "$lstrUserEnvVarsOutput" \
-					|sed -n -r "s${SECsedTk}^export $lstrUserEnvVar (.*)${SECsedTk}\1${SECsedTk} p"`"
+				echo "Help about external variables accepted by this script:"
+				for lstrUserEnvVar in "${lastrUserEnvVarList[@]}";do
+					local lstrOutEnvVarHelp="`echo "$lstrUserEnvVarsOutput" \
+						|sed -n -r "s${SECsedTk}^export $lstrUserEnvVar (.*)${SECsedTk}\1${SECsedTk} p"`"
 				
-				echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}$lstrOutEnvVarHelp${SECcolorCancel}"
-			done
-			echo
-		fi
+					echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}$lstrOutEnvVarHelp${SECcolorCancel}"
+				done
+				echo
+			fi
 		
-		if $lbOnlyVars;then
-			SECFUNCdbgFuncOutA;return 0
-		fi
+			if $lbOnlyVars;then
+				SECFUNCdbgFuncOutA;return 0
+			fi
 		
-		echo "Help options for `basename "$lstrScriptFile"`:"
+			echo "Help options for `basename "$lstrScriptFile"`:"
+		fi
+	
+		######################### SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
+		cmdSort="cat" #dummy to not break code...
+		if $lbSort;then
+			cmdSort="sort"
+		fi
+		#local lgrepNoCommentedLines="^[[:blank:]]*#"
+		local lstrHelpToken="${lstrFunctionNameToken}help"
+		#local lgrepNoCommentedLines="^[[:blank:]]*#[^h][^e][^l][^p]"
+		#local lgrepNoCommentedLines="^[[:blank:]]*#`echo "$lstrHelpToken" |sed 's"."[^&]"g'`" #negates each letter
+		#if $lbAll;then lgrepNoCommentedLines="";fi
+		#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help" #will also include simplified special help lines
+		#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help"
+		local lgrepMatchHelpToken="#${lstrHelpToken}"
+		local lgrepNoInvalidHelps="[[:blank:]]*#.*#${lstrHelpToken}" #preceding a help comment, must be working (non commented) code
+		local lgrepNoUserEnvVars="$lstrRegexMatchEnvVars"
+		local lgrepNoFunctions="^[[:blank:]]*function .*"
+		local lsedOptionsText='.*\[\[(.*)\]\].*'
+	#	if $lbAll;then lsedOptionsText=".*";fi
+		local lsedOptionsAndHelpText="s,${lsedOptionsText}(#${lstrFunctionNameToken}help.*),\1\2,"
+		local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
+	#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g'
+		#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
+		local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
+		#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
+		local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
+	#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'
+	#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcharEsc}'[0m'${SECcharEsc}'[96m[\2]'${SECcharEsc}'[0m,g'
+		#local lsedAddNewLine='s".*"&\n"'
+	#		|egrep -v "$lgrepNoCommentedLines" \
+	#		|egrep -v "$lgrepNoFunctions" \
+		cat "${lastrFile[@]}" \
+			|egrep -w "$lgrepMatchHelpToken" \
+			|egrep -v "$lgrepNoInvalidHelps" \
+			|egrep -v "$lgrepNoUserEnvVars" \
+			|egrep -v "$lgrepNoFunctions" \
+			|sed -r "$lsedOptionsAndHelpText" \
+			|sed -r "$lsedRemoveTokenOR" \
+			|sed -r "$lsedRemoveHelpToken" \
+			|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
+			|sed -r "$lsedColorizeOptionals" \
+			|sed -r "$lsedColorizeRequireds" \
+			|sed -r "$lsedRemoveComparedVariable" \
+			|sed -r "$lsedColorizeTheOption" \
+			|sed -r "$lsedTranslateEsct" \
+			|$cmdSort \
+			|sed -r "$lsedTranslateEscn" \
+			|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
+			#|sed -r "$lsedAddNewLine"
 	fi
 	
-	######################### SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
-	cmdSort="cat" #dummy to not break code...
-	if $lbSort;then
-		cmdSort="sort"
-	fi
-	#local lgrepNoCommentedLines="^[[:blank:]]*#"
-	local lstrHelpToken="${lstrFunctionNameToken}help"
-	#local lgrepNoCommentedLines="^[[:blank:]]*#[^h][^e][^l][^p]"
-	#local lgrepNoCommentedLines="^[[:blank:]]*#`echo "$lstrHelpToken" |sed 's"."[^&]"g'`" #negates each letter
-	#if $lbAll;then lgrepNoCommentedLines="";fi
-	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help" #will also include simplified special help lines
-	#local lgrepMatchHelpToken="#${lstrHelpToken}|^[[:blank:]]*#help"
-	local lgrepMatchHelpToken="#${lstrHelpToken}"
-	local lgrepNoInvalidHelps="[[:blank:]]*#.*#${lstrHelpToken}" #preceding a help comment, must be working (non commented) code
-	local lgrepNoUserEnvVars="$lstrRegexMatchEnvVars"
-	local lgrepNoFunctions="^[[:blank:]]*function .*"
-	local lsedOptionsText='.*\[\[(.*)\]\].*'
-#	if $lbAll;then lsedOptionsText=".*";fi
-	local lsedOptionsAndHelpText="s,${lsedOptionsText}(#${lstrFunctionNameToken}help.*),\1\2,"
-	local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
-#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g'
-	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
-	#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
-	local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
-#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'
-#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcharEsc}'[0m'${SECcharEsc}'[96m[\2]'${SECcharEsc}'[0m,g'
-	#local lsedAddNewLine='s".*"&\n"'
-#		|egrep -v "$lgrepNoCommentedLines" \
-#		|egrep -v "$lgrepNoFunctions" \
-	cat "${lastrFile[@]}" \
-		|egrep -w "$lgrepMatchHelpToken" \
-		|egrep -v "$lgrepNoInvalidHelps" \
-		|egrep -v "$lgrepNoUserEnvVars" \
-		|egrep -v "$lgrepNoFunctions" \
-		|sed -r "$lsedOptionsAndHelpText" \
-		|sed -r "$lsedRemoveTokenOR" \
-		|sed -r "$lsedRemoveHelpToken" \
-		|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
-		|sed -r "$lsedColorizeOptionals" \
-		|sed -r "$lsedColorizeRequireds" \
-		|sed -r "$lsedRemoveComparedVariable" \
-		|sed -r "$lsedColorizeTheOption" \
-		|sed -r "$lsedTranslateEsct" \
-		|$cmdSort \
-		|sed -r "$lsedTranslateEscn" \
-		|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
-		#|sed -r "$lsedAddNewLine"
-		
 	SECFUNCdbgFuncOutA;return 0
 }
 function SECFUNCshowFunctionsHelp() { #help [script filename] show functions specific help for self script or supplied filename
