@@ -137,7 +137,7 @@ if $bReversedUsbTethering;then
 	done
 	
 	while ! ifconfig "$strUsbInterface" |grep "inet addr:$strDesktopIp";do
-		if ! echoc -q "will you edit your $strUsbInterface network interface IPV4/Method to 'Shared to other computers'?";then
+		if ! echoc -q "will you edit your $strUsbInterface network interface IPV4/Method to 'Shared to other computers'?@Dy";then
 			SECFUNCexecA -ce sudo ifconfig "$strUsbInterface" "$strDesktopIp" netmask 255.255.255.0
 		fi
 	done
