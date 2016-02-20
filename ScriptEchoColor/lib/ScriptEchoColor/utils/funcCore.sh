@@ -852,8 +852,7 @@ if [[ ! -d "$SECstrUserHomeConfigPath" ]]; then
   mkdir "$SECstrUserHomeConfigPath"
 fi
 
-export SECbShowHelpSummaryOnly #help shows only summary when calling SECFUNCshowHelp
-: ${SECbShowHelpSummaryOnly:=false}
+export SECbShowHelpSummaryOnly;: ${SECbShowHelpSummaryOnly:=false}; #help shows only summary when calling SECFUNCshowHelp
 function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a help will be shown specific to such function.
 #SECFUNCshowHelp_help \tOtherwise a help will be shown to the script file as a whole.
 #SECFUNCshowHelp_help \tMultiline help is supported.
@@ -1039,8 +1038,13 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 				for lstrUserEnvVar in "${lastrUserEnvVarList[@]}";do
 					local lstrOutEnvVarHelp="`echo "$lstrUserEnvVarsOutput" \
 						|sed -n -r "s${SECsedTk}^export $lstrUserEnvVar (.*)${SECsedTk}\1${SECsedTk} p"`"
-				
-					echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}$lstrOutEnvVarHelp${SECcolorCancel}"
+					
+					local lstrCfgVarHelp=""
+					if [[ "$lstrUserEnvVar" =~ ^CFG.* ]];then
+						lstrCfgVarHelp=" (must be set using --cfg option)"
+					fi
+					
+					echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}${lstrOutEnvVarHelp}${lstrCfgVarHelp}${SECcolorCancel}"
 				done
 				echo
 			fi

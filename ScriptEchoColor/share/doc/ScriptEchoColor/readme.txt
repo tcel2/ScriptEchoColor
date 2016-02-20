@@ -31,6 +31,7 @@ SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
 KNOWN BUGS and LIMITATIONS:
 
 TODO (fix at top):
+	fix: str should not receive stderr output: SECbRunLog=true str="`eval $(secinit);echo abc >>/dev/stderr`"
 	fix: if SECbRunLog=true, trap INT on scripts wont work...
 	fix: remove all `source` that are not for libs files; also change the way vars work to not use "source" by splitting varid and value and recreating varid="value"
 	fix: eval is used everywhere.. use eval properly only... `grep eval * -rnc --exclude="*~" |grep -v ":0"`

@@ -821,11 +821,11 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	
 	if $SECbExecJustEcho;then
 		if $bJustEcho;then
-			echo "$lstrExec"
+			echo "$lstrExec" #TODO this is to go to stdout, but... wouldnt be better to go to stderr?
 			return 0
 		fi
 		if $bJustEchoNoQuotes;then
-			echo "`SECFUNCparamsToEval --noquotes "${lastrParamsToExec[@]}"`"
+			echo "`SECFUNCparamsToEval --noquotes "${lastrParamsToExec[@]}"`" #TODO this is to go to stdout, but... wouldnt be better to go to stderr?
 			return 0
 		fi
 	fi

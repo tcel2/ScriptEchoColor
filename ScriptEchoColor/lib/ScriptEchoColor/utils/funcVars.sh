@@ -281,6 +281,33 @@ function SECFUNCvarIsArray() { #help
 }
 
 function SECFUNCvarGet() { #help <varname> [arrayIndex] if var is an array, you can use a 2nd param as index in the array (none to return the full array)
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCvarGet_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCvarGet_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCvarGet_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
   if SECFUNCarrayCheck "$1";then
   	if [[ -n "${2-}" ]]; then
   		eval 'echo "${'$1'['$2']}"'
@@ -313,6 +340,41 @@ function SECFUNCfixPliq() { #help
   	#echo "$1" |sed -e 's/"/\\"/g' -e 's"\"\\"g'
   	echo "$1" |sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
 }
+function SECFUNCvarShowAll() { #help will shrink db and output it
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCvarShowAll_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCvarShowAll_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCvarShowAll_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	SECFUNCvarWriteDB
+	echo "$SECvarFile" >>/dev/stderr
+	cat "$SECvarFile" #|grep -v " SECvars=" #remove control variables from the list
+	
+	return 0
+}
 function SECFUNCvarShowSimple() { #help (see SECFUNCvarShow)
   SECFUNCvarShow "$1"
 }
@@ -326,7 +388,7 @@ function SECFUNCvarShow() { #help show var
 		elif [[ "${1-}" == "--towritedb" ]]; then #SECFUNCvarShow_help
 			#l_prefix="SECFUNCvarSet --nowrite " # --nowrite because it will be used at read db
 			l_prefix="export "
-		elif [[ "${1-}" == "--varwords" ]]; then #SECFUNCvarShow_help
+		elif [[ "${1-}" == "--varwords" ]]; then #SECFUNCvarShow_help will output the variable and value in a speakable format
 			lbVarWords=true
 		else
 			SECFUNCechoErrA "invalid option '$1'"
@@ -350,7 +412,7 @@ function SECFUNCvarShow() { #help show var
 		local l_value="`SECFUNCvarGet $lstrVarId`"
 		l_value=`SECFUNCfixPliq "$l_value"`
 		if $lbVarWords;then
-			echo "`SECFUNCseparateInWords $lstrVarId` = \"$l_value\""
+			echo "`SECFUNCseparateInWords --notype $lstrVarId` = \"$l_value\""
 		else
 			echo "${l_prefix}$lstrVarId=\"$l_value\";";
 		fi

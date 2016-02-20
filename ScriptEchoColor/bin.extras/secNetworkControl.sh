@@ -31,6 +31,8 @@ bCheckInternet=false
 bListNetworkFiles=false
 bToggle=false
 nCoolDownDelay=15
+export CFGbControlWifi;: ${CFGbControlWifi:=true}; #help set to false to ignore wifi
+SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
@@ -55,12 +57,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nCoolDownDelay="${1-}"
 	elif [[ "$1" == "--toggle" || "$1" == "-t" ]];then #help toggle network on/off
 		bToggle=true
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+		pSECFUNCcfgOptSet "$@";exit 0;
 	else
 		echoc -p "invalid option '$1'"
 		exit 1
 	fi
 	shift
 done
+# IMPORTANT validate CFG vars here before writing them all...
+SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 function FUNCcheckInternet() {
   if ip route ls |grep --color=always "192.168.0." >/dev/null;then
@@ -84,7 +91,9 @@ fi
 # required before toggling too
 SECFUNCuniqueLock --daemonwait
 
-function FUNCsetEnable(){
+function FUNCsetEnable(){ #help <true|false>
+	local lbEnable="$1"
+	
 	SECFUNCcfgReadDB
 	if SECFUNCisNumber -dn "${CFGnLastStateRequestTime-}";then
 #		while true;do
@@ -110,12 +119,22 @@ function FUNCsetEnable(){
 		SECFUNCechoWarnA "invalid CFGnLastStateRequestTime='${CFGnLastStateRequestTime-}', will be fixed..."
 	fi
 	
-	strRet="`nmcli nm enable $1 2>&1`"
+	strRet="`nmcli nm enable $lbEnable 2>&1`"
 	strErr="Not authorized to enable/disable networking"
 	if echo "$strRet" |grep -q "$strErr";then
 		echoc --say "$strErr"
 		return 1
 	fi
+	
+	if $CFGbControlWifi;then
+		echoc -w -t 3 #blind useful delay to help it work
+		if $lbEnable;then
+			SECFUNCexecA -ce nmcli nm wifi on
+		else
+			SECFUNCexecA -ce nmcli nm wifi off
+		fi
+	fi
+	
 	SECFUNCcfgWriteVar CFGnLastStateRequestTime="`SECFUNCdtFmt --nonano`"
 	return 0
 }

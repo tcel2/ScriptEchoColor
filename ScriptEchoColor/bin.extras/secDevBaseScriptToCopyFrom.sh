@@ -100,7 +100,6 @@ export strEnvVarUserCanModify #help this variable will be accepted if modified b
 export strEnvVarUserCanModify2 #help test
  
 strExample="DefaultValue"
-bCfgTest=false
 CFGstrTest="Test"
 astrRemainingParams=()
 SECFUNCcfgReadDB #after default variables value setup above
@@ -113,13 +112,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
-	elif [[ "$1" == "--examplecfg" || "$1" == "-c" ]];then #help [CFGstrTest]
-		if ! ${2+false} && [[ "${2:0:1}" != "-" ]];then #check if next param is not an option (this would fail for a negative numerical value)
-			shift
-			CFGstrTest="$1"
-		fi
-		
-		bCfgTest=true
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+		pSECFUNCcfgOptSet "$@";exit 0;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set

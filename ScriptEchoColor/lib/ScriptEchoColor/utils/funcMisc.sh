@@ -419,6 +419,48 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	SECFUNCdbgFuncOutA;return 0
 }
 
+function pSECFUNCcfgOptSet(){ #help <"$@"> to be used at --cfg scripts option
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCcfgOptSet_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCcfgOptSet_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCcfgOptSet_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+#		else
+#			SECFUNCechoErrA "invalid option '$1'"
+#			$FUNCNAME --help
+#			return 1
+		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+			SECFUNCechoErrA "invalid option '$1'"
+			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	while true;do
+		if ${1+false};then break;fi
+		if [[ "${1}" == "help" ]];then 
+			SECFUNCcfgFileName --show;
+		else 
+			SECFUNCcfgWriteVar "${1}";
+		fi;
+		shift
+	done;
+	
+	return 0
+}
+
 function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[SECcfgFileName], if not set will default to `basename "$0"`
 	# var init here
 	local lbGetFilename=false
@@ -469,9 +511,13 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 	fi
 	
 	if $lbGetFilename;then
-		SECFUNCexecA -ce echo "$SECcfgFileName"
+		echo "$SECcfgFileName"
 	elif $lbShow;then
-		SECFUNCexecA -ce cat "$SECcfgFileName"
+		if [[ -f "$SECcfgFileName" ]];then
+			SECFUNCexecA -ce cat "$SECcfgFileName"
+		else
+			SECFUNCechoWarnA "file SECcfgFileName='$SECcfgFileName' does not exist yet!"
+		fi
 	fi
 	
 	#echo "$lpath/${SECcfgFileName}.cfg"
