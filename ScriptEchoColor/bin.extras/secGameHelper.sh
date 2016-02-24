@@ -346,6 +346,23 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	return 0
 }
 
+function GAMEFUNClookForDupFiles(){ #help <lstrGamePath>
+	local lstrGamePath="$1"
+	( #to avoid changing the path outside here
+		echoc --info "$FUNCNAME: looking for duplicate files"
+		SECFUNCdelay --init $FUNCNAME
+		cd "$lstrGamePath"
+		local lstrFoundDups="`find |sort -f |uniq -Ddi`"
+		if [[ -n "$lstrFoundDups" ]];then
+			echoc -p "fix required, there are DUPLICATED files (with case insensitive matching names)"
+			echo "$lstrFoundDups"
+			echoc -p "fix required, there are DUPLICATED files (with case insensitive matching names)"
+			exit 1
+		fi
+		echoc --info "$FUNCNAME: delay `SECFUNCdelay --getpretty $FUNCNAME`"
+	)
+};export -f GAMEFUNClookForDupFiles
+
 if [[ "$0" == */secGameHelper.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #help

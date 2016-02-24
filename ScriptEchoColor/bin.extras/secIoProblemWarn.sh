@@ -91,7 +91,7 @@ echo "nPidDaemon='$nPidDaemon'"
 function FUNCCchecker(){
 	echo "FUNCCchecker pid '$BASHPID' #test: kill -SIGSTOP $BASHPID;sleep 30;kill -SIGCONT $BASHPID"
 	while true;do
-		echo "`SECFUNCdtFmt --logmessages`: checking IO..."
+		echo "`SECFUNCdtFmt --logmessages`: testing IO..."
 		echo "$RANDOM" >"/tmp/.$SECstrScriptSelfName.IO-check.tmp"
 		kill -SIGUSR1 "$nPidDaemon"
 		sleep $((nMainSleep/2))
