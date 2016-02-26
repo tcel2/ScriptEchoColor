@@ -380,7 +380,25 @@ function FUNClogMisc() {
 (export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpzy $nDelay 2>&1 >>"$strLogFileIostat")& #TODO get 'tps' info from iostat?
 FUNClogMisc&
 # last one shows also on current output
-SECFUNCexecA -c --echo sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
+SECFUNCexecA -ce sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
 
-echoc -p "ended why?"
+#TODO simply restart it? python limitation/bug?
+echoc -p "ended why?" # below is the error trace when it ends:
+exit 1
+#	Traceback (most recent call last):
+#		File "/usr/sbin/iotop", line 17, in <module>
+#		  main()
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 620, in main
+#		  main_loop()
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 610, in <lambda>
+#		  main_loop = lambda: run_iotop(options)
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 506, in run_iotop
+#		  return run_iotop_window(None, options)
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 501, in run_iotop_window
+#		  ui.run()
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 155, in run
+#		  self.process_list.duration)
+#		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 447, in refresh_display
+#		  print(l)
+#	UnicodeEncodeError: 'ascii' codec can't encode characters in position 212-216: ordinal not in range(128)
 

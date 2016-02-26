@@ -252,19 +252,25 @@ fi
 SECFUNCcfgReadDB CFGafAltBaseGammaRGB
 
 if $bReset;then
-	astrCurrentGammaRGB=(`FUNCgetCurrentGammaRGB`)
-	bDoReset=true
+	
+	# toggle alt/default mode
+	astrCurrentGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
+	declare -p astrCurrentGammaRGB
+	bStillRequiresReset=true
 	if SECFUNCarrayCheck CFGafAltBaseGammaRGB;then
-		if SECFUNCarrayCmp astrCurrentGammaRGB CFGafBaseGammaRGB;then
+		if   SECFUNCarrayCmp astrCurrentGammaRGB CFGafBaseGammaRGB;then
+			echoc --info "ResetToggleAltMode:AltBase"
 			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafAltBaseGammaRGB[@]}"
-			bDoReset=false
+			bStillRequiresReset=false
 		elif SECFUNCarrayCmp astrCurrentGammaRGB CFGafAltBaseGammaRGB;then
+			echoc --info "ResetToggleAltMode:DefaultBase"
 			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
-			bDoReset=false
+			bStillRequiresReset=false
 		fi
 	fi
 	
-	if $bDoReset;then
+	# simple reset to default
+	if $bStillRequiresReset;then
 		if SECFUNCarrayCheck CFGafBaseGammaRGB;then
 			#SECFUNCexecA -ce xgamma -rgamma ${CFGafBaseGammaRGB[0]} -ggamma ${CFGafBaseGammaRGB[1]} -bgamma ${CFGafBaseGammaRGB[2]}
 			SECFUNCexecA -ce $SECstrScriptSelfName --set "${CFGafBaseGammaRGB[@]}"
@@ -473,4 +479,6 @@ if $bSpeak;then
 		|sed -e "s'0 ' 'g" -e "s'0 ' 'g" -e "s'0 ' 'g" -e "s'[.] ' 'g"`"
 	echoc --say "$strSay"
 fi
+
+exit 0
 
