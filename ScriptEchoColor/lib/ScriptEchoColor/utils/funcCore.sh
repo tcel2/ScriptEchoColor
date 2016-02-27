@@ -990,7 +990,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		local lstrFileNameWithMatch=""
 		for lstrFile in "${lastrFile[@]}";do
 			if grep -q "$lstrRegexFuncMatch" "$lstrFile";then
-				lstrFileNameWithMatch=" at `basename "$lstrFile"`"
+#				lstrFileNameWithMatch=" at `basename "$lstrFile"`"
+				lstrFileNameWithMatch=" at '$lstrFile'"
 				break;
 			fi
 		done
@@ -1782,6 +1783,7 @@ function SECFUNCppidList() { #help [separator] between pids
   local lbAddSelf=false
   local lbChildList=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCppidList_help
 			SECFUNCshowHelp $FUNCNAME
 			return

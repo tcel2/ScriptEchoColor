@@ -615,7 +615,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 : ${SECbExecJustEcho:=true}
 #: ${SECbExecDefaultOptions:=""}
 function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
-	local bOmitOutput=false
+	local lbOmitOutput=false
 	local bShowElapsed=false
 	local bWaitKey=false
 	local bExecEcho=false
@@ -626,6 +626,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbLogCustom=false;
 	export SEClstrLogFileSECFUNCexec #NOT local, so it can be reused by other calls
 	local lstrLogFileNew="" #actually is temporary variable
+	local lbChild=false
+	local lbChildClean=false
 	local lbDetach=false;
 	export SEClnLogQuotaSECFUNCexec #NOT local, so it can be reused by other calls
 	local lnLogQuota=0; #0 means no limit
@@ -653,8 +655,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			SEClstrFuncCaller="${1}"
 		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCexec_help output colored
 			lbColorize=true
-		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr
-			bOmitOutput=true
+		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr (logging overrides this)
+			lbOmitOutput=true
 		elif [[ "$1" == "--quietoutput" ]];then #deprecated
 			SECFUNCechoErrA "deprecated '$1', use --quiet instead"
 			_SECFUNCcriticalForceExit
@@ -691,10 +693,14 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			shift
 			lnLogQuota=${1-};
 			lbLog=true
-		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help creates a detached child process that will continue running without this parent, implies --log unless another log type is set; also disable --elapsed --nolog and disable the return value (prevent interactivity)
+		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process (it's pid and tmpfile goes to stdout)
+			lbChild=true;
+		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help like --child but creates a detached child process that will continue running without this parent process, implies --log (only really works if outputs are redirected) unless another log type is set; overrides --child
 			lbDetach=true;
 		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help show list of detached pids at log
 			lbDetachedList=true;
+#		elif [[ "$1" == "--childclean" ]];then #SECFUNCexec_help <pid,pid...> clean temp child files 
+#			lbChildClean=true; #TODO should validate if is child of this parent?
 		elif [[ "$1" == "--envvarset" || "$1" == "-v" ]];then #SECFUNCexec_help will basically prepend the command with `declare -g`
 			lbEnvVar=true;
 		else
@@ -716,12 +722,17 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	
 	# fix options
 	if [[ "$SEC_DEBUG" == "true" ]];then
-		bOmitOutput=false
+		lbOmitOutput=false
 	fi
+	
 	if $lbDetach;then
 		lbLog=true;
-		bShowElapsed=false;
 		lbDoLog=true
+		lbChild=true;
+	fi
+	
+	if $lbChild;then
+		bShowElapsed=false;
 	fi
 	
 	# main code
@@ -831,30 +842,130 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	fi
 	
 	local lnSECFUNCexecReturnValue=0
-	if $bShowElapsed;then local ini=`SECFUNCdtFmt`;fi
+	if $bShowElapsed;then local lnDelayInitTime=`SECFUNCdtFmt`;fi
   #eval "$lstrExec" $omitOutput;lnSECFUNCexecReturnValue=$?
   #"${lastrParamsToExec[@]}" $omitOutput;lnSECFUNCexecReturnValue=$?
-  if $lbDoLog && [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
-  	if $lbDetach;then
-	  	#"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &
-			#(exec 2>>"$SEClstrLogFileSECFUNCexec";exec 1>&2;"${lastrParamsToExec[@]}") & disown
-		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
-		  local lnPidDetached=$!
-		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-		else
-		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
-		  #"${lastrParamsToExec[@]}" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
-		fi
-  else
-  	if $bOmitOutput;then
-		  #"${lastrParamsToExec[@]}" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
-		  "${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
-  	else
-  		"${lastrParamsToExec[@]}" &&: ; lnSECFUNCexecReturnValue=$?
-  	fi
+  if [[ ! -f "${SEClstrLogFileSECFUNCexec-}" ]];then
+  	lbDoLog=false
   fi
-	if $bShowElapsed;then local end=`SECFUNCdtFmt`;fi
+  
+	export lstrFileRetVal=$(mktemp)
+	function SECFUNCexec_runAtom(){ #TODO ignore that this function errors may not be logged? only going to terminal may be
+		local lnPidChild
+		local lnDelayInitTimeChild=`SECFUNCdtFmt`
+		
+		echo "cmd${SECcharTab}${lastrParamsToExec[@]}" >>"$lstrFileRetVal"
+		
+		if $lbDoLog;then
+			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
+			if $lbDetach || $lbChild;then
+			  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+				"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
+			else
+				echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+				"${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+			fi
+		else
+			if $lbOmitOutput;then
+				if $lbChild;then # detach always require log, above
+					"${lastrParamsToExec[@]}" >/dev/null 2>&1 &	lnPidChild=$!
+				else
+					"${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+				fi
+			else
+				if $lbChild;then # detach always require log, above
+					"${lastrParamsToExec[@]}" &	lnPidChild=$!
+				else
+					"${lastrParamsToExec[@]}" &&: ;lnSECFUNCexecReturnValue=$?
+				fi
+			fi
+		fi
+		
+#		if [[ -n "$lnPidChild" ]];then # detach is also child
+		if $lbChild;then # detach is also child
+			echo "pid${SECcharTab}$lnPidChild" >>"$lstrFileRetVal"
+			wait $lnPidChild;lnRet=$?;echo "ret${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
+		fi
+				
+#		local lnRet
+#		if $lbDetach || ( $lbDoLog && $lbChild );then
+#			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
+#			"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
+#		elif $lbChild;then
+#			"${lastrParamsToExec[@]}" &	lnPidChild=$!
+#		elif $lbDoLog;then
+#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+#		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+#		else
+#			"${lastrParamsToExec[@]}" &&: ; lnRet=$?
+#		fi
+		
+#		if [[ -z "$lnRet" ]];then
+#		if $lbChild;then # detach is also child
+#			wait $lnPidChild;lnRet=$?;echo "ret${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
+#		fi
+		
+		local lnDelayEndTimeChild=`SECFUNCdtFmt`
+		
+		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>"$lstrFileRetVal";
+	}
+	
+	if $lbDetach;then # overrides simple child option
+#		SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+		SECFUNCexec_runAtom & disown #if this process ends, the child will continue running
+	elif $lbChild;then
+		SECFUNCexec_runAtom &
+	else
+		SECFUNCexec_runAtom
+	fi
+	
+	if $lbChild;then # detach is also child
+		sleep 0.1 # to help on avoiding the warn msg
+		while lnPidChild="`egrep "^pid${SECcharTab}" "$lstrFileRetVal" |cut -f2`"; [[ -z "$lnPidChild" ]];do
+			SECFUNCechoWarnA "waiting for pid of child cmd: ${lastrParamsToExec[@]}"
+			sleep 0.1 #TODO is it safe not use this delay? such loop may clog cpu?
+		done
+		echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
+	fi
+	
+#  if $lbDoLog || $lbDetach || $lbChild;then
+#  	if $lbDetach || $lbChild;then
+##			if $lbDetach;then #overrides simple child option
+##				SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+##			elif $lbChild;then
+##				SECFUNCexec_runAtom &
+##			else
+##				SECFUNCexec_runAtom
+##			fi
+#			
+##			if $lbDetach || $lbChild;then
+##				sleep 0.1 # to help on avoiding the warn msg
+##				while lnPidChild="`egrep "^pid${SECcharTab}" "$lstrFileRetVal" |cut -f2`"; [[ -z "$lnPidChild" ]];do
+##					SECFUNCechoWarnA "waiting for pid of child cmd: ${lastrParamsToExec[@]}"
+##					sleep 0.1 #TODO is it safe not use this delay? such loop may clog cpu?
+##				done
+##				echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
+##			fi
+
+##		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
+##		  local lnPidDetached=$!
+##		  echo "$lnPidDetached" #so user can capture it
+#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+#		else
+#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
+#		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+#		  #"${lastrParamsToExec[@]}" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
+#		fi
+#  else
+#  	if $lbOmitOutput;then
+#		  #"${lastrParamsToExec[@]}" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
+#		  "${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+#  	else
+#  		"${lastrParamsToExec[@]}" &&: ; lnSECFUNCexecReturnValue=$?
+#  	fi
+#  fi
+  
+	if $bShowElapsed;then local lnDelayEndTime=`SECFUNCdtFmt`;fi
 	
 	if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
 		if((lnLogQuota>0)) || ((${SEClnLogQuotaSECFUNCexec-0}>0));then
@@ -884,7 +995,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$lstrExec"
   
 	if $bShowElapsed;then
-		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$end-$ini"`s"
+		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$lnDelayEndTime-$lnDelayInitTime"`s"
 	fi
 	
 	if((lnSECFUNCexecReturnValue!=0));then

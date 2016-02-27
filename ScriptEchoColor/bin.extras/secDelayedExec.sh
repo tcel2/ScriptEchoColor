@@ -485,7 +485,7 @@ function FUNCrun(){
 			echo "$lnRetAtom" >"$strFileRetVal";
 		};export -f FUNCrunAtom
 		if $bXterm;then
-			strTitle="${astrRunParams[@]}"
+			strTitle="${astrRunParams[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			SECFUNCarraysExport
 			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
