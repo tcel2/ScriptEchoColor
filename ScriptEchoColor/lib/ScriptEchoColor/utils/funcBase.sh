@@ -625,6 +625,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbLogTmp=false;
 	local lbLogCustom=false;
 	export SEClstrLogFileSECFUNCexec #NOT local, so it can be reused by other calls
+	export SEClstrFuncExecLastChildRef #NOT local, so it can be reused by other calls
 	local lstrLogFileNew="" #actually is temporary variable
 	local lbChild=false
 	local lbChildClean=false
@@ -695,9 +696,9 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			shift
 			lnLogQuota=${1-};
 			lbLog=true
-		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process. It's pid and temp monitoring status file goes to stdout, let's call it ChildReference.
+		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process. It's temp status file goes to SEClstrFuncExecLastChildRef, to not interfere with default outputs.
 			lbChild=true;
-		elif [[ "$1" == "--readchild" ]];then #SECFUNCexec_help <lstrChildReference> <lstrReadStatus> the output of --child can be used as reference. Each line has a status, like 'exit', use it to retrieve its value. If status is 'all', will dump the full file data. If status is prefixed with 'chk:' like 'chk:exit', will return true if that status was written to the temp file, and false otherwise.
+		elif [[ "$1" == "--readchild" ]];then #SECFUNCexec_help <lstrChildReference> <lstrReadStatus> use SEClstrFuncExecLastChildRef as reference. Each line has a status, like 'exit', use it to retrieve its value. If status is 'all', will dump the full file data. If status is prefixed with 'chk:' like 'chk:exit', will return true if that status was written to the temp file, and false otherwise.
 			shift
 			lstrChildReference="${1-}"
 			shift
@@ -718,8 +719,9 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	done
 	
 	if [[ -n "$lstrChildReference" ]];then
-		local lnRefPid="` echo "$lstrChildReference" |cut -f1`"
-		local lnRefFile="`echo "$lstrChildReference" |cut -f2`"
+#		local lnRefPid="` echo "$lstrChildReference" |cut -f1`"
+#		local lnRefFile="`echo "$lstrChildReference" |cut -f2`"
+		local lnRefFile="$lstrChildReference"
 		if [[ ! -f "$lnRefFile" ]];then
 			SECFUNCechoErrA "invalid lnRefFile='$lnRefFile'"
 			return 1
@@ -873,7 +875,16 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lstrFunctionInfo="$FUNCNAME: lstrCaller=${lstrCaller}: "
 		fi
 		
-		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}$lstrExec${lstrColorSuffix}" >>/dev/stderr
+		local lstrChildIndicator=""
+		if $lbChild;then
+			lstrChildIndicator=" # as "
+			if $lbDetach;then
+				lstrChildIndicator+="DETACHED "
+			fi
+			lstrChildIndicator+="CHILD process (see var SEClstrFuncExecLastChildRef)"
+		fi
+		
+		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}${lstrExec}${lstrChildIndicator}${lstrColorSuffix}" >>/dev/stderr
 	fi
 	
 	if $bWaitKey;then
@@ -900,7 +911,12 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   fi
   
 	export lstrFileRetVal=$(mktemp)
-	function SECFUNCexec_runAtom(){
+	function SECFUNCexec_runAtom(){ #help <BASHPID> (useless?)
+		#trap >>/dev/stderr
+		local lnBPid="$1"
+		
+		local lnPPid="$$"
+		
 		local lnPidChild
 		local lnDelayInitTimeChild=`SECFUNCdtFmt`
 		
@@ -936,7 +952,19 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 #		if [[ -n "$lnPidChild" ]];then # detach is also child
 		if $lbChild;then # detach is also child
 			echo "pid${SECcharTab}$lnPidChild" >>"$lstrFileRetVal"
-			wait $lnPidChild;lnRet=$?;echo "exit${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
+			
+#			if ! $lbDetach;then	trap "kill -SIGABRT $lnPidChild" exit SIGHUP SIGINT SIGQUIT SIGILL SIGABRT SIGFPE SIGKILL SIGSEGV SIGPIPE SIGTERM; fi
+			#trap >>/dev/stderr
+			function SECFUNCexec_atomKill(){ #help trapping exit signals didnt work...
+				# to test this: FUNCtst(){ trap 'echo oi' KILL;trap 'echo oi' TERM;sleep 1000; };SECFUNCexecA -ce --child FUNCtst;echo $SEClstrFuncExecLastChildRef
+				while [[ -d "/proc/$1" ]];do sleep 1;done;
+				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGTERM $lnPidChild;fi;sleep 1;
+				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGKILL $lnPidChild;fi;sleep 1;
+				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGABRT $lnPidChild;fi;sleep 1;
+			};SECFUNCexec_atomKill $lnPPid >/dev/null 2>&1 & #echo "lnPPid='$lnPPid'" >>/dev/stderr
+			
+			wait $lnPidChild&&:;lnRet=$?;echo "exit${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
+			echo "exitSignalInfo${SECcharTab}`SECFUNCerrCodeExplained ${lnRet}`" >>"$lstrFileRetVal";
 		fi
 				
 #		local lnRet
@@ -963,16 +991,17 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	}
 	
 	if $lbDetach;then # overrides simple child option
-		SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+		SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
 	elif $lbChild;then
 		if $lbDoLog;then
-			SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+			SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
 		else
-			SECFUNCechoWarnA "without log, the function SECFUNCexec_runAtom error output will be discarded..." #TODO find a workaround...
-			SECFUNCexec_runAtom >/dev/null 2>&1 &
+			#SECFUNCechoWarnA "without log, the function SECFUNCexec_runAtom error output will be discarded..." #TODO find a workaround...
+#			SECFUNCexec_runAtom "$BASHPID" >/dev/null 2>&1 &
+			SECFUNCexec_runAtom "$BASHPID" & # do not touch default outputs!
 		fi
 	else
-		SECFUNCexec_runAtom
+		SECFUNCexec_runAtom "$BASHPID"
 	fi
 	
 	if $lbChild;then # detach is also child
@@ -981,7 +1010,9 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			SECFUNCechoWarnA "waiting for pid of child cmd: ${lastrParamsToExec[@]}"
 			sleep 0.1 #TODO is it safe not use this delay? such loop may clog cpu?
 		done
-		echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
+#		echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
+#		echo "$lstrFileRetVal" #so user can capture it
+		SEClstrFuncExecLastChildRef="$lstrFileRetVal"
 	else
 		rm "$lstrFileRetVal"
 	fi

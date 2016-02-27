@@ -33,18 +33,18 @@ source "$SECstrFileLibFast";
 
 # FUNCTIONS
 
-function SECFUNCerrCodeExplained() { #help
+function SECFUNCerrCodeExplained() { #help <lnErrCode> describe error codes
 	# var init here
 	local lstrExample="DefaultValue"
 	local lastrRemainingParams=()
+	local lbShowAll=false;
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCerrCodeExplained_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCerrCodeExplained_help <lstrExample> MISSING DESCRIPTION
-#			shift
-#			lstrExample="${1-}"
+		elif [[ "$1" == "--showall" || "$1" == "-a" ]];then #SECFUNCerrCodeExplained_help dump all known error codes
+			lbShowAll=true
 		elif [[ "$1" == "--" ]];then #SECFUNCerrCodeExplained_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -64,27 +64,35 @@ function SECFUNCerrCodeExplained() { #help
 	
 	local lnErrCode="${1-}"
 	
-	local lstrMsg=""
-	case "$lnErrCode" in
-		1) lstrMsg="generic error";;
-		2) lstrMsg="shell builtins usage error, ex.: permission, or some keyword is missing etc.";;
-		126) lstrMsg="command is not executable, or permission problem";;
-		127) lstrMsg="command not found";;
-		129) lstrMsg="SIGHUP";; #128+n where n>=1
-    130) lstrMsg="SIGINT";;
-    131) lstrMsg="SIGQUIT";;
-    132) lstrMsg="SIGILL";; #        4       Core    Illegal Instruction
-    134) lstrMsg="SIGABRT";; #       6       Core    Abort signal from abort(3)
-    136) lstrMsg="SIGFPE";; #        8       Core    Floating point exception
-    137) lstrMsg="SIGKILL";; #       9       Term    Kill signal
-    139) lstrMsg="SIGSEGV";; #      11       Core    Invalid memory reference
-    141) lstrMsg="SIGPIPE";; #      13       Term    Broken pipe: write to pipe with no readers
-    142) lstrMsg="SIGALRM";; #      14       Term    Timer signal from alarm(2)
-    143) lstrMsg="SIGTERM";; #      15       Term    Termination signal
-		255) lstrMsg="invalid exit value, should have been in the range of 0 to 255";;
-		*) lstrMsg="User error code?";;
-	esac
-	echo "($lnErrCode) $lstrMsg" #stdout to be easily capturable
+	local lanErrCodes
+	if $lbShowAll;then
+		lanErrCodes=({1..255})
+	else
+		lanErrCodes=($lnErrCode)
+	fi
+	for lnErrCode in "${lanErrCodes[@]}";do
+		local lstrMsg=""
+		case "$lnErrCode" in
+			1) lstrMsg="generic error";;
+			2) lstrMsg="shell builtins usage error, ex.: permission, or some keyword is missing etc.";;
+			126) lstrMsg="command is not executable, or permission problem";;
+			127) lstrMsg="command not found";;
+			129) lstrMsg="SIGHUP - hangup or death";; #128+n where n>=1
+		  130) lstrMsg="SIGINT - interrupt";;
+		  131) lstrMsg="SIGQUIT - quit";;
+		  132) lstrMsg="SIGILL - illegal Instruction";; #        4       Core    Illegal Instruction
+		  134) lstrMsg="SIGABRT - abort";; #       6       Core    Abort signal from abort(3)
+		  136) lstrMsg="SIGFPE - floating point exception";; #        8       Core    Floating point exception
+		  137) lstrMsg="SIGKILL - kill ";; #       9       Term    Kill signal
+		  139) lstrMsg="SIGSEGV - segmentation fault";; #      11       Core    Invalid memory reference
+		  141) lstrMsg="SIGPIPE - broken pipe";; #      13       Term    Broken pipe: write to pipe with no readers
+		  142) lstrMsg="SIGALRM - timer signals alarm";; #      14       Term    Timer signal from alarm(2)
+		  143) lstrMsg="SIGTERM - termination";; #      15       Term    Termination signal
+			255) lstrMsg="invalid exit value, should have been in the range of 0 to 254";; # to 254 as 255 already means problem
+			*) if ! $lbShowAll;then lstrMsg="User error code?";fi;;
+		esac
+		if [[ -n "$lstrMsg" ]];then echo "($lnErrCode) $lstrMsg";fi #stdout to be easily capturable
+	done
 }
 
 strSECFUNCtrapErrCustomMsg="" # see SECFUNCexec for usage

@@ -142,21 +142,24 @@ while true;do #MainLoop
 	# look for drop box
 	nPidDropbox="`pgrep -f "/dropbox$|/dropbox /newerversion$" |head -n 1`"&&:
 	if [[ -z "$nPidDropbox" ]];then echoc -t 3 -w "waiting for dropbox pid"; continue;fi
+	SECFUNCexecA -ce renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "` # several pids, do not surround with "
 	ps --no-headers -p $nPidDropbox
 	strCpuLimitCmd="cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"
 	
 	# start cpulimit
-	SECFUNCexecA -ce $strCpuLimitCmd &&: & nSubShellPid=$! # starts cpulimit as child subshell
-#	SECFUNCexecA --child -ce $strCpuLimitCmd
-	while true;do
-		if [[ ! -d "/proc/$nSubShellPid" ]];then 
-			echoc -t 3 -w "subshell with cpulimit exited";
-			continue 2; # continues at MainLoop. If cpulimit exits for any reason, the subshell will exit too
-		fi 
-		
-		if pgrep -fx "$strCpuLimitCmd";then break;fi
-		echoc -w -t 3 "waiting '$strCpuLimitCmd'"
-	done
+	SECFUNCexecA --child -ce $strCpuLimitCmd
+#	strChildCmdRef="`SECFUNCexecA --child -ce $strCpuLimitCmd`"
+	if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >>/dev/stderr;continue;fi # continues at MainLoop, as it should not have exited
+#	SECFUNCexecA -ce $strCpuLimitCmd &&: & nSubShellPid=$! # starts cpulimit as child subshell
+#	while true;do
+#		if [[ ! -d "/proc/$nSubShellPid" ]];then 
+#			echoc -t 3 -w "subshell with cpulimit exited";
+#			continue 2; # continues at MainLoop. If cpulimit exits for any reason, the subshell will exit too
+#		fi 
+#		
+#		if pgrep -fx "$strCpuLimitCmd";then break;fi
+#		echoc -w -t 3 "waiting '$strCpuLimitCmd'"
+#	done
 	
 	# user control/interaction
 	while true;do
@@ -166,10 +169,11 @@ while true;do #MainLoop
 				continue 2; #continues at MainLoop to start cpulimit
 			fi
 		else
-			if ! pgrep -fx "$strCpuLimitCmd";then continue 2;fi # continues at MainLoop to start cpulimit
+#			if ! pgrep -fx "$strCpuLimitCmd";then continue 2;fi # continues at MainLoop to start cpulimit if it have exited for any reason
+			if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >>/dev/stderr;continue 2;fi # continues at MainLoop to start cpulimit if it have exited for any reason
 			
 			if echoc -t $nQuestionSleep -q "suspend limitation?";then
-				SECFUNCexecA -ce kill -SIGKILL "`pgrep -fx "$strCpuLimitCmd"`"
+				SECFUNCexecA -ce kill -SIGKILL `pgrep -fx "$strCpuLimitCmd"`
 				SECFUNCexecA -ce kill -SIGCONT $nPidDropbox
 				bSuspendingLimitation=true
 			fi
