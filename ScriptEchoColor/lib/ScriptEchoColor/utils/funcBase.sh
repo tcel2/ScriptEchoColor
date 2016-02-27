@@ -697,7 +697,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lbLog=true
 		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process. It's pid and temp monitoring status file goes to stdout, let's call it ChildReference.
 			lbChild=true;
-		elif [[ "$1" == "--readchild" ]];then #SECFUNCexec_help <lstrChildReference> <lstrReadStatus> the output of --child can be used as reference. Each line has a status, like 'exit', use it to retrieve its value, if it is 'all', will dump the full file data.
+		elif [[ "$1" == "--readchild" ]];then #SECFUNCexec_help <lstrChildReference> <lstrReadStatus> the output of --child can be used as reference. Each line has a status, like 'exit', use it to retrieve its value. If status is 'all', will dump the full file data. If status is prefixed with 'chk:' like 'chk:exit', will return true if that status was written to the temp file, and false otherwise.
 			shift
 			lstrChildReference="${1-}"
 			shift
@@ -725,6 +725,12 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			return 1
 		fi
 		
+		local bChkOnly=false
+		if [[ "$lstrReadStatus" =~ ^chk: ]];then
+			bChkOnly=true
+			lstrReadStatus="${lstrReadStatus:4}"
+		fi
+		
 		local lstrRefPrefix="$lstrReadStatus${SECcharTab}"
 		local lstrRefFound
 		if [[ "$lstrReadStatus" == "all" ]];then
@@ -732,9 +738,17 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		else
 			lstrRefFound="`egrep "^$lstrRefPrefix" "$lnRefFile"`"&&:
 		fi
+		
 		if [[ -z "$lstrRefFound" ]];then
+			if $bChkOnly;then
+				return 1
+			fi
 			SECFUNCechoErrA "invalid lstrReadStatus='$lstrReadStatus'"
 			return 1
+		else
+			if $bChkOnly;then
+				return 0
+			fi
 		fi
 		
 		if [[ "$lstrReadStatus" == "all" ]];then
@@ -886,7 +900,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   fi
   
 	export lstrFileRetVal=$(mktemp)
-	function SECFUNCexec_runAtom(){ #TODO ignore that this function errors may not be logged? only going to terminal may be
+	function SECFUNCexec_runAtom(){
 		local lnPidChild
 		local lnDelayInitTimeChild=`SECFUNCdtFmt`
 		
@@ -949,10 +963,14 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	}
 	
 	if $lbDetach;then # overrides simple child option
-#		SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
-		SECFUNCexec_runAtom & disown #if this process ends, the child will continue running
+		SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
 	elif $lbChild;then
-		SECFUNCexec_runAtom &
+		if $lbDoLog;then
+			SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+		else
+			SECFUNCechoWarnA "without log, the function SECFUNCexec_runAtom error output will be discarded..." #TODO find a workaround...
+			SECFUNCexec_runAtom >/dev/null 2>&1 &
+		fi
 	else
 		SECFUNCexec_runAtom
 	fi
