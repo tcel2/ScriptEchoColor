@@ -147,6 +147,7 @@ while true;do #MainLoop
 	
 	# start cpulimit
 	SECFUNCexecA -ce $strCpuLimitCmd &&: & nSubShellPid=$! # starts cpulimit as child subshell
+#	SECFUNCexecA --child -ce $strCpuLimitCmd
 	while true;do
 		if [[ ! -d "/proc/$nSubShellPid" ]];then 
 			echoc -t 3 -w "subshell with cpulimit exited";

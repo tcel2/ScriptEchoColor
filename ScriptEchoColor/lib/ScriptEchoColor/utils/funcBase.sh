@@ -641,6 +641,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbEnvVar=false
 	local lbDateTimeShow=true;
 	local lbFunctionInfoShow=true;
+	local lstrChildReference=""
+	local lstrReadStatus=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -693,8 +695,13 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			shift
 			lnLogQuota=${1-};
 			lbLog=true
-		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process (it's pid and tmpfile goes to stdout)
+		elif [[ "$1" == "--child" ]];then #SECFUNCexec_help will run as a child process. It's pid and temp monitoring status file goes to stdout, let's call it ChildReference.
 			lbChild=true;
+		elif [[ "$1" == "--readchild" ]];then #SECFUNCexec_help <lstrChildReference> <lstrReadStatus> the output of --child can be used as reference. Each line has a status, like 'exit', use it to retrieve its value, if it is 'all', will dump the full file data.
+			shift
+			lstrChildReference="${1-}"
+			shift
+			lstrReadStatus="${1-}"
 		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help like --child but creates a detached child process that will continue running without this parent process, implies --log (only really works if outputs are redirected) unless another log type is set; overrides --child
 			lbDetach=true;
 		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help show list of detached pids at log
@@ -709,6 +716,35 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		fi
 		shift
 	done
+	
+	if [[ -n "$lstrChildReference" ]];then
+		local lnRefPid="` echo "$lstrChildReference" |cut -f1`"
+		local lnRefFile="`echo "$lstrChildReference" |cut -f2`"
+		if [[ ! -f "$lnRefFile" ]];then
+			SECFUNCechoErrA "invalid lnRefFile='$lnRefFile'"
+			return 1
+		fi
+		
+		local lstrRefPrefix="$lstrReadStatus${SECcharTab}"
+		local lstrRefFound
+		if [[ "$lstrReadStatus" == "all" ]];then
+			lstrRefFound="`cat "$lnRefFile"`"
+		else
+			lstrRefFound="`egrep "^$lstrRefPrefix" "$lnRefFile"`"&&:
+		fi
+		if [[ -z "$lstrRefFound" ]];then
+			SECFUNCechoErrA "invalid lstrReadStatus='$lstrReadStatus'"
+			return 1
+		fi
+		
+		if [[ "$lstrReadStatus" == "all" ]];then
+			echo "$lstrRefFound"
+		else
+			echo "$lstrRefFound" |sed -r "s@^$lstrRefPrefix(.*)@\1@"
+		fi
+		
+		return 0
+	fi
 	
 	if $lbDetachedList;then
 		if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then
@@ -854,11 +890,13 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		local lnPidChild
 		local lnDelayInitTimeChild=`SECFUNCdtFmt`
 		
-		echo "cmd${SECcharTab}${lastrParamsToExec[@]}" >>"$lstrFileRetVal"
+		if $lbChild;then
+			echo "cmd${SECcharTab}${lastrParamsToExec[@]}" >>"$lstrFileRetVal"
+		fi
 		
 		if $lbDoLog;then
 			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
-			if $lbDetach || $lbChild;then
+			if $lbChild;then
 			  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
 				"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
 			else
@@ -884,7 +922,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 #		if [[ -n "$lnPidChild" ]];then # detach is also child
 		if $lbChild;then # detach is also child
 			echo "pid${SECcharTab}$lnPidChild" >>"$lstrFileRetVal"
-			wait $lnPidChild;lnRet=$?;echo "ret${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
+			wait $lnPidChild;lnRet=$?;echo "exit${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
 		fi
 				
 #		local lnRet
@@ -926,6 +964,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			sleep 0.1 #TODO is it safe not use this delay? such loop may clog cpu?
 		done
 		echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
+	else
+		rm "$lstrFileRetVal"
 	fi
 	
 #  if $lbDoLog || $lbDetach || $lbChild;then
