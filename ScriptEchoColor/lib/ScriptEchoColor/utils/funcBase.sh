@@ -1397,6 +1397,7 @@ function SECFUNCcleanEnvironment() { #help clean environment from everything rel
 		shift
 	done
 	
+	#TODO This should instead have a list of what was set and clean based on that. User may create something beggining with SEC
 	local lstrCmdUnset="`set |egrep "^_?SEC" |sed -r 's"^([[:alnum:]_]*)[ =].*"unset \1"'`"
 	local lstrCmdUnalias="`alias |egrep "^alias _?SEC" |sed -r 's"^alias (_?SEC[[:alnum:]_]*)=.*"\1"' |tr "\n" " "`"
 	if [[ -n "$lstrCmdUnalias" ]];then

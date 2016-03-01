@@ -70,7 +70,7 @@ if $SEC_ShortFuncsAliases; then
 fi
 
 declare -Ax SECastrDebugFunctionPerFile #must be here as arrays arent exported by bash
-SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="undefined" #TODO I couldnt find a way to show the script filename yet...
+SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="undefined" # SECstrBashSourceIdDefault is NOT a vaiable, it is an array ID. #TODO I couldnt find a way to show the script filename yet...
 #this is slow -> export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceIdDefault}]-undefined}(),L$LINENO;p$$[$(ps --no-headers -o comm -p $$)];bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID[$(ps --no-headers -o comm -p $PPID)]' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
 export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceIdDefault}]-undefined}(),L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
 
@@ -124,7 +124,10 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 	unset SECcmdExportedAssociativeArrays
 	
 	# restore the exported arrays
+	# first, set the variable value WITHOUT export. Exporting with value will fail for some associative arrays (namely: SECastrDebugFunctionPerFile)
 	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+	# second, do re-export in a simple way, the env var id alone (without the value)
+	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%export \1;%;tfound;d;:found"`"
 	
 	# remove the temporary variables representing exported arrays
 	eval "`declare |sed -r "s%^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)='(.*)'$%unset \1;%;tfound;d;:found"`"

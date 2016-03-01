@@ -456,6 +456,7 @@ function FUNCrun(){
 #	eval `secinit`
 #	SECFUNCarraysRestore
 	nRunTimes=0
+	bDevMode=false
 	while true;do
 		((nRunTimes++))&&:
 	
@@ -479,19 +480,27 @@ function FUNCrun(){
 			( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
 				SECFUNCcleanEnvironment; #all SEC environment will be cleared
 				#"$@";
-				echo "Running Command: ${astrRunParams[@]}"
+				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
 				"${astrRunParams[@]}"
 			)&&:;local lnRetAtom=$?
 			echo "$lnRetAtom" >"$strFileRetVal";
 		};export -f FUNCrunAtom
+		
+		astrCmdToRun=(bash -c)
+		if $bDevMode;then
+			astrCmdToRun=(secBashForScriptEchoColorDevelopment.sh --exit)
+		fi
+		astrCmdToRun+=(FUNCrunAtom)
+		
 		if $bXterm;then
 			strTitle="${astrRunParams[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			SECFUNCarraysExport
 			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
-			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e 'bash -c FUNCrunAtom'
+			strCmd="${astrCmdToRun[@]}"
+			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
 		else
-			SECFUNCexecA -ce FUNCrunAtom
+			SECFUNCexecA -ce "${astrCmdToRun[@]}"
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
 		
@@ -531,12 +540,29 @@ function FUNCrun(){
 			lstrTxt+="DbgInfo:\n";
 			lstrTxt+="\tTERM=$TERM\n";
 			lstrTxt+="\tPATH='$PATH'\n";
+			lstrTxt+="\tbDevMode='$bDevMode'\n";
 			lstrTxt+="\n";
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";
-			if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
-				break;
+			
+			#TODO how t f can this fail when term is dump/closed ?????: if which yad;then
+			if yad --version;then
+				# annoying: --on-top
+				yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
+					--sticky --center --selectable-labels \
+					--button="gtk-close:1" \
+					--button="retry:0" \
+					--button="retry-DEV:2";nRet=$?
+				case $nRet in 
+					0);; #normal retry
+					1)break;; #do not retry, end
+					2)bDevMode=true;; #retry in development mode (path)
+				esac
+			else
+				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
+					break;
+				fi
 			fi
 		else
 			break;

@@ -32,7 +32,9 @@ if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or th
 	SECDEVbRunLog=$SECbRunLog
 fi
 
-eval `secinit --extras --nolog`
+eval `secinit --extras --nolog --force`
+
+#declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
 export SECDEVstrSelfName="`readlink -f "$0"`";SECDEVstrSelfName="`basename "$SECDEVstrSelfName"`"
 echo "Self: $0" >>/dev/stderr
@@ -74,6 +76,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "[user command and params] to be run initially"
 		SECFUNCshowHelp --nosort
+		SECFUNCexecA -ce cat "$strFileCfg"
 		exit
 	elif [[ "$1" == "--cddevpath" || "$1" == "-c" ]];then #help initially cd to development path
 		SECDEVbCdDevPath=true
@@ -85,7 +88,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
 		SECDEVbFullDebug=true
-	elif [[ "$1" == "--cfg" ]];then #help <path> configure the project path if not already
+	elif [[ "$1" == "--cfg" ]];then #help <SECDEVstrProjectPath> configure the project path if not already
 		shift
 		SECDEVstrProjectPath="${1-}"
 		
@@ -107,7 +110,7 @@ if $bCfgPath;then
 fi
 
 if [[ -z "$SECDEVstrProjectPath" ]];then
-	SECDEVstrProjectPath="`cat "$HOME/.${SECDEVstrSelfName}.cfg"`"
+	SECDEVstrProjectPath="`cat "$strFileCfg"`"
 fi
 if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
 	echo "invalid project development path '$SECDEVstrProjectPath'" >>/dev/stderr
@@ -115,7 +118,7 @@ if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
 fi
 
 export SECDEVbExecTwice=false
-if ! cmp "$0" "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName";then
+if ! SECFUNCexecA -ce cmp "$0" "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName";then
 	SECDEVbExecTwice=true
 fi
 
@@ -228,9 +231,11 @@ function SECFUNCaddToRcFile() {
 		#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
+#			set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
 			( #eval `secinit --force`;
 				SECbRunLog=true #force log!
 				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
+				set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
@@ -258,9 +263,15 @@ function SECFUNCaddToRcFile() {
 };export -f SECFUNCaddToRcFile
 
 #history -a
-SECFUNCarraysExport
+#SECFUNCdrawLine A
+#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr
+#SECFUNCdrawLine B
+SECFUNCexecA -ce SECFUNCarraysExport -v
 #set |grep "^SEC_EX"
-if ! bash --rcfile <(echo 'SECFUNCaddToRcFile;');then
+#SECFUNCdrawLine C
+#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr
+#SECFUNCdrawLine D
+if ! SECFUNCexecA -ce bash --rcfile <(echo 'SECFUNCaddToRcFile;');then
 	SECFUNCechoErrA "exited with problem, what is happening?"
 fi
 
