@@ -496,7 +496,9 @@ function FUNCrun(){
 			strTitle="${astrRunParams[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			SECFUNCarraysExport
-			echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
+			if [[ "$TERM" != "dumb" ]];then
+				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
+			fi
 			strCmd="${astrCmdToRun[@]}"
 			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
 		else
@@ -532,7 +534,7 @@ function FUNCrun(){
 		
 		if $bStay || $lbErr;then
 			lstrTxt+="RunCommand:\n"
-			lstrTxt+="\t${astrRunParams[@]}\n";
+			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
 			lstrTxt+="\n";
 			lstrTxt+="LogInfoDbgCmd:\n";
 			lstrTxt+="\tsecMaintenanceDaemon.sh --dump $$\n";
