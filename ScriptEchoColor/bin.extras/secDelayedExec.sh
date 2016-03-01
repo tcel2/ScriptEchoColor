@@ -492,16 +492,17 @@ function FUNCrun(){
 		fi
 		astrCmdToRun+=(FUNCrunAtom)
 		
+		SECFUNCarraysExport
 		if $bXterm;then
 			strTitle="${astrRunParams[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
-			SECFUNCarraysExport
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
 			strCmd="${astrCmdToRun[@]}"
 			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
 		else
+#			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}"
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
