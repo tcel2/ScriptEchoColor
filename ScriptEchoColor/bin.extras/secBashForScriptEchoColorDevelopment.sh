@@ -32,8 +32,10 @@ if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or th
 	SECDEVbRunLog=$SECbRunLog
 fi
 
+export SECbFuncArraysRestoreVerbose=true
+
 eval `secinit --extras --nolog --force`
-declare -p SECDEVastrCmdTmp
+declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 
 #declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
@@ -140,7 +142,7 @@ if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 	SECDEVbHasCmdTmp=true
 fi
 
-declare -p SECDEVastrCmdTmp
+declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -193,10 +195,11 @@ function SECFUNCaddToRcFile() {
 		echo
 		SECDEVbExecTwice=false #prevent infinite recursive loop
 		SECDEVbIsInExecTwiceMode=true
-		declare -p SECDEVastrCmdTmp
+		declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 #		$SECDEVstrSelfName "${SECDEVastrCmdTmp[@]}" #all options are already in exported variables
 		SECFUNCarraysExport -v
-		$SECDEVstrSelfName # No params needed. All options are already in exported variables
+		declare -p SECDEVstrSelfName
+		SECFUNCexecA -ce $SECDEVstrSelfName # No params needed. All options are already in exported variables
 		exit #must exit to not execute the options twice, only once above.
 	fi
 	###################################### TWICE MODE - EXIT ###########################################
@@ -243,12 +246,12 @@ function SECFUNCaddToRcFile() {
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #			set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
-			declare -p SECDEVastrCmdTmp >>/dev/stderr
+			declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 			( #eval `secinit --force`;
 				SECbRunLog=true #force log!
 				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
 				set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
-				declare -p SECDEVastrCmdTmp
+				declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
 				declare -p astrCmdTmp
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;

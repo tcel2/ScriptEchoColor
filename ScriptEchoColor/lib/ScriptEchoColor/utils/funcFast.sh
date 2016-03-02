@@ -113,6 +113,8 @@ _SECFUNCcheckIfIsArrayAndInit SECastrBashDebugFunctionIds # If any item of the a
 _SECFUNCcheckIfIsArrayAndInit SECastrFunctionStack
 _SECFUNCcheckIfIsArrayAndInit SECastrBashSourceFilesPrevious
 
+: ${SECbFuncArraysRestoreVerbose:=false}
+export SECbFuncArraysRestoreVerbose
 function SECFUNCarraysRestore() { #help restore all exported arrays
 	if ${SECbHasExportedArrays+false};then #to speedup execution where no array has been exported
 		return
@@ -125,7 +127,12 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 	
 	# restore the exported arrays
 	# first, set the variable value WITHOUT export. Exporting with value will fail for some associative arrays (namely: SECastrDebugFunctionPerFile)
-	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+	local lstrEvalRest="`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+	if $SECbFuncArraysRestoreVerbose;then
+		echo "SECINFO: $FUNCNAME" >>/dev/stderr
+		echo "$lstrEvalRest" >>/dev/stderr
+	fi
+	eval "$lstrEvalRest"
 	# second, do re-export in a simple way, the env var id alone (without the value)
 	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%export \1;%;tfound;d;:found"`"
 	
@@ -140,6 +147,7 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 #}
 
 SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
+#echo "$SECbFuncArraysRestoreVerbose.$LINENO" >>/dev/stderr
 
 ###############################################################################
 # LAST THINGS CODE
