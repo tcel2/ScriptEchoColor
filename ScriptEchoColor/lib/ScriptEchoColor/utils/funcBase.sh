@@ -227,6 +227,7 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch; 
 	if $lbDelayMode;then
 		local lnOneDayInSeconds="$((3600*24))"
 		#((lfTime+=$SECnFixDate))
+#		echo "SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr
 		local lnDays="`SECFUNCbcPrettyCalcA --trunc --scale 0 "$lfTime/$lnOneDayInSeconds"`"
 		lfTime="`SECFUNCbcPrettyCalcA --scale 9 "$lfTime+$SECnFixDate"`"
 		
@@ -987,7 +988,20 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		
 		local lnDelayEndTimeChild=`SECFUNCdtFmt`
 		
-		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>"$lstrFileRetVal";
+#		trap >>/dev/stderr
+#		echo "asdf`SECFUNCbcPrettyCalcA --help`" >>/dev/stderr
+#		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>/dev/stderr
+#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
+#		alias SECFUNCbcPrettyCalcA >>/dev/stderr
+#		echo "AAA`alias SECFUNCbcPrettyCalcA`" >>/dev/stderr
+#		echo "AAA`SECFUNCbcPrettyCalcA 1+2`" >>/dev/stderr
+#		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>/dev/stderr
+#		set -x
+		local lnElapsed="`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`"
+		echo "elapsed${SECcharTab}${lnElapsed}" >>"$lstrFileRetVal";
+#		set +x
+		
+		return 0
 	}
 	
 	if $lbDetach;then # overrides simple child option
@@ -1547,6 +1561,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	
 	function SECFUNCdelay_get(){
 		local lfNow="`SECFUNCdtFmt`"
+#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
 		local lfDelayToOutput="`SECFUNCbcPrettyCalcA --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
 		local lstrShowId=""
 		if $lbShowId;then
@@ -1592,6 +1607,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		fi
 		
 		local delay=`SECFUNCdelay_get`
+#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
 		if SECFUNCbcPrettyCalcA --cmpquiet "$delay>=$lnCheckDelayAt";then
 			SECFUNCdelay_init
 			return 0

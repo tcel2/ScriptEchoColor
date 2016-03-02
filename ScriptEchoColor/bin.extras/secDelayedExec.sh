@@ -459,7 +459,7 @@ function FUNCrun(){
 	bDevMode=false
 	while true;do
 		((nRunTimes++))&&:
-	
+		
 		# do RUN
 		FUNClog RUN "$nRunTimes time(s)"
 		SECFUNCdelay RUN --init
@@ -559,7 +559,7 @@ function FUNCrun(){
 					--button="retry-DEV:2" \
 					--button="gtk-close:1" ;nRet=$?
 				case $nRet in 
-					0);; #normal retry
+					0)bDevMode=false;; #normal retry
 					1)break;; #do not retry, end
 					2)bDevMode=true;; #retry in development mode (path)
 				esac

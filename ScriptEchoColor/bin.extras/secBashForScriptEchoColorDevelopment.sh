@@ -192,7 +192,15 @@ function SECFUNCaddToRcFile() {
 	#echo " PATH='$PATH'" >>/dev/stderr
 	echo -e "PATH=(\t`echo $PATH |sed 's":"\n\t"g'`)" >>/dev/stderr	
 	
+	# must be after PATH setup !!!
+	if $SECDEVbSecInit;then
+		local lstrInitCmd="secinit --extras --force"
+		echoc --info " $lstrInitCmd"
+		eval `$lstrInitCmd`;
+	fi
+	
 	###################################### TWICE MODE ###########################################
+	# Must be after secinit!!! TODO if it is before secinit, SECFUNCbcPrettyCalcA "will not be recognized" but... aparently will cause any trouble? now what????
 	if $SECDEVbExecTwice;then #this grants all is updated
 		echo
 		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
@@ -208,7 +216,9 @@ function SECFUNCaddToRcFile() {
 		alias >>/dev/stderr
 		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr # alias not set yet
 		
+#		export SEC_DEBUGX=true;set -x
 		SECFUNCexecA -ce $SECDEVstrSelfName # No params needed. All options are already in exported variables
+#		set +x
 		echo "SECDEVINFO: just after twice run" >>/dev/stderr
 #		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr
 		echo "SECDEVINFO: just before twice exit" >>/dev/stderr
@@ -217,13 +227,6 @@ function SECFUNCaddToRcFile() {
 	fi
 	###################################### TWICE MODE - EXIT ###########################################
 	
-	# must be after PATH setup !!!
-	if $SECDEVbSecInit;then
-		local lstrInitCmd="secinit --extras --force"
-		echoc --info " $lstrInitCmd"
-		eval `$lstrInitCmd`;
-	fi
-
 	# Must be after secinit!!!
 	if $SECDEVbRunLog;then
 		export SECbRunLog="$SECDEVbRunLog" #this shell wont be logged, but commands run on it will be properly logged again IF user had it previously setup for ex. at .bashrc
