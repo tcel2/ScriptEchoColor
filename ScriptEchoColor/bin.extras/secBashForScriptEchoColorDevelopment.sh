@@ -32,6 +32,7 @@ if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or th
 	SECDEVbRunLog=$SECbRunLog
 fi
 
+export SEC_WARN=true
 export SECbFuncArraysRestoreVerbose=true
 
 eval `secinit --extras --nolog --force`
@@ -57,6 +58,8 @@ function SECDEVFUNCoptions() {
 		unset SECDEVbUnboundErr
 		unset SECDEVastrCmdTmp
 		unset SECDEVbHasCmdTmp
+		unset SECDEVbIsInExecTwiceMode
+		unset SECDEVbExecTwiceTest
 		SECDEVFUNCoptions #will now run just setting the defaults! yey!
 	elif [[ -n "${1-}" ]];then
 		echoc -p "invalid option '$1'"
@@ -71,6 +74,7 @@ function SECDEVFUNCoptions() {
 		if ${SECDEVastrCmdTmp+false};then SECDEVastrCmdTmp=();fi;export SECDEVastrCmdTmp
 		: ${SECDEVbHasCmdTmp:=false};export SECDEVbHasCmdTmp
 		: ${SECDEVbIsInExecTwiceMode:=false};export SECDEVbIsInExecTwiceMode
+		: ${SECDEVbExecTwiceTest:=false};export SECDEVbExecTwiceTest
 	fi
 };export -f SECDEVFUNCoptions
 SECDEVFUNCoptions
@@ -81,7 +85,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCshowHelp --colorize "[user command and params] to be run initially"
 		SECFUNCshowHelp --nosort
 		SECFUNCexecA -ce cat "$strFileCfg"
-		exit
+		exit 0
 	elif [[ "$1" == "--cddevpath" || "$1" == "-c" ]];then #help initially cd to development path
 		SECDEVbCdDevPath=true
 	elif [[ "$1" == "--exit" || "$1" == "-e" ]];then #help exit after running user command
@@ -121,9 +125,10 @@ if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
 	exit 1
 fi
 
-export SECDEVbExecTwice=false
-if ! SECFUNCexecA -ce cmp "$0" "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName";then
+export SECDEVbExecTwice=false # keep this here, it is important to prevent infinite loop!
+if $SECDEVbExecTwiceTest || ! SECFUNCexecA -ce cmp "$0" "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName";then
 	SECDEVbExecTwice=true
+	SECDEVbExecTwiceTest=false # disabled now to prevent infinite loop
 fi
 
 if $SECDEVbFullDebug;then
@@ -197,10 +202,18 @@ function SECFUNCaddToRcFile() {
 		SECDEVbIsInExecTwiceMode=true
 		declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 #		$SECDEVstrSelfName "${SECDEVastrCmdTmp[@]}" #all options are already in exported variables
-		SECFUNCarraysExport -v
-		declare -p SECDEVstrSelfName
+		SECFUNCexecA -ce SECFUNCarraysExport -v
+		
+		declare -p SECDEVstrSelfName >>/dev/stderr
+		alias >>/dev/stderr
+		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr # alias not set yet
+		
 		SECFUNCexecA -ce $SECDEVstrSelfName # No params needed. All options are already in exported variables
-		exit #must exit to not execute the options twice, only once above.
+		echo "SECDEVINFO: just after twice run" >>/dev/stderr
+#		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr
+		echo "SECDEVINFO: just before twice exit" >>/dev/stderr
+		#TODO 2 lines? echo "SECDEVINFO: just before twice exit: `type SECFUNCbcPrettyCalcA&&: 2>&1`" >>/dev/stderr
+		ps;SECFUNCechoWarnA "exiting";exit 0 #must exit to not execute the options twice, only once above.
 	fi
 	###################################### TWICE MODE - EXIT ###########################################
 	
@@ -273,9 +286,11 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	if $SECDEVbExitAfterUserCmd;then
-		echo " Exiting..." >>/dev/stderr
+		echo " SECDEVINFO: Exiting after user command..." >>/dev/stderr
 		sleep 1
-		exit
+#		ps >>/dev/stderr
+#		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr
+		ps;SECFUNCechoWarnA "exiting";exit 0
 	fi
 
 	if ! $SECDEVbExecTwice;then
@@ -294,7 +309,11 @@ SECFUNCexecA -ce SECFUNCarraysExport -v
 #SECFUNCdrawLine C
 #set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr
 #SECFUNCdrawLine D
+echoc --info "now running bash with modified/increased rc file"
 if ! SECFUNCexecA -ce bash --rcfile <(echo 'SECFUNCaddToRcFile;');then
 	SECFUNCechoErrA "exited with problem, what is happening?"
+	ps;SECFUNCechoWarnA "exiting";exit 1
 fi
+
+ps;SECFUNCechoWarnA "exiting";exit 0
 
