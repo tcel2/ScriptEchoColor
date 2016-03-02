@@ -265,22 +265,26 @@ elif $bErrorsMonitor || $bErrorsMonitorOnlyTraps;then
 	echoc --info "strFileErrorLog='$strFileErrorLog'"
 	nLineCount=0
 	while true;do
-		nLineCountCurrent=$(cat "$strFileErrorLog" |wc -l)
+		if [[ -f "$strFileErrorLog" ]];then
+			nLineCountCurrent=$(cat "$strFileErrorLog" |wc -l)
 		
-		#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
-		strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"&&:
-		if $bErrorsMonitorOnlyTraps;then
-			strErrsToOutput="`echo "$strErrsToOutput" |grep "$strTrapToken" -w`"&&:
-		fi
-		if [[ -n "$strErrsToOutput" ]];then # split the line into several easily readable lines!
-			echo "$strErrsToOutput" \
-				|sed -r \
-					-e "s@';@';\n\t@g" \
-					-e "s@${strTrapToken}@${SECcolorRed}&${SECcolorCancel}@"
-#					-e 's".*"&\n"' \
-		fi
+			#tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog" |sed -r -e 's";";\n\t"g' -e 's".*"&\n"'
+			strErrsToOutput="`tail -n $((nLineCountCurrent-nLineCount)) "$strFileErrorLog"`"&&:
+			if $bErrorsMonitorOnlyTraps;then
+				strErrsToOutput="`echo "$strErrsToOutput" |grep "$strTrapToken" -w`"&&:
+			fi
+			if [[ -n "$strErrsToOutput" ]];then # split the line into several easily readable lines!
+				echo "$strErrsToOutput" \
+					|sed -r \
+						-e "s@';@';\n\t@g" \
+						-e "s@${strTrapToken}@${SECcolorRed}&${SECcolorCancel}@"
+	#					-e 's".*"&\n"' \
+			fi
 		
-		nLineCount=$nLineCountCurrent
+			nLineCount=$nLineCountCurrent
+		else
+			echoc --info "error log is empty!"
+		fi
 		
 		echoc -w "Log for SECERROR(s), `SECFUNCdtFmt --pretty`"
 	done

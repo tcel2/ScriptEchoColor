@@ -33,6 +33,7 @@ if ! ${SECbRunLog+false};then # SECbRunLog must be false (secinit --nolog) or th
 fi
 
 eval `secinit --extras --nolog --force`
+declare -p SECDEVastrCmdTmp
 
 #declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
@@ -67,6 +68,7 @@ function SECDEVFUNCoptions() {
 		: ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
 		if ${SECDEVastrCmdTmp+false};then SECDEVastrCmdTmp=();fi;export SECDEVastrCmdTmp
 		: ${SECDEVbHasCmdTmp:=false};export SECDEVbHasCmdTmp
+		: ${SECDEVbIsInExecTwiceMode:=false};export SECDEVbIsInExecTwiceMode
 	fi
 };export -f SECDEVFUNCoptions
 SECDEVFUNCoptions
@@ -130,10 +132,15 @@ if $SECDEVbFullDebug;then
 fi
 
 # custom first command by user
-SECDEVastrCmdTmp=("$@")
+if ! $SECDEVbIsInExecTwiceMode;then # there should have no params anyway..
+	SECDEVastrCmdTmp=("${@-}")
+fi
+
 if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 	SECDEVbHasCmdTmp=true
 fi
+
+declare -p SECDEVastrCmdTmp
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -185,7 +192,11 @@ function SECFUNCaddToRcFile() {
 		echoc --info " Loading '$SECstrScriptSelfName' twice as the project development one differs."
 		echo
 		SECDEVbExecTwice=false #prevent infinite recursive loop
-		$SECDEVstrSelfName #all options are already in exported variables
+		SECDEVbIsInExecTwiceMode=true
+		declare -p SECDEVastrCmdTmp
+#		$SECDEVstrSelfName "${SECDEVastrCmdTmp[@]}" #all options are already in exported variables
+		SECFUNCarraysExport -v
+		$SECDEVstrSelfName # No params needed. All options are already in exported variables
 		exit #must exit to not execute the options twice, only once above.
 	fi
 	###################################### TWICE MODE - EXIT ###########################################
@@ -232,14 +243,23 @@ function SECFUNCaddToRcFile() {
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #			set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
+			declare -p SECDEVastrCmdTmp >>/dev/stderr
 			( #eval `secinit --force`;
 				SECbRunLog=true #force log!
 				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
 				set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
+				declare -p SECDEVastrCmdTmp
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
+				declare -p astrCmdTmp
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
-				if ! $SECDEVbSecInit;then SECFUNCcleanEnvironment;fi #all SEC environment will be cleared
+				SECFUNCcheckActivateRunLog -v --restoredefaultoutputs
+				if ! $SECDEVbSecInit;then 
+					# all SEC environment will be cleared. 
+					# A SEC script will setup it again. 
+					# This is good because a few applications may not handle so much env vars.
+					SECFUNCcleanEnvironment;
+				fi 
 				echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
 				"${astrCmdTmp[@]}";
 			)&&:;nRet=$?

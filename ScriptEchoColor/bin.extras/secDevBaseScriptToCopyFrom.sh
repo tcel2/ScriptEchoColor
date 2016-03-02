@@ -66,6 +66,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	# var init here
 	local lstrExample="DefaultValue"
 	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
@@ -102,6 +103,7 @@ export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
 astrRemainingParams=()
+astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;

@@ -477,7 +477,7 @@ function FUNCrun(){
 			eval `secinit` #this will apply the exported arrays
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-			( SECbRunLog=true SECFUNCcheckActivateRunLog; #forced log!
+			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
 				SECFUNCcleanEnvironment; #all SEC environment will be cleared
 				#"$@";
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
@@ -550,13 +550,14 @@ function FUNCrun(){
 			lstrTxt+="\n";
 			
 			#TODO how t f can this fail when term is dump/closed ?????: if which yad;then
-			if yad --version;then
+			if SECFUNCexecA -ce yad --version;then
 				# annoying: --on-top
+				# the first button will be the default when hitting Enter...
 				yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
 					--sticky --center --selectable-labels \
-					--button="gtk-close:1" \
 					--button="retry:0" \
-					--button="retry-DEV:2";nRet=$?
+					--button="retry-DEV:2" \
+					--button="gtk-close:1" ;nRet=$?
 				case $nRet in 
 					0);; #normal retry
 					1)break;; #do not retry, end
