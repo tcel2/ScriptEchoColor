@@ -456,7 +456,7 @@ function FUNCrun(){
 #	eval `secinit`
 #	SECFUNCarraysRestore
 	nRunTimes=0
-	bDevMode=false
+	local lbDevMode=false
 	while true;do
 		((nRunTimes++))&&:
 		
@@ -487,7 +487,7 @@ function FUNCrun(){
 		};export -f FUNCrunAtom
 		
 		astrCmdToRun=(bash -c)
-		if $bDevMode;then
+		if $lbDevMode;then
 			astrCmdToRun=(secBashForScriptEchoColorDevelopment.sh --exit)
 		fi
 		astrCmdToRun+=(FUNCrunAtom)
@@ -543,7 +543,7 @@ function FUNCrun(){
 			lstrTxt+="DbgInfo:\n";
 			lstrTxt+="\tTERM=$TERM\n";
 			lstrTxt+="\tPATH='$PATH'\n";
-			lstrTxt+="\tbDevMode='$bDevMode'\n";
+			lstrTxt+="\tlbDevMode='$lbDevMode'\n";
 			lstrTxt+="\n";
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
@@ -551,18 +551,32 @@ function FUNCrun(){
 			
 			#TODO how t f can this fail when term is dump/closed ?????: if which yad;then
 			if SECFUNCexecA -ce yad --version;then
+				local lbEvalCode=false
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
 					--sticky --center --selectable-labels \
 					--button="retry:0" \
+					--button="retry(EvalCode):4" \
 					--button="retry-DEV:2" \
+					--button="retry-DEV(EvalCode):3" \
 					--button="gtk-close:1" ;nRet=$?
 				case $nRet in 
-					0)bDevMode=false;; #normal retry
+					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end
-					2)bDevMode=true;; #retry in development mode (path)
+					2)lbDevMode=true;; #retry in development mode (path)
+					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
+					4)lbDevMode=false;lbEvalCode=true;; #normal retry
 				esac
+				
+				if $lbEvalCode;then
+					local lstrCodeToEval="`zenity --entry \
+						--title "$SECstrScriptSelfName[$$]" \
+						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
+					echo "eval: $lstrCodeToEval" >>/dev/stderr
+					eval "$lstrCodeToEval"
+				fi
+				
 			else
 				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 					break;
