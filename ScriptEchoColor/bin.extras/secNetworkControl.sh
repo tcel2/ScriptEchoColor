@@ -33,9 +33,12 @@ bToggle=false
 nCoolDownDelay=15
 bOn=false
 bOff=false
+bState=false
+bVerbose=false
 export CFGbControlWifi;: ${CFGbControlWifi:=true}; #help set to false to ignore wifi
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
+	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script helps on ex.:"
 		SECFUNCshowHelp --colorize "\tThunderbird will stop asking for password on startup."
@@ -50,7 +53,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit
 	elif [[ "$1" == "--checkinternet" || "$1" == "-c" ]];then #help check if internet is active return 0, or inactive return 1
 		bCheckInternet=true
-	elif [[ "$1" == "--validateonly" || "$1" == "-v" ]];then #help just validate the params and exit without executing them.
+	elif [[ "$1" == "--validateonly" || "$1" == "-o" ]];then #help just validate the params and exit without executing them.
 		bValidateOnly=true
 	elif [[ "$1" == "--listnetworkfiles" || "$1" == "-l" ]];then #help lsof -i
 		bListNetworkFiles=true
@@ -63,6 +66,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bOn=true
 	elif [[ "$1" == "--off" ]];then #help network off
 		bOff=true
+	elif [[ "$1" == "--verbose" || "$1" == "-v" ]];then #help 
+		bVerbose=true
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
@@ -75,8 +80,21 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+function FUNCinternetState() {
+	nmcli -f STATE -t nm
+}
+
+function FUNCinternetConnectivity() {
+	ip route ls |grep --color=always "192.168.0."
+}
+
 function FUNCcheckInternet() {
-  if ip route ls |grep --color=always "192.168.0." >/dev/null;then
+	if $bVerbose;then
+		echo "state:'`FUNCinternetState`'" >>/dev/stderr
+		echo "connectivity:'`FUNCinternetConnectivity`'" >>/dev/stderr
+	fi
+	
+  if FUNCinternetConnectivity >/dev/null;then
   	return 0
   fi
   return 1
@@ -169,7 +187,7 @@ function FUNCinternetStateCmp() { #help <lstrCheck>... state(s) to check for
 				;;
 		esac
 	
-		if [[ "`nmcli -f STATE -t nm`" == "$lstrCheck" ]];then
+		if [[ "`FUNCinternetState`" == "$lstrCheck" ]];then
 			return 0
 		fi
 		
@@ -189,16 +207,16 @@ function FUNCdialogConnStateProgress(){
 	local lstrTextEnd="$1"
 	
 	for((i=0;i<100;i++));do
-		if((i<98));then
+		if((i>0 && i<98));then # >0 to have time to show it
 			local lbEnd=false
 			if $lbEnable;then
 				if FUNCinternetStateCmp connected;then
 					lbEnd=true;
 				fi
 			else
-				if FUNCinternetStateCmp disconnected;then
-					lbEnd=true;
-				fi
+#				if FUNCinternetStateCmp disconnected;then
+					lbEnd=true; # disconnecting always works instantly
+#				fi
 			fi
 			
 			if $lbEnd;then
@@ -211,6 +229,9 @@ function FUNCdialogConnStateProgress(){
 	echoc --say --info "$lstrTextEnd"
 }
 
+#if $bState;then
+#	FUNCinternetState
+#	exit 0
 if $bOn || $bOff || $bToggle;then
 	bEnable=true
 	
