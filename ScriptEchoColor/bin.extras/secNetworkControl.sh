@@ -31,6 +31,8 @@ bCheckInternet=false
 bListNetworkFiles=false
 bToggle=false
 nCoolDownDelay=15
+bOn=false
+bOff=false
 export CFGbControlWifi;: ${CFGbControlWifi:=true}; #help set to false to ignore wifi
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
@@ -57,6 +59,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nCoolDownDelay="${1-}"
 	elif [[ "$1" == "--toggle" || "$1" == "-t" ]];then #help toggle network on/off
 		bToggle=true
+	elif [[ "$1" == "--on" ]];then #help network on
+		bOn=true
+	elif [[ "$1" == "--off" ]];then #help network off
+		bOff=true
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
@@ -93,6 +99,16 @@ SECFUNCuniqueLock --daemonwait
 
 function FUNCsetEnable(){ #help <true|false>
 	local lbEnable="$1"
+	
+	if $lbEnable && FUNCinternetStateCmp connected connecting;then 
+		echoc --info "@ralready on..."
+		return 0;
+	fi
+	
+	if ! $lbEnable && FUNCinternetStateCmp disconnected;then 
+		echoc --info "@ralready off..."
+		return 0;
+	fi
 	
 	SECFUNCcfgReadDB
 	if SECFUNCisNumber -dn "${CFGnLastStateRequestTime-}";then
@@ -139,11 +155,31 @@ function FUNCsetEnable(){ #help <true|false>
 	return 0
 }
 
-function FUNCisInternetOn(){
-	[[ "`nmcli -f STATE -t nm`" == "connected" ]]
+#function FUNCisInternetOn(){
+#	[[ "`nmcli -f STATE -t nm`" == "connected" ]]
+#}
+
+function FUNCinternetStateCmp() { #help <lstrCheck>... state(s) to check for
+	while ! ${1+false};do
+		local lstrCheck="$1"
+		case "$lstrCheck" in
+			disconnected|connecting|connected);;
+			*)SECFUNCechoErrA "invalid lstrCheck='$lstrCheck'"
+				_SECFUNCcriticalForceExit
+				;;
+		esac
+	
+		if [[ "`nmcli -f STATE -t nm`" == "$lstrCheck" ]];then
+			return 0
+		fi
+		
+		shift&&:
+	done
+	
+	return 1;
 }
 
-function FUNCwaitConnectDialog(){
+function FUNCdialogConnStateProgress(){
 	local lbEnable="$1"
 	shift
 	local lstrTitle="$1"
@@ -156,11 +192,11 @@ function FUNCwaitConnectDialog(){
 		if((i<98));then
 			local lbEnd=false
 			if $lbEnable;then
-				if FUNCisInternetOn;then
+				if FUNCinternetStateCmp connected;then
 					lbEnd=true;
 				fi
 			else
-				if ! FUNCisInternetOn;then
+				if FUNCinternetStateCmp disconnected;then
 					lbEnd=true;
 				fi
 			fi
@@ -175,13 +211,23 @@ function FUNCwaitConnectDialog(){
 	echoc --say --info "$lstrTextEnd"
 }
 
-if $bToggle;then
+if $bOn || $bOff || $bToggle;then
 	bEnable=true
-	strText="Internet going ON"
-	strTextEnd="Internet ON"
-#	if nmcli nm |tail -n 1 |grep -q connected;then 
-	if FUNCisInternetOn;then
+	
+	if $bOn;then
+		bEnable=true
+	elif $bOff;then
 		bEnable=false
+	elif $bToggle;then
+		if FUNCinternetStateCmp connected connecting;then
+			bEnable=false
+		fi
+	fi
+	
+	if $bEnable;then
+		strText="Internet going ON"
+		strTextEnd="Internet ON"
+	else
 		strText="Internet going OFF"
 		strTextEnd="Internet OFF"
 	fi
@@ -190,28 +236,9 @@ if $bToggle;then
 		strTitle="$SECstrScriptSelfName: Info Internet Status"
 		SECFUNCCwindowOnTop -d 1 "^$strTitle$"
 		echoc --say --info "$strText"
-#		if $bEnable;then
-			FUNCwaitConnectDialog $bEnable "$strTitle" "$strText" "$strTextEnd"
-#		else
-#			SECFUNCexecA -ce zenity --timeout 3 --info --title "$strTitle" --text "$strText"&
-#		fi
+		FUNCdialogConnStateProgress $bEnable "$strTitle" "$strText" "$strTextEnd"
 	fi
-	
-#	if nmcli nm |tail -n 1 |grep -q connected;then 
-#		if FUNCsetEnable false;then
-#			strText="Internet OFF"
-#			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
-#			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
-#			echoc --say --info "$strText"
-#		fi
-#	else 
-#		if FUNCsetEnable true;then
-#			strText="Internet ON"
-#			SECFUNCCwindowOnTop -d 1 "$SECstrScriptSelfName"
-#			zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strText"&
-#			echoc --say --info "$strText"
-#		fi
-#	fi
+
 	exit $?
 fi
 
