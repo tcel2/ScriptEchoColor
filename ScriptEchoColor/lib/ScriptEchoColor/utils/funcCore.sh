@@ -2001,10 +2001,23 @@ function SECFUNCcheckActivateRunLog() { #help
 #		exec 2>/dev/stderr
 		if $SECbRunLogEnabled;then
 			SECFUNCcheckActivateRunLog_report before
-			#TODO this restore below is still blind...
 			# 101 and 102 to try to avoid any conflicts
 			#TODO should check for fd availability...
-			exec 1>&101 2>&102 #restore (if not yet enabled it would redirect to nothing and bug out)
+			if [[ -t 101 ]];then
+				exec 1>&101
+			else
+				exec 1>&0 # if broken, fallback to stdin
+				SECFUNCechoWarnA "fd 101 was broken..." #after the redirection of course...
+			fi
+			
+			if [[ -t 102 ]];then
+				exec 2>&102
+			else
+				exec 2>&0 # if broken, fallback to stdin
+				SECFUNCechoWarnA "fd 102 was broken..." #after the redirection of course...
+			fi
+			
+#			exec 1>&101 2>&102 #restore (if not yet enabled it would redirect to nothing and bug out)
 			SECFUNCcheckActivateRunLog_report after
 			SECbRunLogEnabled=false
 		fi
