@@ -1959,6 +1959,7 @@ function SECFUNCcheckActivateRunLog() { #help
 	local lbInheritParentLog=false
 	local lbVerbose=false
 	local lastrAllParams=("${@-}")
+	local lbForceStdin=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCcheckActivateRunLog_help
 			SECFUNCshowHelp $FUNCNAME
@@ -1967,6 +1968,8 @@ function SECFUNCcheckActivateRunLog() { #help
 			lbVerbose=true
 		elif [[ "$1" == "--restoredefaultoutputs" ]];then #SECFUNCcheckActivateRunLog_help restore default outputs to stdout and stderr
 			lbRestoreDefaults=true
+		elif [[ "$1" == "--forcestdin" ]];then #SECFUNCcheckActivateRunLog_help will force all to point to stdin
+			lbForceStdin=true
 		elif [[ "$1" == "--inheritparent" || "$1" == "-i" ]];then #SECFUNCcheckActivateRunLog_help force inherit parent log
 			lbInheritParentLog=true
 		elif [[ "$1" == "--" ]];then #SECFUNCcheckActivateRunLog_help params after this are ignored as being these options
@@ -1986,12 +1989,22 @@ function SECFUNCcheckActivateRunLog() { #help
 		fi
 	}
 	
+	if $lbForceStdin;then
+		SECFUNCcheckActivateRunLog_report before
+		exec 1>&0 2>&0
+		SECFUNCcheckActivateRunLog_report after
+		return 0
+	fi
+	
 	if $SECbRunLogDisable || $lbRestoreDefaults;then
 #		exec 1>/dev/stdout
 #		exec 2>/dev/stderr
 		if $SECbRunLogEnabled;then
 			SECFUNCcheckActivateRunLog_report before
-			exec 1>&3 2>&4 #restore (if not yet enabled it would redirect to nothing and bug out)
+			#TODO this restore below is still blind...
+			# 101 and 102 to try to avoid any conflicts
+			#TODO should check for fd availability...
+			exec 1>&101 2>&102 #restore (if not yet enabled it would redirect to nothing and bug out)
 			SECFUNCcheckActivateRunLog_report after
 			SECbRunLogEnabled=false
 		fi
@@ -2057,7 +2070,7 @@ function SECFUNCcheckActivateRunLog() { #help
 				echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
 			#	exec 1>"$SECstrRunLogFile"
 			#	exec 2>"$SECstrRunLogFile"
-				exec 3>&1 4>&2 #backup
+				exec 101>&1 102>&2 #backup
 				exec > >(tee "$SECstrRunLogFile")
 				exec 2>&1
 				

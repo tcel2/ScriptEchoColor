@@ -264,12 +264,12 @@ function FUNCorganize() {
 	
 		if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
 			# adjust size
-			eval `xdotool getwindowgeometry $windowId |grep "Geometry:" |sed -r 's"^.*Geometry: ([[:digit:]]*)x([[:digit:]]*).*$"\
+			if ! eval `xdotool getwindowgeometry $windowId |grep "Geometry:" |sed -r 's"^.*Geometry: ([[:digit:]]*)x([[:digit:]]*).*$"\
 				windowWidthCurrent=\1;\
-				windowHeightCurrent=\2;"'`
+				windowHeightCurrent=\2;"'`;then continue;fi #skip on fail
 			#@@@TODO after size is set, the collected size always differ from the asked one...
 			if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
-				SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight
+				if ! SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight;then continue;fi #skip if fail
 				xdotool getwindowgeometry $windowId |grep "Geometry:"&&:
 			fi
 	
@@ -280,7 +280,7 @@ function FUNCorganize() {
 			eval `wmctrl -d |grep "[*] DG" |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 				viewportX=\1;\
 				viewportY=\2;"'`
-			SECFUNCexecA --echo xdotool windowmap $windowId	#why some windows get unmapped?
+			SECFUNCexecA --echo xdotool windowmap $windowId &&:	#why some windows get unmapped?
 			SECFUNCexecA --echo xdotool windowmove --sync $windowId \
 				$(( (basePosX-viewportX)+x )) \
 				$(( (basePosY-viewportY)+y )) &&: 2>/dev/null; # this can return error, but may not fail on next run...

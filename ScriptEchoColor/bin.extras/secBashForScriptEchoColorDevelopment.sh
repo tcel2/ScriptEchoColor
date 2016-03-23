@@ -38,6 +38,8 @@ export SECbFuncArraysRestoreVerbose=true
 eval `secinit --extras --nolog --force`
 declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 
+SECFUNCcheckActivateRunLog -v --forcestdin
+
 #declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
 export SECDEVstrSelfName="`readlink -f "$0"`";SECDEVstrSelfName="`basename "$SECDEVstrSelfName"`"
@@ -272,7 +274,13 @@ function SECFUNCaddToRcFile() {
 				declare -p astrCmdTmp
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
-				SECFUNCcheckActivateRunLog -v --restoredefaultoutputs
+#				SECFUNCcheckActivateRunLog -v --restoredefaultoutputs
+
+#				SECFUNCcheckActivateRunLog -v --forcestdin
+				
+#				ls -l --color /proc/$$/fd/*
+#				exec 1>&0 2>&0
+#				ls -l --color /proc/$$/fd/*
 				if ! $SECDEVbSecInit;then 
 					# all SEC environment will be cleared. 
 					# A SEC script will setup it again. 
