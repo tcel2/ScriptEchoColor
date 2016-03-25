@@ -123,6 +123,7 @@ bSpeak=false
 bGetc=false
 astrRunParams=("$@")
 bChangeWait=false
+CFGnKeepDelay=30
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
 afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
@@ -309,7 +310,7 @@ elif $bKeep;then
 		#SECFUNCexecA -ce xgamma -rgamma ${CFGafModGammaRGB[0]} -ggamma ${CFGafModGammaRGB[1]} -bgamma ${CFGafModGammaRGB[2]}
 		declare -p CFGafModGammaRGB
 		SECFUNCexecA -ce FUNCsetGamma "${CFGafModGammaRGB[@]}"
-		echoc -w -t 60 "keep gamma"
+		echoc -w -t $CFGnKeepDelay "keep gamma"
 	done
 elif $bRandom;then
 	if $SECbRunLog;then
