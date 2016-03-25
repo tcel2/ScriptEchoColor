@@ -480,6 +480,7 @@ function FUNCrun(){
 			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
 				SECFUNCcleanEnvironment; #all SEC environment will be cleared
 				#"$@";
+				declare -p PATH >>/dev/stderr
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
 				"${astrRunParams[@]}"
 			)&&:;local lnRetAtom=$?
@@ -545,9 +546,9 @@ function FUNCrun(){
 			lstrTxt+="\tPATH='$PATH'\n";
 			lstrTxt+="\tlbDevMode='$lbDevMode'\n";
 			lstrTxt+="\n";
-			lstrTxt+="Tips:\n";
-			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
-			lstrTxt+="\n";
+#			lstrTxt+="Tips:\n";
+#			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
+#			lstrTxt+="\n";
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";
@@ -557,13 +558,23 @@ function FUNCrun(){
 				local lbEvalCode=false
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
-				yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
-					--sticky --center --selectable-labels \
-					--button="retry:0" \
-					--button="retry(EvalCode):4" \
-					--button="retry-DEV:2" \
-					--button="retry-DEV(EvalCode):3" \
-					--button="gtk-close:1" ;nRet=$?
+				astrYadFields=(
+					bXterm #0
+				)
+				strYadOutput="`
+					yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
+						--sticky --center --selectable-labels \
+						--form --field "[${astrYadFields[0]}] Use Xterm:chk" \
+						--button="retry:0" \
+						--button="retry(EvalCode):4" \
+						--button="retry-DEV:2" \
+						--button="retry-DEV(EvalCode):3" \
+						--button="gtk-close:1" \
+						"${!astrYadFields[0]}"
+					`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
+				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
+				declare -p astrYadReturnValues
+				if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end

@@ -253,7 +253,7 @@ elif $bShowCriticalErrors;then
 elif $bShowErrors;then
 	#`less` requires log to be deactivated
 	SECFUNCcheckActivateRunLog --restoredefaultoutputs
-	grep --color "unbound variable" `find "/run/shm/.SEC.$USER/log/" -maxdepth 1 -type f -xtype f`
+	grep --color "unbound variable" `find "/run/shm/.SEC.$USER/log/" -maxdepth 1 -type f -xtype f`&&:
 	echoc -w "see run log next"
 	while ! SECFUNCexecA -ce less "$strFileErrorLog"&&:;do
 		echoc -w -t 60 "No errors on log."

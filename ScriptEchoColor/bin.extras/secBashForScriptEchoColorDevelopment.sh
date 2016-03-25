@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+#SECFUNCexecA -ce zenity --question&&:
+
 if ! type -P secinit >/dev/null;then
 	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >>/dev/stderr
 	exit 1
@@ -42,8 +44,6 @@ SECFUNCcheckActivateRunLog --report
 if [[ "$TERM" != "dumb" ]];then
 	SECFUNCcheckActivateRunLog -v --forcestdin
 fi
-
-#SECFUNCexecA -ce zenity --question&&:
 
 #declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
@@ -137,6 +137,7 @@ if $SECDEVbExecTwiceTest || ! SECFUNCexecA -ce cmp "$0" "$SECDEVstrProjectPath/b
 	SECDEVbExecTwice=true
 	SECDEVbExecTwiceTest=false # disabled now to prevent infinite loop
 fi
+declare -p SECDEVbExecTwice >>/dev/stderr
 
 if $SECDEVbFullDebug;then
 	export SEC_DEBUG=true
