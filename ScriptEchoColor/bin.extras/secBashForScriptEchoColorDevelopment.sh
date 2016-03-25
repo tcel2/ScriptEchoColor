@@ -38,7 +38,12 @@ export SECbFuncArraysRestoreVerbose=true
 eval `secinit --extras --nolog --force`
 declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 
-SECFUNCcheckActivateRunLog -v --forcestdin
+SECFUNCcheckActivateRunLog --report
+if [[ "$TERM" != "dumb" ]];then
+	SECFUNCcheckActivateRunLog -v --forcestdin
+fi
+
+#SECFUNCexecA -ce zenity --question&&:
 
 #declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
 
@@ -272,6 +277,7 @@ function SECFUNCaddToRcFile() {
 				declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
 				declare -p astrCmdTmp
+#				type "${astrCmdTmp[0]}"&&:
 #				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
 				#SECFUNCcheckActivateRunLog; #force log!
 #				SECFUNCcheckActivateRunLog -v --restoredefaultoutputs

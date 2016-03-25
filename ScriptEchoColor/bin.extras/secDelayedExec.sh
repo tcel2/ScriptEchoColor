@@ -545,6 +545,9 @@ function FUNCrun(){
 			lstrTxt+="\tPATH='$PATH'\n";
 			lstrTxt+="\tlbDevMode='$lbDevMode'\n";
 			lstrTxt+="\n";
+			lstrTxt+="Tips:\n";
+			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
+			lstrTxt+="\n";
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";

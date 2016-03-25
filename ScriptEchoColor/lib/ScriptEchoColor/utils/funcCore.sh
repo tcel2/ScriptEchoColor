@@ -1960,6 +1960,7 @@ function SECFUNCcheckActivateRunLog() { #help
 	local lbVerbose=false
 	local lastrAllParams=("${@-}")
 	local lbForceStdin=false
+	local lbSimpleReport=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCcheckActivateRunLog_help
 			SECFUNCshowHelp $FUNCNAME
@@ -1970,6 +1971,8 @@ function SECFUNCcheckActivateRunLog() { #help
 			lbRestoreDefaults=true
 		elif [[ "$1" == "--forcestdin" ]];then #SECFUNCcheckActivateRunLog_help will force all to point to stdin
 			lbForceStdin=true
+		elif [[ "$1" == "--report" || "$1" == "-r" ]];then #SECFUNCcheckActivateRunLog_help simple report
+			lbSimpleReport=true
 		elif [[ "$1" == "--inheritparent" || "$1" == "-i" ]];then #SECFUNCcheckActivateRunLog_help force inherit parent log
 			lbInheritParentLog=true
 		elif [[ "$1" == "--" ]];then #SECFUNCcheckActivateRunLog_help params after this are ignored as being these options
@@ -1982,17 +1985,23 @@ function SECFUNCcheckActivateRunLog() { #help
 		shift
 	done
 	
-	function SECFUNCcheckActivateRunLog_report(){
-		if $lbVerbose;then
+	function _SECFUNCcheckActivateRunLog_report(){
+		if $lbVerbose || $lbSimpleReport;then
 			echo "SECINFO: $FUNCNAME: ${lastrAllParams[@]}: $@" >>/dev/stderr
 			ls /proc/$$/fd -l >>/dev/stderr
+			declare -p SECbRunLogEnabled SECnRunLogTeePid SECstrRunLogFile SECstrRunLogFileDefault&&: >>/dev/stderr
 		fi
 	}
 	
+	if $lbSimpleReport;then
+		_SECFUNCcheckActivateRunLog_report
+		return 0
+	fi
+	
 	if $lbForceStdin;then
-		SECFUNCcheckActivateRunLog_report before
+		_SECFUNCcheckActivateRunLog_report before
 		exec 1>&0 2>&0
-		SECFUNCcheckActivateRunLog_report after
+		_SECFUNCcheckActivateRunLog_report after
 		return 0
 	fi
 	
@@ -2000,7 +2009,7 @@ function SECFUNCcheckActivateRunLog() { #help
 #		exec 1>/dev/stdout
 #		exec 2>/dev/stderr
 		if $SECbRunLogEnabled;then
-			SECFUNCcheckActivateRunLog_report before
+			_SECFUNCcheckActivateRunLog_report before
 			# 101 and 102 to try to avoid any conflicts
 			#TODO should check for fd availability...
 			if [[ -t 101 ]];then
@@ -2018,7 +2027,7 @@ function SECFUNCcheckActivateRunLog() { #help
 			fi
 			
 #			exec 1>&101 2>&102 #restore (if not yet enabled it would redirect to nothing and bug out)
-			SECFUNCcheckActivateRunLog_report after
+			_SECFUNCcheckActivateRunLog_report after
 			SECbRunLogEnabled=false
 		fi
 		return 0
@@ -2103,7 +2112,7 @@ function SECFUNCcheckActivateRunLog() { #help
 				fi
 			
 				SECbRunLogEnabled=true
-				SECFUNCcheckActivateRunLog_report enabled
+				_SECFUNCcheckActivateRunLog_report enabled
 			fi
 		fi
 #	fi
