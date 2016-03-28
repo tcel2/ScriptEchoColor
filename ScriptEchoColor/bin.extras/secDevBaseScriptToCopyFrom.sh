@@ -99,7 +99,6 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
- 
 strExample="DefaultValue"
 CFGstrTest="Test"
 astrRemainingParams=()
@@ -108,7 +107,9 @@ SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "\t#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
