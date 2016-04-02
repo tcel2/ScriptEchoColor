@@ -73,7 +73,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--display" ]];then #help <nDisplay>
 		shift
 		nDisplay="${1-}"
-	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same command)
+	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same title/command)
 		SECXbDaemon=true
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
@@ -227,12 +227,13 @@ function FUNCexecParams() {
 	eval `secinit`
 	
 	if $SECXbDaemon;then
+		echoc --info "Starting daemon for unique id '$strTitle'"
 		while true;do
 			#SECFUNCuniqueLock --id "$strTitle" --isdaemonrunning
 			SECFUNCuniqueLock --id "$strTitle" --setdbtodaemon #SECFUNCdaemonUniqueLock $strTitle
 			
 			if $SECbDaemonWasAlreadyRunning;then
-				echoc --info "waiting other daemon exit"
+				echoc --info "waiting other daemon exit, id '$strTitle'"
 				sleep 1
 				continue;
 			fi	
