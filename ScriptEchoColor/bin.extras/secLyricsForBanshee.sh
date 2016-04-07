@@ -286,13 +286,14 @@ while true; do
 					if $bGraphicalDialog;then
 						#cat "$strLyricsFile" >"$strFileLyricsTmp"
 						ln -sf "$strLyricsFile" "$strFileLyricsTmp"
-						echoc -x "enscript -f \"Times-Roman14\" \"`readlink -f "$strFileLyricsTmp"`\" -p \"${strFileLyricsTmp}.pdf\""
+						SECFUNCexecA -ce enscript -f "Times-Roman14" "`readlink -f "$strFileLyricsTmp"`" -p "${strFileLyricsTmp}.pdf"
 					else
 						cat "$strLyricsFile" |less & pidLess="$!"
 					fi
 				fi
 			else
-				echoc --alert "File not found: '$strLyricsFile'"
+				echoc --alert "File not found!"
+				echoc --info "strLyricsFile='$strLyricsFile'"
 				for nIndex in "${!aLyricsSiteAndStrings[@]}";do
 					if FUNConlineLyrics $nIndex "$strLyricsFile";then
 						bJustDownloadedLyrics=true
@@ -300,7 +301,8 @@ while true; do
 					fi
 				done
 				if ! $bJustDownloadedLyrics;then
-					echo "Lyrics for '`basename "${strLyricsFile%.lyrics}"`' is Missing..." |enscript -f "Times-Roman14" -p "${strFileLyricsTmp}.pdf"
+					echo "Lyrics for '`basename "${strLyricsFile%.lyrics}"`' is Missing..." \
+						|enscript -f "Times-Roman14" -p "${strFileLyricsTmp}.pdf"
 				fi
 			fi
 			#pidLess="$(sh -c 'cat "$strLyricsFile" |less & echo ${!}')" #less wont work this way
