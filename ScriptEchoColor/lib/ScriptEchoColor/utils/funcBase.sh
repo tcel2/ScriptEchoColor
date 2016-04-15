@@ -645,6 +645,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbFunctionInfoShow=true;
 	local lstrChildReference=""
 	local lstrReadStatus=""
+	local lbCleanEnv=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -657,6 +658,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		elif [[ "$1" == "--callerfunc" ]];then #SECFUNCexec_help <FUNCNAME>
 			shift
 			SEClstrFuncCaller="${1}"
+		elif [[ "$1" == "--cleanenv" || "$1" == "-l" ]];then #SECFUNCexec_help will clean the environment from this lib variables when running the command
+			lbCleanEnv=true
 		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCexec_help output colored
 			lbColorize=true
 		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr (logging overrides this)
@@ -925,37 +928,43 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			echo "cmd${SECcharTab}${lastrParamsToExec[@]}" >>"$lstrFileRetVal"
 		fi
 		
+		function SECFUNCexec_runQuartz(){
+			if $lbCleanEnv;then
+				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")
+			else
+				"${lastrParamsToExec[@]}"
+			fi
+		}
+		
 		if $lbDoLog;then
 			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
 			if $lbChild;then
 			  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-				"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
+				SECFUNCexec_runQuartz >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
 			else
 				echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-				"${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+				SECFUNCexec_runQuartz &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
 			fi
 		else
 			if $lbOmitOutput;then
 				if $lbChild;then # detach always require log, above
-					"${lastrParamsToExec[@]}" >/dev/null 2>&1 &	lnPidChild=$!
+					SECFUNCexec_runQuartz >/dev/null 2>&1 &	lnPidChild=$!
 				else
-					"${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuartz &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
 				fi
 			else
 				if $lbChild;then # detach always require log, above
-					"${lastrParamsToExec[@]}" &	lnPidChild=$!
+					SECFUNCexec_runQuartz &	lnPidChild=$!
 				else
-					"${lastrParamsToExec[@]}" &&: ;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuartz &&: ;lnSECFUNCexecReturnValue=$?
 				fi
 			fi
 		fi
 		
-#		if [[ -n "$lnPidChild" ]];then # detach is also child
 		if $lbChild;then # detach is also child
 			echo "pid${SECcharTab}$lnPidChild" >>"$lstrFileRetVal"
 			
 #			if ! $lbDetach;then	trap "kill -SIGABRT $lnPidChild" exit SIGHUP SIGINT SIGQUIT SIGILL SIGABRT SIGFPE SIGKILL SIGSEGV SIGPIPE SIGTERM; fi
-			#trap >>/dev/stderr
 			function SECFUNCexec_atomKill(){ #help trapping exit signals didnt work...
 				# to test this: FUNCtst(){ trap 'echo oi' KILL;trap 'echo oi' TERM;sleep 1000; };SECFUNCexecA -ce --child FUNCtst;echo $SEClstrFuncExecLastChildRef
 				while [[ -d "/proc/$1" ]];do sleep 1;done;
@@ -968,38 +977,10 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			echo "exitSignalInfo${SECcharTab}`SECFUNCerrCodeExplained ${lnRet}`" >>"$lstrFileRetVal";
 		fi
 				
-#		local lnRet
-#		if $lbDetach || ( $lbDoLog && $lbChild );then
-#			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
-#			"${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
-#		elif $lbChild;then
-#			"${lastrParamsToExec[@]}" &	lnPidChild=$!
-#		elif $lbDoLog;then
-#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-#		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
-#		else
-#			"${lastrParamsToExec[@]}" &&: ; lnRet=$?
-#		fi
-		
-#		if [[ -z "$lnRet" ]];then
-#		if $lbChild;then # detach is also child
-#			wait $lnPidChild;lnRet=$?;echo "ret${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
-#		fi
-		
 		local lnDelayEndTimeChild=`SECFUNCdtFmt`
 		
-#		trap >>/dev/stderr
-#		echo "asdf`SECFUNCbcPrettyCalcA --help`" >>/dev/stderr
-#		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>/dev/stderr
-#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
-#		alias SECFUNCbcPrettyCalcA >>/dev/stderr
-#		echo "AAA`alias SECFUNCbcPrettyCalcA`" >>/dev/stderr
-#		echo "AAA`SECFUNCbcPrettyCalcA 1+2`" >>/dev/stderr
-#		echo "elapsed${SECcharTab}`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`" >>/dev/stderr
-#		set -x
 		local lnElapsed="`SECFUNCbcPrettyCalcA "$lnDelayEndTimeChild-$lnDelayInitTimeChild"`"
 		echo "elapsed${SECcharTab}${lnElapsed}" >>"$lstrFileRetVal";
-#		set +x
 		
 		return 0
 	}
