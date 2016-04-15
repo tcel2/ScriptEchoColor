@@ -928,7 +928,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			echo "cmd${SECcharTab}${lastrParamsToExec[@]}" >>"$lstrFileRetVal"
 		fi
 		
-		function SECFUNCexec_runQuartz(){
+		function SECFUNCexec_runQuark(){
 			if $lbCleanEnv;then
 				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")
 			else
@@ -940,23 +940,23 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			echo "logfile${SECcharTab}$SEClstrLogFileSECFUNCexec" >>"$lstrFileRetVal"
 			if $lbChild;then
 			  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-				SECFUNCexec_runQuartz >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
+				SECFUNCexec_runQuark >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
 			else
 				echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-				SECFUNCexec_runQuartz &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+				SECFUNCexec_runQuark &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
 			fi
 		else
 			if $lbOmitOutput;then
 				if $lbChild;then # detach always require log, above
-					SECFUNCexec_runQuartz >/dev/null 2>&1 &	lnPidChild=$!
+					SECFUNCexec_runQuark >/dev/null 2>&1 &	lnPidChild=$!
 				else
-					SECFUNCexec_runQuartz &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuark &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
 				fi
 			else
 				if $lbChild;then # detach always require log, above
-					SECFUNCexec_runQuartz &	lnPidChild=$!
+					SECFUNCexec_runQuark &	lnPidChild=$!
 				else
-					SECFUNCexec_runQuartz &&: ;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuark &&: ;lnSECFUNCexecReturnValue=$?
 				fi
 			fi
 		fi
