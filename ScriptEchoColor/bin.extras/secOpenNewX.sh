@@ -426,7 +426,7 @@ function FUNCscript() {
   	SECFUNCdbgFuncOutA;return
   elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
     #FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
-    secXtermDetached.sh FUNCshowHelp $DISPLAY 30
+    secXtermDetached.sh FUNCshowHelp $DISPLAY #30
   elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
     if FUNCisScreenLockRunning ${1-};then
       exit 0
@@ -1129,7 +1129,7 @@ fi
 
 #FUNCxtermDetached --waitX1exit FUNCshowHelp :0&
 #FUNCxtermDetached --waitX1exit FUNCshowHelp :1&
-secXtermDetached.sh --display :1 FUNCshowHelp :1 30
+secXtermDetached.sh --display :1 FUNCshowHelp :1 #30
 #pidZenity0=$!
 
 secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
