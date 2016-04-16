@@ -66,16 +66,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
 		shift
 		nDelayAtLoops="${1-}"
-	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." (LOOP) when the custom command return true (0), allows waiting instances to run; so must return non 0 to keep holding them.
+	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." ~daemon when the custom command return true (0), allows waiting instances to run; so must return non 0 to keep holding them.
 		shift
 		strCustomCommand="${1-}"
 		bCheckPointDaemon=true
-	elif [[ "$1" == "--checkpointdaemonhold" ]];then #help like --checkpointdaemon, but will prompt user before releasing the scripts
+	elif [[ "$1" == "--checkpointdaemonhold" ]];then #help "<command> <params>..." ~daemon like --checkpointdaemon, but will also prompt user before releasing the scripts
 		shift
 		strCustomCommand="${1-}"
 		bCheckPointDaemon=true
 		bCheckPointDaemonHold=true
-	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help (LOOP) after nSleepFor, also waits checkpoint tmp file to be removed
+	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help ~loop after nSleepFor, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--nounique" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
@@ -99,7 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCechoErrA "invalid option '$1'" >>/dev/stderr
 		exit 1
 	fi
-	shift
+	shift&&:
 done
 
 export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
@@ -574,7 +574,9 @@ function FUNCrun(){
 					`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
 				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues
-				if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+				if((`SECFUNCarraySize astrYadReturnValues`>0));then
+					if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+				fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end
