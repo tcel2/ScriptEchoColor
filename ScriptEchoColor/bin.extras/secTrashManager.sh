@@ -165,21 +165,45 @@ while true;do
 						|sort \
 						|head -n $nFileCountPerStep)&&:
 			fi
-			# COOL!
+			if false;then # Good and precise but too slow if there are too many files...
+				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+					find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
+						|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+						|sort \
+						|head -n $nFileCountPerStep)&&:
+			fi
+			# This will use the trashinfo file datetime as reference! probably 100% precise!
+			# A token '&' is used to help on precisely parsing the `ls` output making it usable with `cut`.
 			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-				find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
-					|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
-					|sort \
-					|head -n $nFileCountPerStep)&&:
-					
+				ls -ltr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
+					|head -n $((nFileCountPerStep+1)) \
+					|tail -n +2 \
+					|sed -r -e 's"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"' -e 's".trashinfo$""' )&&:
+#			# `tail` +2 to skip total line. `sed` to convert 1st space to tab making it usable with `cut`
+#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+#				ls -ltr --time-style='+%Y%m%d+%H%M%S.%N' "../info/" \
+#					|tail -n +2 \
+#					|head -n $nFileCountPerStep \
+#					|cut -d' ' -f6- \
+#					|sed -r -e 's" "\t"' -e 's".trashinfo$""' )&&:
+#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+#				ls -ltr --time-style=full-iso "../info/" \
+#					|tail -n +2 \
+#					|head -n $nFileCountPerStep \
+#					|cut -d' ' -f6-7,9- \
+#					|sed -r -e 's" "+"' -e 's" "\t"' -e 's".trashinfo$""' )&&:
+			
 			if((`SECFUNCarraySize astrEntryList`>0));then
 				nRmCount=0
 				nRmSizeTotalB=0
 				nAvailSizeB4RmB=$((`FUNCavailFS`*1000000))&&: # from M to B
 				# has date and filename
 				for strEntry in "${astrEntryList[@]}";do
-					bDirectory=false
+					strFileDT="`echo "$strEntry" |cut -f1`"
 					strFile="`echo "$strEntry" |cut -f2`"
+#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
+					
+					bDirectory=false
 					if [[ -d "$strFile" ]];then 
 						bDirectory=true
 #						SECFUNCechoWarnA "Directories are not supported yet '$strFile'" #TODO remove directories?
@@ -195,7 +219,6 @@ while true;do
 						continue; 
 					fi 
 					
-					strFileDT="`echo "$strEntry" |cut -f1`"
 					if $bDirectory;then
 						nFileSizeB="`du -bs "$strFile/" |cut -f1`"
 					else
@@ -237,7 +260,7 @@ while true;do
 			fi
 		fi
 		
-		if $bTest;then break;fi # to work at only the user default trash folder
+		#if $bTest;then break;fi # to work at only the user default trash folder
 		
 	done
 
