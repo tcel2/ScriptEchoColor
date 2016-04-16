@@ -1091,8 +1091,40 @@ varset --show pidX1=`FUNCisX1running`
 echoc --say "X at `ps -A -o tty,comm |grep Xorg |grep -v tty7 |grep -o "tty." |sed 's"."& "g'`"
 
 if [[ -n "$strGeometry" ]];then
-	xrandr -display :1 -s $strGeometry
-	sleep 1
+#	zenity --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
+#		--text "This is a dummy window to let Xorg initialize\nproperly before changing resolution..."
+	
+	nBlindDelay=1
+	
+	strMsg="New resolution: $strGeometry.\n"
+	strMsg+="This is a dummy window to help Xorg initialize\n"
+	strMsg+=" properly while changing resolution.\n"
+	#strMsg+="Click here to continue...\n"
+	#strMsg+="(this window must receive focus for this workaround to work...)\n"
+	zenity --timeout=60 --display=:1 --info --title "$SECstrScriptSelfName" --text "$strMsg"&
+#	echoc -w -t $nBlindDelay	"sleep ${nBlindDelay}s safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry...
+	
+	# if the resolution is not set properly, the desktop will be bigger and scrolling and xgamma will not work either.
+#	echoc -w -t 5 "sleep safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry
+
+	SECFUNCexecA -ce xrandr -display :1 -s "$strGeometry"
+#	echoc -w -t $nBlindDelay "sleep ${nBlindDelay}s safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry...
+	
+	#zenity --display=:1 --info --title "$SECstrScriptSelfName" --text "One more time...\n$strMsg"&
+	
+#	echoc -w -t 5
+	
+#	echoc -w -t 5 "sleep safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry
+	
+#	zenity --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
+#		--text "This is a dummy window to let Xorg initialize\nproperly after changing resolution..."
+	
+	# if the resolution is not set properly, the desktop will be bigger and scrolling and xgamma will not work either.
+#	echoc -w -t 3 "sleep safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry
+	
+#	while ! DISPLAY=:1 xrandr |egrep "[*]" |grep "$strGeometry";do
+#		echoc -w -t 3 "waiting X :1 resolution be set..."
+#	done
 fi
 
 #FUNCxtermDetached --waitX1exit FUNCshowHelp :0&

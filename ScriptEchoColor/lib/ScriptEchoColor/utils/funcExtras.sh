@@ -150,6 +150,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		SECFUNCechoErrA "lstrWindowTitleRegex='$lstrWindowTitleRegex' missing"
 		return 1
 	fi
+	export lstrWindowTitleRegex
 	
 	local lstrWarnMsg="still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex'"
 	if $lbWait;then
@@ -169,6 +170,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			if $lbStop;then
 				break
 			fi
+			export lstrWindowTitleRegex
 			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
 			if SECFUNCisNumber -nd "$lnWindowId";then
 				##################
@@ -204,15 +206,15 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 					break;
 				fi
 			fi
-			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg (to stop this, execute \`kill $BASHPID\`)"
+			SEC_WARN=true SECFUNCechoWarn "$lstrWarnMsg (to stop this, execute \`kill $BASHPID\`)" #TODO why other aliases work while the alias SECFUNCechoWarnA fails while running secOpenNewX.sh?
 			sleep $lnDelay;
 			
 			if SECFUNCdelay lnTimeout --checkorinit $lnTimeout;then
-				SECFUNCechoErrA "$lstrWarnMsg (TIMEOUT)"
+				SECFUNCechoErr "$lstrWarnMsg (TIMEOUT)"
 				break;
 			fi
 		done	
-	}
+	};export -f SECFUNCCwindowCmd_ChildLoop
 	(SECFUNCCwindowCmd_ChildLoop)&lnChildPid=$!;if ! $lbChild;then wait;fi
 	
 	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
