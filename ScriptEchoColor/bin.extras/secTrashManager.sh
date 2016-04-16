@@ -24,7 +24,8 @@
 
 eval `secinit`
 
-strTrashFolder="$HOME/.local/share/Trash/files/"
+strTrashFolderUser="$HOME/.local/share/Trash/files/"
+strTrashFolder=""
 nFSSizeAvailGoalMB=1000 #1GB
 nFileCountPerStep=100
 
@@ -86,45 +87,60 @@ fi
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
+SECFUNCuniqueLock --waitbecomedaemon
 
 function FUNCavailFS(){
 	df -BM --output=avail "$strTrashFolder" |tail -n 1 |tr -d M
 }
 
-SECFUNCexecA -ce cd "$strTrashFolder"
 while true;do
-	echo "Available `FUNCavailFS`MB, nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB'"
-	if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
-		nTrashSize="`du -sh ./ |cut -d'M' -f1`"
-		echoc --info "nTrashSize='$nTrashSize'"
-		
-		IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-			find "./" -type f -printf '%T+\t%p\n' \
-				|sort \
-				|head -n $nFileCountPerStep)&&:
-		
-		if((`SECFUNCarraySize astrEntryList`>0));then
-			nRmCount=0
-			# has date and filename
-			for strEntry in "${astrEntryList[@]}";do
-				strFile="`echo "$strEntry" |cut -f2`"
-				nFileSizeB="`stat -c "%s" "$strFile"`"
-				nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
-				((nRmCount++))&&:
-				
-				echo "nRmCount='$nRmCount',strFile='$strFile',nFileSizeB='$nFileSizeB',AvailMB='`FUNCavailFS`'"
-			
-				rm -vf "$strFile"&&:
-				
-				if $bTest || ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
-					break;
-				fi
-			done
+	astrMountedFSList=(`df --output=target |tail -n +2`);
+	astrMountedFSList+=("$strTrashFolderUser")
+	for strMountedFS in "${astrMountedFSList[@]}";do
+		if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
+			strTrashFolder="$strMountedFS"
 		else
-			echoc --info "trash is empty"
+			strTrashFolder="$strMountedFS/.Trash-1000/files/"
 		fi
-	fi
-	
+		ls -ld "$strTrashFolder"&&:
+		if [[ ! -d "$strTrashFolder" ]];then continue;fi
+		
+		SECFUNCexecA -ce cd "$strTrashFolder"
+		echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',strTrashFolder='$strTrashFolder'"
+		
+		if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
+			nTrashSize="`du -sh ./ |cut -d'M' -f1`"
+			echoc --info "nTrashSize='$nTrashSize'"
+		
+			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+				find "./" -type f -printf '%T+\t%p\n' \
+					|sort \
+					|head -n $nFileCountPerStep)&&:
+		
+			if((`SECFUNCarraySize astrEntryList`>0));then
+				nRmCount=0
+				# has date and filename
+				for strEntry in "${astrEntryList[@]}";do
+					strFile="`echo "$strEntry" |cut -f2`"
+					nFileSizeB="`stat -c "%s" "$strFile"`"
+					nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
+					((nRmCount++))&&:
+				
+					echo "nRmCount='$nRmCount',strFile='$strFile',nFileSizeB='$nFileSizeB',AvailMB='`FUNCavailFS`'"
+			
+					rm -vf "$strFile"&&:
+				
+					if $bTest || ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
+						break;
+					fi
+				done
+			else
+				echoc --info "trash is empty"
+			fi
+		fi
+		
+	done
+
 	echoc -w -t 60
 done		
 
