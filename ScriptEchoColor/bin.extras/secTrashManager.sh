@@ -25,6 +25,7 @@
 eval `secinit`
 
 strTrashFolderUser="$HOME/.local/share/Trash/files/"
+echo "strTrashFolderUser='$strTrashFolderUser'"
 strTrashFolder=""
 nFSSizeAvailGoalMB=1000 #1GB
 nFileCountPerStep=100
@@ -37,6 +38,9 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bTest=false
+bDummyRun=false
+strChkTrashConsistencyFolder=false
+#bTouchToDelDT=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -52,10 +56,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--step" || "$1" == "-s" ]];then #help <nFileCountPerStep> per check will work with this files count
 		shift
 		nFileCountPerStep="${1-}"
-	elif [[ "$1" == "--test" || "$1" == "-t" ]];then #help <strExample> MISSING DESCRIPTION
-#		shift
-#		strExample="${1-}"
+	elif [[ "$1" == "--test1" ]];then #help will work in one trashed file
 		bTest=true
+	elif [[ "$1" == "--chk" ]];then #help <strChkTrashConsistencyFolder> ~single check trashinfo consistency and exit
+		shift
+		strChkTrashConsistencyFolder="${1-}"
+	elif [[ "$1" == "--dummy" ]];then #help ~debug will not remove the trashed files
+		bDummyRun=true
+#	elif [[ "$1" == "--touch" ]];then #help will touch all files at trash to their trashing datetime
+#		bTouchToDelDT=true
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
@@ -86,6 +95,27 @@ fi
 
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+#if $bTouchToDelDT;then
+#	strTouchDT="`egrep "^DeletionDate=" "$strFile" |cut -d'=' -f2`"
+#	exit 0
+#fi
+
+if [[ -d "$strChkTrashConsistencyFolder" ]];then
+	cd "$strChkTrashConsistencyFolder/"
+	FUNCchkTrashInfo(){ 
+#		if [[ "$1" == "." ]];then return;fi
+		strTrashInfoFile="../info/$1.trashinfo"; 
+		if [[ ! -f "$strTrashInfoFile" ]];then 
+			echo "MISSING: $strTrashInfoFile";
+		else
+			echo -ne "`date`: Still checking...\r"
+		fi; 
+	};export -f FUNCchkTrashInfo;
+	find "./" -maxdepth 1 -not -iname "." -exec bash -c "FUNCchkTrashInfo '{}'" \;
+	
+	exit 0
+fi
+
 # Main code
 SECFUNCuniqueLock --waitbecomedaemon
 
@@ -94,43 +124,111 @@ function FUNCavailFS(){
 }
 
 while true;do
-	astrMountedFSList=(`df --output=target |tail -n +2`);
-	astrMountedFSList+=("$strTrashFolderUser")
+	astrMountedFSList=("$strTrashFolderUser")
+	astrMountedFSList+=(`df --output=target |tail -n +2`);
 	for strMountedFS in "${astrMountedFSList[@]}";do
+		# Validations
 		if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
 			strTrashFolder="$strMountedFS"
 		else
 			strTrashFolder="$strMountedFS/.Trash-1000/files/"
 		fi
-		ls -ld "$strTrashFolder"&&:
+		SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
+		if ! echo "$strTrashFolder" |grep -qi "trash";then 
+			# minimal :( safety check ...
+			SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
+			continue;
+		fi
+#		ls -ld "$strTrashFolder"&&:
 		if [[ ! -d "$strTrashFolder" ]];then continue;fi
 		
 		SECFUNCexecA -ce cd "$strTrashFolder"
-		echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',strTrashFolder='$strTrashFolder'"
+		nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
+		echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+		if((nTrashSizeMB==0));then continue;fi
 		
+		# Remove files
 		if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
-			nTrashSize="`du -sh ./ |cut -d'M' -f1`"
-			echoc --info "nTrashSize='$nTrashSize'"
-		
+#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
+#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
+			
+			if false;then # BAD.. will not consider the file trashing time...
+				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+					find "./" -type f -printf '%T+\t%p\n' \
+						|sort \
+						|head -n $nFileCountPerStep)&&:
+			fi
+			if false;then # BAD... too many files on the list, will fail cmd param size limit...
+				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+					egrep "^DeletionDate=" -H ../info/*.trashinfo \
+						|sed -r 's"(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+						|sort \
+						|head -n $nFileCountPerStep)&&:
+			fi
+			# COOL!
 			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-				find "./" -type f -printf '%T+\t%p\n' \
+				find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
+					|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
 					|sort \
 					|head -n $nFileCountPerStep)&&:
-		
+					
 			if((`SECFUNCarraySize astrEntryList`>0));then
 				nRmCount=0
+				nRmSizeTotalB=0
+				nAvailSizeB4RmB=$((`FUNCavailFS`*1000000))&&: # from M to B
 				# has date and filename
 				for strEntry in "${astrEntryList[@]}";do
+					bDirectory=false
 					strFile="`echo "$strEntry" |cut -f2`"
-					nFileSizeB="`stat -c "%s" "$strFile"`"
+					if [[ -d "$strFile" ]];then 
+						bDirectory=true
+#						SECFUNCechoWarnA "Directories are not supported yet '$strFile'" #TODO remove directories?
+#						continue
+					elif [[ -L "$strFile" ]];then 
+						: # symbolic links are ok
+					elif [[ ! -f "$strFile" ]];then 
+						# delete the trashinfo file for a missing trashed file
+						SECFUNCechoWarnA "Missing real file strFile='$strFile', removing trashinfo for it."
+						if ! $bDummyRun;then
+							rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+						fi
+						continue; 
+					fi 
+					
+					strFileDT="`echo "$strEntry" |cut -f1`"
+					if $bDirectory;then
+						nFileSizeB="`du -bs "$strFile/" |cut -f1`"
+					else
+						nFileSizeB="`stat -c "%s" "$strFile"`"
+					fi
 					nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
 					((nRmCount++))&&:
+					
+					strReport=""
+					strReport+="nRmCount='$nRmCount',"
+					strReport+="strFile='$strFile',"
+					strReport+="nFileSizeB='$nFileSizeB',"
+					strReport+="strFileDT='$strFileDT',"
+					strReport+="AvailMB='`FUNCavailFS`',"
+					strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
+					echo "$strReport"
+					
+					if ! $bDummyRun;then
+						if ! $bDirectory;then
+							# extra security on removing a file, will use it's full path, therefore surely inside of trash folder
+							rm -vf "/$strTrashFolder/$strFile"
+						else
+							# removes directory recursively
+							SECFUNCexecA -ce rm -rvf "/$strTrashFolder/$strFile/"
+						fi
+						rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+					fi
+					
+					((nRmSizeTotalB+=nFileSizeB))&&:
 				
-					echo "nRmCount='$nRmCount',strFile='$strFile',nFileSizeB='$nFileSizeB',AvailMB='`FUNCavailFS`'"
-			
-					rm -vf "$strFile"&&:
-				
-					if $bTest || ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
+					if $bTest;then break;fi # to work at only with one file
+					# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
+					if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nFSSizeAvailGoalMB*1000000) ));then
 						break;
 					fi
 				done
@@ -138,6 +236,8 @@ while true;do
 				echoc --info "trash is empty"
 			fi
 		fi
+		
+		if $bTest;then break;fi # to work at only the user default trash folder
 		
 	done
 

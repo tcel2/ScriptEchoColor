@@ -1259,11 +1259,11 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
-		shift
+		shift&&:
 	done
 	
 	local lstrWords="${1-}";
-	shift
+	shift&&:
 	local lstrFill="${1-}"
 
 	local sedRemoveFormatChars='s"[\]E[[][[:digit:]]*m""g'
