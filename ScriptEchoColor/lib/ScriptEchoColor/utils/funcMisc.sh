@@ -503,11 +503,13 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 		SECcfgFileName="$lpath/${1}.cfg"
 	#fi
 	else
-	#if [[ -z "$SECcfgFileName" ]];then
-		local lstrCanonicalFileName="`readlink -f "$0"`"
-		#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >>/dev/stderr
-		#SECcfgFileName="$lpath/`basename "$0"`.cfg"
-		SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
+		if [[ -z "$SECcfgFileName" ]];then
+		#if [[ -z "$SECcfgFileName" ]];then
+			local lstrCanonicalFileName="`readlink -f "$0"`"
+			#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >>/dev/stderr
+			#SECcfgFileName="$lpath/`basename "$0"`.cfg"
+			SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
+		fi
 	fi
 	
 	if $lbGetFilename;then

@@ -102,6 +102,13 @@ function FUNCsetGamma() { #<fR> <fG> <fB>
 		-bgamma "`FUNCchkFixGammaComponent "$3"`"
 }
 
+strCfgByDisplay="`SECFUNCfixId -f "${SECstrScriptSelfName}_Display${DISPLAY}"`"
+SECFUNCcfgFileName "$strCfgByDisplay"
+#echo "SECcfgFileName='$SECcfgFileName'"
+#SECFUNCcfgFileName --get
+#SECFUNCcfgFileName --show
+#exit 0
+
 bChange=false
 bChangeUp=false
 bChangeDown=false
@@ -124,6 +131,7 @@ bGetc=false
 astrRunParams=("$@")
 bChangeWait=false
 CFGnKeepDelay=30
+SECFUNCcfgFileName --get
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
 afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
@@ -239,6 +247,11 @@ if $bSetCurrent;then
 	fi
 fi
 
+#if $bKeep;then # Keep Daemon - PART1
+#	SECFUNCuniqueLock --daemonwait --id "$strCfgByDisplay"
+#	echo "SECcfgFileName='$SECcfgFileName'"
+#fi
+
 if $bSetBase;then
 	CFGafBaseGammaRGB=(`FUNCgetCurrentGammaRGB`)
 	declare -p CFGafBaseGammaRGB
@@ -294,22 +307,31 @@ elif $bSetCurrent;then
 	#CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
 	declare -p CFGafModGammaRGB
 	SECFUNCcfgWriteVar CFGafModGammaRGB
-elif $bKeep;then
-	SECFUNCuniqueLock --daemonwait
-#	if ! SECFUNCarrayCheck CFGafBaseGammaRGB;then
-#		SECFUNCechoWarnA "setting required base"
-#		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
-#	fi
-
-#	CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB`)
-#	declare -p CFGafModGammaRGB
-#	SECFUNCcfgWriteVar CFGafModGammaRGB
+elif $bKeep;then  # Keep Daemon - PART2
+	SECFUNCuniqueLock --daemonwait --id "$strCfgByDisplay"
 	
+#	strCfgByDisplay="${SECstrScriptSelfName}_DaemonKeep_Display${DISPLAY}"
+#	
+#	SECFUNCuniqueLock --daemonwait --id "$strCfgByDisplay"
+##	if ! SECFUNCarrayCheck CFGafBaseGammaRGB;then
+##		SECFUNCechoWarnA "setting required base"
+##		SECFUNCexecA -ce $SECstrScriptSelfName --setbase
+##	fi
+
+##	CFGafModGammaRGB=(`FUNCgetCurrentGammaRGB`)
+##	declare -p CFGafModGammaRGB
+##	SECFUNCcfgWriteVar CFGafModGammaRGB
+#	
+#	SECFUNCcfgFileName "$strCfgByDisplay"
+#	echo "SECcfgFileName='$SECcfgFileName'"
 	while true;do
 		SECFUNCcfgReadDB CFGafModGammaRGB
 		#SECFUNCexecA -ce xgamma -rgamma ${CFGafModGammaRGB[0]} -ggamma ${CFGafModGammaRGB[1]} -bgamma ${CFGafModGammaRGB[2]}
-		declare -p CFGafModGammaRGB
-		SECFUNCexecA -ce FUNCsetGamma "${CFGafModGammaRGB[@]}"
+		if declare -p CFGafModGammaRGB;then
+			SECFUNCexecA -ce FUNCsetGamma "${CFGafModGammaRGB[@]}"
+		else
+			echoc -p "CFGafModGammaRGB is not set?"
+		fi
 		echoc -w -t $CFGnKeepDelay "keep gamma"
 	done
 elif $bRandom;then
