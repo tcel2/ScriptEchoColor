@@ -1094,7 +1094,7 @@ if [[ -n "$strGeometry" ]];then
 #	zenity --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
 #		--text "This is a dummy window to let Xorg initialize\nproperly before changing resolution..."
 	
-	nBlindDelay=1
+	nBlindDelay=5
 	
 	strMsg="New resolution: $strGeometry.\n"
 	strMsg+="This is a dummy window to help Xorg initialize\n"
@@ -1102,6 +1102,10 @@ if [[ -n "$strGeometry" ]];then
 	#strMsg+="Click here to continue...\n"
 	#strMsg+="(this window must receive focus for this workaround to work...)\n"
 	zenity --timeout=60 --display=:1 --info --title "$SECstrScriptSelfName" --text "$strMsg"&
+	
+	zenity --timeout=$nBlindDelay --display=:1 --info --title "$SECstrScriptSelfName" \
+		--text "Holding ${nBlindDelay}s\n$strMsg"&&: # to try to let Xorg stabilize b4 xrandr
+	
 #	echoc -w -t $nBlindDelay	"sleep ${nBlindDelay}s safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry...
 	
 	# if the resolution is not set properly, the desktop will be bigger and scrolling and xgamma will not work either.
