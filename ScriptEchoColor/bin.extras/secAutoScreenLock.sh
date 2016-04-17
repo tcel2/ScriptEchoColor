@@ -127,10 +127,10 @@ varset strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.l
 if $bLockedCheckOnly;then
 	while ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;do
 		if $bIgnoreDaemon;then
-			SECFUNCechoWarnA "daemon not running, unity log will not be available"
+			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
 			break;
 		fi
-		echoc -w -t 3 "waiting for daemon..."
+		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
 	done
 	SECFUNCvarReadDB strUnityLog
 	

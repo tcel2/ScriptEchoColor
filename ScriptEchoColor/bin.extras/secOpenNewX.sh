@@ -672,6 +672,7 @@ function FUNCshowHelp() {
 #  zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
 	strTitleRegex="OpenNewX: your Custom Commands! ppid$$"
 	SECFUNCCwindowCmd --ontop --maximize "$strTitleRegex"
+#	SECFUNCCwindowCmd --maximize "$strTitleRegex"
   SECFUNCexec --echo -c zenity --display=$1 $timeout --title "$strTitleRegex" --text-info --filename="$helpFile"
 	# will wait zenity exit
   SECFUNCCwindowCmd --stop "$strTitleRegex"
