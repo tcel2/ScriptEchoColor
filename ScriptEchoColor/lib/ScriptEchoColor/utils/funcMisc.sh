@@ -224,6 +224,8 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	fi
 	lstrBaseId="`SECFUNCfixIdA -f "$lstrBaseId"`"
 	
+	local lstrPrefixMsg="$FUNCNAME:$lstrBaseId:"
+	
 	# code here
 	SECFUNCcfgReadDB
 	local lbCfgStopReq="CFGb${lstrBaseId}StopRequest"
@@ -233,16 +235,26 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	
 	if $lbStop;then
 		SECFUNCcfgWriteVar "$lbCfgStopReq"=true
+		if $lbSpeak;then secSayStack.sh "stop requested";fi
+		while ${!lbCfgStopReq};do
+			SECFUNCcfgReadDB
+			echo -en "${lstrPrefixMsg} Waiting stop request '$lstrBaseId' be accepted for ${SECONDS}s\r" >>/dev/stderr
+		done
 	elif $lbContinue;then
 		SECFUNCcfgWriteVar "$lbCfgContinueReq"=true
+		if $lbSpeak;then secSayStack.sh "continue requested";fi
+		while ${!lbCfgContinueReq};do
+			SECFUNCcfgReadDB
+			echo -en "${lstrPrefixMsg} Waiting continue request '$lstrBaseId' be accepted for ${SECONDS}s\r" >>/dev/stderr
+		done
 	elif $lbCheckHold;then
 		if ${!lbCfgStopReq};then
 			if $lbSpeak;then secSayStack.sh "stop request accepted";fi
-			SECFUNCcfgWriteVar "$lbCfgStopReq"=false
 			SECONDS=0
 			while ! ${!lbCfgContinueReq};do
 				SECFUNCcfgReadDB
-				echo -en "$FUNCNAME:$lstrBaseId:Holding exec for ${SECONDS}s\r" >>/dev/stderr
+				SECFUNCcfgWriteVar "$lbCfgStopReq"=false # put here to keep accepting stop requests in case they happen more than one time...
+				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for ${SECONDS}s\r" >>/dev/stderr
 			done
 			if $lbSpeak;then secSayStack.sh "continue request accepted";fi
 			SECFUNCcfgWriteVar "$lbCfgContinueReq"=false
