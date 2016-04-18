@@ -556,41 +556,54 @@ function FUNCrun(){
 			#TODO how t f can this fail when term is dump/closed ?????: if which yad;then
 			if SECFUNCexecA -ce yad --version;then
 				local lbEvalCode=false
+				: ${strCodeToEval:=""}
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				astrYadFields=(
 					bXterm #0
+					strCodeToEval #1
 				)
 				strYadOutput="`
 					yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
+						--separator="\n" \
 						--sticky --center --selectable-labels \
-						--form --field "[${astrYadFields[0]}] Use Xterm:chk" \
+						--form \
+						--field "[${astrYadFields[0]}] Use Xterm:chk" \
+						--field "[${astrYadFields[1]}]" \
 						--button="retry:0" \
-						--button="retry(EvalCode):4" \
 						--button="retry-DEV:2" \
-						--button="retry-DEV(EvalCode):3" \
 						--button="gtk-close:1" \
-						"${!astrYadFields[0]}"
+						"${!astrYadFields[0]}" \
+						"${!astrYadFields[1]}" 
 					`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
-				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
+#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" \
+#						--button="retry(EvalCode):4" \
+#						--button="retry-DEV(EvalCode):3" \
+#				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
+				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
-					if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+					if [[ "${astrYadReturnValues[0]-}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+					strCodeToEval="${astrYadReturnValues[1]-}"
+#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end
 					2)lbDevMode=true;; #retry in development mode (path)
-					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
-					4)lbDevMode=false;lbEvalCode=true;; #normal retry
+#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
+#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
 				esac
 				
-				if $lbEvalCode;then
-					local lstrCodeToEval="`zenity --entry \
-						--title "$SECstrScriptSelfName[$$]" \
-						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
-					echo "eval: $lstrCodeToEval" >>/dev/stderr
-					eval "$lstrCodeToEval"
+#				if $lbEvalCode;then
+#					local lstrCodeToEval="`zenity --entry \
+#						--title "$SECstrScriptSelfName[$$]" \
+#						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
+#					echo "eval: $lstrCodeToEval" >>/dev/stderr
+#					eval "$lstrCodeToEval"
+#				fi
+				if [[ -n "$strCodeToEval" ]];then
+					eval "$strCodeToEval"
 				fi
 				
 			else
