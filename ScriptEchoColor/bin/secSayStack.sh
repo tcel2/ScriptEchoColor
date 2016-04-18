@@ -122,8 +122,14 @@ function FUNCisPidActive() { #generic check with info
 	fi
 	
 	#FUNCexecSS --caller "$FUNCNAME" ps -p $1 -o pid,ppid,stat,state,command;
-	SECFUNCexecA ps -p $1 -o pid,ppid,stat,state,command;
-	return $?
+#	SECFUNCexecA ps -p $1 -o pid,ppid,stat,state,command >>/dev/null 2>&1; #TODO so useless? only to check if pid is active?
+#	return $?
+	
+	if [[ -d "/proc/$1/" ]];then
+		return 0;
+	fi
+	
+	return 1;
 };export -f FUNCisPidActive
 
 function FUNCcheckIfLockPidIsRunning() {
