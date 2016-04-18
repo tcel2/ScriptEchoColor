@@ -172,6 +172,86 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	SECFUNCdbgFuncOutA; return 0;
 }
 
+function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing scripts (or self calling script)
+	# var init here
+	local lstrExample="DefaultValue"
+	local lbStop=false
+	local lbContinue=false
+	local lbCheckHold=false
+	local lstrBaseId="`SECFUNCfixIdA -f "$SECstrScriptSelfName"`"
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	local lbSpeak=false;
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCsyncStopContinue_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCsyncStopContinue_help request
+			lbStop=true
+		elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #SECFUNCsyncStopContinue_help request
+			lbContinue=true
+		elif [[ "$1" == "--checkhold" || "$1" == "-h" ]];then #SECFUNCsyncStopContinue_help will check and hold if requested
+			lbCheckHold=true
+		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsyncStopContinue_help about requests
+			lbSpeak=true;
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCsyncStopContinue_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCsyncStopContinue_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	if [[ -n "${1-}" ]];then
+		lstrBaseId="$1"
+	fi
+	if [[ -z "$lstrBaseId" ]];then
+		SECFUNCechoErrA "invalid lstrBaseId='$lstrBaseId'"
+		return 1
+	fi
+	lstrBaseId="`SECFUNCfixIdA -f "$lstrBaseId"`"
+	
+	# code here
+	SECFUNCcfgReadDB
+	local lbCfgStopReq="CFGb${lstrBaseId}StopRequest"
+	if ${!lbCfgStopReq+false};then SECFUNCcfgWriteVar "$lbCfgStopReq"=false;fi
+	local lbCfgContinueReq="CFGb${lstrBaseId}ContinueRequest"
+	if ${!lbCfgContinueReq+false};then SECFUNCcfgWriteVar "$lbCfgContinueReq"=false;fi
+	
+	if $lbStop;then
+		SECFUNCcfgWriteVar "$lbCfgStopReq"=true
+	elif $lbContinue;then
+		SECFUNCcfgWriteVar "$lbCfgContinueReq"=true
+	elif $lbCheckHold;then
+		if ${!lbCfgStopReq};then
+			if $lbSpeak;then secSayStack.sh "stop request accepted";fi
+			SECFUNCcfgWriteVar "$lbCfgStopReq"=false
+			SECONDS=0
+			while ! ${!lbCfgContinueReq};do
+				SECFUNCcfgReadDB
+				echo -en "$FUNCNAME:$lstrBaseId:Holding exec for ${SECONDS}s\r" >>/dev/stderr
+			done
+			if $lbSpeak;then secSayStack.sh "continue request accepted";fi
+			SECFUNCcfgWriteVar "$lbCfgContinueReq"=false
+		fi
+	fi
+	
+	return 0 # important to have this default return value in case some non problematic command fails before returning
+}
+
 function SECFUNCuniqueLock() { #help Creates a unique lock that help the script to prevent itself from being executed more than one time simultaneously. If lock exists, outputs the pid holding it and return 1.
 	SECFUNCdbgFuncInA;
 	#set -x

@@ -92,7 +92,10 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		shift&&:
 	done
 	
+	#validate params here
+	
 	# code here
+	
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
