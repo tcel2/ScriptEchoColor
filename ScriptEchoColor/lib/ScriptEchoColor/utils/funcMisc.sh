@@ -182,6 +182,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	local lastrRemainingParams=()
 	local lastrAllParams=("${@-}") # this may be useful
 	local lbSpeak=false;
+	local lbWait=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCsyncStopContinue_help show this help
@@ -191,6 +192,8 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			lbStop=true
 		elif [[ "$1" == "--continue" || "$1" == "-c" ]];then #SECFUNCsyncStopContinue_help request
 			lbContinue=true
+		elif [[ "$1" == "--nowaitrequest" || "$1" == "-W" ]];then #SECFUNCsyncStopContinue_help do not wait for requests be accepted
+			lbWait=false
 		elif [[ "$1" == "--checkhold" || "$1" == "-h" ]];then #SECFUNCsyncStopContinue_help will check and hold if requested
 			lbCheckHold=true
 		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsyncStopContinue_help about requests
@@ -236,25 +239,34 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	if $lbStop;then
 		SECFUNCcfgWriteVar "$lbCfgStopReq"=true
 		if $lbSpeak;then secSayStack.sh "stop requested";fi
-		while ${!lbCfgStopReq};do
-			SECFUNCcfgReadDB
-			echo -en "${lstrPrefixMsg} Waiting stop request '$lstrBaseId' be accepted for ${SECONDS}s\r" >>/dev/stderr
-		done
+		if $lbWait;then
+			local lnSECONDS=$SECONDS
+			while ${!lbCfgStopReq};do
+				SECFUNCcfgReadDB
+				echo -en "${lstrPrefixMsg} Waiting stop request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				sleep 1
+			done
+		fi
 	elif $lbContinue;then
 		SECFUNCcfgWriteVar "$lbCfgContinueReq"=true
 		if $lbSpeak;then secSayStack.sh "continue requested";fi
-		while ${!lbCfgContinueReq};do
-			SECFUNCcfgReadDB
-			echo -en "${lstrPrefixMsg} Waiting continue request '$lstrBaseId' be accepted for ${SECONDS}s\r" >>/dev/stderr
-		done
+		if $lbWait;then
+			local lnSECONDS=$SECONDS
+			while ${!lbCfgContinueReq};do
+				SECFUNCcfgReadDB
+				echo -en "${lstrPrefixMsg} Waiting continue request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				sleep 1
+			done
+		fi
 	elif $lbCheckHold;then
 		if ${!lbCfgStopReq};then
 			if $lbSpeak;then secSayStack.sh "stop request accepted";fi
-			SECONDS=0
+			local lnSECONDS=$SECONDS
 			while ! ${!lbCfgContinueReq};do
 				SECFUNCcfgReadDB
 				SECFUNCcfgWriteVar "$lbCfgStopReq"=false # put here to keep accepting stop requests in case they happen more than one time...
-				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for ${SECONDS}s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				sleep 1
 			done
 			if $lbSpeak;then secSayStack.sh "continue request accepted";fi
 			SECFUNCcfgWriteVar "$lbCfgContinueReq"=false
