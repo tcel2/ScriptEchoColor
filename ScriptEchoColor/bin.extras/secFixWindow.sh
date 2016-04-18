@@ -38,6 +38,7 @@ aWindowListToSkip=(
 
 #TODO initially read all windows status, and also detect new windows and read their status too, if not too cpu encumbering...
 
+bUseXterm=true
 bReactivateWindow=false
 strReactWindNamesRegex=""
 bWaitResquestFixAllOnly=false
@@ -83,6 +84,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixYakuake=true
 	elif [[ "$1" == "--fixpsensor" ]];then #help to fix psensor window (on system startup, its maximized state may be ignored).
 		bFixPSensor=true
+	elif [[ "$1" == "--noxterm" ]];then #help whenever a new xterm would be used, now will not
+		bUseXterm=false
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
 	elif [[ "$1" == "--activateunmapped" ]];then #help ~daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
@@ -119,6 +122,14 @@ fi
 
 #if ! secAutoScreenLock.sh --islocked;then	SEC_WARN=true SECFUNCechoWarnA "test!";fi #@@@R
 
+function FUNCxterm(){
+	if $bUseXterm;then
+		secXtermDetached.sh --skipchilddb --daemon "$@"
+	else
+		SECFUNCexecA -ce "$@"
+	fi
+}
+
 # run these and exit
 if $bFixCompiz;then
 	if secAutoScreenLock.sh --islocked;then
@@ -132,9 +143,9 @@ if $bFixCompiz;then
 		fi
 	fi
 	
-	secXtermDetached.sh metacity --replace;
+	FUNCxterm metacity --replace;
 	sleep 3; #this blind delay helps on properly fixing
-	secXtermDetached.sh compiz --replace
+	FUNCxterm compiz --replace
 	
   exit 0
 elif $bActivateUnmappedWindow;then
@@ -180,9 +191,8 @@ elif $bActivateUnmappedWindow;then
 	exit 0
 elif $bFixYakuake;then
  	SECFUNCexecA -ce killall -9 yakuake&&:
-	SECFUNCexecA -ce sleep 5 # does this help?
-	#secXtermDetached.sh --daemon --donotclose yakuake
-	secXtermDetached.sh --donotclose yakuake #yakuake returns the command prompt, but keeps running...
+	SECFUNCexecA -ce sleep 5 # does this really help?
+	FUNCxterm yakuake --nofork
 	exit 0
 elif $bFixCairoDock;then
 	SECFUNCexecA -ce pkill cairo-dock&&:
@@ -194,8 +204,7 @@ elif $bFixCairoDock;then
 	
 	#cairo-dock --log message
 	#cairo-dock >>/tmp/".`basename "$0"`.log"&disown
-	#secXtermDetached.sh --daemon cairo-dock
-	secXtermDetached.sh --skipchilddb --daemon cairo-dock
+	FUNCxterm cairo-dock
 	exit 0
 elif $bFixPSensor;then
 	SECFUNCexecA -ce SECFUNCCwindowCmd --maximize "Psensor - Temperature Monitor"

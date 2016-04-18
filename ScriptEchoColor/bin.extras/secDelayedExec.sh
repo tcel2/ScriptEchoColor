@@ -535,7 +535,7 @@ function FUNCrun(){
 		FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
 		
 		if $bStay || $lbErr;then
-			lstrTxt+="RunCommand:\n"
+			lstrTxt+="RunCommand(astrRunParams[@]):\n"
 			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
 			lstrTxt+="\n";
 			lstrTxt+="LogInfoDbgCmd:\n";
