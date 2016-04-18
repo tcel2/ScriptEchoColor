@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2013 by Henrique Abdalla
+# Copyright (C) 2004-2016 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -30,13 +30,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "Recovers window manager after crash, and helps easily replacing them."
-		SECFUNCshowHelp --colorize "The default auto-recovery window manager option (if not set) is the last detected. If none is detected, prefers in this order: compiz, metacity (will check if they are installed)"
+		SECFUNCshowHelp --colorize "The default auto-recovery window manager option (if not set) is the last detected. If none is detected, prefers in this order: compiz, metacity, xfwm4 (will check if they are installed)"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--compiz" || "$1" == "-c" ]];then #help force compiz the default auto recovery option
 		strPreferedWM="compiz"
 	elif [[ "$1" == "--metacity" || "$1" == "-m" ]];then #help force metacity the default auto recovery option
 		strPreferedWM="metacity"
+	elif [[ "$1" == "--xfwm4" || "$1" == "-x" ]];then #help force xfwm4 the default auto recovery option
+		strPreferedWM="xfwm4"
 #	elif [[ "$1" == "--jwm" || "$1" == "-j" ]];then #help force jwm the default auto recovery option
 #		strPreferedWM="jwm"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -73,6 +75,8 @@ function FUNCcheckGetPreferedWm() {
 		lstrPreferedWM="compiz"
 	elif which metacity 2>&1 >>/dev/null;then
 		lstrPreferedWM="metacity"
+	elif which xfwm4 2>&1 >>/dev/null;then
+		lstrPreferedWM="xfwm4"
 #	elif which jwm 2>&1 >>/dev/null;then
 #		lstrPreferedWM="jwm"
 	else
@@ -95,6 +99,8 @@ while true;do
 		strCurrent="compiz"
 	elif pgrep metacity 2>&1 >>/dev/null;then
 		strCurrent="metacity"
+	elif pgrep xfwm4 2>&1 >>/dev/null;then
+		strCurrent="xfwm4"
 #	elif pgrep jwm 2>&1 >>/dev/null;then
 #		strCurrent="jwm"
 	else
@@ -117,7 +123,7 @@ while true;do
 		continue;
 	fi
 	
-	echoc -t 10 -Q "replace window manager@O_compiz/_metacity/holdFor_60s"&&:;
+	echoc -t 10 -Q "replace window manager@O_compiz/_metacity/_xfwm4/holdFor_60s"&&:;
 	case "`secascii $?`" in 
 		c)
 			if [[ "$strCurrent" == "compiz" ]];then
@@ -131,6 +137,13 @@ while true;do
 			SECFUNCexecA -ce secXtermDetached.sh metacity --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="metacity"
 			;; 
+		x)
+			SECFUNCexecA -ce secXtermDetached.sh xfwm4 --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			strPreferedWM="xfwm4"
+			;; 
+		6)
+			echoc -w -t 60 "holding execution"
+			;;
 	esac
 	
 #	if [[ "$strCurrent" != "metacity" ]];then
@@ -149,5 +162,6 @@ while true;do
 #		fi
 #	fi
 	
+	echoc -w -t 3
 done
 

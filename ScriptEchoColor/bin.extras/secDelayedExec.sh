@@ -79,7 +79,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--nounique" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
-	elif [[ "$1" == "--shouldnotexit" || "$1" == "-d" ]];then #help indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
+	elif [[ "$1" == "--shouldnotexit" || "$1" == "-d" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
 	elif [[ "$1" == "--listconcurrent" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
