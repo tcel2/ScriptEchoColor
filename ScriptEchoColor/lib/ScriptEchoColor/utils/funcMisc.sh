@@ -194,7 +194,7 @@ function SECFUNCrequest() { #help <lstrId> simple requests
 			lbRequest=true;
 		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCrequest_help only returns after successful
 			lbWait=true;
-		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsyncStopContinue_help about requests
+		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCrequest_help about requests
 			lbSpeak=true;
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCrequest_help <lstrExample> MISSING DESCRIPTION
 			shift
