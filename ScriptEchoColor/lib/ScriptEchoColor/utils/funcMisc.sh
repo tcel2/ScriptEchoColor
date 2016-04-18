@@ -172,6 +172,107 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	SECFUNCdbgFuncOutA; return 0;
 }
 
+function SECFUNCrequest() { #help <lstrId> simple requests
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	local lbWait=false
+	local lbListen=false;
+	local lstrBaseId="`SECFUNCfixIdA -f "$SECstrScriptSelfName"`"
+	local lstrId=""
+	local lbRequest=false
+	local	lbSpeak=false;
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCrequest_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "$1" == "--listen" || "$1" == "-l" ]];then #SECFUNCrequest_help
+			lbListen=true;
+		elif [[ "$1" == "--request" || "$1" == "-r" ]];then #SECFUNCrequest_help
+			lbRequest=true;
+		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCrequest_help only returns after successful
+			lbWait=true;
+		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsyncStopContinue_help about requests
+			lbSpeak=true;
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCrequest_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCrequest_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	#validate params here
+	if [[ -n "${1-}" ]];then
+		lstrId="$1"
+	fi
+	if [[ -z "$lstrId" ]];then
+		SECFUNCechoErrA "invalid lstrId='$lstrId'"
+		return 1
+	fi
+	lstrId="`SECFUNCfixIdA -f "$lstrId"`"
+	
+	local lstrPrefixMsg="$FUNCNAME:$lstrBaseId:"
+	
+	# code here
+	SECFUNCcfgReadDB
+	
+	local lbCfgReq="CFGb${lstrBaseId}${lstrId}"
+	if ${!lbCfgReq+false};then SECFUNCcfgWriteVar "$lbCfgReq"=false;fi #set default
+	
+	if $lbListen;then
+		local lbAccepted=false
+		local lnSECONDS=$SECONDS
+		while true;do
+			SECFUNCcfgReadDB
+			if ${!lbCfgReq};then 
+				if $lbSpeak;then secSayStack.sh --showtext "$lstrId request accepted";fi
+				SECFUNCcfgWriteVar "$lbCfgReq"=false # accepted, reset
+				lbAccepted=true
+				break
+			else
+				echo -en "${lstrPrefixMsg} Waiting '$lstrId' request for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+			fi # to break this loop
+			
+			if ! $lbWait;then break;fi
+			sleep 1
+		done
+		
+		if $lbAccepted;then	return 0;else return 1;fi
+	elif $lbRequest;then
+		SECFUNCcfgWriteVar "$lbCfgReq"=true
+		if $lbSpeak;then secSayStack.sh --showtext  "$lstrId requested";fi
+		local lnSECONDS=$SECONDS
+		while true;do
+			SECFUNCcfgReadDB
+			if ! ${!lbCfgReq};then
+				break;
+			else
+				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+			fi # after accepted it will be set to false
+			
+			if ! $lbWait;then break;fi
+			sleep 1
+		done
+	fi
+		
+	return 0 # important to have this default return value in case some non problematic command fails before returning
+}
+
 function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing scripts (or self calling script)
 	# var init here
 	local lstrExample="DefaultValue"
@@ -240,7 +341,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	
 	if $lbStop;then
 		SECFUNCcfgWriteVar "$lbCfgStopReq"=true
-		if $lbSpeak;then secSayStack.sh "stop requested";fi
+		if $lbSpeak;then secSayStack.sh --showtext  "stop requested";fi
 		if $lbWait;then
 			local lnSECONDS=$SECONDS
 			while ${!lbCfgStopReq};do
@@ -251,7 +352,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 		fi
 	elif $lbContinue;then
 		SECFUNCcfgWriteVar "$lbCfgContinueReq"=true
-		if $lbSpeak;then secSayStack.sh "continue requested";fi
+		if $lbSpeak;then secSayStack.sh --showtext  "continue requested";fi
 		if $lbWait;then
 			local lnSECONDS=$SECONDS
 			while ${!lbCfgContinueReq};do
@@ -262,7 +363,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 		fi
 	elif $lbCheckHold;then
 		if ${!lbCfgStopReq};then
-			if $lbSpeak;then secSayStack.sh "stop request accepted";fi
+			if $lbSpeak;then secSayStack.sh --showtext  "stop request accepted";fi
 			local lnSECONDS=$SECONDS
 			while ! ${!lbCfgContinueReq};do
 				SECFUNCcfgReadDB
@@ -270,7 +371,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
 				sleep 1
 			done
-			if $lbSpeak;then secSayStack.sh "continue request accepted";fi
+			if $lbSpeak;then secSayStack.sh --showtext  "continue request accepted";fi
 			SECFUNCcfgWriteVar "$lbCfgContinueReq"=false
 		fi
 	fi

@@ -67,6 +67,8 @@ strSuspendAtKey="SayStackSuspendedAtPid"
 strSuspendByKey="SayStackSuspendedByPid"
 sleepDelay=0.1
 bDaemon=false
+bOutputSayText=false
+bShowPlayOutput=false
 bWaitSay=false
 strSayId="$SECstrSayId"
 bResume=false
@@ -289,7 +291,18 @@ function FUNCplay() {
 	if $bStdoutFilename;then
 		echo "$fileAudio"
 	fi
-	SECFUNCexecA play -v "$lsayVol" "$fileAudio" $lstrSndEffects #lstrSndEffects no quotes to become params (work?)
+#	local lstrPlayOutput="2>>/dev/null"
+#	local lstrPlayOutput="--quiet"
+#	if $bShowPlayOutput;then
+#		lstrPlayOutput=""
+#	fi
+	local astrCmd=(play -v "$lsayVol" "$fileAudio" $lstrSndEffects)
+	# lstrSndEffects no quotes to become params (work?)
+	if $bShowPlayOutput;then
+		SECFUNCexecA "${astrCmd[@]}"
+	else
+		SECFUNCexecA "${astrCmd[@]}" >>/dev/null 2>&1 #TODO why `SECFUNCexec --quiet` did not work?
+	fi
 };export -f FUNCplay;
 
 ####################### other initializations
@@ -324,6 +337,10 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		bClearCache=true
 	elif [[ "$1" == "--daemon" ]];then #help keeps running and takes care of all speak requests with log
 		bDaemon=true
+	elif [[ "$1" == "--showtext" ]];then #help promptly outputs the text to be said, good for logs
+		bOutputSayText=true;
+	elif [[ "$1" == "--showplayinfo" ]];then #help show play command output
+		bShowPlayOutput=true
 	elif [[ "$1" == "--waitsay" ]];then #help only exit after the saying of the specified text has finished
 		bWaitSay=true
 	elif [[ "$1" == "--suspend" ]];then #help suspend speaking, and exit only after the speaking is surely suspended (see --resume)
@@ -385,6 +402,10 @@ if [[ -z "$sayText" ]]; then
 		sayText=" " #dummy speech to force resuming, probably in case saying pid crashed or was killed.
 	else
 		exit 0 #exit_FUNCsayStack: wont put empty lines
+	fi
+else
+	if $bOutputSayText;then
+		echo "SECSay: $sayText" >>/dev/stderr
 	fi
 fi
 
