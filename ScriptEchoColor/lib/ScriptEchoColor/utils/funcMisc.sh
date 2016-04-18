@@ -231,10 +231,12 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 	
 	# code here
 	SECFUNCcfgReadDB
+	
 	local lbCfgStopReq="CFGb${lstrBaseId}StopRequest"
-	if ${!lbCfgStopReq+false};then SECFUNCcfgWriteVar "$lbCfgStopReq"=false;fi
+	if ${!lbCfgStopReq+false};then SECFUNCcfgWriteVar "$lbCfgStopReq"=false;fi #set default
+	
 	local lbCfgContinueReq="CFGb${lstrBaseId}ContinueRequest"
-	if ${!lbCfgContinueReq+false};then SECFUNCcfgWriteVar "$lbCfgContinueReq"=false;fi
+	if ${!lbCfgContinueReq+false};then SECFUNCcfgWriteVar "$lbCfgContinueReq"=false;fi #set default
 	
 	if $lbStop;then
 		SECFUNCcfgWriteVar "$lbCfgStopReq"=true
