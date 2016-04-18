@@ -117,7 +117,7 @@ while true;do
 		continue;
 	fi
 	
-	echoc -t 10 -Q "replace window manager@O_compiz/_metacity"&&:;
+	echoc -t 10 -Q "replace window manager@O_compiz/_metacity/holdFor_60s"&&:;
 	case "`secascii $?`" in 
 		c)
 			if [[ "$strCurrent" == "compiz" ]];then

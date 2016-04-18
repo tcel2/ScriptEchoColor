@@ -388,7 +388,7 @@ function FUNCzenitySelectFiles() {
 	local lstrTitle="$1"
 	shift
 	
-	local listSelected=`zenity --list --checklist --column="" --column="$lstrTitle" "$@"`
+	local listSelected=`zenity --list --checklist --column="" --column="$lstrTitle" "$@"`&&:
 	
 	if [[ -n "$listSelected" ]];then
 		echoc --info "Selected files list:" >>/dev/stderr
@@ -399,10 +399,14 @@ function FUNCzenitySelectFiles() {
 	fi
 };export -f FUNCzenitySelectFiles
 function FUNCzenitySelectAndAddFiles() {
-	local lstrFilesToAdd=`FUNCzenitySelectFiles "file to add" "$@"`
-	echoc --info "Adding requested files."
-	#echo "lstrFilesToAdd='$lstrFilesToAdd'" >>/dev/stderr
-	eval $0 --skipnautilus --addfiles $lstrFilesToAdd
+	local lstrFilesToAdd="`FUNCzenitySelectFiles "file to add" "$@"`"
+	if [[ -n "$lstrFilesToAdd" ]];then
+		echoc --info "Adding requested files: $lstrFilesToAdd"
+		#echo "lstrFilesToAdd='$lstrFilesToAdd'" >>/dev/stderr
+		eval $0 --skipnautilus --addfiles $lstrFilesToAdd
+	else
+		echoc --info "no files selected"
+	fi
 };export -f FUNCzenitySelectAndAddFiles
 
 function FUNCunison(){
