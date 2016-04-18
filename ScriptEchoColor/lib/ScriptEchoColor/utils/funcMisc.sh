@@ -295,7 +295,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			lbContinue=true
 		elif [[ "$1" == "--nowaitrequest" || "$1" == "-W" ]];then #SECFUNCsyncStopContinue_help do not wait for requests be accepted
 			lbWait=false
-		elif [[ "$1" == "--checkhold" || "$1" == "-h" ]];then #SECFUNCsyncStopContinue_help will check and hold if requested
+		elif [[ "$1" == "--checkhold" || "$1" == "-h" ]];then #SECFUNCsyncStopContinue_help will check and hold, if requested will return true, otherwise false
 			lbCheckHold=true
 		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsyncStopContinue_help about requests
 			lbSpeak=true;
@@ -362,7 +362,10 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			done
 		fi
 	elif $lbCheckHold;then
+		local lbStopWasRequested=false
+		
 		if ${!lbCfgStopReq};then
+			lbStopWasRequested=true
 			if $lbSpeak;then secSayStack.sh --showtext  "stop request accepted";fi
 			local lnSECONDS=$SECONDS
 			while ! ${!lbCfgContinueReq};do
@@ -374,6 +377,8 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			if $lbSpeak;then secSayStack.sh --showtext  "continue request accepted";fi
 			SECFUNCcfgWriteVar "$lbCfgContinueReq"=false
 		fi
+		
+		if ! $lbStopWasRequested;then return 1;fi
 	fi
 	
 	return 0 # important to have this default return value in case some non problematic command fails before returning

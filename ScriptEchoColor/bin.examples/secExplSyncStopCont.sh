@@ -27,7 +27,9 @@ eval `secinit`
 if [[ -z "${1-}" ]];then #main loop
 	while true;do
 		echo $SECONDS
-		SECFUNCsyncStopContinue -hp
+		if SECFUNCsyncStopContinue -hp;then
+			echo "hold request ended..."
+		fi
 		sleep 1
 	done
 elif [[ "$1" == "stop" ]];then
