@@ -495,7 +495,9 @@ function FUNCrun(){
 		
 		SECFUNCarraysExport
 		if $bXterm;then
-			strTitle="`basename "${astrRunParams[@]}"`_pid$$"
+			astrTmp=("${astrRunParams[@]}")
+			astrTmp[0]="`basename "${astrTmp[0]}"`"
+			strTitle="${astrTmp[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
