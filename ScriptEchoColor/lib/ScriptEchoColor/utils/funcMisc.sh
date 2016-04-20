@@ -44,6 +44,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	local lnPid=$$
 	local lbListLocksWithPids=false
 	local lbPidOfLockFile=false
+	local lbGetLock=false
 	local lstrLockFile=""
 	local lfSleepDelay="`SECFUNCbcPrettyCalcA --scale 3 "$SECnLockRetryDelay/1000.0"`"
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
@@ -64,6 +65,8 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 			lnPid=${1-}
 		elif [[ "$1" == "--list" ]];then #SECFUNCfileLock_help list of lock files with pids
 			lbListLocksWithPids=true
+		elif [[ "$1" == "--getlock" ]];then #SECFUNCfileLock_help will return the lock file for the specified real file if it was locked
+			lbGetLock=true
 		elif [[ "$1" == "--pidof" ]];then #SECFUNCfileLock_help <lockfilename> extracts the pid of the filename
 			shift
 			lstrLockFile="${1-}"
@@ -117,13 +120,17 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	local lfileLock="$SEC_TmpFolder/.SEC.FileLock.$lmd5sum.lock"	
 	local lfileLockPid="${lfileLock}.$lnPid"	
 	
-	if $lbCheckIfIsLocked;then
+	if $lbCheckIfIsLocked || $lbGetLock;then
 		if [[ ! -L "$lfileLock" ]] || ! $lbFileExist;then
 			SECFUNCdbgFuncOutA;return 1;
 		else
-			local lfileLockPidOther="`readlink "$lfileLock"`"
-			local lnLockingPid="`echo "$lfileLockPidOther" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
-			echo "$lnLockingPid"
+			if $lbGetLock;then
+				echo "$lfileLock"
+			else
+				local lfileLockPidOther="`readlink "$lfileLock"`"
+				local lnLockingPid="`echo "$lfileLockPidOther" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
+				echo "$lnLockingPid"
+			fi
 		fi
 	elif $lbUnlock;then
 #				rm -v "$lstrLockFileIntermediary"
@@ -550,14 +557,28 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	
 	# clean unique but invalid files
 	if $lbListAndCleanUniqueFiles;then
-		ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."* |while read lstrUniqueFile;do
+		IFS=$'\n' read -d '' -r -a astrUniqueFileList < <(ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*)&&:
+		local lstrUniqueFile
+		for lstrUniqueFile in "${astrUniqueFileList[@]}";do
+		#ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&: |while read lstrUniqueFile;do
 			local lnPidCheck=$(cat "$lstrUniqueFile")
 			#if [[ ! -d "/proc/$lnPidCheck" ]];then
+			local lbAlive=false
 			if SECFUNCpidChecks --active --check "$lnPidCheck";then
+				lbAlive=true
+			fi
+			
+			if $lbAlive;then
 				if ! $lbQuiet;then
-					echo "$lstrUniqueFile"
+#					local lstrDeadInfo="(DEAD)"
+#					local lstrLockFile=""
+#					local lstrDeadInfo=""
+					local lstrLockFile="`basename "$(SECFUNCfileLock --getlock "$lstrUniqueFile")"`"&&:
+					echo "U='`basename "${lstrUniqueFile}"`', pid='${lnPidCheck}', lock='${lstrLockFile}'"
+#					echo "`basename "${lstrUniqueFile}"`,${lnPidCheck}${lstrDeadInfo},${lstrLockFile}"
 				fi
 			else
+				# TODO confirm if this quick lock is to prevent another process from creating a lock, while trying to remove the unique file here AND DOCUMENT IT PROPERLY!!! :P
 				local lstrQuickLock="${lstrUniqueFile}.ToCreateRealFile.lock"
 				if ln -s "$lstrUniqueFile" "$lstrQuickLock";then
 					rm "$lstrUniqueFile"

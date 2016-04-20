@@ -374,7 +374,7 @@ if [[ "$SEC_DEBUG" == "true" ]];then
 	_SECdbgVerboseOpt="-v"
 fi
 
-: ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
+#: ${SECnPidMax:=`cat /proc/sys/kernel/pid_max`}
 
 # MAIN CODE
 #export SECstrBugTrackLogFile="/tmp/.SEC.BugTrack.`id -u`.log"

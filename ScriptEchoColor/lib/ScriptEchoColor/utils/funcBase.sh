@@ -421,8 +421,10 @@ function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 #			
 #			lbWritePid=true
 #			lbCheckPid=true
-		elif [[ "$1" == "--active" ]];then #SECFUNCpidChecks_help the pid of other options must be active or it will return false
+		elif [[ "$1" == "--active" ]];then #SECFUNCpidChecks_help the pid of other options must be active or it will return false, without this option, it is useful to validate pid value of dead proccess
 			lbMustBeActive=true
+#		elif [[ "$1" == "--notactive" ]];then #SECFUNCpidChecks_help the pid of other options must be active or it will return false
+#			lbMustBeActive=false
 		elif [[ "$1" == "--check" ]];then #SECFUNCpidChecks_help <pid>
 			shift
 			lnPid="${1-0}"
@@ -456,10 +458,15 @@ function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 			SECFUNCechoErrA "lnPid='$lnPid' < 1"
 			return 1
 		fi
-		if(($1>SECnPidMax));then
-			SECFUNCechoErrA "lnPid='$lnPid' > $SECnPidMax"
-			return 1
+
+		if false;then # keep as information but disabled, as the pid_max may not have been set properly yet at boot time #TODO why!??!
+			local lnPidMax="`cat /proc/sys/kernel/pid_max`"
+			if(($1>lnPidMax));then
+				SECFUNCechoErrA "lnPid='$lnPid' > $lnPidMax"
+				return 1
+			fi
 		fi
+		
 		return 0
 	}
 	
@@ -509,7 +516,7 @@ function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 		return 0
 	fi
 
-	local lnAllowedPid="-1"
+	local lnAllowedPid=-1
 	local lbAllowedIsValid=false
 	if [[ -f "$SECstrLockFileAllowedPid" ]];then
 		lnAllowedPid="`cat "$SECstrLockFileAllowedPid" 2>/dev/null`"

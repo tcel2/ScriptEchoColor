@@ -37,7 +37,7 @@ SECFUNCcfgReadDB
 echo "SECcfgFileName='$SECcfgFileName'"
 
 SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false #this grants startup always obbeying sleep
-varset bCheckPoint=false
+varset bCheckPointConditionsMet=false
 export bWaitCheckPoint=false
 export nDelayAtLoops=1
 export bCheckPointDaemon=false
@@ -51,6 +51,7 @@ export bCheckPointDaemonHold=false
 export bRunAllNow=false
 export bRespectedSleep=false
 export bXterm=false
+export strCheckPointCustomCmd
 export astrXtermOpts=()
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
@@ -68,11 +69,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nDelayAtLoops="${1-}"
 	elif [[ "$1" == "--checkpointdaemon" ]];then #help "<command> <params>..." ~daemon when the custom command return true (0), allows waiting instances to run; so must return non 0 to keep holding them.
 		shift
-		strCustomCommand="${1-}"
+		strCheckPointCustomCmd="${1-}"
 		bCheckPointDaemon=true
 	elif [[ "$1" == "--checkpointdaemonhold" ]];then #help "<command> <params>..." ~daemon like --checkpointdaemon, but will also prompt user before releasing the scripts
 		shift
-		strCustomCommand="${1-}"
+		strCheckPointCustomCmd="${1-}"
 		bCheckPointDaemon=true
 		bCheckPointDaemonHold=true
 	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help ~loop after nSleepFor, also waits checkpoint tmp file to be removed
@@ -137,8 +138,10 @@ if $bRunAllNow;then
 	echoc --info "hit ctrl+c to end."
 	while true;do 
 		SECFUNCcfgReadDB; 
+#		echo "`SECFUNCdtFmt --alt`/SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow', bCheckPointConditionsMet='$bCheckPointConditionsMet'";
 		echo "`SECFUNCdtFmt --alt`/SECCFGbOverrideRunAllNow='$SECCFGbOverrideRunAllNow'";
 		SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=true
+#		varset bCheckPointConditionsMet=true
 		
 		if SECFUNCdelay --checkorinit 5 "SECCFGbOverrideRunAllNow";then
 			if FUNCcheckIfWaitCmdsHaveRun;then
@@ -210,19 +213,22 @@ fi
 if $bCheckPointDaemon;then
 	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >>/dev/stderr
 	
-	if [[ -z "$strCustomCommand" ]];then
-		FUNClog Err "invalid empty strCustomCommand"
+	if [[ -z "$strCheckPointCustomCmd" ]];then
+		FUNClog Err "invalid empty strCheckPointCustomCmd"
 		exit 1
 	fi
 	
 	SECFUNCuniqueLock --waitbecomedaemon
+	SECFUNCuniqueLock --getuniquefile
+	SECFUNCuniqueLock --getdaemonpid
 	
 	SECONDS=0
-	echo "Conditional command to activate checkpoint: $strCustomCommand"
+	echo "Conditional command to activate checkpoint: $strCheckPointCustomCmd"
 	while true;do
-		if ! $bCheckPoint;then
+#		if ! $bCheckPointConditionsMet;then
 			echo "Check at `date "+%Y%m%d+%H%M%S.%N"` (${SECONDS}s)"
-			if bash -c "$strCustomCommand";then
+			if bash -c "$strCheckPointCustomCmd";then
+				# hold just after checkpoint condition is met
 				if $bCheckPointDaemonHold;then
 					echoc --say "run?"
 					strTitle="$SECstrScriptSelfName[$$], hold waiting instances."
@@ -233,15 +239,16 @@ if $bCheckPointDaemon;then
 						fi
 					done
 				fi
-				varset bCheckPoint=true
+				varset bCheckPointConditionsMet=true
 				echo "Check Point reached at `date "+%Y%m%d+%H%M%S.%N"`"
 				echo "'waiting commands' will only run if this one remain active!!! "
 				break
 			fi
-		fi
+#		fi
 		sleep $nDelayAtLoops
 	done
 	
+	# this wait is necessary so other instances have time to confirm the checkpoint
 	strIdShowDelay="ShowDelay"
 	SECFUNCdelay "$strIdShowDelay" --init
 	while true;do
@@ -298,7 +305,7 @@ FUNClog ini
 #	SECONDS=0
 #	while true;do
 #		SECFUNCvarReadDB
-#		if $bCheckPoint;then
+#		if $bCheckPointConditionsMet;then
 #			break
 #		fi
 #		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (${SECONDS}s)...\r"
@@ -309,37 +316,37 @@ FUNClog ini
 #fi
 if $bWaitCheckPoint;then
 	SECFUNCdelay bWaitCheckPoint --init
-	nPidDaemon=0
+	nPidDaemon=-1
 	strFileUnique="`SECFUNCuniqueLock --getuniquefile`"
 	while true;do
 		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
 
 #		if SECFUNCuniqueLock --isdaemonrunning;then
 #			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
-#			if $bCheckPoint;then
+#			if $bCheckPointConditionsMet;then
 #				break
 #			fi
 #		fi
 		
 		if [[ ! -f "$strFileUnique" ]];then #TODO after the daemon exited, another script pid (not daemon one) was considered as being daemon, but how?
-			nPidDaemon=0
+			nPidDaemon=-1 
 		fi
 		
 		if [[ -d "/proc/$nPidDaemon" ]];then
-			SECFUNCvarReadDB bCheckPoint
-			if $bCheckPoint;then
+			SECFUNCvarReadDB bCheckPointConditionsMet
+			if $bCheckPointConditionsMet;then
 				break
 			else
 				sleep 3 #this extra sleep is to lower the cpu usage when several scripts are running this same check at once
 			fi
 		else
-			nPidDaemon=0 # this helps (but is not 100% garanteed) on preventing other process that could have get the same pid
+			nPidDaemon=-1 # this helps (but is not 100% garanteed) on preventing other process that could have get the same pid
 			if SECFUNCuniqueLock --isdaemonrunning;then
 #				SECFUNCuniqueLock --setdbtodaemon # if daemon was NOT running, this would become the daemon
 #				if $SECbDaemonWasAlreadyRunning;then
 #					nPidDaemon="$SECnDaemonPid"
 #				else
-#					nPidDaemon=0
+#					nPidDaemon=-1
 #				fi
 				if SECFUNCuniqueLock --setdbtodaemononly;then
 					nPidDaemon="$SECnDaemonPid"

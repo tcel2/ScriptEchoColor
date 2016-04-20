@@ -166,7 +166,7 @@ function FUNClocksList(){
 		lstrAll="*"
 	fi
 	#ls --color -l "$SEC_TmpFolder/.SEC.FileLock."*".lock"* 2>/dev/null;
-	eval "ls --color -l \"$SEC_TmpFolder/.SEC.FileLock.\"*\".lock$lstrIntermediaryOnly\"$lstrAll 2>/dev/null";
+	eval "ls --color -l \"$SEC_TmpFolder/.SEC.FileLock.\"*\".lock$lstrIntermediaryOnly\"$lstrAll 2>/dev/null"&&:
 }
 
 function FUNClistSecPids() {
@@ -417,6 +417,7 @@ while true;do
 	##########################################################################
   ############### RELEASE UNIQUE DAEMON FILES OF DEAD PIDS #################
 	##########################################################################
+#	echo "Validate daemon unique files:"
 	SECFUNCuniqueLock --quiet --listclean #must come after locks cleaning to generate less log possible as it warns about missing real file on unlock attempt
 	
 	##########################################################################
@@ -461,7 +462,7 @@ while true;do
 			nTotLocks="`FUNClocksList |wc -l`"
 		fi
 	
-		echo -en "Pids(Wrap=$nPidWrapCount,Last=$nPidLast,Tot=$nTotPids,SEC=$nTotSecPids),nTotLocks='$nTotLocks',Active for `SECFUNCdelay MainLoop --getpretty`.\r"
+		echo -en "Pids(Wrap=$nPidWrapCount,Last=$nPidLast,Tot=$nTotPids,SEC=$nTotSecPids),nTotLocks='$nTotLocks',Active for '`SECFUNCdelay MainLoop --getpretty`'.\r"
 	#	if SECFUNCdelay "FlushEcho" --checkorinit 10;then
 	#		echo
 	#	fi
