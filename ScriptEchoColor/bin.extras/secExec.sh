@@ -24,6 +24,9 @@
 
 eval `secinit`
 
+echoc -p "not implemented yet, may be one day?"
+exit 1
+
 bDetach=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then

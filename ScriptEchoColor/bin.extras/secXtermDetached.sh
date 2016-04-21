@@ -254,7 +254,7 @@ function FUNCexecParams() {
 		#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
 		#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
 		#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
-		SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown
+		SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown #TODO use nohup?
 		nPidCmd=$!
 		
 		while true;do

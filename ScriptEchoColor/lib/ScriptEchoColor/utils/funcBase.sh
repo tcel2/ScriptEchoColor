@@ -993,7 +993,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	}
 	
 	if $lbDetach;then # overrides simple child option
-		SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+#		SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
+		nohup SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & #if this process ends, the child will continue running
 	elif $lbChild;then
 		if $lbDoLog;then
 			SECFUNCexec_runAtom "$BASHPID" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
