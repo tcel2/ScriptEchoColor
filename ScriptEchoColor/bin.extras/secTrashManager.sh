@@ -220,9 +220,9 @@ while true;do
 					fi 
 					
 					if $bDirectory;then
-						nFileSizeB="`du -bs "$strFile/" |cut -f1`"
+						nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
 					else
-						nFileSizeB="`stat -c "%s" "$strFile"`"
+						nFileSizeB="`stat -c "%s" "./$strFile"`"
 					fi
 					nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
 					((nRmCount++))&&:

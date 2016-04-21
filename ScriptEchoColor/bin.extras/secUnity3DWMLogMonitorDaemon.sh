@@ -72,7 +72,7 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars --noshow #this will also show all config vars
 
-strUnityLogDaemonId="${SECstrScriptSelfName}_UnityLog_Display$DISPLAY"
+strUnityLogDaemonId="${SECstrScriptSelfName}_UnityLog_Display${DISPLAY}"
 strUnityLogDaemonId="`SECFUNCfixIdA -f "$strUnityLogDaemonId"`"
 SECFUNCcfgWriteVar CFGstrUnityLogFile="$SECstrTmpFolderLog/.${strUnityLogDaemonId}.UnitySession.log"
 #SECFUNCcfgWriteVar CFGstrUnityLogFile="$SECstrTmpFolderLog/.${SECstrScriptSelfName}_Display`SECFUNCfixIdA -f $DISPLAY`.UnitySession.log"
@@ -97,7 +97,7 @@ elif $bGetLogFile;then
 #	fi
 else
 	if $bWasAlreadyRunning;then
-		echoc --info "already running, exiting..."
+		echoc --info "already running: $strUnityLogDaemonId"
 		exit 0;
 	else
 		while true;do
@@ -118,7 +118,8 @@ else
 				SECFUNCexecA -c --echo zenity --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
 			fi
 
-			"${astrCmd[@]}"&&: >"$CFGstrUnityLogFile"
+#			"${astrCmd[@]}"&&: >"$CFGstrUnityLogFile"
+			"${astrCmd[@]}" |tee "$CFGstrUnityLogFile"
 			
 #			while pgrep -fx "${astrCmd[*]}";do # [*] to be one param only
 #				echo "pid for cmd='${astrCmd[*]}'" >>/dev/stderr
