@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2014 by Henrique Abdalla
+# Copyright (C) 2004-2016 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -40,7 +40,8 @@ bDebugging=false
 bMouseTrickMode=false
 bLockedCheckOnly=false
 bIgnoreDaemon=false
-bSpeak=true
+#bSpeak=true
+#bUnityLogDaemonOnly=false
 astrSimpleCommandRegex=(
 	"^chromium-browser .*flashplayer.so"
 	"^/usr/bin/vlc "
@@ -86,8 +87,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
 		bDebugging=true
-	elif [[ "$1" == "--nospeak" ]];then #help will not speak
-		bSpeak=false
+#	elif [[ "$1" == "--nospeak" ]];then #help will not speak
+#		bSpeak=false
+#	elif [[ "$1" == "--unitylogdaemononly" ]];then #help ~daemon will just start the unity log daemon
+#		bUnityLogDaemonOnly=true;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -100,12 +103,12 @@ done
 
 function FUNCisLocked(){
 	# The lock may happen by other means than this script...
-	if [[ -f "${strUnityLog-}" ]];then
-		if grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+	if [[ -f "${strUnityLogFile-}" ]];then
+		if grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
 			return 0
 		fi
 	else
-		SECFUNCechoWarnA "unity log file strUnityLog='${strUnityLog-}' not available"
+		SECFUNCechoWarnA "unity log file strUnityLogFile='${strUnityLogFile-}' not available"
 	fi
 	
 	if xscreensaver-command -time |grep -q "screen locked since";then
@@ -122,17 +125,50 @@ function FUNCisLocked(){
 	return 1
 }
 
-varset strUnityLog="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
+#varset strUnityLogFile="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
+varset strUnityLogFile="`secUnity3DWMLogMonitorDaemon.sh --getlogfile`"
 
+strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
+#strUnityLogDaemonId="${strDaemonId}_UnityLog"
+
+#FUNCunityLogDaemon(){
+#	if SECFUNCuniqueLock --id "$strUnityLogDaemonId" --isdaemonrunning;then return 0;fi
+#	
+#	SECFUNCuniqueLock --id "$strUnityLogDaemonId" --waitbecomedaemon
+#	
+#	# after this, user can safely screen lock
+#	local lstrDBusUnityDestination="com.canonical.Unity.Launcher"
+#	local lstrDBusUnityObjPath="/com/canonical/Unity/Session"
+#	local lastrCmd=(gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath")
+#	"${lastrCmd[@]}" >"$strUnityLogFile"&
+#	if $bSpeak;then
+#		strSayLogStarted="`SECFUNCseparateInWords --notype "${SECstrScriptSelfName%.sh}"` log started."
+#		echoc --info --say "$strSayLogStarted"
+#	
+#		SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
+#		SECFUNCexecA -c --echo zenity --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
+#	fi
+#	
+#	while pgrep -fx "${lastrCmd[*]}";do # [*] to be one param only
+#		sleep 5;
+#	done
+#	SECFUNCechoErrA "Unity log monitor exited, why? : ${lastrCmd[@]}"
+#	return 1
+#}
+
+#if $bUnityLogDaemonOnly;then
+#	FUNCunityLogDaemon
+#	exit $?
+#el
 if $bLockedCheckOnly;then
-	while ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;do
+	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
 		if $bIgnoreDaemon;then
 			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
 			break;
 		fi
 		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
 	done
-	SECFUNCvarReadDB strUnityLog
+	SECFUNCvarReadDB strUnityLogFile
 	
 	FUNCisLocked&&:
 	exit $?
@@ -150,7 +186,7 @@ fi
 
 bHoldExecution=false
 if $bHoldToggle;then
-	if ! SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --setdbtodaemononly;then
+	if ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;then
 		echoc -p "daemon is not running."
 		exit 1
 	fi
@@ -180,19 +216,11 @@ if $bModeGnome;then
 	echoc --alert "Bug: at development time 'gnome-screensaver-command --query' has reported being active while it was not..."
 fi
 
-SECFUNCuniqueLock --id "${SECstrScriptSelfName}_Display$DISPLAY" --daemonwait
+SECFUNCuniqueLock --id "$strDaemonId" --daemonwait
 
 # after this, user can safely screen lock
-strDBusUnityDestination="com.canonical.Unity.Launcher"
-strDBusUnityObjPath="/com/canonical/Unity/Session"
-gdbus monitor -e -d "$strDBusUnityDestination" -o "$strDBusUnityObjPath" >"$strUnityLog"&
-if $bSpeak;then
-	strSayLogStarted="`SECFUNCseparateInWords --notype "${SECstrScriptSelfName%.sh}"` log started."
-	echoc --info --say "$strSayLogStarted"
-	
-	SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
-	SECFUNCexecA -c --echo zenity --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
-fi
+secUnity3DWMLogMonitorDaemon.sh
+#"$SECstrScriptSelfName" --unitylogdaemononly&
 
 nLightweightHackId=1
 bWasLockedByThisScript=false
@@ -205,7 +233,7 @@ while true;do
 	#strXscreensaverStatus="`xscreensaver-command -time`"&&: #it may not have been loaded yet..
 	
 #	# The lock may happen by other means than this script...
-#	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLog" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+#	if ! $bIsLocked && grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
 #		bIsLocked=true
 #	fi
 #	if ! $bIsLocked && xscreensaver-command -time |grep -q "screen locked since";then
