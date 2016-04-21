@@ -858,11 +858,16 @@ fi
 bCompizOff=false
 if pgrep -x "^compiz$";then
 	if ! pgrep -x "^metacity$";then
-		echoc --alert "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
-		if echoc -q "run 'metacity'?";then
-			secXtermDetached.sh metacity --replace
-			bCompizOff=true
-		fi
+		echoc --alert "3D application? stop compiz!"
+		echoc --info "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
+#		if echoc -q "run 'metacity'?";then
+#			secXtermDetached.sh metacity --replace
+#			bCompizOff=true
+#		fi
+		ScriptEchoColor -Q "replace window manager?@O_metacity/_xfwm4@Dt"&&:; case "`secascii $?`" in 
+			m)secXtermDetached.sh metacity --replace;bCompizOff=true;; 
+			x)secXtermDetached.sh xfwm4 --replace;bCompizOff=true;; 
+		esac
 	fi
 else
 	bCompizOff=true
