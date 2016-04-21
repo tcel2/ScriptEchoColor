@@ -855,21 +855,43 @@ fi
 #  useJWM=false
 #fi
 
-bCompizOff=false
-if pgrep -x "^compiz$";then
-	if ! pgrep -x "^metacity$";then
+function FUNCcurrentWM(){
+	wmctrl -m |grep Name |cut -d' ' -f2-
+};export -f FUNCcurrentWM
+
+#bCompizOff=false
+#if pgrep -x "^compiz$";then
+#	if ! pgrep -x "^metacity$";then
+if [[ "`FUNCcurrentWM`" == "Compiz" ]];then
 		echoc --alert "3D application? stop compiz!"
 		echoc --info "if you are going to run a 3D application, it is strongly advised to not leave another one on the current X session (like the very compiz unity), it may crash when coming back..."
 #		if echoc -q "run 'metacity'?";then
 #			secXtermDetached.sh metacity --replace
 #			bCompizOff=true
 #		fi
-		ScriptEchoColor -Q "replace window manager?@O_metacity/_xfwm4@Dt"&&:; case "`secascii $?`" in 
-			m)secXtermDetached.sh metacity --replace;bCompizOff=true;; 
-			x)secXtermDetached.sh xfwm4 --replace;bCompizOff=true;; 
+		bWaitChangeWM=false
+		type xfwm4
+		type metacity
+		ScriptEchoColor -Q "replace window manager?@O_metacity/_xfwm4@Dm"&&:; case "`secascii $?`" in 
+			m)secXtermDetached.sh metacity --replace;bWaitChangeWM=true;; 
+			x)secXtermDetached.sh xfwm4 --replace;bWaitChangeWM=true;; 
 		esac
-	fi
-else
+		
+		if $bWaitChangeWM;then
+			while [[ "`FUNCcurrentWM`" == "Compiz" ]];do
+				echoc -w -t 1
+			done
+		fi
+fi
+#	fi
+##else
+##	bCompizOff=true
+#fi
+
+strCurrentWindowManager="`FUNCcurrentWM`"
+echo "strCurrentWindowManager='$strCurrentWindowManager'"
+bCompizOff=false
+if [[ "$strCurrentWindowManager" != "Compiz" ]];then
 	bCompizOff=true
 fi
 
