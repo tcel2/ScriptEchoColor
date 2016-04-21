@@ -39,7 +39,7 @@ nDelay=10
 bDebugging=false
 bMouseTrickMode=false
 bLockedCheckOnly=false
-bIgnoreDaemon=false
+#bIgnoreDaemon=false
 #bSpeak=true
 #bUnityLogDaemonOnly=false
 astrSimpleCommandRegex=(
@@ -81,8 +81,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		astrSimpleCommandRegex+=("${1-}");
 	elif [[ "$1" == "--islocked" ]];then #help exit 0 if screen is locked
 		bLockedCheckOnly=true
-	elif [[ "$1" == "--skipdaemon" ]];then #help ignore daemon check where it would be required
-		bIgnoreDaemon=true
+#	elif [[ "$1" == "--skipdaemon" ]];then #help ignore daemon check where it would be required
+#		bIgnoreDaemon=true
 	elif [[ "$1" == "--mousetrickmode" ]];then #help simulate mouse activity what will expectedly work with all screensavers but may have some side effects..
 		bMouseTrickMode=true
 	elif [[ "$1" == "--debug" ]];then #help to help on debugging by changing a few things... :(
@@ -161,13 +161,20 @@ strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 #	exit $?
 #el
 if $bLockedCheckOnly;then
-	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
-		if $bIgnoreDaemon;then
-			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
-			break;
-		fi
-		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
+	while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
+#		secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
+		nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+		echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
 	done
+	
+#	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
+#		if $bIgnoreDaemon;then
+#			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
+#			break;
+#		fi
+#		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
+#	done
+	
 	SECFUNCvarReadDB strUnityLogFile
 	
 	FUNCisLocked&&:
@@ -219,7 +226,8 @@ fi
 SECFUNCuniqueLock --id "$strDaemonId" --daemonwait
 
 # after this, user can safely screen lock
-secUnity3DWMLogMonitorDaemon.sh
+nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+#secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
 #"$SECstrScriptSelfName" --unitylogdaemononly&
 
 nLightweightHackId=1

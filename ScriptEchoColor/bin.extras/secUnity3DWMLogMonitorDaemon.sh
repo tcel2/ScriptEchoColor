@@ -32,6 +32,7 @@ CFGstrTest="Test"
 bSpeak=true
 astrRemainingParams=()
 bGetLogFile=false;
+bChkIsRunning=false
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -44,6 +45,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
 	elif [[ "$1" == "--getlogfile" || "$1" == "-g" ]];then #help 
 		bGetLogFile=true
+	elif [[ "$1" == "--isrunning" || "$1" == "-i" ]];then #help 
+		bChkIsRunning=true
 	elif [[ "$1" == "--nospeak" ]];then #help will not speak when ready
 		bSpeak=false
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
@@ -79,7 +82,12 @@ if SECFUNCuniqueLock --id "$strUnityLogDaemonId" --isdaemonrunning;then
 	bWasAlreadyRunning=true;
 fi
 
-if $bGetLogFile;then
+if $bChkIsRunning;then
+	if $bWasAlreadyRunning;then
+		exit 0
+	fi
+	exit 1
+elif $bGetLogFile;then
 #	if $bWasAlreadyRunning;then
 		echo "$CFGstrUnityLogFile"
 		exit 0
