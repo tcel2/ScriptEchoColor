@@ -266,6 +266,19 @@ function FUNChasCache() {
 	
 	return 1
 };export -f FUNChasCache
+
+function FUNCcacheFileToPlay(){
+	local lmd5sumText="$1";shift
+	local lstrCacheFile="$_SECSAYcacheFolder/$lmd5sumText"
+	echo "$lstrCacheFile"
+};export -f FUNCcacheFileToPlay
+
+#function FUNCfileToPlay(){
+#	local lmd5sumText="$1";shift
+#	local fileAudio="`FUNCcacheFileToPlay`"
+#	echo "$fileAudio"
+#};export -f FUNCplayFileInfo
+
 function FUNCplay() { 
 #	local lbCacheOnly=false
 #	if [[ "$1" == "--cacheonly" ]];then
@@ -282,7 +295,7 @@ function FUNCplay() {
 		return 1
 	fi
 	
-	local lstrCacheFile="$_SECSAYcacheFolder/$lmd5sumText"
+	local lstrCacheFile="`FUNCcacheFileToPlay "$lmd5sumText"`" #"$_SECSAYcacheFolder/$lmd5sumText"
 	
 	SECFUNCexecA touch "$lstrCacheFile" #to indicate that it was recently used
 	local fileAudio="$lstrCacheFile"
@@ -294,9 +307,14 @@ function FUNCplay() {
 		fi
 	fi
 	
-	if $bStdoutFilename;then
-		echo "$fileAudio"
-	fi
+#	if $bStdoutFilename;then
+##		FUNCcacheFileToPlay "$lmd5sumText"
+##		ls --color /proc/$$/fd -l >>/dev/stderr 
+##		echo "$fileAudio" >>/dev/stderr 
+##		echo "$fileAudio" >>/dev/stdout
+#		echo "$fileAudio"
+#	fi
+
 #	local lstrPlayOutput="2>>/dev/null"
 #	local lstrPlayOutput="--quiet"
 #	if $bShowPlayOutput;then
@@ -337,8 +355,10 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	  strSndEffects="$1"
 	elif [[ "$1" == "--nomp3" ]];then #help do not use mp3 format, but cache files will be about 10x bigger...
 		SEC_SAYMP3=false
+#	elif [[ "$1" == "--stdout" ]];then #help output the full sound filename to stdout, this implies --waitsay because a say buffer may be on going...
 	elif [[ "$1" == "--stdout" ]];then #help output the full sound filename to stdout
 		bStdoutFilename=true
+	#	bWaitSay=true
 	elif [[ "$1" == "--clearcache" ]];then #help all audio files on cache will be removed
 		bClearCache=true
 	elif [[ "$1" == "--daemon" ]];then #help keeps running and takes care of all speak requests with log
@@ -414,6 +434,15 @@ else
 		echo "SECSay: $sayText" >>/dev/stderr
 	fi
 fi
+
+if ! $bDaemon;then
+	if $bStdoutFilename;then 
+#		md5sumTextGet="`FUNCgetParamValue "$strHead" SECmd5sum`"
+#		FUNCcacheFileToPlay "$md5sumTextGet";
+		FUNCcacheFileToPlay "$md5sumText"
+	fi
+fi
+
 
 #echo "$sayText" >>"$_SECSAYfileSayStack"
 sayVol="`echo "scale=2;$SECnSayVolume/100" |bc -l`"
@@ -515,6 +544,14 @@ while true; do
 		if ! sleep $sleepDelay; then exit 1; fi #exit_FUNCsayStack: on sleep fail
 	done
 	
+#	if ! $bDaemon;then
+#		if $bStdoutFilename;then 
+#	#		md5sumTextGet="`FUNCgetParamValue "$strHead" SECmd5sum`"
+#	#		FUNCcacheFileToPlay "$md5sumTextGet";
+#			FUNCcacheFileToPlay "$md5sumText"
+#		fi
+#	fi
+	
 	if [[ -f "$_SECSAYfileSayStack" ]];then
 		strHead=`head -n 1 "$_SECSAYfileSayStack"`
 		if [[ -n "$strHead" ]]; then
@@ -537,6 +574,7 @@ while true; do
 			fi
 			
 			FUNCplay "$md5sumTextGet" "$nSayVolGet" "$strSndEffectsGet"
+#			if $bStdoutFilename;then FUNCcacheFileToPlay "$md5sumTextGet";fi
 			
 			#SECFUNCexecA sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
 			SECFUNCexecA sed -i "/$md5sumTextGet/d" "$_SECSAYfileSayStack" #delete correct line
