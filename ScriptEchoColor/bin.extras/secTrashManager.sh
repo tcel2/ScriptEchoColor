@@ -127,138 +127,143 @@ while true;do
 	astrMountedFSList=("$strTrashFolderUser")
 	astrMountedFSList+=(`df --output=target |tail -n +2`);
 	for strMountedFS in "${astrMountedFSList[@]}";do
-		# Validations
-		if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
-			strTrashFolder="$strMountedFS"
-		else
-			strTrashFolder="$strMountedFS/.Trash-1000/files/"
-		fi
-		SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
-		if ! echo "$strTrashFolder" |grep -qi "trash";then 
-			# minimal :( safety check ...
-			SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
-			continue;
-		fi
-#		ls -ld "$strTrashFolder"&&:
-		if [[ ! -d "$strTrashFolder" ]];then continue;fi
+		function FUNCcheckFS() {
+			# Validations
+			if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
+				strTrashFolder="$strMountedFS"
+			else
+				strTrashFolder="$strMountedFS/.Trash-1000/files/"
+			fi
+			SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
+			if ! echo "$strTrashFolder" |grep -qi "trash";then 
+				# minimal :( safety check ...
+				SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
+				return 0 #continue;
+			fi
+	#		ls -ld "$strTrashFolder"&&:
+			if [[ ! -d "$strTrashFolder" ]];then return 0;fi #continue;fi
 		
-		SECFUNCexecA -ce cd "$strTrashFolder"
-		nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
-		echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
-		if((nTrashSizeMB==0));then continue;fi
+			SECFUNCexecA -ce cd "$strTrashFolder"
+			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
+			echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+			if((nTrashSizeMB==0));then return 0;fi #continue;fi
 		
-		# Remove files
-		if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
-#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
-#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
+			# Remove files
+			if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
+	#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
+	#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
 			
-			if false;then # BAD.. will not consider the file trashing time...
+				if false;then # BAD.. will not consider the file trashing time...
+					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+						find "./" -type f -printf '%T+\t%p\n' \
+							|sort \
+							|head -n $nFileCountPerStep)&&:
+				fi
+				if false;then # BAD... too many files on the list, will fail cmd param size limit...
+					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+						egrep "^DeletionDate=" -H ../info/*.trashinfo \
+							|sed -r 's"(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+							|sort \
+							|head -n $nFileCountPerStep)&&:
+				fi
+				if false;then # Good and precise but too slow if there are too many files...
+					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+						find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
+							|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+							|sort \
+							|head -n $nFileCountPerStep)&&:
+				fi
+				# This will use the trashinfo file datetime as reference! probably 100% precise!
+				# A token '&' is used to help on precisely parsing the `ls` output making it usable with `cut`.
 				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-					find "./" -type f -printf '%T+\t%p\n' \
-						|sort \
-						|head -n $nFileCountPerStep)&&:
-			fi
-			if false;then # BAD... too many files on the list, will fail cmd param size limit...
-				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-					egrep "^DeletionDate=" -H ../info/*.trashinfo \
-						|sed -r 's"(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
-						|sort \
-						|head -n $nFileCountPerStep)&&:
-			fi
-			if false;then # Good and precise but too slow if there are too many files...
-				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-					find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
-						|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
-						|sort \
-						|head -n $nFileCountPerStep)&&:
-			fi
-			# This will use the trashinfo file datetime as reference! probably 100% precise!
-			# A token '&' is used to help on precisely parsing the `ls` output making it usable with `cut`.
-			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-				ls -ltr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
-					|head -n $((nFileCountPerStep+1)) \
-					|tail -n +2 \
-					|sed -r -e 's"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"' -e 's".trashinfo$""' )&&:
-#			# `tail` +2 to skip total line. `sed` to convert 1st space to tab making it usable with `cut`
-#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-#				ls -ltr --time-style='+%Y%m%d+%H%M%S.%N' "../info/" \
-#					|tail -n +2 \
-#					|head -n $nFileCountPerStep \
-#					|cut -d' ' -f6- \
-#					|sed -r -e 's" "\t"' -e 's".trashinfo$""' )&&:
-#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-#				ls -ltr --time-style=full-iso "../info/" \
-#					|tail -n +2 \
-#					|head -n $nFileCountPerStep \
-#					|cut -d' ' -f6-7,9- \
-#					|sed -r -e 's" "+"' -e 's" "\t"' -e 's".trashinfo$""' )&&:
+					ls -ltr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
+						|head -n $((nFileCountPerStep+1)) \
+						|tail -n +2 \
+						|sed -r -e 's"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"' -e 's".trashinfo$""' )&&:
+	#			# `tail` +2 to skip total line. `sed` to convert 1st space to tab making it usable with `cut`
+	#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+	#				ls -ltr --time-style='+%Y%m%d+%H%M%S.%N' "../info/" \
+	#					|tail -n +2 \
+	#					|head -n $nFileCountPerStep \
+	#					|cut -d' ' -f6- \
+	#					|sed -r -e 's" "\t"' -e 's".trashinfo$""' )&&:
+	#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+	#				ls -ltr --time-style=full-iso "../info/" \
+	#					|tail -n +2 \
+	#					|head -n $nFileCountPerStep \
+	#					|cut -d' ' -f6-7,9- \
+	#					|sed -r -e 's" "+"' -e 's" "\t"' -e 's".trashinfo$""' )&&:
 			
-			if((`SECFUNCarraySize astrEntryList`>0));then
-				nRmCount=0
-				nRmSizeTotalB=0
-				nAvailSizeB4RmB=$((`FUNCavailFS`*1000000))&&: # from M to B
-				# has date and filename
-				for strEntry in "${astrEntryList[@]}";do
-					strFileDT="`echo "$strEntry" |cut -f1`"
-					strFile="`echo "$strEntry" |cut -f2`"
-#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
+				if((`SECFUNCarraySize astrEntryList`>0));then
+					nRmCount=0
+					nRmSizeTotalB=0
+					nAvailSizeB4RmB=$((`FUNCavailFS`*1000000))&&: # from M to B
+					# has date and filename
+					for strEntry in "${astrEntryList[@]}";do
+						strFileDT="`echo "$strEntry" |cut -f1`"
+						strFile="`echo "$strEntry" |cut -f2`"
+	#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
 					
-					bDirectory=false
-					if [[ -d "$strFile" ]];then 
-						bDirectory=true
-#						SECFUNCechoWarnA "Directories are not supported yet '$strFile'" #TODO remove directories?
-#						continue
-					elif [[ -L "$strFile" ]];then 
-						: # symbolic links are ok
-					elif [[ ! -f "$strFile" ]];then 
-						# delete the trashinfo file for a missing trashed file
-						SECFUNCechoWarnA "Missing real file strFile='$strFile', removing trashinfo for it."
+						bDirectory=false
+						if [[ -d "$strFile" ]];then 
+							bDirectory=true
+	#						SECFUNCechoWarnA "Directories are not supported yet '$strFile'" #TODO remove directories?
+	#						continue
+						elif [[ -L "$strFile" ]];then 
+							: # symbolic links are ok
+						elif [[ ! -f "$strFile" ]];then 
+							# delete the trashinfo file for a missing trashed file
+							SECFUNCechoWarnA "Missing real file strFile='$strFile', removing trashinfo for it."
+							if ! $bDummyRun;then
+								rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+							fi
+							continue; 
+						fi 
+					
+						if $bDirectory;then
+							nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
+						else
+							nFileSizeB="`stat -c "%s" "./$strFile"`"
+						fi
+						nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
+						((nRmCount++))&&:
+					
+						strReport=""
+						strReport+="nRmCount='$nRmCount',"
+						strReport+="strFile='$strFile',"
+						strReport+="nFileSizeB='$nFileSizeB',"
+						strReport+="strFileDT='$strFileDT',"
+						strReport+="AvailMB='`FUNCavailFS`',"
+						strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
+						echo "$strReport"
+					
 						if ! $bDummyRun;then
+							if ! $bDirectory;then
+								# extra security on removing a file, will use it's full path, therefore surely inside of trash folder
+								rm -vf "/$strTrashFolder/$strFile"
+							else
+								# removes directory recursively
+								SECFUNCexecA -ce rm -rvf "/$strTrashFolder/$strFile/"
+							fi
 							rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
 						fi
-						continue; 
-					fi 
 					
-					if $bDirectory;then
-						nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
-					else
-						nFileSizeB="`stat -c "%s" "./$strFile"`"
-					fi
-					nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
-					((nRmCount++))&&:
-					
-					strReport=""
-					strReport+="nRmCount='$nRmCount',"
-					strReport+="strFile='$strFile',"
-					strReport+="nFileSizeB='$nFileSizeB',"
-					strReport+="strFileDT='$strFileDT',"
-					strReport+="AvailMB='`FUNCavailFS`',"
-					strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
-					echo "$strReport"
-					
-					if ! $bDummyRun;then
-						if ! $bDirectory;then
-							# extra security on removing a file, will use it's full path, therefore surely inside of trash folder
-							rm -vf "/$strTrashFolder/$strFile"
-						else
-							# removes directory recursively
-							SECFUNCexecA -ce rm -rvf "/$strTrashFolder/$strFile/"
-						fi
-						rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
-					fi
-					
-					((nRmSizeTotalB+=nFileSizeB))&&:
+						((nRmSizeTotalB+=nFileSizeB))&&:
 				
-					if $bTest;then break;fi # to work at only with one file
-					# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
-					if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nFSSizeAvailGoalMB*1000000) ));then
-						break;
-					fi
-				done
-			else
-				echoc --info "trash is empty"
+						if $bTest;then break;fi # to work at only with one file
+						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
+						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nFSSizeAvailGoalMB*1000000) ));then
+							break;
+						fi
+					done
+				else
+					echoc --info "trash is empty"
+				fi
 			fi
-		fi
+			
+			return 0
+		};export -f FUNCcheckFS
+		(FUNCcheckFS) # to make the "pid using FS detection system" unlink with this script
 		
 		#if $bTest;then break;fi # to work at only the user default trash folder
 		
