@@ -981,6 +981,8 @@ if $useJWM; then
 		#	4 - mod4 (meta/super)
 		#	5 - mod5
     echo -e '
+	        <Key key="XF86AudioRaiseVolume">exec:amixer set Master 5%+</Key>
+	        <Key key="XF86AudioLowerVolume">exec:amixer set Master 5%-</Key>
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
           <Key mask="4" key="F3">exec:xdotool set_desktop 2</Key>
