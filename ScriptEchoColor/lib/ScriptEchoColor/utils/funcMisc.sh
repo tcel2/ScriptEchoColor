@@ -1008,6 +1008,64 @@ function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a fil
 	echo -n "$lnSecondsDelay"
 }
 
+function SECFUNCtoggleBoolean(){ #help toggles a variable "boolean" value (true or false) only if it was already set as "boolean"
+	# var init here
+#	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	local lbShow=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCtoggleBoolean_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			return 0
+		elif [[ "${1-}" == "--show" ]]; then #SECFUNCtoggleBoolean_help
+			lbShow=true
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCtoggleBoolean_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCtoggleBoolean_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	#validate params here
+	local lstrVarId="${1-}"
+	if ! declare -p "$lstrVarId" >>/dev/null;then
+		SECFUNCechoErrA "invalid var '$lstrVarId'"
+		return 1
+	fi
+	
+	# code here
+	local lstrValue="${!lstrVarId}"
+	local lstrNewValue=""
+	if [[ "$lstrValue" == "true" ]];then
+		lstrNewValue="false"
+	elif [[ "$lstrValue" == "false" ]];then
+		lstrNewValue="true"
+	else
+		SECFUNCechoErrA "var '$lstrVarId' has not boolean value '$lstrValue'"
+		return 1
+	fi
+	
+	declare -xg ${lstrVarId}="$lstrNewValue"
+	if $lbShow;then declare -p ${lstrVarId};fi
+	
+	return 0 # important to have this default return value in case some non problematic command fails before returning
+}
+
 #function SECFUNCexit() { #useful to do 'before exit' tasks
 #	local lnStatus=$?
 #	if [[ -n "${1-}" ]];then

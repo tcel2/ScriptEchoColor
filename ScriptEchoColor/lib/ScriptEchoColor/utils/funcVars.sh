@@ -308,31 +308,24 @@ function SECFUNCvarGet() { #help <varname> [arrayIndex] if var is an array, you 
 		shift&&:
 	done
 	
-  if SECFUNCarrayCheck "$1";then
-  	if [[ -n "${2-}" ]]; then
-  		eval 'echo "${'$1'['$2']}"'
-  	else
-	  	#declare |grep "^$1=(" |sed 's"^'$1'=""'
-	  	local l_sedRemoveDeclare="s;^declare -[^ ]* $1=;;"
+	local lstrVarId="${1-}"
+	if ! declare -p "$lstrVarId" >>/dev/null;then
+		SECFUNCechoErrA "invalid var '$lstrVarId'"
+		return 1
+	fi
+	
+  if SECFUNCarrayCheck "$lstrVarId";then
+  	if [[ -n "${2-}" ]]; then # this is a single value from the array on its final format
+  		local lstrRefArrayIndexed="$lstrVarId[$2]"
+  		echo "${!lstrRefArrayIndexed}" 
+  	else # this is the full array value to be reused
+	  	local l_sedRemoveDeclare="s;^declare -[^ ]* ${lstrVarId}=;;"
 	  	local l_sedRemovePliqs="s;^'(.*)'$;\1;"
-	  	declare -p $1 |sed -r -e "$l_sedRemoveDeclare" -e "$l_sedRemovePliqs"
-#			local l_value=""
-#			#for val in `eval 'echo "${'$1'[@]}"'`; do
-#			local l_tot=`eval 'echo "${#'$1'[*]}"'`
-#			for((i=0;i<l_tot;i++)); do
-#				local l_separator=`if((i==0));then echo "";else echo " ";fi`
-#				#l_value="$l_value '$val'"
-#				local l_val=`eval 'echo "${'$1'['$i']}"'`
-#				l_val="`SECFUNCfixPliq "$l_val"`"
-#				l_value="$l_value$l_separator\"$l_val\""
-#			done
-#			l_value="($l_value)"
-#			echo "$l_value";
+	  	declare -p ${lstrVarId} |sed -r -e "$l_sedRemoveDeclare" -e "$l_sedRemovePliqs"
   	fi
   else
-		#@@@R local varWithCurrencySign=`echo '$'$1`
-		#@@@R eval 'echo "'$varWithCurrencySign'"'
-		eval 'echo "${'$1'-}"'
+#		eval 'echo "${'$1'-}"'
+		echo "${!lstrVarId}"
 	fi
 }
 function SECFUNCfixPliq() { #help 
@@ -446,23 +439,25 @@ function SECFUNCvarToggle() { #help <varId> only works with variable that has "b
 	fi
 	
 	local lstrVarId="${1-}"
-	if [[ -z "$lstrVarId" ]];then
-		SECFUNCechoErrA "invalid var '$lstrVarId'"
-		return 1
-	fi
+	if ! SECFUNCtoggleBoolean ${lstrVarId};then return 1;fi
+#	if [[ -z "$lstrVarId" ]];then
+#		SECFUNCechoErrA "invalid var '$lstrVarId'"
+#		return 1
+#	fi
 	
-	local lstrValue="`SECFUNCvarGet "$lstrVarId"`"
-	local lstrNewValue=""
-	if [[ "$lstrValue" == "true" ]];then
-		lstrNewValue="false"
-	elif [[ "$lstrValue" == "false" ]];then
-		lstrNewValue="true"
-	else
-		SECFUNCechoErrA "var '$lstrVarId' has not boolean value '$lstrValue'"
-		return 1
-	fi
+#	local lstrValue="`SECFUNCvarGet "$lstrVarId"`"
+#	local lstrNewValue=""
+#	if [[ "$lstrValue" == "true" ]];then
+#		lstrNewValue="false"
+#	elif [[ "$lstrValue" == "false" ]];then
+#		lstrNewValue="true"
+#	else
+#		SECFUNCechoErrA "var '$lstrVarId' has not boolean value '$lstrValue'"
+#		return 1
+#	fi
 	
-	SECFUNCvarSet $lstrOptShow $lstrVarId="$lstrNewValue"
+#	SECFUNCvarSet $lstrOptShow $lstrVarId="$lstrNewValue"
+	SECFUNCvarSet $lstrOptShow $lstrVarId="${!lstrVarId}"
 }
 
 function SECFUNCvarUnset() { #help <var> unregister the variable so it will not be saved to BD next time
@@ -609,7 +604,8 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 		
 		if $l_bSetVarValue; then
 			#eval "export $l_varPlDoUsThVaNaPl=\"$l_value\""
-			eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
+			#eval "export $l_varPlDoUsThVaNaPl=\"`SECFUNCfixPliq "$l_value"`\""
+			declare -xg $l_varPlDoUsThVaNaPl="`SECFUNCfixPliq "$l_value"`"
 		fi
   fi
 	
