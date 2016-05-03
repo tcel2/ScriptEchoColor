@@ -52,6 +52,7 @@ bActivateUnmappedWindow=false
 strActivateUnmappedWindowNameId=""
 bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as it will be overriden at boolean check...
 bFixPSensor=false
+bKeepNumlockOn=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
 		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
@@ -84,6 +85,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixYakuake=true
 	elif [[ "$1" == "--fixpsensor" ]];then #help to fix psensor window (on system startup, its maximized state may be ignored).
 		bFixPSensor=true
+	elif [[ "$1" == "--keepnumlockon" ]];then #help will check if numlock is off and turn it on
+		bKeepNumlockOn=true
 	elif [[ "$1" == "--noxterm" ]];then #help whenever a new xterm would be used, now will not
 		bUseXterm=false
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
@@ -208,6 +211,18 @@ elif $bFixCairoDock;then
 	exit 0
 elif $bFixPSensor;then
 	SECFUNCexecA -ce SECFUNCCwindowCmd --maximize "Psensor - Temperature Monitor"
+	exit 0
+elif $bKeepNumlockOn;then
+	function SECFUNCkeepNumlockOn(){
+		while true;do 
+			if numlockx status |grep off;then 
+				SECFUNCexecA -ce numlockx on;
+			fi;
+			sleep 1;
+		done
+	};export -f SECFUNCkeepNumlockOn
+#		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
+	SECFUNCkeepNumlockOn
 	exit 0
 elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);

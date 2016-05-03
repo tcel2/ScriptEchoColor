@@ -427,17 +427,17 @@ function FUNCscript() {
   elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
     #FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
     secXtermDetached.sh FUNCshowHelp $DISPLAY #30
-  elif [[ "$lscriptName" == "keepNumlockOn" ]]; then #FUNCscript_help will check if numlock is off and turn it on
-  	function SECFUNCkeepNumlockOn(){
-			while true;do 
-				if numlockx status |grep off;then 
-					SECFUNCexecA -ce numlockx on;
-				fi;
-				sleep 1;
-			done
-		};export -f SECFUNCkeepNumlockOn
-#		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
-		SECFUNCkeepNumlockOn
+#  elif [[ "$lscriptName" == "keepNumlockOn" ]]; then #FUNCscript_help will check if numlock is off and turn it on
+#  	function SECFUNCkeepNumlockOn(){
+#			while true;do 
+#				if numlockx status |grep off;then 
+#					SECFUNCexecA -ce numlockx on;
+#				fi;
+#				sleep 1;
+#			done
+#		};export -f SECFUNCkeepNumlockOn
+##		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
+#		SECFUNCkeepNumlockOn
   elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
     if FUNCisScreenLockRunning ${1-};then
       exit 0
@@ -913,7 +913,7 @@ while FUNCisX1running;do
 	fi
 done
 ls -l $SECvarFile
-SECFUNCuniqueLock --daemonwait
+SECFUNCuniqueLock --waitbecomedaemon
 SECFUNCvarSet --default pidOpenNewX=$$
 ls -l $SECvarFile
 
