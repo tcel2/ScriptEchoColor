@@ -398,7 +398,7 @@ function FUNCscript() {
 	SECFUNCdbgFuncInA;
 	# scripts will be executed with all environment properly setup with eval `secinit`
 	local lscriptName="${1-}"
-	shift
+	shift&&:
 	
 	FUNCscriptHelp(){
 		echo "Scripts List:"
@@ -427,6 +427,16 @@ function FUNCscript() {
   elif [[ "$lscriptName" == "showHelp" ]]; then #FUNCscript_help show user custom command options and other options
     #FUNCxtermDetached --waitx1exit FUNCshowHelp $DISPLAY 30&
     secXtermDetached.sh FUNCshowHelp $DISPLAY #30
+  elif [[ "$lscriptName" == "keepNumlockOn" ]]; then #FUNCscript_help will check if numlock is off and turn it on
+  	function SECFUNCkeepNumlockOn(){
+			while true;do 
+				if numlockx status |grep off;then 
+					SECFUNCexecA -ce numlockx on;
+				fi;
+				sleep 1;
+			done
+		};export -f SECFUNCkeepNumlockOn
+		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
   elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
     if FUNCisScreenLockRunning ${1-};then
       exit 0
@@ -754,9 +764,9 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
       exit 1
     fi
   elif [[ "$1" == "--script" ]]; then #help run a internal script (without script name will show the list)
-  	shift
+  	shift&&:
   	scriptName="${1-}"
-  	shift
+  	shift&&:
   	FUNCscript $scriptName "$@"
 		exit 0
   elif [[ "$1" == "--killX1" ]]; then #help kill X :1
@@ -983,6 +993,7 @@ if $useJWM; then
     echo -e '
 	        <Key key="XF86AudioRaiseVolume">exec:amixer set Master 5%+</Key>
 	        <Key key="XF86AudioLowerVolume">exec:amixer set Master 5%-</Key>
+	        <Key key="XF86AudioMute">exec:amixer set Master toggle</Key>
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
           <Key mask="4" key="F3">exec:xdotool set_desktop 2</Key>
@@ -1277,7 +1288,8 @@ done
 if $bCompizOff;then
 	if ! ps -A |grep -q -x compiz;then
 		if echoc -q "restore compiz?";then
-			secXtermDetached.sh compiz --replace
+#			(cd "$HOME";secXtermDetached.sh compiz --replace) #$HOME to move away from any unmountable media
+			(cd "$HOME";secXtermDetached.sh secFixWindow.sh --fixcompiz) #$HOME to move away from any unmountable media
 		fi
 	fi
 fi

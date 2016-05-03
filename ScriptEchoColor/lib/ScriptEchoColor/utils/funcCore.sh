@@ -1954,6 +1954,15 @@ function SECFUNCppidList() { #help [separator] between pids
   return 0
 }
 
+function SECFUNCrestoreDefaultOutputs() { #help same as `SECFUNCcheckActivateRunLog --restoredefaultoutputs "${@-}"`
+	if [[ "$1" == "--help" ]];then #SECFUNCrestoreDefaultOutputs_help
+		SECFUNCshowHelp $FUNCNAME
+		return 0
+	fi
+	
+	SECFUNCcheckActivateRunLog --restoredefaultoutputs "${@-}" #keep its return status
+}
+
 function SECFUNCcheckActivateRunLog() { #help
 	local lbRestoreDefaults=false
 	local lbInheritParentLog=false
