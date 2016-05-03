@@ -1178,7 +1178,8 @@ fi
 secXtermDetached.sh --display :1 FUNCshowHelp :1 #30
 #pidZenity0=$!
 
-secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
+#secXtermDetached.sh --display :1 bash -ic "FUNCrestartPulseAudioDaemonChild"
+secXtermDetached.sh --display :1 FUNCrestartPulseAudioDaemonChild
 
 # run in a thread, prevents I from ctrl+c here what breaks THIS X instace and locks keyb
 if $useJWM; then
