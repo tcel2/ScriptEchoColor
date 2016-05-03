@@ -32,10 +32,10 @@ SECFUNCechoDbgA "SECvarFile='$SECvarFile'"
 
 #alias ps='echoc -x ps' #good to debug the bug
 
-SECFUNCvarGet SEC_SAYVOL
 if [[ -z "${SEC_SAYVOL-}" ]];then
 	export SEC_SAYVOL=15 #from 0 to 100 #this should be controlled by external scripts...
 fi
+SECFUNCvarGet SEC_SAYVOL
 
 export execX1="X :1"
 grepX1="X :1"
@@ -436,7 +436,8 @@ function FUNCscript() {
 				sleep 1;
 			done
 		};export -f SECFUNCkeepNumlockOn
-		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
+#		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
+		SECFUNCkeepNumlockOn
   elif [[ "$lscriptName" == "isScreenLocked" ]];then #FUNCscript_help [displayId] check if screen is locked
     if FUNCisScreenLockRunning ${1-};then
       exit 0
