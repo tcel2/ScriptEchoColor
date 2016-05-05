@@ -103,19 +103,19 @@ done
 
 function FUNCisLocked(){
 	# The lock may happen by other means than this script...
-	if [[ -f "${strUnityLogFile-}" ]];then
-		if grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+	if $bModeUnity;then
+		if [[ -f "${strUnityLogFile-}" ]];then
+			if grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+				return 0
+			fi
+		else
+			SECFUNCechoWarnA "unity log file strUnityLogFile='${strUnityLogFile-}' not available"
+		fi
+	elif $bModeXscreensaver;then
+		if xscreensaver-command -time |grep -q "screen locked since";then
 			return 0
 		fi
-	else
-		SECFUNCechoWarnA "unity log file strUnityLogFile='${strUnityLogFile-}' not available"
-	fi
-	
-	if xscreensaver-command -time |grep -q "screen locked since";then
-		return 0
-	fi
-	
-	if $bModeGnome;then #gnome has a bug (TODO explain what bug), so only check if its option was actually chosen
+	elif $bModeGnome;then #gnome has a bug (TODO explain what bug), so only check if its option was actually chosen
 		if gnome-screensaver-command --query |grep -q "The screensaver is active";then
 			# on ubuntu, it actually uses unity to lock, and gnome only activates after screen is blanked...
 			return 0
@@ -126,7 +126,9 @@ function FUNCisLocked(){
 }
 
 #varset strUnityLogFile="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
-varset strUnityLogFile="`secUnity3DWMLogMonitorDaemon.sh --getlogfile`"
+if $bModeUnity;then
+	varset strUnityLogFile="`secUnity3DWMLogMonitorDaemon.sh --getlogfile`"
+fi
 
 strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 #strUnityLogDaemonId="${strDaemonId}_UnityLog"
@@ -161,11 +163,12 @@ strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 #	exit $?
 #el
 if $bLockedCheckOnly;then
-	while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
-#		secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
-		nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
-		echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
-	done
+	if $bModeUnity;then
+		while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
+	#		secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
+			nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+			echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
+		done
 	
 #	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
 #		if $bIgnoreDaemon;then
@@ -175,7 +178,8 @@ if $bLockedCheckOnly;then
 #		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
 #	done
 	
-	SECFUNCvarReadDB strUnityLogFile
+		SECFUNCvarReadDB strUnityLogFile
+	fi
 	
 	FUNCisLocked&&:
 	exit $?
@@ -223,10 +227,12 @@ if $bModeGnome;then
 	echoc --alert "Bug: at development time 'gnome-screensaver-command --query' has reported being active while it was not..."
 fi
 
-SECFUNCuniqueLock --id "$strDaemonId" --daemonwait
+SECFUNCuniqueLock --id "$strDaemonId" --waitbecomedaemon
 
 # after this, user can safely screen lock
-nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+if $bModeUnity;then
+	nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+fi
 #secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
 #"$SECstrScriptSelfName" --unitylogdaemononly&
 

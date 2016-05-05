@@ -134,7 +134,7 @@ fi
 
 if [[ -n "$strTitleForce" ]];then
 #	varset strTitle="$strTitleForce"
-	varset strTitle="`SECFUNCfixId "$strTitleForce"`" #if user puts a title with invalid characters it will be said by not using --justfix option
+	varset strTitle="`SECFUNCfixId "$strTitleForce"`"&&: #if user puts a title with invalid characters it will be said by not using --justfix option
 else # strTitle is set to the command that is the first parameter
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
 	varset strTitle="`SECFUNCfixId --justfix "$1"`"
