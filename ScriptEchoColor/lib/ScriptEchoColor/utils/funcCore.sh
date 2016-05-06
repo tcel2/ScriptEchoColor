@@ -427,7 +427,9 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 #		SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
 #		echo "0" #if not array or invalid
 #	fi
-	eval 'echo "${#'$lstrArrayId'[@]}"'
+	declare -n laRef="$lstrArrayId"
+	echo "${#laRef[@]}"
+#	eval 'echo "${#'$lstrArrayId'[@]}"'
 	
 	return 0
 }
@@ -468,10 +470,14 @@ function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> retu
 	
 	if ! SECFUNCarrayCheck "$lstrArrayIdA";then
 		SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
-		return 1
+		return 1 #generic error indicating a problem that MUST be fixed by the user
 	fi
 	
 	if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
+#		SECFUNCechoWarnA "empty array lstrArrayIdA='$lstrArrayIdA'"
+		###
+		# SAY NOTHING!!! the contains check can return false (non 0) in case array is empty, is not even a warning...
+		###
 		return 4 #empty array
 	fi
 	
@@ -483,6 +489,10 @@ function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> retu
 		fi
 	done
 	
+	#SECFUNCechoWarnA "element lstrElementToMatch='$lstrElementToMatch' not found."
+	###
+	# SAY NOTHING!!! the contains check can return false (non 0) in case element was not found, is not even a warning...
+	###
 	return 3 #a non conflicting return value indicating array does not contain element
 }
 

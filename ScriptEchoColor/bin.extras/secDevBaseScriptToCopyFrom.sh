@@ -63,6 +63,7 @@ function FUNCcodingGuide(){
 
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
+	SECFUNCdbgFuncInA;
 	# var init here
 	local lstrExample="DefaultValue"
 	local lastrRemainingParams=()
@@ -71,7 +72,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
 			SECFUNCshowHelp $FUNCNAME
-			return 0
+			SECFUNCdbgFuncOutA;return 0
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
 			shift
 			lstrExample="${1-}"
@@ -84,7 +85,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			$FUNCNAME --help
-			return 1
+			SECFUNCdbgFuncOutA;return 1
 #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
 #			SECFUNCechoErrA "invalid option '$1'"
 #			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
@@ -96,7 +97,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	
 	# code here
 	
-	return 0 # important to have this default return value in case some non problematic command fails before returning
+	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 : ${strEnvVarUserCanModify:="test"}

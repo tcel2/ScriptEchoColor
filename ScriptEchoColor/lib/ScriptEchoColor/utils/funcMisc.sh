@@ -179,34 +179,40 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	SECFUNCdbgFuncOutA; return 0;
 }
 
-function SECFUNCrequest() { #help <lstrId> simple requests
+function SECFUNCrequest() {
+	SECFUNCsimpleSyncRequest "$@"
+}
+function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized execution requests
 	# var init here
 	local lstrExample="DefaultValue"
 	local lastrRemainingParams=()
 	local lastrAllParams=("${@-}") # this may be useful
 	local lbWait=false
 	local lbListen=false;
-	local lstrBaseId="`SECFUNCfixIdA -f "$SECstrScriptSelfName"`"
+#	local lstrBaseId="`SECFUNCfixIdA -f "$SECstrScriptSelfName"`"
 	local lstrId=""
+	local lbStack=false
 	local lbRequest=false
 	local	lbSpeak=false;
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCrequest_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCsimpleSyncRequest_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-		elif [[ "$1" == "--listen" || "$1" == "-l" ]];then #SECFUNCrequest_help
+		elif [[ "$1" == "--listen" || "$1" == "-l" ]];then #SECFUNCsimpleSyncRequest_help
 			lbListen=true;
-		elif [[ "$1" == "--request" || "$1" == "-r" ]];then #SECFUNCrequest_help
+		elif [[ "$1" == "--request" || "$1" == "-r" ]];then #SECFUNCsimpleSyncRequest_help
 			lbRequest=true;
-		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCrequest_help only returns after successful
+		elif [[ "$1" == "--stack" || "$1" == "-s" ]];then #SECFUNCsimpleSyncRequest_help while listening, all concurrent requests happenng while the listener work is being processed will stack (each will be processed independently), otherwise all concurrent requests will be dropped when the 1st is processed
+			lbStack=true;
+		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCsimpleSyncRequest_help only returns after successful (request accepted or listening for a request)
 			lbWait=true;
-		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCrequest_help about requests
+		elif [[ "$1" == "--speak" || "$1" == "-p" ]];then #SECFUNCsimpleSyncRequest_help about requests
 			lbSpeak=true;
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCrequest_help <lstrExample> MISSING DESCRIPTION
-			shift
-			lstrExample="${1-}"
-		elif [[ "$1" == "--" ]];then #SECFUNCrequest_help params after this are ignored as being these options, and stored at lastrRemainingParams
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCsimpleSyncRequest_help <lstrExample> MISSING DESCRIPTION
+#			shift
+#			lstrExample="${1-}"
+		elif [[ "$1" == "--" ]];then #SECFUNCsimpleSyncRequest_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
@@ -231,24 +237,71 @@ function SECFUNCrequest() { #help <lstrId> simple requests
 		SECFUNCechoErrA "invalid lstrId='$lstrId'"
 		return 1
 	fi
+	# one script can have many Ids
 	lstrId="`SECFUNCfixIdA -f "$lstrId"`"
 	
-	local lstrPrefixMsg="$FUNCNAME:$lstrBaseId:"
+	local lstrPrefixMsg="$SECstrScriptSelfName:$FUNCNAME:"
 	
 	# code here
+	local lstrIdCfgPRL="CFGanPidRequesterListFor${lstrId}"
+	# this line is useless, but keep as reference:	declare -ax "$lstrIdCfgPRL"
+	declare -nx lanRefPRL="$lstrIdCfgPRL" # creates a reference to be assigned as an array
+	lanRefPRL=() # initializes/creates the referenced array as empty
+	export "$lstrIdCfgPRL"
+#	echo "A${#lanRefPRL[@]}"
+#	lanRefPRL+=(a)
+#	echo "B${#lanRefPRL[@]}"
+#	echo "C${#lanRefPRL[0]}"
+#	local lstrIdCfgPRL1stElem="$lstrIdCfgPRL[0]"
+#	local lstrIdCfgPRLallElems="$lstrIdCfgPRL[@]"
+#	local lstrIdCfgPRLSize="#${lstrIdCfgPRLallElems}"
+#	local lstrIdCfgPRLrm1stElem="${lstrIdCfgPRLallElems}:1"
+#	declare -a "$lstrIdCfgPRL"
+#	"$lstrIdCfgPRL"=()
 	SECFUNCcfgReadDB
 	
-	local lbCfgReq="CFGb${lstrBaseId}${lstrId}"
-	if ${!lbCfgReq+false};then SECFUNCcfgWriteVar "$lbCfgReq"=false;fi #set default
+#	local lbCfgReq="CFGb${lstrBaseId}${lstrId}"
+#	if ${!lbCfgReq+false};then SECFUNCcfgWriteVar "$lbCfgReq"=false;fi #set default
 	
 	if $lbListen;then
+		# if not stacking requests, that list must be cleaned before begin listening
+		if ! $lbStack;then 
+#			declare -a "$lstrIdCfgPRL"=();
+			lanRefPRL=()
+			SECFUNCcfgWriteVar "${!lanRefPRL}";
+		fi
+		
 		local lbAccepted=false
 		local lnSECONDS=$SECONDS
 		while true;do
-			SECFUNCcfgReadDB
-			if ${!lbCfgReq};then 
-				if $lbSpeak;then secSayStack.sh --showtext "$lstrId request accepted";fi
-				SECFUNCcfgWriteVar "$lbCfgReq"=false # accepted, reset
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
+			SECFUNCcfgReadDB #"${!lanRefPRL}"
+#			cat `SECFUNCcfgFileName --get`
+#			SECFUNCcfgFileName --show
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
+#			SECFUNCcfgFileName --show
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
+#			echo "lanRefPRL[@]=${lanRefPRL[@]-}" >>/dev/stderr
+			if((${#lanRefPRL[@]}>0));then
+				local lnPid="${lanRefPRL[0]}"
+				local lstrReport="$lstrId request from lnpid='$lnPid' accepted"
+				if ! $lbStack;then lstrReport="${lstrReport}, other requests dropped";fi
+				echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+				if $lbSpeak;then secSayStack.sh --showtext "request accepted";fi #to not speak so much as the report...
+#				SECFUNCcfgWriteVar "$lbCfgReq"=false # accepted, reset
+				
+				if $lbStack;then 
+#					declare -a "$lstrIdCfgPRL"=("${!lstrIdCfgPRLrm1stElem}");
+					lanRefPRL=("${lanRefPRL[@]:1}")
+#					declare -p "${!lanRefPRL}"
+#					SECFUNCarrayClean "${!lanRefPRL}" "$lnPid"
+#					declare -p "${!lanRefPRL}"
+#					SECFUNCcfgWriteVar "${!lanRefPRL}";
+				else
+					lanRefPRL=()
+				fi
+				SECFUNCcfgWriteVar "${!lanRefPRL}";
+				
 				lbAccepted=true
 				break
 			else
@@ -261,20 +314,48 @@ function SECFUNCrequest() { #help <lstrId> simple requests
 		
 		if $lbAccepted;then	return 0;else return 1;fi
 	elif $lbRequest;then
-		SECFUNCcfgWriteVar "$lbCfgReq"=true
-		if $lbSpeak;then secSayStack.sh --showtext  "$lstrId requested";fi
-		local lnSECONDS=$SECONDS
-		while true;do
-			SECFUNCcfgReadDB
-			if ! ${!lbCfgReq};then
-				break;
-			else
+		SECFUNCcfgReadDB --keeplock
+#		declare -a "$lstrIdCfgPRL"=("${!lstrIdCfgPRLallElems}" "$$");
+		lanRefPRL+=("$$")
+		SECFUNCcfgWriteVar "${!lanRefPRL}";
+		
+		local lstrReport="$lstrId requested"
+		echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+
+		if $lbWait;then 
+			local lnSECONDS=$SECONDS
+			while true;do
+				SECFUNCcfgReadDB
+#				declare -p "${!lanRefPRL}"
+#				SECFUNCcfgFileName --show
+				if ! SECFUNCarrayContains "${!lanRefPRL}" $$;then
+					break;
+				fi
+				
 				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
-			fi # after accepted it will be set to false
-			
-			if ! $lbWait;then break;fi
-			sleep 1
-		done
+				sleep 1
+			done
+		else
+			# will not speak if the listener will already "expectedly" speak
+			if $lbSpeak;then secSayStack.sh --showtext "request made";fi
+		fi
+		
+#		SECFUNCcfgWriteVar "$lbCfgReq"=true
+#		local lstrReport="$lstrId requested"
+#		echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+#		if $lbSpeak;then secSayStack.sh --showtext "$lstrReport";fi
+#		local lnSECONDS=$SECONDS
+#		while true;do
+#			SECFUNCcfgReadDB
+#			if ${!lbCfgReq};then #true
+#				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+#			else
+#				break;
+#			fi # after accepted it will be set to false
+#			
+#			if ! $lbWait;then break;fi
+#			sleep 1
+#		done
 	fi
 		
 	return 0 # important to have this default return value in case some non problematic command fails before returning
@@ -759,18 +840,80 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 	#echo "$SECcfgFileName"
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
-function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars at current env
+#function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars at current env
+#	SECFUNCdbgFuncInA;
+#	#echo oi;eval `cat tst.db`;return
+#	if [[ -z "$SECcfgFileName" ]];then
+#		SECFUNCcfgFileName
+#	fi
+#	
+#	if [[ "${1-}" == "--help" ]];then
+#		SECFUNCshowHelp ${FUNCNAME}
+#		SECFUNCdbgFuncOutA;return
+#	fi
+#	
+#	if [[ -f "$SECcfgFileName" ]];then
+#  	SECFUNCfileLock "$SECcfgFileName"
+#  	#sedFixStoredArray="s,^([^=]*)=(\(.*\));$,declare -ax \\\\\n\1='\2';," # arrays stored just like `astr=();`, should be `declare -a astr='()';`, my bad... now I have to fix it...
+#		#sed -i.bkp -r -e "$sedFixStoredArray" $SECcfgFileName
+#  	#sed -r -e "$sedFixStoredArray" $SECcfgFileName
+#		while true;do
+#			#eval "`cat "$SECcfgFileName"`"
+#			#eval "`sed -r -e "$sedFixStoredArray" $SECcfgFileName`"
+#			#source "$SECcfgFileName"
+#			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file? ugh????
+#			local lnRetFromEval=$?
+#			if((lnRetFromEval!=0));then
+#				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
+#				SECFUNCfixCorruptFile "$SECcfgFileName"
+#			else
+#				break
+#			fi
+#		done
+#  	SECFUNCfileLock --unlock "$SECcfgFileName"
+#  fi
+#  SECFUNCdbgFuncOutA;
+#  #set -x
+#}
+function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars at current env
 	SECFUNCdbgFuncInA;
 	#echo oi;eval `cat tst.db`;return
 	if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
 	fi
 	
-	if [[ "${1-}" == "--help" ]];then
-		SECFUNCshowHelp ${FUNCNAME}
-		SECFUNCdbgFuncOutA;return
-	fi
+	# var init here
+	local lstrExample="DefaultValue"
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	local lbKeepLocked=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCcfgReadDB_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--keeplock" || "$1" == "-k" ]];then #SECFUNCcfgReadDB_help will not unlock the db after returning
+			lbKeepLocked=true
+		elif [[ "$1" == "--" ]];then #SECFUNCcfgReadDB_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
 	
+	#validate params here
+	
+	# code here
 	if [[ -f "$SECcfgFileName" ]];then
   	SECFUNCfileLock "$SECcfgFileName"
   	#sedFixStoredArray="s,^([^=]*)=(\(.*\));$,declare -ax \\\\\n\1='\2';," # arrays stored just like `astr=();`, should be `declare -a astr='()';`, my bad... now I have to fix it...
@@ -780,7 +923,11 @@ function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars a
 			#eval "`cat "$SECcfgFileName"`"
 			#eval "`sed -r -e "$sedFixStoredArray" $SECcfgFileName`"
 			#source "$SECcfgFileName"
-			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file?
+			
+#			declare -p CFGanPidRequesterListForFancyWork >>/dev/stderr
+#			cat "$SECcfgFileName" >>/dev/stderr
+			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file? ugh????
+#			declare -p CFGanPidRequesterListForFancyWork >>/dev/stderr
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
@@ -789,10 +936,10 @@ function SECFUNCcfgReadDB() { #help read the cfg file and set all its env vars a
 				break
 			fi
 		done
-  	SECFUNCfileLock --unlock "$SECcfgFileName"
+		if ! $lbKeepLocked;then SECFUNCfileLock --unlock "$SECcfgFileName";fi
   fi
-  SECFUNCdbgFuncOutA;
-  #set -x
+  
+  SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 function pSECFUNCprepareEnvVarsToWriteDB() { #private: store in a way that when being read will be considered global by adding -g
 	#declare -p "$@" |sed -r "s'^(declare )([^ ]*) '\1\2g '"
@@ -802,11 +949,14 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	#TODO make SECFUNCvarSet use this and migrate all from there to here?
 	local lbRemoveVar=false
 	local lbReport=false;
+	local lbKeepLocked=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--remove" ]];then #SECFUNCcfgWriteVar_help remove the variable from config file
 			lbRemoveVar=true
 		elif [[ "$1" == "--report" || "$1" == "-r" ]];then #SECFUNCcfgWriteVar_help output the variable being written
 			lbReport=true
+		elif [[ "$1" == "--keeplock" || "$1" == "-k" ]];then #SECFUNCcfgWriteVar_help will not unlock the db after returning
+			lbKeepLocked=true
 		elif [[ "${1-}" == "--help" ]];then
 			SECFUNCshowHelp ${FUNCNAME}
 			return 0
@@ -818,7 +968,6 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	done
 	
 	# if var is being set, eval (do) it
-#	local lbIsArray=false
 	if echo "$1" |grep -q "^[[:alnum:]_]*=";then # here the var will never be array
 		eval "`echo "$1" |sed -r 's,^([[:alnum:]_]*)=(.*),\
 			\1="\2";\
@@ -841,30 +990,6 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	
 	eval "export $lstrVarId" #make it sure it is exported
 	
-#	# `declare` must be stripped off or the evaluation of the cfg file will fail!!!
-#	if declare -p "${lstrVarId}" |grep -q "^declare -[aA]";then
-#		lbIsArray=true
-#	fi
-	
-#	local lstrPliqForArray=""
-#	if $lbIsArray;then
-#		lstrPliqForArray="'"
-#	fi
-	
-#	local lstrDeclareAssociativeArray=""
-#	if declare -p "$lstrVarId" |grep -q "^declare -A";then
-##		lstrDeclareAssociativeArray="declare -Axg $lstrVarId;"
-#		lstrDeclareAssociativeArray="declare -Axg \\"
-#	fi
-#	if declare -p "$lstrVarId" |grep -q "^declare -a";then # normal array too
-##		lstrDeclareAssociativeArray="declare -axg $lstrVarId;"
-#		lstrDeclareAssociativeArray="declare -axg \\"
-#	fi
-	
-	#local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=${lstrPliqForArray}(.*)${lstrPliqForArray}$,\1=\2,"`
-	#local lstrToWrite=`declare -p ${lstrVarId} |sed -r "s,^declare -[[:alpha:]-]* ([[:alnum:]_]*)=(.*)$,\1=\2,"`
-	#local lstrToWrite="`declare -p ${lstrVarId}`"
-	#local lstrToWrite="`declare -p ${lstrVarId} |sed -r "s'^(declare )([^ ]*)( ${lstrVarId}=.*)'\1\2g\3'"`" # store in a way that when being read will be considered global
 	local lstrToWrite="`pSECFUNCprepareEnvVarsToWriteDB ${lstrVarId}`"
 	
 	if [[ ! -f "$SECcfgFileName" ]];then
@@ -872,20 +997,14 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	fi
 	
 	SECFUNCfileLock "$SECcfgFileName"
-#	local lstrMatchLineToRemove=`echo "$lstrToWrite" |sed -r 's,(^[^=]*=).*,\1,'`
-#	sed -i "/$lstrMatchLineToRemove/d" "$SECcfgFileName" #will remove the variable line
-#	sed -i "/declare -A ${lstrVarId}/d" "$SECcfgFileName" #will remove the variable declaration
-#	sed -i "/${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable line
-	sed -i "/^declare [^ ]* ${lstrVarId}=/d" "$SECcfgFileName" #will remove the variable declaration
+	######
+	# this will remove the variable declaration
+	######
+	sed -i "/^declare [^ ]* ${lstrVarId}=/d" "$SECcfgFileName" 
 	if ! $lbRemoveVar;then
-#		if [[ -n "$lstrDeclareAssociativeArray" ]];then
-#			# must come before the array values set
-#			echo "$lstrDeclareAssociativeArray" >>"$SECcfgFileName"
-#		fi
-#		echo "${lstrToWrite};" >>"$SECcfgFileName" #append new line with var
 		echo "${lstrToWrite}" >>"$SECcfgFileName" #append new line with var
 	fi
-	SECFUNCfileLock --unlock "$SECcfgFileName"
+	if ! $lbKeepLocked;then SECFUNCfileLock --unlock "$SECcfgFileName";fi
 	
 	chmod u+rw,go-rw "$SECcfgFileName" #permissions for safety
 	

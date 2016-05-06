@@ -197,6 +197,7 @@ function SECFUNCaddToRcFile() {
 	
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
+	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.examples"
 	#echo " PATH='$PATH'" >>/dev/stderr
 	echo -e "PATH=(\t`echo $PATH |sed 's":"\n\t"g'`)" >>/dev/stderr	
 	

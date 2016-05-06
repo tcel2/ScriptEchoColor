@@ -26,16 +26,28 @@ eval `secinit`
 
 strId="FancyWork"
 if [[ "$1" == "request" ]];then
-	SECFUNCrequest -rwp "$strId"
+	SECFUNCsimpleSyncRequest -rwp "$strId"
+elif [[ "$1" == "requestnowait" ]];then
+	SECFUNCsimpleSyncRequest -rp "$strId"
 elif [[ "$1" == "listen" ]];then
+	nSpeep=20
 	while true;do
-		SECFUNCrequest -lwp "$strId"
-		echo
-		echo "request accepted at $SECONDS, performing $strId, sleeping..."
-		sleep 20
+		SECFUNCsimpleSyncRequest -lwp "$strId"
+		echo "Expl: (NL)"
+		echo "Expl: request accepted at ${SECONDS}s, performing $strId, pseudo working (actually sleeping ${nSpeep}s)..."
+		sleep $nSpeep
+	done
+elif [[ "$1" == "listenstack" ]];then
+	nSpeep=20
+	while true;do
+		SECFUNCsimpleSyncRequest --stack -lwp "$strId"
+		echo "Expl: (NL)"
+		echo "Expl: request accepted at ${SECONDS}s, performing $strId, pseudo working (actually sleeping ${nSpeep}s)..."
+		sleep $nSpeep
 	done
 elif [[ "$1" == "--help" ]];then
 	echo "run as: $0 listen"
-	echo "at another terminal run: $0 request"
+	echo "at several other terminals run: $0 request|requestnowait (they will not stack, the 1st will be accepted and others dropped)"
+	echo "To test a stack of requests, run as: $0 listenstack"
 fi
 
