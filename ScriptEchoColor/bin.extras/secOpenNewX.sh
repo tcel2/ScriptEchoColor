@@ -939,6 +939,38 @@ exec 2>&1
 #	fi
 #done
 
+function FUNCvolCurrPerc(){
+	amixer get Master |egrep "[[:digit:]]*%" -o |tr -d "%"
+};export -f FUNCvolCurrPerc
+: ${CFGnMuteTogglePercRef:=`FUNCvolCurrPerc`}
+function FUNCvolUnmute(){
+	SECFUNCcfgReadDB
+	amixer set Master unmute # this line seems useless (will make no difference) but...
+	amixer set Master ${CFGnMuteTogglePercRef}%
+}
+function FUNCvolume(){
+	if [[ "$1" == "--up" ]];then
+		if((`FUNCvolCurrPerc`==0));then # will only be 0 if was muted, so just unmute initially
+			FUNCvolUnmute
+		else
+			amixer set Master 5%+
+		fi
+	elif [[ "$1" == "--down" ]];then
+		amixer set Master 5%-
+		if((`FUNCvolCurrPerc`==0));then
+			amixer set Master 1% # just to differentiate from mute toggle (that sets to 0%)
+		fi
+	elif [[ "$1" == "--togglemute" ]];then
+		# as this `amixer set Master toggle` would mute but not unmute...
+		if((`FUNCvolCurrPerc`==0));then
+			FUNCvolUnmute
+		else # mute
+			SECFUNCcfgWriteVar CFGnMuteTogglePercRef=`FUNCvolCurrPerc`
+			amixer set Master 0%
+		fi
+	fi
+};export -f FUNCvolume
+
 if $useJWM; then
   if $bRecreateRCfile || [[ ! -f "$HOME/.jwmrc" ]]; then
   	if [[ ! -f /etc/jwm/jwmrc ]]; then
@@ -992,9 +1024,9 @@ if $useJWM; then
 		#	4 - mod4 (meta/super)
 		#	5 - mod5
     echo -e '
-	        <Key key="XF86AudioRaiseVolume">exec:amixer set Master 5%+</Key>
-	        <Key key="XF86AudioLowerVolume">exec:amixer set Master 5%-</Key>
-	        <Key key="XF86AudioMute">exec:amixer set Master toggle</Key>
+	        <Key key="XF86AudioRaiseVolume">exec:FUNCvolume --up</Key>
+	        <Key key="XF86AudioLowerVolume">exec:FUNCvolume --down</Key>
+	        <Key key="XF86AudioMute">exec:FUNCvolume --togglemute</Key>
           <Key mask="4" key="F1">exec:xdotool set_desktop 0</Key>
           <Key mask="4" key="F2">exec:xdotool set_desktop 1</Key>
           <Key mask="4" key="F3">exec:xdotool set_desktop 2</Key>

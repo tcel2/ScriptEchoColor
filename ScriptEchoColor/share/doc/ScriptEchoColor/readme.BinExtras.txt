@@ -50,4 +50,5 @@ Status: (needs updating)
 PS.: pretty list all with
 #cd `secGetInstallPath`/bin.extras;ls sec* -1 |LC_ALL="C.UTF-8" sort -n |column -c `tput cols` |column -t |sed "s'.*' &'"
 cd `secGetInstallPath`/bin.extras;ls sec* -1 |LC_ALL="C.UTF-8" sort -n |sed "s'.*' &'"
+#if echoc -q "all scripts require review for the presence of a failproof --help option before this can work...";then export SECbShowHelpSummaryOnly=true;export SECbRunLog=false;astrFileList=($(cd `secGetInstallPath`/bin.extras;ls sec* -1 |LC_ALL="C.UTF-8" sort -n |sed "s'.*'&'"));for strFile in "${astrFileList[@]}";do strSummary="`SECFUNCexecA -ce "$strFile" --help`";strSummary="`echo "$strSummary" |tr '\n' ' '`";done;fi
 

@@ -17,6 +17,7 @@ Currently available experimental scripts:
  sec.Symlink.Edit.NautilusScript.sh
  sec.Symlink.MakeRelative.NautilusScript.sh
  sec.TouchFileDateTimeToNow.NautilusScript.sh
+ secAdbShellHelper.sh
  secAutoScreenLock.sh
  secAutoUnmount.sh
  secBashForScriptEchoColorDevelopment.sh
@@ -40,6 +41,7 @@ Currently available experimental scripts:
  secHiPriFoWi.sh (High priority to focused window)
  secHighTmprMon.sh
  secIoProblemWarn.sh
+ secKeyboardMacro.sh
  secLogSessionLock.sh
  secLyricsForBanshee.sh
  secMountAsSambaShare.sh
@@ -48,6 +50,7 @@ Currently available experimental scripts:
  secNetworkControl.sh
  secOpenNewX.sh
  secOrganizeXterminals.sh
+ secPulseAudioNormalizer.sh
  secRefactorInFiles.sh
  secRemoteInfo.sh
  secReplaceWindowManager.sh
@@ -59,8 +62,10 @@ Currently available experimental scripts:
  secSoundToBeep.sh
  secToDoList2txt.sh
  secTrashManager.sh
+ secUnity3DWMLogMonitorDaemon.sh
  secUpdateRemoteBackupFiles.sh
  secVisualMacro.sh
  secWebpPreview.sh
+ secXscreensaverLockRequest.sh
  secXtermDetached.sh
  
