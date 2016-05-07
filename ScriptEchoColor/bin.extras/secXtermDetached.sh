@@ -337,7 +337,7 @@ if $bWaitDBsymlink;then
 #	nCountFindDBsLinked=0
 	function FUNCfindSymlinks() {
 		#find /run/shm/ -lname "$SECvarFile"
-		find "$SEC_TmpFolder/" -lname "$SECvarFile"
+		find "$SEC_TmpFolder/" -lname "$SECvarFile"&&:
 	}
 	while true;do #wait for some child to link to the DB file
 		nBDsLinked=`FUNCfindSymlinks |wc -l`

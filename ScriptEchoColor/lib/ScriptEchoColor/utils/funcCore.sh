@@ -2112,7 +2112,7 @@ function SECFUNCcheckActivateRunLog() { #help
 			#	exec 1>"$SECstrRunLogFile"
 			#	exec 2>"$SECstrRunLogFile"
 				exec 101>&1 102>&2 #backup
-				exec > >(tee "$SECstrRunLogFile")
+				exec > >(tee "$SECstrRunLogFile") #TODO this caused error once, WHY??? and... can it be protected in some way? while sleep?
 				exec 2>&1
 				
 				# waits tee to properly start...
