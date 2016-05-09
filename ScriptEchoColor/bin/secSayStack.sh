@@ -252,6 +252,11 @@ function FUNChasCache() {
 	local lmd5sumText="${1}"
 	#local fileAudio="${2-}" #optional
 	
+	if [[ -z "$lmd5sumText" ]];then
+		SECFUNCechoErrA "invalid lmd5sumText=''"
+		return 1
+	fi
+	
 	local lstrCacheFile="$_SECSAYcacheFolder/$lmd5sumText"
 	local lstrCacheFileReal="`readlink -f "$lstrCacheFile"`"
 	if [[ -f "$lstrCacheFileReal" ]] && ((`stat -c "%s" "$lstrCacheFileReal"`>0));then
@@ -261,8 +266,8 @@ function FUNChasCache() {
 	
 	SECFUNCechoDbgA "cache missing: $lstrCacheFile"
 	# mainly to remove invalid (size=0) files
-	SECFUNCexecA rm "$lstrCacheFile"
-	SECFUNCexecA rm "$lstrCacheFileReal"
+	SECFUNCexecA -ce rm -vf "$lstrCacheFile"&&:
+	SECFUNCexecA -ce rm -vf "$lstrCacheFileReal"&&:
 	
 	return 1
 };export -f FUNChasCache
@@ -420,6 +425,7 @@ fi
 SECFUNCexecA mkdir -p "$_SECSAYcacheFolder"
 if $bDaemon;then
 	sayText="${strDaemonSays}${sayText}"
+	echo "_SECSAYfileSayStack='$_SECSAYfileSayStack'"
 fi
 
 ####################### what will be said (configured to festival)
@@ -452,6 +458,7 @@ paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached v
 paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
 paramSayId="(Parameter.set 'SECsayId '$strSayId)"
 paramSndEffects="(Parameter.set 'SECstrSndEffects '$strSndEffects)"
+sayTextFixed="`echo "$sayText" |sed 's/[^a-zA-Z0-9=_-]/ /g'`"
 echo "${paramSortOrder}\
 			${paramMd5sum}\
 			${paramSayVol}\
@@ -461,7 +468,7 @@ echo "${paramSortOrder}\
 			(Parameter.set 'Audio_Required_Rate 16000)\
 			(Parameter.set 'Audio_Required_Format 'snd)\
 			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText '\$FILE\")\
-			(SayText \"$sayText\")" >>"$_SECSAYfileSayStack"
+			(SayText \"${sayTextFixed}\")" >>"$_SECSAYfileSayStack"
 #			(Parameter.set 'Audio_Command \"bash -c '$_SECSAYselfBaseName --cacheonly $md5sumText $sayVol '\$FILE\")\
 sort "$_SECSAYfileSayStack" -o "$_SECSAYfileSayStack" #ensure FIFO
 
@@ -568,16 +575,30 @@ while true; do
 			nSayVolGet="`FUNCgetParamValue "$strHead" SECsayVol`"
 			strSndEffectsGet="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
 			
+			echo "md5sumTextGet='$md5sumTextGet'"
+			echo "nSayVolGet='$nSayVolGet'"
+			echo "strSndEffectsGet='$strSndEffectsGet'"
+			
 			#echo "strHead=$strHead" >>/dev/stderr
-			if ! FUNChasCache $md5sumTextGet;then
-				echo "$strHead"	|SECFUNCexecA festival --pipe # this line will CREATE the CACHE!
+			bCanPlay=true
+			if [[ -z "$md5sumTextGet" ]];then
+				bCanPlay=false
+			elif ! FUNChasCache "$md5sumTextGet";then
+				if ! echo "$strHead"	|SECFUNCexecA festival --pipe;then # this line will CREATE the CACHE!
+					SECFUNCechoErrA "festival failed to speak strHead='$strHead', bug? skipping..."
+					# this error will not exit, it is a error but the daemon can continue running...
+					bCanPlay=false
+				fi
 			fi
 			
-			FUNCplay "$md5sumTextGet" "$nSayVolGet" "$strSndEffectsGet"
-#			if $bStdoutFilename;then FUNCcacheFileToPlay "$md5sumTextGet";fi
-			
-			#SECFUNCexecA sed -i 1d "$_SECSAYfileSayStack" #delete 1st line
-			SECFUNCexecA sed -i "/$md5sumTextGet/d" "$_SECSAYfileSayStack" #delete correct line
+			if $bCanPlay;then
+				if ! FUNCplay "$md5sumTextGet" "$nSayVolGet" "$strSndEffectsGet";then
+					SECFUNCechoErrA "festival failed to speak strHead='$strHead', bug? skipping..."
+				fi
+				SECFUNCexecA sed -i "/$md5sumTextGet/d" "$_SECSAYfileSayStack" #delete precise line
+			else
+				SECFUNCexecA -ce sed -i 1d "$_SECSAYfileSayStack" #delete 1st line with invalid strHead data
+			fi
 		else
 			if ! $bDaemon;then
 				break

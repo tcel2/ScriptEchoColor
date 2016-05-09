@@ -197,137 +197,6 @@ function FUNCclearCache() {
 	echoc -x "echo 3 |sudo -k tee /proc/sys/vm/drop_caches" #put on sudoers
 };export -f FUNCclearCache
 
-#function FUNClockFile() {
-#	local bUnlock=false
-#	if [[ "$1" == "--unlock" ]];then
-#		bUnlock=true;
-#		shift
-#	fi
-#	
-#	local fileId="$1"
-#	local mainPid="$2" #the main pid that all childs will use as reference
-#	
-#	local lockFile="/tmp/${fileId}.lock"
-#	local lockFileReal="${lockFile}.$mainPid"
-#	
-#	if $bUnlock;then
-#		rm -vf "$lockFile" >>/dev/stderr
-#		rm -vf "$lockFileReal" >>/dev/stderr
-#		return;
-#	fi
-#	
-#	while ! ln -s "$lockFileReal" "$lockFile" >>/dev/stderr; do #create the symlink
-#		local realFile=`readlink "$lockFile"`
-#		pidOfRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
-#		if ! ps -p $pidOfRealFile >>/dev/stderr;then
-#			rm -vf "$realFile" >>/dev/stderr
-#		fi
-#		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
-#	done
-#	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileReal"
-#}
-
-#export strCicleGammaId="OpenNewX_CicleGammaDaemon"
-#function FUNCkeepGamma() { # some games reset the gamma on each restart
-#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
-#	
-#	SECFUNCuniqueLock --id "$strCicleGammaId" --daemonwait
-#	
-#	while true; do
-#		SECFUNCvarReadDB
-#		xgamma -gamma ${fGamma-}
-#		echo "keep gamma at ${fGamma-}"
-#		sleep 60
-#	done
-#};export -f FUNCkeepGamma
-
-#function FUNCcicleGamma() {
-#	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
-#	
-#	eval `secinit --log` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
-#	echo "0=$0"
-#	echo "PATH='$PATH'"
-#	echo "$FUNCNAME" #@@@R to help on debug
-#	
-#	while ! SECFUNCuniqueLock --id "$strCicleGammaId" --setdbtodaemononly;do
-#		echoc -p "waiting strCicleGammaId='$strCicleGammaId'"
-#		sleep 3
-#	done
-#			
-#	SECFUNCdbgFuncInA;
-#	#set -x
-#	local nDirection=$1 #1 or -1
-#	
-#	#@@@R to help on debug
-#	echo "SECvarFile='$SECvarFile'" #@@@R to help on debug
-#	ls -l $SECvarFile #@@@R to help on debug
-#	echo "pid=$$,PPID=$PPID" #@@@R to help on debug
-#	SECFUNCppidList --comm -s "\n" -r #@@@R to help on debug
-#	
-#	SECFUNCvarSet --show --default fGamma 1.0
-#	echo "pidOpenNewX=`SECFUNCvarGet pidOpenNewX`"
-#	#SECFUNCvarGet fGamma
-#	
-##	local lockFileGamma="/tmp/openNewX.gamma.lock"
-##	local lockFileGammaReal="${lockFileGamma}.$pidOpenNewX"
-##	while ! ln -s "$lockFileGammaReal" "$lockFileGamma"; do #create the symlink
-##		local realFile=`readlink "$lockFileGamma"`
-##		pidForRealFile=`echo "$realFile" |sed -r "s'.*[.]([[:digit:]]*)$'\1'"`
-##		if ! ps -p $pidForRealFile;then
-##			rm -vf "$realFile"
-##		fi
-##		if ! sleep 0.1; then return 1; fi #exit_FUNCsayStack: on sleep fail
-##	done
-##	echo "`SECFUNCdtFmt --pretty`.$$" >>"$lockFileGammaReal"
-#	local lockGammaId="openNewX.gamma"
-##	FUNClockFile "$lockGammaId" $pidOpenNewX
-##	SECFUNCuniqueLock --pid $pidOpenNewX --id "$lockGammaId"
-#	SECFUNCuniqueLock --pid $$ --id "$lockGammaId"
-
-##	SECFUNCvarSet --default gammaLock 0
-##	SECFUNCvarWaitValue gammaLock 0
-##	SECFUNCvarSet gammaLock $$
-#	
-#	local nIncrement="0.25"
-#	local nMin="0.25"
-#	local nMax="10.0"
-#	
-#	SECFUNCvarSet --show fGamma=`bc <<< "$fGamma+($nDirection*$nIncrement)"`
-#	if ((`bc <<< "$fGamma<$nMin"`)); then
-#		SECFUNCvarSet --show fGamma=$nMax
-#	fi
-#	if ((`bc <<< "$fGamma>$nMax"`)); then
-#		SECFUNCvarSet --show fGamma=$nMin
-#	fi
-#	
-##	if [[ "$fGamma" == "0.5" ]];then
-##		SECFUNCvarSet fGamma=0.75
-##	elif [[ "$fGamma" == "0.75" ]];then
-##		SECFUNCvarSet fGamma=1.0
-##	elif [[ "$fGamma" == "1.0" ]];then
-##		SECFUNCvarSet fGamma=1.25
-##	elif [[ "$fGamma" == "1.25" ]];then
-##		SECFUNCvarSet fGamma=1.5
-##	elif [[ "$fGamma" == "1.5" ]];then
-##		SECFUNCvarSet fGamma=1.75
-##	elif [[ "$fGamma" == "1.75" ]];then
-##		SECFUNCvarSet fGamma=2.0
-##	elif [[ "$fGamma" == "2.0" ]];then
-##		SECFUNCvarSet fGamma=0.5
-##	fi
-#	
-#	xgamma -gamma $fGamma
-##	SECFUNCvarSet gammaLock 0
-##	rm -vf "$lockFileGamma"
-##	FUNClockFile --unlock "$lockGammaId" $pidOpenNewX
-##	SECFUNCuniqueLock --release --pid $pidOpenNewX --id "$lockGammaId"
-#	echoc --say "gamma $fGamma" #must say before releasing the lock!
-#	SECFUNCuniqueLock --release --pid $$ --id "$lockGammaId"
-#	#set +x
-#	echoc -w -t 60 #@@@R to help on debug
-#	SECFUNCdbgFuncOutA;
-#};export -f FUNCcicleGamma
-
 function FUNCnvidiaCicle() {
 	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	
@@ -448,18 +317,6 @@ function FUNCscript() {
 	  FUNCnvidiaCicle 1
   elif [[ "$lscriptName" == "nvidiaCicleBack" ]]; then #FUNCscript_help cicle through nvidia pre-setups
 	  FUNCnvidiaCicle -1
-#  elif [[ "$lscriptName" == "cicleGamma" ]]; then #FUNCscript_help cicle gamma value
-##  	while true;do
-##  		if ! ps -A -o pid,comm,command |grep -v "^[ ]*$$" |grep "^[ ]*[[:digit:]]* openNewX.sh.*cicleGamma$" |grep -v grep; then
-##  			break
-##  		fi
-##  		echoc -w -t 1 "already running, waiting other exit"
-##  	done
-##	  FUNCcicleGamma 1
-#	  secGammaChange.sh --say --up
-#  elif [[ "$lscriptName" == "cicleGammaBack" ]]; then #FUNCscript_help cicle gamma value
-##  	FUNCcicleGamma -1
-#  	secGammaChange.sh --say --down
   elif [[ "$lscriptName" == "sayTemperature" ]]; then #FUNCscript_help say temperature
 #		sedTemperature='s".*: *+\([0-9][0-9]\)\.[0-9]°C.*"\1"'
 #		tmprToMonitor="temp1"
@@ -1041,11 +898,11 @@ if $useJWM; then
           <Key mask="4" key="H">exec:'"xterm -e \"$0 --script showHelp\" #kill=skip"'</Key>
           <Key mask="4" key="K">exec:xkill</Key>
           <Key mask="4" key="L">exec:'"xterm -e \"bash -c FUNCCHILDScreenLockNow\" #kill=skip"'</Key>
-          <Key mask="4"  key="M">exec:'"xterm -e \"secGammaChange.sh --say --up\" #kill=skip"'</Key>
-          <Key mask="S4" key="M">exec:'"xterm -e \"secGammaChange.sh --say --down\" #kill=skip"'</Key>
-          <Key mask="C4" key="M">exec:'"xterm -e \"secGammaChange.sh --say --reset\" #kill=skip"'</Key>
+          <Key mask="4"  key="M">exec:secGammaChange.sh --say --up</Key>
+          <Key mask="S4" key="M">exec:secGammaChange.sh --say --down</Key>
+          <Key mask="C4" key="M">exec:secGammaChange.sh --say --reset</Key>
           <Key mask="4" key="P">exec:'"xterm -e \"$0 --script sayTemperature\" #kill=skip"'</Key>
-          <Key mask="4" key="T">exec:xterm -e "FUNCsayTime #kill=skip"</Key>
+          <Key mask="4" key="T">exec:bash -c FUNCsayTime</Key>
           <Key mask="4" key="X">exec:xterm -e "FUNCechocInitBashInteractive #kill=skip"</Key>
           <Key mask="4" key="Z">exec:xterm -display :0 -e "FUNCechocInitBashInteractive #kill=skip"</Key>
           <Key mask="4" key="1">exec:'"xterm -e \"${customCmd[0]-}\" #kill=skip"'</Key>
