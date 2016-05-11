@@ -640,7 +640,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	if $lbListAndCleanUniqueFiles;then
 		IFS=$'\n' read -d '' -r -a astrUniqueFileList < <(ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&:)&&: #TODO why this `&&:)&&:` was necessary instead of simply `)&&:` ? the inner error should have been ignored...
 		local lstrUniqueFile
-		for lstrUniqueFile in "${astrUniqueFileList[@]}";do
+		for lstrUniqueFile in "${astrUniqueFileList[@]-}";do
 		#ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&: |while read lstrUniqueFile;do
 			local lnPidCheck=$(cat "$lstrUniqueFile")
 			#if [[ ! -d "/proc/$lnPidCheck" ]];then
