@@ -60,25 +60,48 @@ function echoa(){ #alert
 
 strSelfName="`basename "$0"`"
 strMainFile="ScriptEchoColor/bin/ScriptEchoColor.sh"
+strTmpSelf="/tmp/$strSelfName"
+bOnlineCheck=true
 
 : ${SECstrUserInstallPath:=$HOME/ScriptEchoColor}
-echoi "to change the default, before running this script, set env var SECstrUserInstallPath='$SECstrUserInstallPath' to something else."
+
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+	if [[ "$1" == "--help" ]];then #help show this help
+		grep "then \#help " "$0"
+		echoi "Will install a clone for the current user only."
+		echo "strSelfName='$strSelfName'"
+		echo "strMainFile='$strMainFile'"
+		echo "strTmpSelf='$strTmpSelf'"
+		echoi "To change the default, before running this script, set this env var to something else:"
+		echo "SECstrUserInstallPath='$SECstrUserInstallPath'"
+		exit 0
+	elif [[ "$1" == "--noOnlineCheck" || "$1" == "-O" ]];then #help skip online update, tho this is important in case of this script bug-fixes/improvements
+		bOnlineCheck=false
+	else
+		echop "invalid option '$1'"
+		$0 --help #$0 considers ./, works best anyway..
+		exit 1
+	fi
+	shift&&:
+done
+
+# Main code
 
 ################ self check
-#if false;then
-echoi " checking for this script update... "
-strTmpSelf="/tmp/$strSelfName"
-FUNCexecEcho wget -O "$strTmpSelf" "http://sourceforge.net/projects/scriptechocolor/files/Ubuntu%20.deb%20packages/$strSelfName/download"
-if ! FUNCexecEcho cmp "$0" "$strTmpSelf";then
-	(
-		FUNCexecEcho ls -l "$0"
-		FUNCexecEcho cp -vf "$strTmpSelf" "$0"
-		FUNCexecEcho ls -l "$0"
-		echoa "updated '$strSelfName', re-run it."
-	)&disown
-	exit 0
+if $bOnlineCheck;then
+	echoi " checking for this script update... "
+	FUNCexecEcho wget -O "$strTmpSelf" "http://sourceforge.net/projects/scriptechocolor/files/Ubuntu%20.deb%20packages/$strSelfName/download"
+	if ! FUNCexecEcho cmp "$0" "$strTmpSelf";then
+		(
+			FUNCexecEcho ls -l "$0"
+			FUNCexecEcho cp -vf "$strTmpSelf" "$0"
+			FUNCexecEcho ls -l "$0"
+			echoa "Installer Updated!"
+			echoi "re-run '$strSelfName'"
+		)&disown
+		exit 0
+	fi
 fi
-#fi
 
 ################## validate installation
 bFirstClone=false
@@ -92,7 +115,8 @@ FUNCexecEcho pwd
 if ! $bFirstClone;then
 	if [[ ! -f "$strMainFile" ]];then
 		echop "problem at installation? unable to find strMainFile='$strMainFile'"
-		echoa "remove/trash/rename its install path manually."
+		echoa "User action required!"
+		echoi "remove/trash/rename its install path manually."
 		FUNCexecEcho pwd
 		#echop "'$0' must be run at '`dirname "$0"`/' like: './$strSelfName'"
 		echow "press a key to exit..."
@@ -128,10 +152,15 @@ ln -vs ../bin.examples/* ./ 2>&1 |egrep -v ": File exists$"
 echo
 
 echoi ">>---> initialize ScriptEchoColor <---<<"
+strSecBin="$SECstrUserInstallPath/ScriptEchoColor/bin"
+export PATH="$PATH:$strSecBin"
+echo "PATH='$PATH'"
+echo "secGetInstallPath.sh '`secGetInstallPath.sh`'"
 ./echoc --info "Success! ScriptEchoColor @nenabled!" #will initialize it
 echo
 
-echoa ">>---> now add the below to your PATH variable <---<<"
-echoi "`secGetInstallPath.sh`/bin"
+echoa ">>---> Configure PATH variable!!! <---<<"
+echoi "now add the below to your PATH variable"
+echo "$strSecBin"
 echo
 
