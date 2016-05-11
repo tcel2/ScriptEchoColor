@@ -863,7 +863,7 @@ function SECFUNCexportFunctions() { #help
 		|sed 's"declare .* pSECFUNC"export -f pSECFUNC"' \
 		|sed 's".*"&;"' \
 		|grep "export -f pSECFUNC" &&:
-		
+	
 	return 0
 }
 
