@@ -391,8 +391,8 @@ while true;do
 		IFS=$'\n' read -d '' -r -a astrFileLockList < <(SECFUNCfileLock --list)&&:
 		#echo ">>>B" >>/dev/stderr
 		#SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
-		if((${#astrFileLockList[@]-}>0));then
-			for lstrLockFileIntermediary in "${astrFileLockList[@]-}";do
+		if((`SECFUNCarraySize astrFileLockList`>0));then 
+			for lstrLockFileIntermediary in "${astrFileLockList[@]}";do
 				#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 				nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
 				if [[ ! -d "/proc/$nPid" ]];then

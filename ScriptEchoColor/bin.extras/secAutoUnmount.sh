@@ -113,38 +113,40 @@ fi
 function FUNCupdateDevList() {
 	declare -ag astrDev=()
 	
-	for strDevTemp in "${astrDevTemp[@]-}";do
-		# fix path
-		if [[ "$strDevTemp" == /* ]];then
-			if [[ "`dirname "$strDevTemp"`" != "$strDevIdsPath" ]];then
-				echoc -p "invalid '$strDevTemp', must be at '$strDevIdsPath'"
-				exit 1
-			fi
-		else
-			strDevTemp="$strDevIdsPath/$strDevTemp"
-		fi
-	
-		if $bRetry;then
-			while [[ ! -a "$strDevTemp" ]];do
-				echoc -w -t 60 "waiting device '$strDevTemp' become available"
-			done
-		fi
-	
-		# add to array
-		if [[ -L "$strDevTemp" ]];then
-			if [[ "$strDevTemp" == *-part? ]];then
-				astrDev+=("`readlink -f "$strDevTemp"`")
+	if((`SECFUNCarraySize astrDevTemp`>0));then
+		for strDevTemp in "${astrDevTemp[@]}";do
+			# fix path
+			if [[ "$strDevTemp" == /* ]];then
+				if [[ "`dirname "$strDevTemp"`" != "$strDevIdsPath" ]];then
+					echoc -p "invalid '$strDevTemp', must be at '$strDevIdsPath'"
+					exit 1
+				fi
 			else
-				# add partitions to array in case it is base device
-				for strDevTemp2 in `ls -1 "${strDevTemp}-part"*`;do
-					astrDev+=("`readlink -f "$strDevTemp2"`")
+				strDevTemp="$strDevIdsPath/$strDevTemp"
+			fi
+	
+			if $bRetry;then
+				while [[ ! -a "$strDevTemp" ]];do
+					echoc -w -t 60 "waiting device '$strDevTemp' become available"
 				done
 			fi
-		else
-			echoc -p "invalid device id '$strDevTemp'"
-			exit 1
-		fi
-	done
+	
+			# add to array
+			if [[ -L "$strDevTemp" ]];then
+				if [[ "$strDevTemp" == *-part? ]];then
+					astrDev+=("`readlink -f "$strDevTemp"`")
+				else
+					# add partitions to array in case it is base device
+					for strDevTemp2 in `ls -1 "${strDevTemp}-part"*`;do
+						astrDev+=("`readlink -f "$strDevTemp2"`")
+					done
+				fi
+			else
+				echoc -p "invalid device id '$strDevTemp'"
+				exit 1
+			fi
+		done
+	fi
 	
 	echoc --info "Devices: ${astrDev[@]}"
 	

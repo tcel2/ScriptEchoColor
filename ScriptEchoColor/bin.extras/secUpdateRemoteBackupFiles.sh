@@ -536,23 +536,25 @@ function FUNCcheckUpdateAllCompressedFiles() {
 	)&&: #TODO it works but returns 1, why?
 	
 	if [[ -n "${lastrCompressedFilesList[@]-}" ]];then
-		for lstrCompressedFile in "${lastrCompressedFilesList[@]-}";do
-			local lstrCompressedFile="$HOME/$lstrCompressedFile"
+		if((`SECFUNCarraySize lastrCompressedFilesList`>0));then
+			for lstrCompressedFile in "${lastrCompressedFilesList[@]}";do
+				local lstrCompressedFile="$HOME/$lstrCompressedFile"
 		
-			echo "Found: lstrCompressedFile='$lstrCompressedFile'"
+				echo "Found: lstrCompressedFile='$lstrCompressedFile'"
 		
-			local lstrUncompressedFile="${lstrCompressedFile%.$strSufixCompressedFile}"
+				local lstrUncompressedFile="${lstrCompressedFile%.$strSufixCompressedFile}"
 		
-			if [[ -f "$lstrUncompressedFile" ]];then
-				echo "Found: lstrUncompressedFile='$lstrUncompressedFile'"
+				if [[ -f "$lstrUncompressedFile" ]];then
+					echo "Found: lstrUncompressedFile='$lstrUncompressedFile'"
 			
-				if test "$lstrUncompressedFile" -nt "$lstrCompressedFile";then
-					FUNCcompressFile "$lstrUncompressedFile"
+					if test "$lstrUncompressedFile" -nt "$lstrCompressedFile";then
+						FUNCcompressFile "$lstrUncompressedFile"
+					fi
+				else
+					echo "MISSING: lstrUncompressedFile='$lstrUncompressedFile'"
 				fi
-			else
-				echo "MISSING: lstrUncompressedFile='$lstrUncompressedFile'"
-			fi
-		done
+			done
+		fi
 	fi
 }
 

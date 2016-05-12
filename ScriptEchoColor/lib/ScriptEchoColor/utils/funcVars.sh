@@ -645,11 +645,13 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 function SECFUNCvarIsRegistered() { #help check if var is registered
 	#echo "${SECvars[*]}" |grep -q $1
 	local l_var
-	for l_var in ${SECvars[*]-}; do
-		if [[ "$1" == "$l_var" ]]; then
-			return 0  # found = 0 = true
-		fi
-	done
+	if((`SECFUNCarraySize SECvars`>0));then
+		for l_var in "${SECvars[@]}"; do
+			if [[ "$1" == "$l_var" ]]; then
+				return 0  # found = 0 = true
+			fi
+		done
+	fi
 	return 1
 }
 function SECFUNCvarIsSet() { #help equal to: SECFUNCvarIsRegistered
@@ -828,14 +830,16 @@ function pSECFUNCvarRegister() { #private:
 			SECvars+=($1) # useless to use like 'export SECvars' here, because bash cant export arrays...
 		else
 			local l_nSECvarTmpIndex=0
-			for l_strSECvarTmp in ${SECvars[@]-}; do
-				if [[ "$l_strSECvarTmp" == "$1" ]];then
-					unset SECvars[$l_nSECvarTmpIndex]
-					SECvars=(${SECvars[@]-}) #to fix index, the removed var will be empty/null
-					break
-				fi
-				((l_nSECvarTmpIndex++))
-			done
+			if((`SECFUNCarraySize SECvars`>0));then
+				for l_strSECvarTmp in "${SECvars[@]}"; do
+					if [[ "$l_strSECvarTmp" == "$1" ]];then
+						unset SECvars[$l_nSECvarTmpIndex]
+						SECvars=(${SECvars[@]-}) #to fix index, the removed var will be empty/null
+						break
+					fi
+					((l_nSECvarTmpIndex++))
+				done
+			fi
 		fi
 		
 		pSECFUNCvarPrepare_SECvars_ArrayToExport # so SECvars is always ready when pSECFUNCvarRestore_SECvars_Array is used at child shell
@@ -855,12 +859,14 @@ function pSECFUNCvarLoadMissingVars() { #private:
 	
 	# load only variables that are missing, to prevent overwritting old variables values
 	local l_varsMissing=()
-	for l_varNew in ${SECvars[@]-};do
-		if ! declare -p $l_varNew >/dev/null 2>&1;then
-			SECFUNCvarReadDB $l_varNew;
-			l_varsMissing+=($l_varNew)
-		fi
-	done
+	if((`SECFUNCarraySize SECvars`>0));then
+		for l_varNew in "${SECvars[@]}";do
+			if ! declare -p $l_varNew >/dev/null 2>&1;then
+				SECFUNCvarReadDB $l_varNew;
+				l_varsMissing+=($l_varNew)
+			fi
+		done
+	fi
 #	echo "SECvars=${SECvars[@]-}" >>/dev/stderr
 #	echo "MisVars=${l_varsMissing[@]}" >>/dev/stderr
 #	cat $SECvarFile |grep varTst |grep -v SECvars >>/dev/stderr

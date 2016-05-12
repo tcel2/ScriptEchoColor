@@ -501,10 +501,10 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			lbQuiet=false
 		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <lstrId> set the lock id, if not set, the 'id' defaults to `basename $0`
 			shift
-			lstrId="$1"
+			lstrId="${1-}"
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <l_pid> force pid to be related to the lock, mainly to acquire (default) and --release the lock
 			shift
-			l_pid=$1
+			l_pid="${1-}"
 			#if ! ps -p $l_pid >/dev/null 2>&1;then
 			#if [[ -n "$l_pid" && ! -d "/proc/$l_pid" ]];then
 			if ! SECFUNCpidChecks --active --check "$l_pid";then
@@ -640,34 +640,36 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	if $lbListAndCleanUniqueFiles;then
 		IFS=$'\n' read -d '' -r -a astrUniqueFileList < <(ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&:)&&: #TODO why this `&&:)&&:` was necessary instead of simply `)&&:` ? the inner error should have been ignored...
 		local lstrUniqueFile
-		for lstrUniqueFile in "${astrUniqueFileList[@]-}";do
-		#ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&: |while read lstrUniqueFile;do
-			local lnPidCheck=$(cat "$lstrUniqueFile")
-			#if [[ ! -d "/proc/$lnPidCheck" ]];then
-			local lbAlive=false
-			if SECFUNCpidChecks --active --check "$lnPidCheck";then
-				lbAlive=true
-			fi
+		if((`SECFUNCarraySize astrUniqueFileList`>0));then
+			for lstrUniqueFile in "${astrUniqueFileList[@]}";do
+			#ls -1 "$SEC_TmpFolder/.SEC.UniqueRun."*&&: |while read lstrUniqueFile;do
+				local lnPidCheck="$(cat "$lstrUniqueFile")"
+				#if [[ ! -d "/proc/$lnPidCheck" ]];then
+				local lbAlive=false
+				if SECFUNCpidChecks --active --check "$lnPidCheck";then
+					lbAlive=true
+				fi
 			
-			if $lbAlive;then
-				if ! $lbQuiet;then
-#					local lstrDeadInfo="(DEAD)"
-#					local lstrLockFile=""
-#					local lstrDeadInfo=""
-					local lstrLockFile="`basename "$(SECFUNCfileLock --getlock "$lstrUniqueFile")"`"&&:
-					echo "U='`basename "${lstrUniqueFile}"`', pid='${lnPidCheck}', lock='${lstrLockFile}'"
-#					echo "`basename "${lstrUniqueFile}"`,${lnPidCheck}${lstrDeadInfo},${lstrLockFile}"
+				if $lbAlive;then
+					if ! $lbQuiet;then
+	#					local lstrDeadInfo="(DEAD)"
+	#					local lstrLockFile=""
+	#					local lstrDeadInfo=""
+						local lstrLockFile="`basename "$(SECFUNCfileLock --getlock "$lstrUniqueFile")"`"&&:
+						echo "U='`basename "${lstrUniqueFile}"`', pid='${lnPidCheck}', lock='${lstrLockFile}'"
+	#					echo "`basename "${lstrUniqueFile}"`,${lnPidCheck}${lstrDeadInfo},${lstrLockFile}"
+					fi
+				else
+					# TODO confirm if this quick lock is to prevent another process from creating a lock, while trying to remove the unique file here AND DOCUMENT IT PROPERLY!!! :P
+					local lstrQuickLock="${lstrUniqueFile}.ToCreateRealFile.lock"
+					if ln -s "$lstrUniqueFile" "$lstrQuickLock";then
+						rm "$lstrUniqueFile"
+						echo "[`SECFUNCdtTimeForLogMessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >>/dev/stderr
+						rm "$lstrQuickLock" #after all is done
+					fi
 				fi
-			else
-				# TODO confirm if this quick lock is to prevent another process from creating a lock, while trying to remove the unique file here AND DOCUMENT IT PROPERLY!!! :P
-				local lstrQuickLock="${lstrUniqueFile}.ToCreateRealFile.lock"
-				if ln -s "$lstrUniqueFile" "$lstrQuickLock";then
-					rm "$lstrUniqueFile"
-					echo "[`SECFUNCdtTimeForLogMessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >>/dev/stderr
-					rm "$lstrQuickLock" #after all is done
-				fi
-			fi
-		done
+			done
+		fi
 		SECFUNCdbgFuncOutA;return 0
 	fi
 	
@@ -1048,7 +1050,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	#declare -p lastrAllCfgVars
 	
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
-		for lstrCfgVar in "${lastrAllCfgVars[@]-}";do
+		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
 			SECFUNCcfgWriteVar $lstrCfgVar
 			if $lbShowAll;then
 				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar-}'" >>/dev/stderr

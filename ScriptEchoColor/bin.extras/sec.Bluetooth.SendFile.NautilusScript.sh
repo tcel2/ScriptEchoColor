@@ -49,12 +49,14 @@ function FUNCrescan() {
 	#bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
 	IFS=$'\n' read -d '' -r -a astrDevices < <(echo "$strDevices")
 	echo "astrDevices[@]=(${astrDevices[@]-})" >>/dev/stderr
-	for strDevice in "${astrDevices[@]-}";do 
-		if [[ -n "$strDevice" ]];then
-			echo "strDevice='$strDevice'" >>/dev/stderr
-			astrDeviceList["`echo "$strDevice" |cut -f2`"]="`echo "$strDevice" |cut -f3`"
-		fi
-	done
+	if((`SECFUNCarraySize astrDevices`>0));then
+		for strDevice in "${astrDevices[@]}";do 
+			if [[ -n "$strDevice" ]];then
+				echo "strDevice='$strDevice'" >>/dev/stderr
+				astrDeviceList["`echo "$strDevice" |cut -f2`"]="`echo "$strDevice" |cut -f3`"
+			fi
+		done
+	fi
 	
 	if((${#astrDeviceList[@]}==0));then
 		echoc -p "no bluetooth devices found..."

@@ -83,16 +83,18 @@ function FUNCwindowList() {
 
 	local lnSystemPidMax=`cat /proc/sys/kernel/pid_max`
 	local listWindowIdsSorted=()
-	for windowId in ${listWindowIds[@]-};do
-		local windowPid="`xdotool getwindowpid $windowId`"&&:
-		if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
-			local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
-			local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
-			# sort like in the newests are the last ones
-			local lnIndex="${elapsedPidTime}${lnWindowPidFixedSize}"
-			listWindowIdsSorted[lnIndex]="$windowId" 
-		fi
-	done
+	if((`SECFUNCarraySize listWindowIds`>0));then
+		for windowId in ${listWindowIds[@]};do
+			local windowPid="`xdotool getwindowpid $windowId`"&&:
+			if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
+				local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
+				local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
+				# sort like in the newests are the last ones
+				local lnIndex="${elapsedPidTime}${lnWindowPidFixedSize}"
+				listWindowIdsSorted[lnIndex]="$windowId" 
+			fi
+		done
+	fi
 	
 	#`tac` will make newest windows be ordered at last slots on screen
 	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]-}" |tr ' ' '\n' |tac`)

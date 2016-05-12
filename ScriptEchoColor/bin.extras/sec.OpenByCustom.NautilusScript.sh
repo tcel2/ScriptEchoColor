@@ -108,28 +108,30 @@ function FUNCopen() {
 		astrFiles+=("${astrRemainingParams[@]}")
 	fi
 	declare -p astrFiles
-	for strFile in "${astrFiles[@]-}";do
-		if [[ -f "$strFile" ]];then
-			strExtension="`echo "$strFile" |sed -r 's".*[.](.*)$"\1"'`"
-			if [[ -z "$strExtension" ]];then
-				echoc -p "invalid strExtension='$strExtension'"
-				exit 1
-			fi
+	if((`SECFUNCarraySize astrFiles`>0));then
+		for strFile in "${astrFiles[@]}";do
+			if [[ -f "$strFile" ]];then
+				strExtension="`echo "$strFile" |sed -r 's".*[.](.*)$"\1"'`"
+				if [[ -z "$strExtension" ]];then
+					echoc -p "invalid strExtension='$strExtension'"
+					exit 1
+				fi
 		
-			strExec="${CFGastrAssigned[$strExtension]-}"
+				strExec="${CFGastrAssigned[$strExtension]-}"
 		
-			if [[ -f "$strExec" ]];then
-				SECFUNCexecA -ce "$strExec" "$strFile"
+				if [[ -f "$strExec" ]];then
+					SECFUNCexecA -ce "$strExec" "$strFile"
+				else
+					echoc -p "unassigned strExtension='$strExtension', or missing executable strExec='$strExec'"
+					exit 1
+				fi
 			else
-				echoc -p "unassigned strExtension='$strExtension', or missing executable strExec='$strExec'"
+				echoc -p "missing strFile='$strFile'"
 				exit 1
 			fi
-		else
-			echoc -p "missing strFile='$strFile'"
-			exit 1
-		fi
-		#break; #TODO this is just to prevent opening more than one file, could open tho...
-	done
+			#break; #TODO this is just to prevent opening more than one file, could open tho...
+		done
+	fi
 };export -f FUNCopen
 #zenity --info --text=$LINENO
 #TODO this is not accepting the exported arrays: secXtermDetached.sh --waitonexit 60 bash -c FUNCopen

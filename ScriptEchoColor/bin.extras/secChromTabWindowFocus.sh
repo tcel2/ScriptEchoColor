@@ -103,13 +103,15 @@ done
 while true; do
 	chromiumWindowId=""
 #	list=(`xdotool search Chromium 2>/dev/null`)
-#	for windowId in `echo ${list[*]-}`; do 
+#	if((`SECFUNCarraySize list`>0));then
+#	for windowId in `echo ${list[*]}`; do 
 #		if xwininfo -id $windowId |grep "Window id" |egrep -oq " - Chromium\"$"; then
 #			SECFUNCvarSet --show chromiumWindowId=$windowId
 #			xwininfo -id $chromiumWindowId |grep "Window id" #report
 #			break;
 #		fi
 #	done
+# fi
 	while true; do 
 		if SECFUNCdelay daemonHold --checkorinit 5;then
 			SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
@@ -133,19 +135,21 @@ while true; do
 	tabsOutlinerWindowId=""
 	tabsOutlinerWindowIdMoveable=""
 	list=(`xdotool search "Tabs Outliner" 2>/dev/null`)
-	for windowId in `echo ${list[*]-}`; do 
-		if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Tabs Outliner\"$"; then
-			SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
-#			echo ">a> $windowId"
-#			echo ">b> `FUNCparentest $windowId`"
-#			SECFUNCvarSet --show tabsOutlinerWindowId=`FUNCparentest $windowId`
-#			echo -n ">a>";getParentestWindow.sh $windowId
-#			echo -n ">b>";str=`getParentestWindow.sh $windowId`;echo $str
-			SECFUNCvarSet --show tabsOutlinerWindowId=`getParentestWindow.sh $windowId`
-			xwininfo -id $tabsOutlinerWindowId |grep "Window id" #report
-			break;
-		fi
-	done
+	if((`SECFUNCarraySize list`>0));then
+		for windowId in `echo ${list[*]}`; do 
+			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Tabs Outliner\"$"; then
+				SECFUNCvarSet --show tabsOutlinerWindowIdMoveable=$windowId
+	#			echo ">a> $windowId"
+	#			echo ">b> `FUNCparentest $windowId`"
+	#			SECFUNCvarSet --show tabsOutlinerWindowId=`FUNCparentest $windowId`
+	#			echo -n ">a>";getParentestWindow.sh $windowId
+	#			echo -n ">b>";str=`getParentestWindow.sh $windowId`;echo $str
+				SECFUNCvarSet --show tabsOutlinerWindowId=`getParentestWindow.sh $windowId`
+				xwininfo -id $tabsOutlinerWindowId |grep "Window id" #report
+				break;
+			fi
+		done
+	fi
 #	while true; do 
 #		FUNCwindowAtMouse;
 #		if xwininfo -all -id $windowId |grep -q '"Tabs Outliner"'; then
@@ -165,13 +169,15 @@ while true; do
 	if ps -A -o cmd |grep -v grep |grep unity-panel-service -iq;then
 		#unityLauncherWindowId=`xdotool search unity-launcher`
 		list=(`xdotool search "unity-launcher" 2>/dev/null`)
-		for windowId in `echo ${list[*]-}`; do 
-			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"unity-launcher\"$"; then
-				SECFUNCvarSet --show unityLauncherWindowId=$windowId
-				xwininfo -id $unityLauncherWindowId |grep "Window id" #report
-				break;
-			fi
-		done
+		if((`SECFUNCarraySize list`>0));then
+			for windowId in `echo ${list[*]}`; do 
+				if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"unity-launcher\"$"; then
+					SECFUNCvarSet --show unityLauncherWindowId=$windowId
+					xwininfo -id $unityLauncherWindowId |grep "Window id" #report
+					break;
+				fi
+			done
+		fi
 		if [[ -z "$unityLauncherWindowId" ]]; then
 			FUNCwait #echoc -w -t $waitStart
 			continue;
@@ -181,13 +187,15 @@ while true; do
 	gnomePanelWindowId=-1
 	if ps -A -o cmd |grep -v grep |grep gnome-panel -iq;then
 		list=(`xdotool search "Left Expanded Edge Panel" 2>/dev/null`)
-		for windowId in `echo ${list[*]-}`; do 
-			if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Left Expanded Edge Panel\"$"; then
-				SECFUNCvarSet --show gnomePanelWindowId=$windowId
-				xwininfo -id $gnomePanelWindowId |grep "Window id" #report
-				break;
-			fi
-		done
+		if((`SECFUNCarraySize list`>0));then
+			for windowId in `echo ${list[*]}`; do 
+				if xwininfo -id $windowId |grep "Window id" |egrep -oq "\"Left Expanded Edge Panel\"$"; then
+					SECFUNCvarSet --show gnomePanelWindowId=$windowId
+					xwininfo -id $gnomePanelWindowId |grep "Window id" #report
+					break;
+				fi
+			done
+		fi
 		if [[ -z "$gnomePanelWindowId" ]]; then
 			FUNCwait #echoc -w -t $waitStart
 			continue;

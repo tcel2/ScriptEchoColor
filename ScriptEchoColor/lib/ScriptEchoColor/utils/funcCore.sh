@@ -806,7 +806,6 @@ function SECFUNCbashSourceFiles() { #help
 	SECastrBashSourceFilesPrevious=("${BASH_SOURCE[@]-}")
 	
 	local lstrSourceFileList=""
-	#for lstrSourceFile in "${BASH_SOURCE[@]-}";do
 	if((`SECFUNCarraySize BASH_SOURCE`>0));then
 		for lnSourceFileIndex in "${!BASH_SOURCE[@]}";do
 #			echo ">>>lnSourceFileIndex=$lnSourceFileIndex,${#BASH_SOURCE[@]}-1,${BASH_SOURCE[lnSourceFileIndex]}" >>/dev/stderr
@@ -1166,21 +1165,23 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 	local lsedFunctionNameOnly='s".*function[[:blank:]]*([[:alnum:]_]*)[[:blank:]]*\(\).*"\1"'
 	local lastrFunctions=(`grep "^[[:blank:]]*function[[:blank:]]*[[:alnum:]_]*[[:blank:]]*()" "$lstrScriptFile" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
 	lastrFunctions=(`echo "${lastrFunctions[@]-}" |tr " " "\n" |sort`)
-	for lstrFuncId in ${lastrFunctions[@]-};do
-		echo
-		if type $lstrFuncId 2>/dev/null |grep -q "\-\-help";then
-			local lstrHelp=`$lstrFuncId --help`
-			if [[ -n "$lstrHelp" ]];then
-				echo "$lstrHelp"
+	if((`SECFUNCarraySize lastrFunctions`>0));then
+		for lstrFuncId in ${lastrFunctions[@]};do
+			echo
+			if type $lstrFuncId 2>/dev/null |grep -q "\-\-help";then
+				local lstrHelp=`$lstrFuncId --help`
+				if [[ -n "$lstrHelp" ]];then
+					echo "$lstrHelp"
+				else
+					#echo "  $lstrFuncId()"
+					SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId #this only happens for SECFUNCechoDbg ...
+				fi
 			else
 				#echo "  $lstrFuncId()"
-				SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId #this only happens for SECFUNCechoDbg ...
+				SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId
 			fi
-		else
-			#echo "  $lstrFuncId()"
-			SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId
-		fi
-	done
+		done
+	fi
 }
 
 #function SECFUNCisNumberChkExit(){

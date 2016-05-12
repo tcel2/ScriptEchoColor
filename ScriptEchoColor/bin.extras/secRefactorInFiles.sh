@@ -187,40 +187,42 @@ function _FUNCreportMatches() {
 }
 
 IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${strFileFilter}")&&:
-for strFile in "${astrFileList[@]-}";do
-	if egrep -q "$strRegexMatch" "$strFile";then
-		egrep -Hc "$strRegexMatch" "$strFile"
-		if SECFUNCarrayContains astrFileIgnore "$strFile";then
-			echoc --info "@s@rIgnoring file:@S strFile='$strFile'"
-			continue;
-		fi
+if((`SECFUNCarraySize astrFileList`>0));then
+	for strFile in "${astrFileList[@]}";do
+		if egrep -q "$strRegexMatch" "$strFile";then
+			egrep -Hc "$strRegexMatch" "$strFile"
+			if SECFUNCarrayContains astrFileIgnore "$strFile";then
+				echoc --info "@s@rIgnoring file:@S strFile='$strFile'"
+				continue;
+			fi
 		
-		if $bWrite;then
-			if $bAskSkip;then
-				_FUNCreportMatches
-				# default answer is to skip, so user have to think/check more to help on preventing trouble
-				if echoc -q "skip above strFile='$strFile'?";then
-					continue
+			if $bWrite;then
+				if $bAskSkip;then
+					_FUNCreportMatches
+					# default answer is to skip, so user have to think/check more to help on preventing trouble
+					if echoc -q "skip above strFile='$strFile'?";then
+						continue
+					fi
 				fi
-			fi
 			
-			if [[ -f "${strFile}.${strBkpSuffix}" ]];then
-				echoc --info "backup already exists, moving it to old"
-				SECFUNCexec -ce mv -vT "${strFile}.${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`.${strBkpSuffix}"
-			fi
-			SECFUNCexec -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
-			strBkpFile="${strFile}.${strBkpSuffix}"
-			if [[ -f "$strBkpFile" ]];then
-				SECFUNCexec -ce ls -l "$strBkpFile"
-				SECFUNCexec -ce colordiff "$strBkpFile" "$strFile"&&:
+				if [[ -f "${strFile}.${strBkpSuffix}" ]];then
+					echoc --info "backup already exists, moving it to old"
+					SECFUNCexec -ce mv -vT "${strFile}.${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`.${strBkpSuffix}"
+				fi
+				SECFUNCexec -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
+				strBkpFile="${strFile}.${strBkpSuffix}"
+				if [[ -f "$strBkpFile" ]];then
+					SECFUNCexec -ce ls -l "$strBkpFile"
+					SECFUNCexec -ce colordiff "$strBkpFile" "$strFile"&&:
+				else
+					SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
+				fi
 			else
-				SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
+				_FUNCreportMatches
 			fi
-		else
-			_FUNCreportMatches
 		fi
-	fi
-done
+	done
+fi
 if ! $bWrite;then
 	echoc --alert "nothing was changed!"
 fi

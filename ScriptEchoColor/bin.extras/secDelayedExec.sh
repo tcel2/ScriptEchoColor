@@ -405,14 +405,17 @@ if $bCheckIfAlreadyRunning;then
 		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
 			#echo " anPidOther[@]=(${anPidOther[@]})" >>/dev/stderr
 			bFound=false
-			for nPidOther in ${anPidOther[@]-};do
-				#echo "\"^ RUN -> .*;pid='$nPidOther';\"" >>/dev/stderr
-				#if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
-				if grep -q " RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
-					bFound=true
-					break;
-				fi
-			done;if ! $bFound;then break;fi
+			if((`SECFUNCarraySize anPidOther`>0));then
+				for nPidOther in ${anPidOther[@]};do
+					#echo "\"^ RUN -> .*;pid='$nPidOther';\"" >>/dev/stderr
+					#if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
+					if grep -q " RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
+						bFound=true
+						break;
+					fi
+				done
+			fi
+			if ! $bFound;then break;fi
 		else
 			if ! echo "${anPidList[@]-}" |grep -qw "$$";then
 				FUNClog wrn "could not find self! "
