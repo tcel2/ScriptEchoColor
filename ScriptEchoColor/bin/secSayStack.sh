@@ -458,7 +458,7 @@ paramMd5sum="(Parameter.set 'SECmd5sum '$md5sumText)" #useful to access cached v
 paramSayVol="(Parameter.set 'SECsayVol '$sayVol)"
 paramSayId="(Parameter.set 'SECsayId '$strSayId)"
 paramSndEffects="(Parameter.set 'SECstrSndEffects '$strSndEffects)"
-sayTextFixed="`echo "$sayText" |sed 's/[^a-zA-Z0-9=_-]/ /g'`"
+sayTextFixed="`echo "$sayText" |sed 's/[^a-zA-Z0-9=_-]/ /g'`" # remove any invalid characters to prevent breaking speech application
 echo "${paramSortOrder}\
 			${paramMd5sum}\
 			${paramSayVol}\
@@ -575,9 +575,9 @@ while true; do
 			nSayVolGet="`FUNCgetParamValue "$strHead" SECsayVol`"
 			strSndEffectsGet="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
 			
-			echo "md5sumTextGet='$md5sumTextGet'"
-			echo "nSayVolGet='$nSayVolGet'"
-			echo "strSndEffectsGet='$strSndEffectsGet'"
+#			echo "md5sumTextGet='$md5sumTextGet'" >>/dev/stderr
+#			echo "nSayVolGet='$nSayVolGet'" >>/dev/stderr
+#			echo "strSndEffectsGet='$strSndEffectsGet'" >>/dev/stderr
 			
 			#echo "strHead=$strHead" >>/dev/stderr
 			bCanPlay=true

@@ -84,7 +84,11 @@ SECFUNCuniqueLock --waitbecomedaemon
 
 # This first play seems to store the file in memory, what make it works after?
 strAudioFile="`SEC_SAYVOL=0 secSayStack.sh --stdout "problem with IO"`"
+while ! ls -l "$strAudioFile";do
+	sleep 1 #wait it be created
+done
 strAudioFile="`readlink -f "$strAudioFile"`" #`play` needs the filename extension...
+ls -l "$strAudioFile"
 play -v 0 "$strAudioFile" #TODO confirm if this helps on caching in ram memory the `play` application
 nPidDaemon=$$
 nMainSleep=10

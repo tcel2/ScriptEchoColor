@@ -132,7 +132,7 @@ while true;do
 			if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
 				strTrashFolder="$strMountedFS"
 			else
-				strTrashFolder="$strMountedFS/.Trash-1000/files/"
+				strTrashFolder="$strMountedFS/.Trash-$UID/files/"
 			fi
 			SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
 			if ! echo "$strTrashFolder" |grep -qi "trash";then 
@@ -299,7 +299,7 @@ done
 #done
 
 
-#IFS=$'\n' read -d '' -r -a astrTrashList < <(mount |sed -r 's".* on (.*) type .*"\1/.Trash-1000"' |sort)&&:
+#IFS=$'\n' read -d '' -r -a astrTrashList < <(mount |sed -r 's".* on (.*) type .*"\1/.Trash-$UID"' |sort)&&:
 
 #nTot=${#astrTrashList[@]}
 ##echo "DEBUG: tot $nTot"
