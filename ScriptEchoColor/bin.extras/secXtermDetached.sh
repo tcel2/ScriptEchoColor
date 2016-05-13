@@ -42,6 +42,7 @@ bSkipCascade=false
 bWaitDBsymlink=true
 bKillSkip=false
 export SECXbDaemon=false
+export SECXnMaxWaitOtherDaemon=60
 export SECXnNice=0
 nDisplay="$DISPLAY"
 export SECXnExitWait=0
@@ -75,6 +76,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		nDisplay="${1-}"
 	elif [[ "$1" == "--daemon" ]];then #help enforce the execution to be uniquely run (no other instances of same title/command)
 		SECXbDaemon=true
+	elif [[ "$1" == "--daemonmaxwait" ]];then #help <SECXnMaxWaitOtherDaemon> the max delay in seconds to wait other daemon exit, wait forever by setting to -1
+		shift&&:
+		SECXnMaxWaitOtherDaemon="${1-}"
 	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
 #		strTitleForce="`SECFUNCfixId "$1"`"
@@ -226,68 +230,86 @@ export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
 	eval `secinit`
 	
+	local lbRun=true
 	if $SECXbDaemon;then
 		echoc --info "Starting daemon for unique id '$strTitle'"
+		local lnStartAt=$SECONDS
 		while true;do
+				echo "$LINENO;SECONDS='$SECONDS'"
 			#SECFUNCuniqueLock --id "$strTitle" --isdaemonrunning
 			SECFUNCuniqueLock --id "$strTitle" --setdbtodaemon #SECFUNCdaemonUniqueLock $strTitle
 			
 			if $SECbDaemonWasAlreadyRunning;then
 				echoc --info "waiting other daemon exit, id '$strTitle'"
-				sleep 1
+				echoc -w -t 1
+				
+				echo "SECXnMaxWaitOtherDaemon='$SECXnMaxWaitOtherDaemon'"
+				echo "$LINENO;SECONDS='$SECONDS'"
+				echo "lnStartAt='$lnStartAt'"
+				if((SECXnMaxWaitOtherDaemon>-1));then
+					if(( (SECONDS-lnStartAt) > SECXnMaxWaitOtherDaemon ));then
+						lbRun=false
+						break;
+					fi
+				fi
+				echo "$LINENO;SECONDS='$SECONDS'"
+				
 				continue;
 			fi	
 			
+				echo "$LINENO;SECONDS='$SECONDS'"
 			break
 		done
 	fi
-
-	local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
-	if $SECXbLogOnly || $SECXbNoHup;then
-		echo "lstrFileLogCmd='$lstrFileLogCmd'" >>/dev/stderr
-		tail -F "$lstrFileLogCmd"&
-	fi
 	
-	echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
-	if $SECXbLogOnly;then
-		# stdout must be redirected or the terminal wont let it be a detached child...
-		#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
-		#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
-		#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
-		SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown #TODO use nohup?
-		nPidCmd=$!
-		
-		while true;do
-			echoc --info "monitoring lstrFileLogCmd='$lstrFileLogCmd'"
-			echoc -x "ps --no-headers -o pid,ppid,cpu,stat,cmd -p $nPidCmd"
-			ScriptEchoColor -t 10 -Q "do what?@O_exit/_kill/force_Kill/_stop/_continue"&&:; case "`secascii $?`" in 
-				e) break;
-					;; 
-				k) kill $nPidCmd
-					;; 
-				K) kill -SIGKILL $nPidCmd
-					;; 
-				s) kill -SIGSTOP $nPidCmd
-					;; 
-				c) kill -SIGCONT $nPidCmd
-					;; 
-			esac
-			
-			if [[ ! -d "/proc/$nPidCmd" ]];then
-				echo "nPidCmd='$nPidCmd' exited" >>/dev/stderr
-				break;
-			fi
-		done
-	else
-		if $SECXbNoHup;then
-			SECFUNCexecA -ce nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
-		else
-			SECFUNCexecA -ce bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
+	if $lbRun;then
+		local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
+		if $SECXbLogOnly || $SECXbNoHup;then
+			echo "lstrFileLogCmd='$lstrFileLogCmd'" >>/dev/stderr
+			tail -F "$lstrFileLogCmd"&
 		fi
+	
+		echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
+		if $SECXbLogOnly;then
+			# stdout must be redirected or the terminal wont let it be a detached child...
+			#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
+			#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
+			#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
+			SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown #TODO use nohup?
+			nPidCmd=$!
 		
-		if((nRet!=0));then
-			echoc -p "returned $nRet"
-			echoc -w -t 60
+			while true;do
+				echoc --info "monitoring lstrFileLogCmd='$lstrFileLogCmd'"
+				echoc -x "ps --no-headers -o pid,ppid,cpu,stat,cmd -p $nPidCmd"
+				ScriptEchoColor -t 10 -Q "do what?@O_exit/_kill/force_Kill/_stop/_continue"&&:; case "`secascii $?`" in 
+					e) break;
+						;; 
+					k) kill $nPidCmd
+						;; 
+					K) kill -SIGKILL $nPidCmd
+						;; 
+					s) kill -SIGSTOP $nPidCmd
+						;; 
+					c) kill -SIGCONT $nPidCmd
+						;; 
+				esac
+			
+				if [[ ! -d "/proc/$nPidCmd" ]];then
+					echo "nPidCmd='$nPidCmd' exited" >>/dev/stderr
+					break;
+				fi
+			done
+		else
+			if $SECXbNoHup;then
+				SECFUNCexecA -ce nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
+			else
+				SECFUNCexecA -ce bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
+			fi
+		
+			if((nRet!=0));then
+				echoc -p "returned $nRet"
+				echoc -w -t 60
+			fi
 		fi
 	fi
 	

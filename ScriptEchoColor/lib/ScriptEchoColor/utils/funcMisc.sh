@@ -589,7 +589,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	fi
 	
 	if ${lbDaemon:?};then #will call this self function, beware..
-		SECONDS=0
+		SECFUNCdelay "$FUNCNAME" --init # do not mess with: SECONDS=0 !!!
 		local lbBecameDaemon=false
 		while true;do
 			SECbDaemonWasAlreadyRunning=false #global NOT to export #TODO EXPLAIN WHY?!
@@ -624,7 +624,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 					break;
 				else
 #				if $SECbDaemonWasAlreadyRunning;then
-					echo -ne "$FUNCNAME: Wait other ($SECnDaemonPid) Daemon '$lstrId': ${SECONDS}s...\r" >>/dev/stderr
+					echo -ne "$FUNCNAME: Wait other ($SECnDaemonPid) Daemon '$lstrId': `SECFUNCdelay "$FUNCNAME" --getsec`s...\r" >>/dev/stderr
 					sleep 1 #keep trying to become the daemon
 #				else
 #					break #has become the daemon, breaks loop..
