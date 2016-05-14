@@ -296,7 +296,9 @@ while true;do
 			nScreensaverRet=0
 			if $bModeUnity;then
 #				qdbus com.canonical.Unity "$strDBusUnityObjPath" com.canonical.Unity.Session.Lock&&:
-				qdbus "$strDBusUnityDestination" "$strDBusUnityObjPath" com.canonical.Unity.Session.Lock&&:
+#				strDBusUnityDestination="com.canonical.Unity.Launcher"
+#				qdbus "$strDBusUnityDestination" "$strDBusUnityObjPath" com.canonical.Unity.Session.Lock&&:
+				qdbus com.canonical.Unity.Launcher /com/canonical/Unity/Session com.canonical.Unity.Session.Lock&&:
 				nScreensaverRet=$?
 			elif $bModeGnome;then
 				gnome-screensaver-command --lock&&:

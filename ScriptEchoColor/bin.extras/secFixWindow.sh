@@ -85,7 +85,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixYakuake=true
 	elif [[ "$1" == "--fixpsensor" ]];then #help to fix psensor window (on system startup, its maximized state may be ignored).
 		bFixPSensor=true
-	elif [[ "$1" == "--keepnumlockon" ]];then #help will check if numlock is off and turn it on
+	elif [[ "$1" == "--keepnumlockon" ]];then #help ~daemon will check if numlock is off and turn it on
 		bKeepNumlockOn=true
 	elif [[ "$1" == "--noxterm" ]];then #help whenever a new xterm would be used, now will not
 		bUseXterm=false
@@ -214,6 +214,13 @@ elif $bFixPSensor;then
 	exit 0
 elif $bKeepNumlockOn;then
 	function SECFUNCkeepNumlockOn(){
+		local lstrId="${FUNCNAME}${DISPLAY}"
+		if SECFUNCuniqueLock --id "$lstrId" --isdaemonrunning;then
+			SECFUNCechoWarnA "$lstrId, already running at DISPLAY='$DISPLAY'"
+			return 0
+		fi
+		
+		SECFUNCuniqueLock --id "$lstrId" --waitbecomedaemon
 		while true;do 
 			if numlockx status |grep off;then 
 				SECFUNCexecA -ce numlockx on;

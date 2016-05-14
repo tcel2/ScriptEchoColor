@@ -88,6 +88,7 @@ function FUNCwindowList() {
 			local windowPid="`xdotool getwindowpid $windowId`"&&:
 			if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
 				local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
+				if((elapsedPidTime==0));then elapsedPidTime=1;fi #rare case: dirty workaround to avoid invalid "octal number" creation problem
 				local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
 				# sort like in the newests are the last ones
 				local lnIndex="${elapsedPidTime}${lnWindowPidFixedSize}"
