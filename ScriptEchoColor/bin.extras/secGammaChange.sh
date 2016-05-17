@@ -131,6 +131,7 @@ bGetc=false
 astrRunParams=("$@")
 bChangeWait=false
 CFGnKeepDelay=30
+CFGbRefreshKeepGammaNow=false
 SECFUNCcfgFileName --get
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
@@ -202,6 +203,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		nRgfMax="${1-$nRgfMax}"
 		
 		bRandom=true
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+		pSECFUNCcfgOptSet "$@";exit 0;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -332,7 +336,20 @@ elif $bKeep;then  # Keep Daemon - PART2
 		else
 			echoc -p "CFGafModGammaRGB is not set?"
 		fi
-		echoc -w -t $CFGnKeepDelay "keep gamma"
+		
+		nDelayStep=3
+		for((nDelayCurrent=0;nDelayCurrent<CFGnKeepDelay;nDelayCurrent+=nDelayStep));do
+			SECFUNCcfgReadDB CFGbRefreshKeepGammaNow
+			if $CFGbRefreshKeepGammaNow;then 
+				echoc --info "refreshing now, CFGbRefreshKeepGammaNow='$CFGbRefreshKeepGammaNow'"
+				SECFUNCcfgWriteVar CFGbRefreshKeepGammaNow=false
+				break;
+			fi
+			
+			if echoc -q -t $nDelayStep "refresh now?";then 
+				break;
+			fi
+		done
 	done
 elif $bRandom;then
 	if $SECbRunLog;then

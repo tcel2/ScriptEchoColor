@@ -95,7 +95,7 @@ nMainSleep=10
 echo "nPidDaemon='$nPidDaemon'"
 
 function FUNCCchecker(){
-	echo "FUNCCchecker pid '$BASHPID' #test: kill -SIGSTOP $BASHPID;sleep 30;kill -SIGCONT $BASHPID"
+	echoc --info "FUNCCchecker pid '$BASHPID' #@s@{rn}TestMe@S: kill -SIGSTOP $BASHPID;sleep 30;kill -SIGCONT $BASHPID"
 	while true;do
 		echo "`SECFUNCdtFmt --logmessages`: testing IO..."
 		echo "$RANDOM" >"/tmp/.$SECstrScriptSelfName.IO-check.tmp"
@@ -118,6 +118,7 @@ while true;do
 		play "$strAudioFile"
 		if $bFlashScreen;then
 			FUNCflashScreen
+			secGammaChange.sh --cfg CFGbRefreshKeepGammaNow=true& #must not interfere with the loop
 		fi
 	else
 		echo "`SECFUNCdtFmt --logmessages`: IO seems ok..."
