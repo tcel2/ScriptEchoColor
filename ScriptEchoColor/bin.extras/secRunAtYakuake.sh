@@ -183,9 +183,25 @@ if ! SECFUNCisNumber -dn $nAddSessions;then
 fi
 
 if((nAddSessions>0));then
-	for((i=0;i<nAddSessions;i++));do 
-		qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.addSession;
+	astrSessions=(`qdbus org.kde.yakuake |grep /Windows/`);
+	nSID=-1
+	for strSession in "${astrSessions[@]}";do 
+		echo $strSession;
+		nSID="`qdbus org.kde.yakuake $strSession org.kde.konsole.Window.currentSession`";
+		echo $nSID;
+		if((nSID>-1));then 
+			break;
+		fi;
 	done
+	nSID=$((nSID-1))&&:
+
+	for((i=0;i<nAddSessions;i++));do 
+		SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.addSession;
+	done
+	
+#	sleep 1
+	SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.raiseSession $nSID
+	
 	exit 0
 fi
 

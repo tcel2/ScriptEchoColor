@@ -1122,6 +1122,7 @@ FUNCtranslateColor(){
 	fi
 
 	local param1stupper=`echo -n "${strParam1:0:1}" |tr '[:lower:]' '[:upper:]'`
+#	echo "cmd,${fgbg},${lt},${param1stupper},${strParam1}" >>/dev/stderr
 	eval echo -n "\$cmd${fgbg}${lt}${param1stupper}${strParam1:1}"
 #  case "$strParam1" in
 #  	"black")  eval echo -n "\$cmd${fgbg}${lt}Black"  ;return;;
