@@ -227,10 +227,11 @@ while true;do
 			echoc -x "gitk"&&: 
 			;; 
 		c)
-			echoc --alert "SOURCEFORGE PassWord may be asked...";
+			echoc --alert "SOURCEFORGE PassWord @{-n} may be asked...";
 			strTitleRegex="^Git Gui (.*): push .*"
 			SECFUNCCwindowCmd --timeout 1200 --ontop "$strTitleRegex"
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
+			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
 			echoc -x "git gui"&&: 
 			SECFUNCCwindowCmd --stop "$strTitleRegex"
 			;; 

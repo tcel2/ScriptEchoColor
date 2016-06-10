@@ -83,9 +83,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		elif [[ "$1" == "--timeout" || "$1" == "-o" ]];then #SECFUNCCwindowCmd_help <lnTimeout> after this timeout, will stop looking for window to match
 			shift 
 			lnTimeout="${1-}"
-		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them.
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them. Implies --nochild.
 			shift
 			lstrStopMatchRegex="${1-}" #TODO pointless..
+			
+			lbChild=false
 		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help just wait regex match a window and return 0
 			lbWait=true
 		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child. Useful after a previous line using --wait option.
@@ -104,7 +106,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		shift
 	done
 	
-	if [[ -n "$lstrStopMatchRegex" ]];then
+	if [[ -n "$lstrStopMatchRegex" ]];then #lbChild no child is actually just implied
 		for lnPid in "${!SECastrSECFUNCCwindowCmd_ChildRegex[@]}";do
 			if [[ "${SECastrSECFUNCCwindowCmd_ChildRegex[$lnPid]}" == "$lstrStopMatchRegex" ]];then
 				if [[ ! -d "/proc/$lnPid" ]];then
