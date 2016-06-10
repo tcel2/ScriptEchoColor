@@ -601,8 +601,9 @@ function FUNCrun(){
 				fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
-					1)break;; #do not retry, end
+					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
+					252)break;; #do not retry, end. Closed using the "window close" title button.
 #					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
 #					4)lbDevMode=false;lbEvalCode=true;; #normal retry
 				esac
