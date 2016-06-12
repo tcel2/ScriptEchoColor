@@ -53,10 +53,12 @@ strActivateUnmappedWindowNameId=""
 bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as it will be overriden at boolean check...
 bFixPSensor=false
 bKeepNumlockOn=false
+CFGbFixCurrentNow=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
-		echoc --info "Params: nPseudoMaxWidth nPseudoMaxHeight nXpos nYpos nYposMinReadPos "
-		echoc --info "Recomended for 1024x768: 1000 705 1 25 52"
+		SECFUNCshowHelp -c "This is basically a ~daemon to keep fixing windows."
+		SECFUNCshowHelp -c "Params: <nPseudoMaxWidth> <nPseudoMaxHeight> <nXpos> <nYpos> <nYposMinReadPos> "
+		SECFUNCshowHelp -c "Recomended for 1024x768: 1000 705 1 25 52"
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--skiplist" ]];then #help skip windows names (you can collect with xwininfo) that can be a regexp, separated by blank space
@@ -87,6 +89,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixPSensor=true
 	elif [[ "$1" == "--keepnumlockon" ]];then #help ~daemon will check if numlock is off and turn it on
 		bKeepNumlockOn=true
+	elif [[ "$1" == "--fixcurrentwindownow" || "$1" == "-c" ]];then #help will set CFGbFixCurrentNow and exit. This tell the daemon to fix current window now. Suggestion, bind it to Shift+Ctrl+Meta+UpArrow.
+		SECFUNCcfgWriteVar CFGbFixCurrentNow=true
+		exit 0
 	elif [[ "$1" == "--noxterm" ]];then #help whenever a new xterm would be used, now will not
 		bUseXterm=false
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
@@ -156,8 +161,8 @@ elif $bActivateUnmappedWindow;then
 		echoc -p "invalid strActivateUnmappedWindowNameId='$strActivateUnmappedWindowNameId'"
 		exit 1
 	fi
-	if ((fDefaultDelay>5));then
-		echoc --alert "fDefaultDelay='$fDefaultDelay' > 5, suggested is 3, less may cause trouble."	
+	if ((fDefaultDelay<3));then
+		echoc --alert "fDefaultDelay='$fDefaultDelay' less than 3s may cause trouble..." #here machine was rebooting...
 	fi
 	
 	# only one per window match
@@ -174,7 +179,6 @@ elif $bActivateUnmappedWindow;then
 			bDoItNow=true
 		else
 			echoc --info "Activate this terminal $strInfo"
-			#if [[ $(xdotool getwindowpid $(xdotool getactivewindow)) == $nPPID ]];then 
 			nPidCheck=$(xdotool getwindowpid $(xdotool getactivewindow))&&:
 			if [[ -n "$nPidCheck" ]];then
 				if SECFUNCppidList --checkpid $nPidCheck;then
@@ -370,23 +374,31 @@ while true; do
 	fi
 	
 	if $bForcedHold;then
-		echoc -w "run once"
+		while ! $CFGbFixCurrentNow;do
+#			strTime="`SECFUNCdtFmt --pretty --nodate --nonano`"
+			if echoc -n -q -t 5 "\r Run once `SECFUNCdtFmt --pretty --nodate --nonano`";then break;fi
+			SECFUNCcfgReadDB
+		done
 	elif SECFUNCdelay daemonHold --checkorinit 5;then
 		SECFUNCdaemonCheckHold #secDaemonsControl.sh --checkhold
 	fi
 	
 	anWindowList=(`xdotool getactivewindow`)&&:
 	bFixAllWindowsOnce=false
-	if $bWaitResquestFixAllOnly || SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
-		echoc --info "Fix all windows once: warning, viewport must be changed for each window it is on, so you have to wait a bit..."
-		nWait=3;if $bWaitResquestFixAllOnly;then nWait=1800;fi
-		if echoc -q -t $nWait "fix all windows independently of focus, once?";then
-			anWindowList=(`wmctrl -l |cut -d' ' -f1`)&&:
-			bFixAllWindowsOnce=true
-			fDelay=0.25 #to go very fast, once
-		else
-			if $bWaitResquestFixAllOnly;then
-				continue
+	if $CFGbFixCurrentNow;then
+		fDelay=1
+	else
+		if $bWaitResquestFixAllOnly || SECFUNCdelay fixAllWindowsOnce --checkorinit1 10;then
+			echoc --info "Fix all windows once: warning, viewport must be changed for each window it is on, so you have to wait a bit..."
+			nWait=3;if $bWaitResquestFixAllOnly;then nWait=1800;fi
+			if echoc -q -t $nWait "fix all windows independently of focus, once?";then
+				anWindowList=(`wmctrl -l |cut -d' ' -f1`)&&:
+				bFixAllWindowsOnce=true
+				fDelay=0.25 #to go very fast, once
+			else
+				if $bWaitResquestFixAllOnly;then
+					continue
+				fi
 			fi
 		fi
 	fi
@@ -399,7 +411,6 @@ while true; do
 			sleep $fDelay;
 		fi
 		
-		#if ! windowId="`xdotool getactivewindow`";then ContAftErrA;fi
 		if ! windowName="`xdotool getwindowname $windowId 2>"$strLogFile"`";then
 			xdotool windowactivate `xdotool search --sync "^Desktop$"`&&: #this way desktop shortcut keys work again!
 	#		while ! xdotool windowactivate `xdotool search --sync "^Desktop$"`;do #this way desktop shortcut keys work again!
@@ -673,6 +684,11 @@ while true; do
 			#fi
 		fi;
 	done
+	
+	if $CFGbFixCurrentNow;then
+		SECFUNCcfgWriteVar CFGbFixCurrentNow=false
+	fi
+	
 	if $bFixAllWindowsOnce;then
 		strMsgFixEnd="fixing windows batch ended"
 		echoc --say "$strMsgFixEnd"
