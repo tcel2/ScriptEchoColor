@@ -185,23 +185,43 @@ fi
 if((nAddSessions>0));then
 	astrSessions=(`qdbus org.kde.yakuake |grep /Windows/`);
 	nSID=-1
+	nSIDFirst=-1
 	for strSession in "${astrSessions[@]}";do 
 		echo $strSession;
 		nSID="`qdbus org.kde.yakuake $strSession org.kde.konsole.Window.currentSession`";
+		
+		if((nSIDFirst==-1));then
+			nSIDFirst="${strSession#/Windows/}"; #the id is actually at the end of the session name -1
+			((nSIDFirst--))&&:
+		fi
+		
 		echo $nSID;
 		if((nSID>-1));then 
 			break;
 		fi;
 	done
-	nSID=$((nSID-1))&&:
-
+	if((nSID!=-1));then
+		nSID=$((nSID-1))&&:
+	else
+		SECFUNCechoWarnA "unable to detect current yakuake terminal session, restoring focus to 1st one"
+		nSID=$nSIDFirst;
+	fi
+	
+	#this is important to have yakuake opened
+	if [[ `"qdbus" "org.kde.yakuake" /yakuake/MainWindow_1 org.qtproject.Qt.QWidget.visible` == false ]];then 
+		yakuake;
+		sleep 1
+	fi
+	
 	for((i=0;i<nAddSessions;i++));do 
 		SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.addSession;
 	done
 	
-#	sleep 1
-	SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.raiseSession $nSID
-	
+	if((nSID!=-1));then
+		sleep 1
+		SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.raiseSession $nSID
+	fi
+		
 	exit 0
 fi
 
