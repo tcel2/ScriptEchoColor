@@ -350,12 +350,13 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 	if [[ "$1" == "--help" ]];then #help show this help
 		#grep "#${FUNCNAME}_help" $0 |grep -v grep |sed -r "s'.*(--.*)\" ]];then #${FUNCNAME}_help (.*)'\t\1\t\2'"
 		#SECFUNCexecA --help
+		echo "_SECSAYfileSayStack='$_SECSAYfileSayStack'"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--sayvol" ]];then #help set volume to be used at festival
 		shift
 	  SECnSayVolume="$1"
-	elif [[ "$1" == "--effects" ]];then #help <strSndEffects> set volume to be used at festival
+	elif [[ "$1" == "--effects" ]];then #help <strSndEffects>
 		shift
 	  strSndEffects="$1"
 	elif [[ "$1" == "--nomp3" ]];then #help do not use mp3 format, but cache files will be about 10x bigger...

@@ -130,6 +130,9 @@ bSpeak=false
 bGetc=false
 astrRunParams=("$@")
 bChangeWait=false
+bManuallyAdjust=false
+CFGstrNVidiaSettingsFile="$HOME/.Custom.nvidia-settings-rc"
+bKeepNVidia=false
 CFGnKeepDelay=30
 CFGbRefreshKeepGammaNow=false
 SECFUNCcfgFileName --get
@@ -175,6 +178,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--wait" ]];then #help will wait for @UniqueLock and wont skip gamma change requests.
 		#help If the requests stack is too big and slow, and --say option was used, it may be annoying.
 		bChangeWait=true
+	elif [[ "$1" == "--adjust" ]];then #help manually adjust TODO
+		bManuallyAdjust=true
 	elif [[ "$1" == "--step" ]];then #help <fStep> the float step amount when changing gamma (below 1.0 gamma component, step is halved)
 		shift
 		fStep="${1-}"
@@ -189,6 +194,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#help useful in case some application changes it when you do not want.
 		#help incompatible with --random.
 		bKeep=true
+	elif [[ "$1" == "--keepnvidia" ]];then #help ~daemon (CFGstrNVidiaSettingsFile) a loop that keeps the last gamma setup made at nvidia setttings application,
+		#help useful in case some application changes it when you do not want.
+		#help incompatible with --random.
+		bKeepNVidia=true
 	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
 		#help ~daemon a loop that does random gamma fade, fun effect.
 		#help will not modify configuration file.
@@ -236,6 +245,32 @@ if ! SECFUNCisNumber -dn "$nRgfMax"; then
 	echoc -p "invalid nRgfMax='$nRgfMax'"
 	exit 1
 fi
+
+if $bKeepNVidia;then
+	while true;do 
+		if echoc -t 30 -q "run settings?";then 
+			nvidia-settings --config="$CFGstrNVidiaSettingsFile";
+		fi;
+		SECFUNCexecA -ce nvidia-settings -l --config="$CFGstrNVidiaSettingsFile";
+	done
+fi
+
+if $bManuallyAdjust;then #TODO
+	bChanging=true
+	while $bChanging;do
+		echoc -Q "gamma@_r/_g/_b/_R/_G/_B/_set@Dt"&&:; case "`secascii $?`" in 
+			r)echo 1;;
+			g)echo 2;;
+			b)echo 3;;
+			R)echo 1;;
+			G)echo 2;;
+			B)echo 3;;
+			s)bChanging=false;;
+		esac
+	done
+	exit 0
+fi
+
 if $bSetCurrent;then
 	if ! SECFUNCisNumber -n "${afModGammaRGB[0]}"; then
 		echoc -p "invalid afModGammaRGB[0]='${afModGammaRGB[0]}'"
