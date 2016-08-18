@@ -144,12 +144,13 @@ windowTitleHeight=25
 windowBorderSize=5 #2 #5
 
 function FUNCupdateScreenGeometryData(){
-	anGeom=(`wmctrl -d |grep "[*]" |grep "WA:.*" -o |egrep "[[:digit:]]*x[[:digit:]]*" -o |tr 'x' ' '`)
+	anGeom=(`xrandr |grep "Screen" |egrep "current[^,]*," -o |tr -d " " |egrep "[[:digit:]]+x[[:digit:]]+" -o |tr "x" " "`)
+#	anGeom=(`wmctrl -d |grep "[*]" |grep "WA:.*" -o |egrep "[[:digit:]]*x[[:digit:]]*" -o |tr 'x' ' '`)
 #	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
 	declare -g nScreenWidth="${anGeom[0]}"
 	declare -g nScreenHeight="${anGeom[1]}"
-	echo "nScreenWidth='$nScreenWidth'"
-	echo "nScreenHeight='$nScreenHeight'"
+	echoc --info "nScreenWidth='$nScreenWidth'"
+	echoc --info "nScreenHeight='$nScreenHeight'"
 
 	nScreenWidthWork=$nScreenWidth
 	nScreenHeightWork=$((nScreenHeight-screenStatusBarHeight)) #workable area
