@@ -144,7 +144,8 @@ windowTitleHeight=25
 windowBorderSize=5 #2 #5
 
 function FUNCupdateScreenGeometryData(){
-	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
+	anGeom=(`wmctrl -d |grep "[*]" |grep "WA:.*" -o |egrep "[[:digit:]]*x[[:digit:]]*" -o |tr 'x' ' '`)
+#	anGeom=(`xrandr |grep "[*]" |gawk '{printf $1}' |tr 'x' ' '`)
 	declare -g nScreenWidth="${anGeom[0]}"
 	declare -g nScreenHeight="${anGeom[1]}"
 	echo "nScreenWidth='$nScreenWidth'"

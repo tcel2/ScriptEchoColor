@@ -248,7 +248,7 @@ fi
 
 if $bKeepNVidia;then
 	while true;do 
-		if echoc -t 30 -q "run settings?";then 
+		if echoc -t $CFGnKeepDelay -q "run settings?";then 
 			nvidia-settings --config="$CFGstrNVidiaSettingsFile";
 		fi;
 		SECFUNCexecA -ce nvidia-settings -l --config="$CFGstrNVidiaSettingsFile";
