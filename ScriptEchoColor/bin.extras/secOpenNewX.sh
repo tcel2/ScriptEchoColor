@@ -37,11 +37,10 @@ if [[ -z "${SEC_SAYVOL-}" ]];then
 fi
 SECFUNCvarGet SEC_SAYVOL
 
-export execX1="X :1"
-grepX1="X :1"
+export execX1="X :1" #"startx -- :1"
+#grepX1="X :1"
 selfName=`basename "$0"`
 strOptXtermGeom="100x1" #"1x1" causes problems with ps and others, making everything hard to be readable
-#execX1="startx -- :1"
 #grepX1="/usr/bin/X :1 [-]auth /tmp/serverauth[.].*"
 
 # when you see "#kill=skip" at the end of commands, will prevent terminals from being killed on killall commands (usually created at other scripts)
@@ -181,8 +180,8 @@ function FUNCisScreenLockRunning() {
 };export -f FUNCisScreenLockRunning
 
 function FUNCisX1running {
-  if ps -A -o command |grep -v "grep" |grep -q -x "$grepX1";then
-    ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"
+  if ps -A -o command |grep -v "grep" |grep -q -x "$execX1";then
+    ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $execX1" |sed -r "$sedOnlyPid"
   	return 0
   fi
   return 1
@@ -561,6 +560,7 @@ function FUNCshowHelp() {
 
 ######################## OPTIONS/PARAMETERS #####################################
 
+export bUseXNest=false
 useJWM=true
 useKbd=true
 customCmd=()
@@ -627,6 +627,8 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   	shift&&:
   	FUNCscript $scriptName "$@"
 		exit 0
+  elif [[ "$1" == "--xnest" ]]; then #help use Xnest instead of a new X tty
+  	bUseXNest=true
   elif [[ "$1" == "--killX1" ]]; then #help kill X :1
   	# kill X
     #pidX1=`ps -A -o pid,command |grep -v grep |grep -x "^[ ]*[0-9]* $grepX1" |sed -r "$sedOnlyPid"`
@@ -687,6 +689,10 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   fi
  	shift
 done
+
+if $bUseXNest;then
+	execX1="Xnest :1 -ac"
+fi
 
 #echo "going to execute: $@"
 #@@@R runCmd="$1" #this command must be simple, if need complex put on a script file and call it!
@@ -982,20 +988,22 @@ fi
 pidXtermForNewX=-1
 if ! FUNCisX1running; then
 	function FUNCexecCmdX1(){
+		eval `secinit`
+		
 		echo "INFO: hit CTRL+C to exit the other X session and close this window";
 		echo "INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!";
 		echo "INFO: hit ctrl+alt+f7 to get back to this X session (f7, f8 etc, may vary..)";
 		echo ;
 		echo "Going to execute on another X session: $runCmd";
-		echoc -x "sudo -k $execX1"
+		
+		if $bUseXNest;then
+			SECFUNCexecA -ce $execX1
+		else
+			SECFUNCexecA -ce sudo -k $execX1
+		fi
+		
+		echoc -w -t 60
 	};export -f FUNCexecCmdX1
-#  cmdX1="\
-#  echo \"INFO: hit CTRL+C to exit the other X session and close this window\";\
-#  echo \"INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!\";\
-#  echo \"INFO: hit ctrl+alt+f7 to get back to this X session (f7, f8 etc, may vary..)\";\
-#  echo ;\
-#  echo \"Going to execute on another X session: $runCmd\";\
-#  echoc -x 'sudo -k $execX1'"
 
   if [[ -z "$DISPLAY" ]]; then
     # if at tty1 console there is no X already running
@@ -1004,8 +1012,9 @@ if ! FUNCisX1running; then
     pidXtermForNewX=$!
   else
     #xterm -e "$cmdX1"&
-    secXtermDetached.sh --logonly "FUNCexecCmdX1"
-    pidXtermForNewX=$!
+#    secXtermDetached.sh --logonly "FUNCexecCmdX1"
+    secXtermDetached.sh "FUNCexecCmdX1"
+    pidXtermForNewX=$! #TODO this is wrong, showld be the 2nd xterm opened...
   fi
 fi
 #echoc -x "sudo -k chvt 8" # this line to force go to X :1 terminal
