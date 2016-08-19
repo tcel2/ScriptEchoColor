@@ -78,7 +78,7 @@ if $CFGbUseNewXTrick;then
 	echoc --info "these commands will show on the first time you run this to test it!"
 fi
 
-trap 'sudo -k;echoc -w "SIGINT, exit...;"' INT
+trap 'sudo -k;echoc --waitsay "interrupted";echoc -w "SIGINT, exit...;"' INT
 for strRes in "${astrRes[@]}";do
 	echoc --info "if you can read this..."
 	echoc --alert "HIT CTRL+C NOW!!!"	
@@ -86,16 +86,16 @@ for strRes in "${astrRes[@]}";do
 	strSay="`echo "$strRes" |sed 's"x" by "'`"
 	echoc --waitsay "$strSay"
 	SECFUNCexecA -ce xrandr -s "$strRes"
-	SECFUNCexecA -ce sleep $CFGfSleep
+	echoc -w -t $CFGfSleep
 	
 	if $CFGbUseNewXTrick;then
-		SECFUNCexecA -ce sudo X $CFGstrDisplay& 
 		echoc --waitsay "starting X1"; 
-		SECFUNCexecA -ce sleep $CFGfSleep
+		SECFUNCexecA -ce sudo X $CFGstrDisplay& 
+		echoc -w -t $CFGfSleep
 	
-		SECFUNCexecA -ce sudo pkill -f "X $CFGstrDisplay"
 		echoc --waitsay "kill X $CFGstrDisplay"; 
-		SECFUNCexecA -ce sleep $CFGfSleep
+		SECFUNCexecA -ce sudo pkill -f "X $CFGstrDisplay"
+		echoc -w -t $CFGfSleep
 	fi
 done
 sudo -k #remove sudo permission promptly
