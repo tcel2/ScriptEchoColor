@@ -27,9 +27,6 @@ eval `secinit`
 : ${CFGfSleep:=5.0}
 export CFGfSleep #help after each action
 
-: ${CFGstrExec:="sudo"}
-export CFGstrExec #help change to "exec" if you put such commands at sudoers
-
 : ${CFGstrDisplay:=":1"}
 export CFGstrDisplay #help the display for the new X
 
@@ -72,14 +69,16 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
-alias execA="SECFUNCexecA -ce $CFGstrExec"
-
 astrRes=(`xrandr |egrep " [[:digit:]]+x[[:digit:]]+ " -o`)
 
-trap 'sudo -k;echoc -w "SIGINT, exit...;"' INT
-if $CFGbUseNewXTrick && [[ "$CFGstrExec" == "sudo" ]];then
-	execA uptime #just to activate sudo in case it is being used
+if $CFGbUseNewXTrick;then
+	echoc --alert "sudoers required!"
+	echoc --info "the required sudo commands must be set at sudoers"
+	echoc --info "the pourpose of this script is to fix the messed/unreadable screen!"
+	echoc --info "these commands will show on the first time you run this to test it!"
 fi
+
+trap 'sudo -k;echoc -w "SIGINT, exit...;"' INT
 for strRes in "${astrRes[@]}";do
 	echoc --info "if you can read this..."
 	echoc --alert "HIT CTRL+C NOW!!!"	
@@ -90,11 +89,11 @@ for strRes in "${astrRes[@]}";do
 	SECFUNCexecA -ce sleep $CFGfSleep
 	
 	if $CFGbUseNewXTrick;then
-		execA X $CFGstrDisplay& 
+		SECFUNCexecA -ce sudo X $CFGstrDisplay& 
 		echoc --waitsay "starting X1"; 
 		SECFUNCexecA -ce sleep $CFGfSleep
 	
-		execA pkill -f "X $CFGstrDisplay"
+		SECFUNCexecA -ce sudo pkill -f "X $CFGstrDisplay"
 		echoc --waitsay "kill X $CFGstrDisplay"; 
 		SECFUNCexecA -ce sleep $CFGfSleep
 	fi
