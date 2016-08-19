@@ -69,6 +69,9 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+#Main code
+trap 'sudo -k;echoc --waitsay "interrupted";echoc -w -t 60 "SIGINT, exit...;"' INT
+
 astrRes=(`xrandr |egrep " [[:digit:]]+x[[:digit:]]+ " -o`)
 
 if $CFGbUseNewXTrick;then
@@ -81,7 +84,13 @@ fi
 
 SECFUNCuniqueLock --waitbecomedaemon
 
-trap 'sudo -k;echoc --waitsay "interrupted";echoc -w -t 60 "SIGINT, exit...;"' INT
+function FUNCkillNewX(){
+		echoc --waitsay "kill X $CFGstrDisplay"; 
+		SECFUNCexecA -ce sudo pkill -f "X $CFGstrDisplay"&&:
+		echoc -w -t $CFGfSleep
+}
+
+FUNCkillNewX
 for strRes in "${astrRes[@]}";do
 	echoc --info "if you can read this..."
 	echoc --alert "HIT CTRL+C NOW!!!"	
@@ -95,10 +104,8 @@ for strRes in "${astrRes[@]}";do
 		echoc --waitsay "starting X1"; 
 		SECFUNCexecA -ce sudo X $CFGstrDisplay& 
 		echoc -w -t $CFGfSleep
-	
-		echoc --waitsay "kill X $CFGstrDisplay"; 
-		SECFUNCexecA -ce sudo pkill -f "X $CFGstrDisplay"
-		echoc -w -t $CFGfSleep
+		
+		FUNCkillNewX
 	fi
 done
 sudo -k #remove sudo permission promptly
