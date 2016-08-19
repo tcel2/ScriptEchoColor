@@ -72,6 +72,8 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 #Main code
 trap 'sudo -k;echoc --waitsay "interrupted";echoc -w -t 60 "SIGINT, exit...;"' INT
 
+echoc --waitsay "fix screen"
+
 astrRes=(`xrandr |egrep " [[:digit:]]+x[[:digit:]]+ " -o`)
 
 if $CFGbUseNewXTrick;then
