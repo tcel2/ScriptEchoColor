@@ -76,9 +76,12 @@ if $CFGbUseNewXTrick;then
 	echoc --info "the required sudo commands must be set at sudoers"
 	echoc --info "the pourpose of this script is to fix the messed/unreadable screen!"
 	echoc --info "these commands will show on the first time you run this to test it!"
+	echo
 fi
 
-trap 'sudo -k;echoc --waitsay "interrupted";echoc -w "SIGINT, exit...;"' INT
+SECFUNCuniqueLock --waitbecomedaemon
+
+trap 'sudo -k;echoc --waitsay "interrupted";echoc -w -t 60 "SIGINT, exit...;"' INT
 for strRes in "${astrRes[@]}";do
 	echoc --info "if you can read this..."
 	echoc --alert "HIT CTRL+C NOW!!!"	
