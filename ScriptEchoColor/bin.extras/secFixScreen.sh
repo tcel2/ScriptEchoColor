@@ -76,7 +76,7 @@ alias execA="SECFUNCexecA -ce $CFGstrExec"
 
 astrRes=(`xrandr |egrep " [[:digit:]]+x[[:digit:]]+ " -o`)
 
-trap 'sudo -k;echo "exit...;"' INT
+trap 'sudo -k;echoc -w "SIGINT, exit...;"' INT
 if $CFGbUseNewXTrick && [[ "$CFGstrExec" == "sudo" ]];then
 	execA uptime #just to activate sudo in case it is being used
 fi
