@@ -142,7 +142,12 @@ while true;do #MainLoop
 	# look for drop box
 	nPidDropbox="`pgrep -f "/dropbox$|/dropbox /newerversion$" |head -n 1`"&&:
 	if [[ -z "$nPidDropbox" ]];then echoc -t 3 -w "waiting for dropbox pid"; continue;fi
-	SECFUNCexecA -ce renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "` # several pids, do not surround with "
+	
+	while ! SECFUNCexecA -ce renice -n 19 `ps --no-headers -L -p $nPidDropbox -o lwp |tr "\n" " "`;do # several pids, do not surround with "
+		SECFUNCechoWarnA "renice failed, some of dropbox child pid died?"
+		echoc -w -t 3 "retrying"
+	done
+	
 	ps --no-headers -p $nPidDropbox
 	strCpuLimitCmd="cpulimit -p $nPidDropbox -l $nCpuLimitPercentual"
 	
