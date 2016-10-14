@@ -30,6 +30,10 @@ strTrashFolder=""
 nFSSizeAvailGoalMB=1000 #1GB
 nFileCountPerStep=100
 
+function FUNCmountedFs(){
+	df --output=target |tail -n +2
+}
+
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
@@ -39,6 +43,8 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bTest=false
 bDummyRun=false
+strFilterRegex=""
+bRunOnce=false
 strChkTrashConsistencyFolder=false
 #bTouchToDelDT=false
 SECFUNCcfgReadDB #after default variables value setup above
@@ -47,6 +53,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "\t#MISSING DESCRIPTION script main help text goes here"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo "Mounted FS (to use on filter):";FUNCmountedFs
 		echo
 		SECFUNCshowHelp
 		exit 0
@@ -63,6 +70,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strChkTrashConsistencyFolder="${1-}"
 	elif [[ "$1" == "--dummy" ]];then #help ~debug will not remove the trashed files
 		bDummyRun=true
+	elif [[ "$1" == "--once" ]];then #help will run once and exit
+		bRunOnce=true
+	elif [[ "$1" == "--filter" ]];then #help <strRegex> will only work on the devices matching it
+		shift
+		strFilterRegex="${1-}"
 #	elif [[ "$1" == "--touch" ]];then #help will touch all files at trash to their trashing datetime
 #		bTouchToDelDT=true
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -117,7 +129,9 @@ if [[ -d "$strChkTrashConsistencyFolder" ]];then
 fi
 
 # Main code
-SECFUNCuniqueLock --waitbecomedaemon
+if ! $bRunOnce;then
+	SECFUNCuniqueLock --waitbecomedaemon
+fi
 
 function FUNCavailFS(){
 	df -BM --output=avail "$strTrashFolder" |tail -n 1 |tr -d M
@@ -125,8 +139,12 @@ function FUNCavailFS(){
 
 while true;do
 	astrMountedFSList=("$strTrashFolderUser")
-	astrMountedFSList+=(`df --output=target |tail -n +2`);
+	astrMountedFSList+=(`FUNCmountedFs`);
 	for strMountedFS in "${astrMountedFSList[@]}";do
+		if [[ -n "$strFilterRegex" ]];then
+			if ! [[ "$strMountedFS" =~ $strFilterRegex ]];then continue;fi
+		fi
+		
 		function FUNCcheckFS() {
 			# Validations
 			if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
@@ -269,6 +287,8 @@ while true;do
 		
 	done
 
+	if $bRunOnce;then break;fi
+	
 	echoc -w -t 60
 done		
 

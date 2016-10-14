@@ -41,6 +41,7 @@ TODO (fix at top):
 	fix: booleans used as `if $bVarName` should be `if [[ "$bVarName" == "true" ]]`, despite there is a check at varset that prevents vars considered as boolean to receive value other than true or false!
 	fix: on dev mode, find all improperly named vars and fix it: set |grep "^SEC" |grep -v "SECFUNC\|SECab\|SECb\|SECan\|SECn\|SECDEV\|SECastr\|SECstr" |sed -r "s'^([[:alnum:]_]*)=.*'\1'" |tr '\n' '|' |sed -r -e 's"(.*)\|"\1"' -e 's"\|"\\|"g'
 	fix: on dev mode, find all increment and decrement to make it sure they doesnt result in 0, can be fixed like `((n++))&&:` so the trap wont catch it: grep "for((\|&&:" * -vrI --include="*.sh" |grep "++\|--)\|(--\|(++"
+	use `declare -n` (variable reference) instead of most places matching: egrep "[{][!]" * -irnI |egrep -v "for "
 	use trap EXIT to remove file locks and unique file locks
 	grep "find .* -exec" * -irnI; use `|while` instead of `-exec` works better, no subshell...
   with -t option, append to the end of the line the remaining time each 10s or each 10% of time passes
