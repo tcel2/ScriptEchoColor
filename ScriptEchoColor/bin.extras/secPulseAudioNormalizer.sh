@@ -42,6 +42,8 @@ strDriverFLL="${strDriverFLL%.so}"
 echo "strDriverFLL='$strDriverFLL'"
 strDriverFLLOpt="10,0,0.8"
 
+bFix=false
+
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -50,6 +52,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCshowHelp --colorize "Implementation based on instructions from http://askubuntu.com/a/219921/46437, many thanks!"
 		SECFUNCshowHelp
 		exit 0
+#	elif [[ "$1" == "--fix" ]];then #help try to fix pulseaudio if it is not working
+#		bFix=true
 	elif [[ "$1" == "--remove" || "$1" == "-r" ]];then #help remove the sink from pulseaudio
 		bEnable=false
 	elif [[ "$1" == "--driveropt" ]];then #help <strDriverOpt> options for strDriver
@@ -81,6 +85,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+
+# the best way to workaround pulseaudio problems is to completely stop it and fallback to alsa, in the current session (or just reboot)
+#if $bFix;then
+#	SECFUNCexecA -ce pulseaudio --cleanup-shm
+#	echoc -w "ctrl+c if it is working"
+#	SECFUNCexecA -ce sudo -k service pulseaudio stop
+#	SECFUNCexecA -ce pulseaudio --cleanup-shm
+#	echoc -w -t 10
+#	SECFUNCexecA -ce pulseaudio -D
+#fi
 
 strAudioOutput="`pacmd list-sinks |egrep "[[:blank:]]*name: " |sed -r 's".*<(.*)>"\1"'`";
 
