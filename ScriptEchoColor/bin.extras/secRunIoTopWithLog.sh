@@ -222,7 +222,7 @@ function FUNCcheckHogs() {
 					egrep "^$strDev |^${strDateFormat}$" "$strLogFileIostat" \
 						|sed -r "$sedSpacesToTab" \
 						|sed -r "$sedPrettyDate"
-				)
+				)&&: #TODO just ignore on error seems to work well?
 				#for strMatchDataLine in "${astrMatchDataLineList[@]}";do
 				for((iLineIndex=0;iLineIndex<${#astrMatchDataLineList[@]};iLineIndex++));do
 					strMatchDataLine="${astrMatchDataLineList[iLineIndex]}"
