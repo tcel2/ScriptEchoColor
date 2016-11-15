@@ -183,6 +183,14 @@ if ! SECFUNCisNumber -dn $nAddSessions;then
 fi
 
 if((nAddSessions>0));then
+	#this is important to have yakuake initially opened to detect current session
+	bHadToOpenYak=false
+	if [[ `"qdbus" "org.kde.yakuake" /yakuake/MainWindow_1 org.qtproject.Qt.QWidget.visible` == false ]];then 
+		bHadToOpenYak=true
+		yakuake;
+		sleep 1
+	fi
+	
 	astrSessions=(`qdbus org.kde.yakuake |grep /Windows/`);
 	nSID=-1
 	nSIDFirst=-1
@@ -207,11 +215,7 @@ if((nAddSessions>0));then
 		nSID=$nSIDFirst;
 	fi
 	
-	#this is important to have yakuake opened
-	if [[ `"qdbus" "org.kde.yakuake" /yakuake/MainWindow_1 org.qtproject.Qt.QWidget.visible` == false ]];then 
-		yakuake;
-		sleep 1
-	fi
+	if $bHadToOpenYak;then yakuake;fi #but it can be closed just after...
 	
 	for((i=0;i<nAddSessions;i++));do 
 		SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.addSession;
@@ -221,7 +225,7 @@ if((nAddSessions>0));then
 		sleep 1
 		SECFUNCexecA -ce qdbus org.kde.yakuake /yakuake/sessions org.kde.yakuake.raiseSession $nSID
 	fi
-		
+	
 	exit 0
 fi
 
