@@ -48,7 +48,6 @@ astrSimpleCommandRegex=(
 	"^totem "
 	"^s{0,1}mplayer "
 	"\\\\VLC\\\\vlc.exe "
-	".*/opera_sandbox .*libpepflashplayer.so .*"
 )
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -397,13 +396,11 @@ while true;do
 				if SECFUNCppidList --pid "$nActiveWindowPid" --checkpid "`pgrep netflix-desktop`";then
 					bSimulateActivity=true
 				fi
-#			elif [[ "$strActiveWindowCmd" =~ ^"chromium-browser ".*"flashplayer.so" ]];then # Chromium Flash player
-#				bSimulateActivity=true
-#			elif [[ "$strActiveWindowCmd" =~ ^"/usr/bin/vlc " ]];then # VLC
-#				bSimulateActivity=true
-#			elif [[ "$strActiveWindowCmd" =~ ^"totem " ]];then # VLC
-#				bSimulateActivity=true
-			else
+			elif [[ "$strActiveWindowCmd" =~ .*/opera/opera ]];then # Opera with flashplayer
+				if ps -p $(SECFUNCppidList --child -p $nActiveWindowPid) |egrep -q ".*/opera_sandbox .*libpepflashplayer.so .*";then
+					bSimulateActivity=true
+				fi
+			else # simple checkers
 				bFound=false
 				for strSimpleCommandRegex in "${astrSimpleCommandRegex[@]}";do
 					#echo "strActiveWindowCmd='$strActiveWindowCmd'"
