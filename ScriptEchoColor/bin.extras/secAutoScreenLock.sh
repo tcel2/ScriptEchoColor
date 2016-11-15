@@ -48,6 +48,7 @@ astrSimpleCommandRegex=(
 	"^totem "
 	"^s{0,1}mplayer "
 	"\\\\VLC\\\\vlc.exe "
+	".*/opera_sandbox .*libpepflashplayer.so .*"
 )
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
