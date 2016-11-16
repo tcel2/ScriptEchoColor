@@ -24,18 +24,20 @@
 
 eval `secinit`
 
+strOldBkpToken="_SEC_OLD_TOKEN_"
 bCfgTest=false
 CFGstrTest="Test"
 astrRemainingParams=()
 strRegexMatch=""
 strReplaceWith=""
-strFileFilter="*.java"
+strRegexFileFilter=".*[.]java"
 strBkpSuffix="secrfbkp"
 bWrite=false
 strWorkPath="."
 bAskSkip=true
 bRevertToBackups=false
 bBkpTrash=false
+#bBkpHidden=true
 astrFileIgnore=()
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -44,9 +46,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		SECFUNCshowHelp --colorize "<strRegexMatch> <strReplaceWith> will replace the matching regex in all source files." 
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--filefilter" || "$1" == "-f" ]];then #help <strFileFilter> it is a `find` param
+	elif [[ "$1" == "--filefilter" || "$1" == "-f" ]];then #help <strRegexFileFilter> it is a `find` param
 		shift
-		strFileFilter="${1-}"
+		strRegexFileFilter="${1-}"
 	elif [[ "$1" == "--ignore" || "$1" == "-i" ]];then #help <strFileToIgnore> it is a `find` param
 		shift
 		astrFileIgnore+=("${1-}")
@@ -57,6 +59,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--bkpsuffix" || "$1" == "-b" ]];then #help <strBkpSuffix> if empty, `sed` will not create backups
 		shift
 		strBkpSuffix="${1-}"
+#	elif [[ "$1" == "--bkphidden" || "$1" == "-h" ]];then #help prefix backups with a dot "."
+#		bBkpHidden=true
 	elif [[ "$1" == "--trashbkp" || "$1" == "-t" ]];then #help ~single will remove the backup files and exit
 		bBkpTrash=true
 	elif [[ "$1" == "--workpath" || "$1" == "-w" ]];then #help <strWorkPath> used with `find`
@@ -71,7 +75,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 #		fi
 #		
 #		bCfgTest=true
-	elif [[ "$1" == "--revertbkps" ]];then #help undo/revert to backuped files
+	elif [[ "$1" == "--revertbkps" ]];then #help undo/revert to latest backup of each file
 		bRevertToBackups=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
@@ -94,8 +98,12 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 #	astrParamIgnore+=();
 #done
 
+strBkpKey="`SECFUNCdtFmt --filename`"
+
+strRegexMatchBkpFiles="[.]${strRegexFileFilter}.*[.]${strBkpSuffix}"
+declare -p strRegexMatchBkpFiles
 function FUNCfindBkpWork(){
-	local astrParams=(find "$strWorkPath" -type f -iname "${strFileFilter}*.${strBkpSuffix}")
+	local astrParams=(find "$strWorkPath" -type f -regex ".*/$strRegexMatchBkpFiles")
 	
 	if [[ "$1" == "--report" ]];then
 		echoc --info "bkp files size: @r`"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1 |tr '\t' ' '` "
@@ -134,22 +142,38 @@ strReplaceWith="${1-}"
 shift&&:
 
 if $bRevertToBackups;then
+	if ! echoc -q "this will revert only to the latest backup (of each file)! are you sure?";then
+		exit 0
+	fi
+	
 	export SECbExecJustEcho=true
 	if $bWrite;then
 		SECbExecJustEcho=false
 	fi
 	
-	IFS=$'\n' read -d '' -r -a astrBkpFileList < <(find "${strWorkPath}/" -iname "*${strFileFilter}.${strBkpSuffix}")&&:
-	for strBkpFile in "${astrBkpFileList[@]}";do
-		SECFUNCdrawLine --left "strBkpFile='$strBkpFile'"
-		strFile="${strBkpFile%.bkp}"
-		if [[ -f "$strFile" ]];then
-			SECFUNCexecA -jce mv -vT "$strFile" "${strFile}.RefactoredWrong.`SECFUNCdtFmt --filename`.bkp"
-			SECFUNCexecA -jce mv -vT "$strBkpFile" "${strFile}"
-		else
-			echoc -p "unable to find strFile='$strFile'"
-		fi
-	done
+	IFS=$'\n' read -d '' -r -a astrBkpFileList < <(find "${strWorkPath}/" -regex ".*/$strRegexMatchBkpFiles")&&:
+	if((${#astrBkpFileList[@]-}>0));then
+		for strBkpFile in "${astrBkpFileList[@]-}";do
+			if [[ "$strBkpFile" =~ .*$strOldBkpToken.* ]];then
+				echo "SKIPPING: $strBkpFile"
+				continue
+			fi
+		
+			SECFUNCdrawLine --left "strBkpFile='$strBkpFile'"
+			strBaseName="`basename "$strBkpFile"`"
+			strFile="${strBaseName:1}" #remove the dot
+			strFile="${strFile%.${strBkpSuffix}}"
+			strFile="`dirname "$strBkpFile"`/$strFile"
+			if [[ -f "$strFile" ]];then
+				SECFUNCexecA -ce mv -vT "$strFile" "${strFile}.RefactoredWrong.$strBkpKey.${strBkpSuffix}"
+				SECFUNCexecA -ce mv -vT "$strBkpFile" "${strFile}"
+			else
+				echoc -p "unable to find strFile='$strFile'"
+			fi
+		done
+	else
+		echoc --info "no backups found..."
+	fi
 #	declare -p astrBkpFileList
 #	if ! SECFUNCexec -ce find "${strWorkPath}/" -iname "*.${strBkpSuffix}" -exec ls -l "{}" \; ; then
 #		echoc -p "no backup found..."
@@ -186,7 +210,8 @@ function _FUNCreportMatches() {
 	if SECFUNCexec -ce colordiff <(echo "$lstrBefore") <(echo "$lstrAfter");then :;fi #TODO why &&: didnt work?
 }
 
-IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "${strFileFilter}")&&:
+IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -regex ".*/${strRegexFileFilter}")&&:
+#declare -p strRegexFileFilter strWorkPath
 if((`SECFUNCarraySize astrFileList`>0));then
 	for strFile in "${astrFileList[@]}";do
 		if egrep -q "$strRegexMatch" "$strFile";then
@@ -204,16 +229,25 @@ if((`SECFUNCarraySize astrFileList`>0));then
 						continue
 					fi
 				fi
-			
-				if [[ -f "${strFile}.${strBkpSuffix}" ]];then
+				
+				strFileBkp="${strFile}.${strBkpSuffix}"
+				strFileBkpNormal="$strFileBkp"
+#				if $bBkpHidden;then
+					strFileBkp="`echo "$strFileBkp" |sed -r "s'(.*)/(.*)'\1/.\2'"`" #prefix the basename with a dot
+#				fi
+				
+				if [[ -f "$strFileBkp" ]];then
 					echoc --info "backup already exists, moving it to old"
-					SECFUNCexec -ce mv -vT "${strFile}.${strBkpSuffix}" "${strFile}.old-`SECFUNCdtFmt --filename`.${strBkpSuffix}"
+					strFileBkpOld="`echo "$strFileBkp" |sed -r "s'(.*)/(.*)'\1/\2.${strOldBkpToken}$strBkpKey.${strBkpSuffix}'"`"
+					SECFUNCexec -ce mv -vT "$strFileBkp" "$strFileBkpOld"
 				fi
 				SECFUNCexec -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
-				strBkpFile="${strFile}.${strBkpSuffix}"
-				if [[ -f "$strBkpFile" ]];then
-					SECFUNCexec -ce ls -l "$strBkpFile"
-					SECFUNCexec -ce colordiff "$strBkpFile" "$strFile"&&:
+#				if $bBkpHidden;then
+					mv "$strFileBkpNormal" "$strFileBkp" #overcome sed restriction of only suffixing the file
+#				fi
+				if [[ -f "$strFileBkp" ]];then
+					SECFUNCexec -ce ls -l "$strFileBkp"
+					SECFUNCexec -ce colordiff "$strFileBkp" "$strFile"&&:
 				else
 					SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
 				fi
@@ -227,8 +261,8 @@ if ! $bWrite;then
 	echoc --alert "nothing was changed!"
 fi
 #echoc --info ""
-#SECFUNCexecA -ce du --exclude "$strFileFilter" -hs "`readlink -f "$strWorkPath"`"&&:
-echoc --info "Backup files size (see --trashbkp): "
+#SECFUNCexecA -ce du --exclude "$strRegexFileFilter" -hs "`readlink -f "$strWorkPath"`"&&:
+echoc --info "Backup files size (see --trashbkp help): "
 FUNCfindBkpWork --report
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
