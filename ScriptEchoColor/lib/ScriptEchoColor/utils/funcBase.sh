@@ -1303,7 +1303,7 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	
 	# if odd width, add one char
 	if(( (lnTotalFillChars%2) == 1 ));then 
-		((lnFillCharsRight++))
+		((lnFillCharsRight++))&&:
 	fi
 	
 	# at least one complete fill must happen at beggining and ending, what may cause more than one line to be printed

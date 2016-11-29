@@ -31,7 +31,8 @@ nFSSizeAvailGoalMB=1000 #1GB
 nFileCountPerStep=100
 
 function FUNCmountedFs(){
-	df --output=target |tail -n +2
+	df --output=target |tail -n +2 
+	#|sed 's@.*@"&"@'
 }
 
 : ${strEnvVarUserCanModify:="test"}
@@ -137,9 +138,29 @@ function FUNCavailFS(){
 	df -BM --output=avail "$strTrashFolder" |tail -n 1 |tr -d M
 }
 
+function FUNCrm(){
+	local lOpt="$1";shift
+	local lstrFile="$1";shift #or directory
+	
+	if ! [[ -L "$lstrFile" ]];then #TODO this may let a symlink outside of trash (by using ex.: ../../..) to be removed
+		if [[ "$lstrFile" =~ .*[.][.].* ]];then
+			lstrFile="`readlink -en "$lstrFile"`"
+		fi
+	fi
+	
+	#safety
+	if ! [[ "$lstrFile" =~ [/].*[/][.]*Trash[-/].* ]];then
+		echoc -p "invalid trash path: $lstrFile"
+		exit 1
+	fi
+	
+	SECFUNCexecA -ce chmod -Rv +w "$lstrFile"
+	SECFUNCexecA -ce rm "$lOpt" "$lstrFile"
+}
+
 while true;do
-	astrMountedFSList=("$strTrashFolderUser")
-	astrMountedFSList+=(`FUNCmountedFs`);
+	IFS=$'\n' read -d '' -r -a astrMountedFSList < <(FUNCmountedFs)&&:
+	astrMountedFSList+=("$strTrashFolderUser")
 	for strMountedFS in "${astrMountedFSList[@]}";do
 		if [[ -n "$strFilterRegex" ]];then
 			if ! [[ "$strMountedFS" =~ $strFilterRegex ]];then continue;fi
@@ -233,7 +254,7 @@ while true;do
 							# delete the trashinfo file for a missing trashed file
 							SECFUNCechoWarnA "Missing real file strFile='$strFile', removing trashinfo for it."
 							if ! $bDummyRun;then
-								rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+								FUNCrm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
 							fi
 							continue; 
 						fi 
@@ -258,12 +279,12 @@ while true;do
 						if ! $bDummyRun;then
 							if ! $bDirectory;then
 								# extra security on removing a file, will use it's full path, therefore surely inside of trash folder
-								rm -vf "/$strTrashFolder/$strFile"
+								FUNCrm -vf "/$strTrashFolder/$strFile"
 							else
 								# removes directory recursively
-								SECFUNCexecA -ce rm -rvf "/$strTrashFolder/$strFile/"
+								FUNCrm -rvf "/$strTrashFolder/$strFile/"
 							fi
-							rm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+							FUNCrm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
 						fi
 					
 						((nRmSizeTotalB+=nFileSizeB))&&:
