@@ -63,6 +63,8 @@ if [[ -z "$strLayerBranch" ]];then
 	echo "${strMountAt}.layer0200.SomeDescription2"
 	echo "..."
 	echoc --info "the high value layers will override lower value ones"
+	echoc --info "run it again..."
+	exit 1
 fi
 
 ########
