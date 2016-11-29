@@ -32,22 +32,38 @@ function FUNCumount(){
 }
 
 if [[ -a "$strMountAt" ]];then
-	SECFUNCexecA -ce ls -lR "$strMountAt/"
-	echoc --info "the mount point strMountAt='$strMountAt' access would be overriden, and its files will not be accessible..."
-	echoc -p "strMountAt='$strMountAt' should not exist..."
-	
-	if mount |egrep "/${strMountAt} type aufs";then
+	if ! [[ -d "$strMountAt" ]];then
+		echoc -p "should be a directory strMountAt='$strMountAt', or should not exist..."
+	elif mount |egrep "/${strMountAt} type aufs";then
 		if echoc -q "umount and trash it?";then
 			FUNCumount
 		fi
+	elif [[ -d "$strMountAt" ]];then
+		SECFUNCexecA -ce ls -lR "$strMountAt/"
+		echoc --info "the mount point strMountAt='$strMountAt' access would be overriden, and its files will not be accessible..."
+		echoc -p "strMountAt='$strMountAt' should not exist..."
+		
+		if [[ -z "`ls -A "$strMountAt/"`" ]];then
+			echoc --info "it is empty..."
+			SECFUNCexecA -ce trash -v "$strMountAt"
+		fi
 	fi
 	
+	echoc --info "run it again..."
 	exit 1
 fi
 
 # the layers override priority is from left (top override) to right
-strLayerBranch="`ls -d "${strMountAt}.layer"* |sort -r |tr "\n" ":" |sed -r 's"(.*):"\1"'`"
+strLayerBranch="`ls -d "${strMountAt}.layer"* |sort -r |tr "\n" ":" |sed -r 's"(.*):"\1"'`"&&:
 declare -p strLayerBranch
+
+if [[ -z "$strLayerBranch" ]];then
+	echoc --info "create layers like:"
+	echo "${strMountAt}.layer0100.SomeDescription"
+	echo "${strMountAt}.layer0200.SomeDescription2"
+	echo "..."
+	echoc --info "the high value layers will override lower value ones"
+fi
 
 ########
 ### the leftmost layer will be the one receiving all writes made at the mounted folder, 
