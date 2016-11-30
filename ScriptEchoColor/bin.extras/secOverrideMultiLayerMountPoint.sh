@@ -32,6 +32,7 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bUmount=false
+bReadOnly=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -43,6 +44,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
 	elif [[ "$1" == "-u" ]];then #help unmount and exit
 		bUmount=true;
+	elif [[ "$1" == "--ro" ]];then #help the mount point will be readonly
+		bReadOnly=true;
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
@@ -83,7 +86,10 @@ if $bUmount;then
 	exit 0
 fi
 
-if mount |egrep "/${strMountAt} type aufs";then
+pwd
+strMountedChk="`readlink -e "$(pwd)"`/${strMountAt}"&&:
+declare -p strMountedChk
+if mount |grep "on $strMountedChk type aufs";then # MUST BE A NON-REGEX grep!!
 	echoc --info "already mounted!"
 	exit 0
 else
@@ -95,8 +101,8 @@ else
 			echoc --info "it is empty..."
 			SECFUNCexecA -ce trash -v "$strMountAt"
 		else
-			echoc -p "not empty!"
-			SECFUNCexecA -ce ls -lR "$strMountAt/"
+			echoc -p "strMountAt='$strMountAt' not empty!"
+			SECFUNCexecA -ce du -sh $strMountAt
 			exit 1
 		fi
 	else
@@ -129,8 +135,13 @@ fi
 strWriteLayer="${strMountAt}.writeLayer"
 SECFUNCexecA -ce mkdir -vp "$strWriteLayer"
 
+astrOpts=()
+if $bReadOnly;then
+	astrOpts+=(-o ro)
+fi
+
 SECFUNCexecA -ce mkdir -vp "$strMountAt"
-SECFUNCexecA -ce sudo -k mount -t aufs -o br="$strWriteLayer:$strLayerBranch" none "$strMountAt"
+SECFUNCexecA -ce sudo -k mount -t aufs -o br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
 
 SECFUNCexecA -ce ls -d "${strMountAt}"*
 
