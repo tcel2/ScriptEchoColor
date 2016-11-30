@@ -33,6 +33,7 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bUmount=false
 bReadOnly=false
+bChkIsMultiLayer=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -42,10 +43,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-u" ]];then #help unmount and exit
+	elif [[ "$1" == "-u" ]];then #help ~single unmount and exit
 		bUmount=true;
 	elif [[ "$1" == "--ro" ]];then #help the mount point will be readonly
 		bReadOnly=true;
+	elif [[ "$1" == "--is" ]];then #help ~single check if the specified folder is mounted as multilayer mountpoint, and exit status
+		bChkIsMultiLayer=true;
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
@@ -81,15 +84,30 @@ function FUNCumount(){
 	SECFUNCexecA -ce trash -v "$strMountAt"
 }
 
+pwd
+if [[ "${strMountAt:0:1}" == "/" ]];then #absolute path
+	strMountedChk="`readlink -e "${strMountAt}"`"&&:
+else
+	strMountedChk="`readlink -e "$(pwd)"`/${strMountAt}"&&:
+fi
+declare -p strMountedChk
+
+bAlreadyMounted=false
+if mount |grep "on $strMountedChk type aufs";then # MUST BE A NON-REGEX grep!!
+	bAlreadyMounted=true;
+fi
+
 if $bUmount;then
 	FUNCumount
 	exit 0
+elif $bChkIsMultiLayer;then
+	if $bAlreadyMounted;then
+		exit 0
+	fi
+	exit 1
 fi
 
-pwd
-strMountedChk="`readlink -e "$(pwd)"`/${strMountAt}"&&:
-declare -p strMountedChk
-if mount |grep "on $strMountedChk type aufs";then # MUST BE A NON-REGEX grep!!
+if $bAlreadyMounted;then
 	echoc --info "already mounted!"
 	exit 0
 else
