@@ -29,11 +29,13 @@ export strEnvVarUserCanModify #help this variable will be accepted if modified b
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
+CFGnLayerNumberGap=10
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bUmount=false
 bReadOnly=false
 bChkIsMultiLayer=false
+bRenumber=false
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -49,6 +51,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bReadOnly=true;
 	elif [[ "$1" == "--is" ]];then #help ~single check if the specified folder is mounted as multilayer mountpoint, and exit status
 		bChkIsMultiLayer=true;
+	elif [[ "$1" == "--reorder" ]];then #help ~single will find all layers and renumber them with the pre-defined gap <CFGnLayerNumberGap>
+		bRenumber=true;
 	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
@@ -131,19 +135,62 @@ else
 	fi
 fi
 
-# the layers override priority is from left (top override) to right
-strLayerBranch="`ls -d "${strMountAt}.layer"* |sort -r |tr "\n" ":" |sed -r 's"(.*):"\1"'`"&&:
-declare -p strLayerBranch
-
-if [[ -z "$strLayerBranch" ]];then
-	echoc --info "create layers like:"
-	echo "${strMountAt}.layer0100.SomeDescription"
-	echo "${strMountAt}.layer0200.SomeDescription2"
+#declare -A astrLayerList
+IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d -iname "${strMountAt}.layer*" |sort &&:)&&:
+#if [[ -z "$strLayerBranch" ]];then
+if [[ -z "${astrLayerList[@]-}" ]];then # no layers found
+	echoc --info "create layers like (same size for numeric field) ex.:"
+	echo "${strMountAt}.layer010.SomeDescription"
+	echo "${strMountAt}.layer020.Some Description a"
+	echo "${strMountAt}.layer030.Some Description too"
 	echo "..."
 	echoc --info "the high value layers will override lower value ones"
 	echoc --info "run it again..."
 	exit 1
 fi
+for strLayer in "${astrLayerList[@]-}";do
+	if [[ "$strLayer" =~ .*[:=].* ]];then
+		echoc -p "invalid layer name (must not contain ':' or '=' used by aufs): $strLayer"
+		exit 1
+	fi
+done
+					
+if $bRenumber;then
+	if $bAlreadyMounted;then
+		if echoc -q "umounting required, do it?";then
+			FUNCumount
+		else
+			exit 1
+		fi
+	fi
+	
+#	declare -a astrOrderLayerList
+	iOrder=$CFGnLayerNumberGap
+	for strLayer in "${astrLayerList[@]}";do
+		strOrder="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\2'"`" #collect the numeric order 
+#		astrOrderLayerList[$((10#$strOrder))]="$strOrder:${strLayer}"
+		strNewOrder="`printf "%04d" $iOrder`" #$((10#$strOrder))`"
+		strNewName="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\1${strNewOrder}\3'"`" #modify the numeric order
+		SECFUNCexecA -ce mv -v "${strLayer}" "$strNewName"
+		((iOrder+=CFGnLayerNumberGap))&&:
+	done
+	
+	#declare -p astrOrderLayerList
+#	iOrder=10
+#	for strOrderLayer in "${astrOrderLayerList[@]}";do
+#	done
+	
+	exit 0
+fi
+
+# the layers override priority is from left (top override) to right
+strLayerBranch=""
+for strLayer in "${astrLayerList[@]}";do
+	if [[ -n "$strLayerBranch" ]];then strLayerBranch=":$strLayerBranch";fi
+	strLayerBranch="${strLayer}${strLayerBranch}"
+done
+#strLayerBranch="`ls -d "${strMountAt}.layer"* |sort -r |tr "\n" ":" |sed -r 's"(.*):"\1"'`"&&:
+declare -p strLayerBranch
 
 ########
 ### the leftmost layer will be the one receiving all writes made at the mounted folder, 
