@@ -165,14 +165,24 @@ if $bRenumber;then
 	fi
 	
 #	declare -a astrOrderLayerList
-	iOrder=$CFGnLayerNumberGap
-	for strLayer in "${astrLayerList[@]}";do
-		strOrder="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\2'"`" #collect the numeric order 
-#		astrOrderLayerList[$((10#$strOrder))]="$strOrder:${strLayer}"
-		strNewOrder="`printf "%04d" $iOrder`" #$((10#$strOrder))`"
-		strNewName="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\1${strNewOrder}\3'"`" #modify the numeric order
-		SECFUNCexecA -ce mv -v "${strLayer}" "$strNewName"
-		((iOrder+=CFGnLayerNumberGap))&&:
+	SECbExecJustEcho=true
+	for((i=0;i<2;i++));do # 1st time will be just a preview
+		iOrder=$CFGnLayerNumberGap
+		for strLayer in "${astrLayerList[@]}";do
+			strOrder="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\2'"`" #collect the numeric order 
+	#		astrOrderLayerList[$((10#$strOrder))]="$strOrder:${strLayer}"
+			strNewOrder="`printf "%04d" $iOrder`" #$((10#$strOrder))`"
+			strNewName="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\1${strNewOrder}\3'"`" #modify the numeric order
+			SECFUNCexecA -cej mv -v "${strLayer}" "$strNewName"
+			((iOrder+=CFGnLayerNumberGap))&&:
+		done
+		
+		if ! $SECbExecJustEcho;then break;fi
+		if echoc -q "apply it?";then
+			SECbExecJustEcho=false # affects the mv command above
+		else
+			exit 1
+		fi
 	done
 	
 	#declare -p astrOrderLayerList
