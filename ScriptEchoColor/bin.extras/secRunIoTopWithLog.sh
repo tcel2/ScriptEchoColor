@@ -380,11 +380,13 @@ function FUNClogMisc() {
 (export S_TIME_FORMAT=ISO;SECFUNCexecA -c --echo iostat -txmpzy $nDelay 2>&1 >>"$strLogFileIostat")& #TODO get 'tps' info from iostat?
 FUNClogMisc&
 # last one shows also on current output
-SECFUNCexecA -ce sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
+while true;do
+	SECFUNCexecA -ce sudo -k /usr/sbin/iotop --batch --accumulated --processes --time --only --delay=$nDelay 2>&1 |tee -a "$strLogFileIotop"
+	echoc -p "python limitation/bug? happens when there is too high IO happening..." 
+	echoc -w -t 20
+done
 
-#TODO simply restart it? python limitation/bug?
-echoc -p "ended why?" # below is the error trace when it ends:
-exit 1
+echoc -p "reached here why?" # below is the error trace when it ends: seems like a wait time var overflowed?
 #	Traceback (most recent call last):
 #		File "/usr/sbin/iotop", line 17, in <module>
 #		  main()
@@ -401,4 +403,5 @@ exit 1
 #		File "/usr/lib/python2.7/dist-packages/iotop/ui.py", line 447, in refresh_display
 #		  print(l)
 #	UnicodeEncodeError: 'ascii' codec can't encode characters in position 212-216: ordinal not in range(128)
+exit 1
 
