@@ -71,7 +71,10 @@ if $bXScreenSaverKeepAliveDaemon;then
 	SECFUNCuniqueLock --waitbecomedaemon --id "${SECstrScriptSelfName}_XScreenSaverKeepAlive"
 	while true;do 
 		if ! FUNCisXSS;then 
-			xscreensaver -nosplash;
+			if ! SECFUNCexecA -ce xscreensaver -nosplash;then
+				echoc -p "failed to start xscreensaver, why?"
+				sleep 3
+			fi
 		fi; 
 		sleep 1;
 	done
