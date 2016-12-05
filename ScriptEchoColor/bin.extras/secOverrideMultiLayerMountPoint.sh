@@ -173,7 +173,11 @@ if $bRenumber;then
 	#		astrOrderLayerList[$((10#$strOrder))]="$strOrder:${strLayer}"
 			strNewOrder="`printf "%04d" $iOrder`" #$((10#$strOrder))`"
 			strNewName="`echo "${strLayer}" |sed -r "s'(.*${strMountAt}[.]layer)([[:digit:]]*)([.].*)'\1${strNewOrder}\3'"`" #modify the numeric order
-			SECFUNCexecA -cej mv -v "${strLayer}" "$strNewName"
+			if [[ "${strLayer}" != "$strNewName" ]];then
+				SECFUNCexecA -cej mv -vT "${strLayer}" "$strNewName"
+			else
+				echoc --info "skipping unmodified folder name: '${strLayer}'"
+			fi
 			((iOrder+=CFGnLayerNumberGap))&&:
 		done
 		
