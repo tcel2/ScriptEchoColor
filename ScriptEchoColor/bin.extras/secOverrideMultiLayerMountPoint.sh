@@ -220,6 +220,7 @@ if $bReadOnly;then
 fi
 
 SECFUNCexecA -ce mkdir -vp "$strMountAt"
+declare -p strLayerBranch |tr ":" "\n"
 SECFUNCexecA -ce sudo -k mount -t aufs -o br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
 
 SECFUNCexecA -ce ls -d "${strMountAt}"*

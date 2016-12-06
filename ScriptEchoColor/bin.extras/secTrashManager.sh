@@ -154,7 +154,14 @@ function FUNCrm(){
 		exit 1
 	fi
 	
-	SECFUNCexecA -ce chmod -Rv +w "$lstrFile"
+	if [[ ! -L "$lstrFile" ]];then
+		if [[ -d "$lstrFile" ]];then
+			SECFUNCexecA -ce chmod -Rv +w "$lstrFile"
+		else
+			SECFUNCexecA -ce chmod -v +w "$lstrFile"
+		fi
+	fi
+	
 	SECFUNCexecA -ce rm "$lOpt" "$lstrFile"
 }
 
