@@ -36,7 +36,7 @@ if ! SECFUNCuniqueLock --isdaemonrunning;then
 fi
 
 #echo $SECvarFile
-#echo ">>>$SECnDaemonPid" >>/dev/stderr
+#echo ">>>$SECnDaemonPid" >&2
 
 strSelfName="`basename "$0"`"
 declare -A aDaemonsPid

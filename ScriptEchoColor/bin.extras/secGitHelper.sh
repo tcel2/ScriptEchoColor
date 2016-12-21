@@ -57,23 +57,23 @@ if [[ ! -d "$strDevPath" ]];then
 	
 #	# TODO -d failed just after login time, why?
 #	
-#	ls -ld "$strDevPath" &&: >>/dev/stderr
-#	if test -a "$strDevPath";then echo a >>/dev/stderr;fi
-#	if test -d "$strDevPath";then echo d >>/dev/stderr;fi
-#	if test -e "$strDevPath";then echo e >>/dev/stderr;fi
-#	if test -r "$strDevPath";then echo r >>/dev/stderr;fi
-#	if test -s "$strDevPath";then echo s >>/dev/stderr;fi
-#	if test -w "$strDevPath";then echo w >>/dev/stderr;fi
-#	if test -x "$strDevPath";then echo x >>/dev/stderr;fi
-#	if test -O "$strDevPath";then echo O >>/dev/stderr;fi
-#	if test -G "$strDevPath";then echo G >>/dev/stderr;fi
-#	SECFUNCdrawLine >>/dev/stderr
+#	ls -ld "$strDevPath" &&: >&2
+#	if test -a "$strDevPath";then echo a >&2;fi
+#	if test -d "$strDevPath";then echo d >&2;fi
+#	if test -e "$strDevPath";then echo e >&2;fi
+#	if test -r "$strDevPath";then echo r >&2;fi
+#	if test -s "$strDevPath";then echo s >&2;fi
+#	if test -w "$strDevPath";then echo w >&2;fi
+#	if test -x "$strDevPath";then echo x >&2;fi
+#	if test -O "$strDevPath";then echo O >&2;fi
+#	if test -G "$strDevPath";then echo G >&2;fi
+#	SECFUNCdrawLine >&2
 #	
 #	strFormat="`stat --help |egrep "%." |head -n 30 |sed -r 's"[ ]*%(.)[ ]*(.*)"\1 #\2"' |tr -d "%" |sed -r "s'.*'%&'"`"&&:
-#	stat -c "$strFormat" "$strDevPath" &&: >>/dev/stderr
-#	SECFUNCdrawLine >>/dev/stderr
+#	stat -c "$strFormat" "$strDevPath" &&: >&2
+#	SECFUNCdrawLine >&2
 #	
-#	strace bash -c "[[ -d '$strDevPath' ]]" &&: >>/dev/stderr
+#	strace bash -c "[[ -d '$strDevPath' ]]" &&: >&2
 	
 	exit 1
 fi

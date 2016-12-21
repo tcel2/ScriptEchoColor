@@ -25,7 +25,7 @@
 # THIS FILE SHOULD CONTAIN ONLY THINGS THAT CANNOT BE EXPORTED!!!
 
 # BEFORE EVERYTHING: UNIQUE CHECK, SPECIAL CODE
-if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >>/dev/stderr;exit 1;fi
+if((`id -u`==0));then echo -e "\E[0m\E[33m\E[41m\E[1m\E[5m ScriptEchoColor is still beta, do not use as root... \E[0m" >&2;exit 1;fi
 
 shopt -s expand_aliases
 set -u #so when unset variables are expanded, gives fatal error
@@ -35,7 +35,7 @@ set -T #DEBUG trap is inherited by shell functions
 # environment must have been already initialized on parent
 function SECFUNCfastInitCheck() { #help
 	if ${SECinstallPath+false};then
-		echo "SECERROR: the 'Fast' lib can only work after at least the 'Core' lib has been loaded already..." >>/dev/stderr
+		echo "SECERROR: the 'Fast' lib can only work after at least the 'Core' lib has been loaded already..." >&2
 		exit 1 # this must be `exit` and not `return` as this is critical and script MUST exit
 	fi
 }
@@ -93,17 +93,17 @@ alias SECFUNCreturnOnFailA='if(($?!=0));then return 1;fi'
 alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 # SECFUNCtrapErr defined at Core 
-#trap 'SECnRetTrap=$?;if ! SECFUNCtrapErr "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >>/dev/stderr;exit 1;fi' ERR
-trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR(trap):Exiting..." >>/dev/stderr;exit 1;fi' ERR
+#trap 'SECnRetTrap=$?;if ! SECFUNCtrapErr "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >&2;exit 1;fi' ERR
+trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR(trap):Exiting..." >&2;exit 1;fi' ERR
 
 function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
-	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
+	#echo ">>>>>>>>>>>>>>>>${1}" >&2
 	if ${!1+false};then 
 		declare -a -x -g ${1}='()';
 	else
 		local lstrCheck="`declare -p "$1" 2>/dev/null`";
 		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
-			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >&2
 			_SECFUNCcriticalForceExit
 		fi
 	fi
@@ -129,8 +129,8 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 	# first, set the variable value WITHOUT export. Exporting with value will fail for some associative arrays (namely: SECastrDebugFunctionPerFile)
 	local lstrEvalRest="`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
 	if $SECbFuncArraysRestoreVerbose;then
-		echo "SECINFO: $FUNCNAME" >>/dev/stderr
-		echo "$lstrEvalRest" >>/dev/stderr
+		echo "SECINFO: $FUNCNAME" >&2
+		echo "$lstrEvalRest" >&2
 	fi
 	eval "$lstrEvalRest"
 	# second, do re-export in a simple way, the env var id alone (without the value)
@@ -147,7 +147,7 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 #}
 
 SECFUNCarraysRestore #this is useful when SECFUNCarraysExport is used on parent shell
-#echo "$SECbFuncArraysRestoreVerbose.$LINENO" >>/dev/stderr
+#echo "$SECbFuncArraysRestoreVerbose.$LINENO" >&2
 
 ###############################################################################
 # LAST THINGS CODE

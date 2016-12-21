@@ -39,7 +39,7 @@ function FUNCexecEcho() {
 	fi
 	
 	if $bWait;then
-		read -s -n 1 -p "WAIT: press a key to exec..." >>/dev/stderr
+		read -s -n 1 -p "WAIT: press a key to exec..." >&2
 		echo
 		echo
 	fi
@@ -51,7 +51,7 @@ function FUNCexecEcho() {
 	#shopt -s expand_aliases
 	
 	if((lnRet!=0));then
-		echo "ERROR: $@ #returned $lnRet" >>/dev/stderr
+		echo "ERROR: $@ #returned $lnRet" >&2
 		return $lnRet
 	fi
 };export -f FUNCexecEcho
@@ -64,7 +64,7 @@ function FUNCexit() {
 	if [[ -z "$lnExitValue" ]];then
 		lnExitValue=0
 	elif [[ -n `echo "$lnExitValue" |tr -d '[:digit:]'` ]];then #has not only numbers
-		echo "ERROR: invalid exit value '$lnExitValue'" >>/dev/stderr
+		echo "ERROR: invalid exit value '$lnExitValue'" >&2
 		FUNCexecEcho exit 1
 	fi
 	
@@ -75,7 +75,7 @@ function FUNCexit() {
 	
 	local lstrOuput="${lstr}${lstrMsg}"
 	#if [[ -n "$lstrOuput" ]];then
-		echo "EXIT: ${lstr}${lstrMsg}" >>/dev/stderr
+		echo "EXIT: ${lstr}${lstrMsg}" >&2
 	#fi
 	FUNCexecEcho sudo -k
 	FUNCexecEcho exit $lnExitValue
@@ -209,7 +209,7 @@ if $bBackupOldPrefix && [[ -d "$pathGoboPrefix" ]];then
 	#		echo "nothing to backup at: "
 		fi
 	else
-		echo "INFO: only backups '$pathInstallPrefix' if at Gobo prefix" >>/dev/stderr
+		echo "INFO: only backups '$pathInstallPrefix' if at Gobo prefix" >&2
 	fi
 fi
 

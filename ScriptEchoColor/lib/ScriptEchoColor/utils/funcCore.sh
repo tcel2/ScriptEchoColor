@@ -149,11 +149,11 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 			local lstrCleanedLine="`echo "$lstrErrorTrap" |tr -d "${SECcharTab}${SECcharNL}"`"
 			echo "$lstrCleanedLine" >>"$SECstrFileErrorLog"; # removed \n \t therefore one for the whole line must be re-added
 		fi
-#		echo "$lstrErrorTrap" |tr -d "${SECcharTab}${SECcharNL}" >>/dev/stderr;echo
-#		echo "$lstrErrorTrap" |tr -d "\n\t" >>/dev/stderr;echo
-#		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >>/dev/stderr;
+#		echo "$lstrErrorTrap" |tr -d "${SECcharTab}${SECcharNL}" >&2;echo
+#		echo "$lstrErrorTrap" |tr -d "\n\t" >&2;echo
+#		echo "$lstrErrorTrap" |sed -r 's";"\n\t"g' >&2;
 #		echo "$lstrErrorTrap" |tr -d '\n\t'
-		echo "$lstrErrorTrap" >>/dev/stderr;
+		echo "$lstrErrorTrap" >&2;
 		return 1;
 	fi;
 }
@@ -185,7 +185,7 @@ function _SECFUNCcriticalForceExit() {
 	if test -t 0;then
 		while true;do
 			#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-			read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >>/dev/stderr
+			read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >&2
 			sleep 1
 		done
 	fi
@@ -244,13 +244,13 @@ function SECFUNCdefaultBoolValue(){ #help
 }
 
 #function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
-#	#echo ">>>>>>>>>>>>>>>>${1}" >>/dev/stderr
+#	#echo ">>>>>>>>>>>>>>>>${1}" >&2
 #	if ${!1+false};then 
 #		declare -a -x -g ${1}='()';
 #	else
 #		local lstrCheck="`declare -p "$1" 2>/dev/null`";
 #		if [[ "${lstrCheck:0:10}" != 'declare -a' ]];then
-#			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >>/dev/stderr
+#			echo "$1='${!1-}' MUST BE DECLARED AS AN ARRAY..." >&2
 #			_SECFUNCcriticalForceExit
 #		fi
 #	fi
@@ -483,7 +483,7 @@ function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> retu
 	
 	local lstrArrayIdValA="${lstrArrayIdA}[@]"
 	for lstrCheck in "${!lstrArrayIdValA}";do
-#		echo "($lstrCheck) == ($lstrElementToMatch)" >>/dev/stderr
+#		echo "($lstrCheck) == ($lstrElementToMatch)" >&2
 		if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
 			return 0
 		fi
@@ -669,8 +669,8 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 #		return 1
 #	fi
 #	
-#	#export |grep "${lstrArrayId}=" >>/dev/stderr #@@@R
-#	#export >>/dev/stderr #@@@R
+#	#export |grep "${lstrArrayId}=" >&2 #@@@R
+#	#export >&2 #@@@R
 #	
 #	local l_strTmp="`export |grep "^declare -[Aa]x ${lstrArrayId}='("`";
 # 	#if(($?==0));then
@@ -732,19 +732,19 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 		return 1
 	fi
 	
-#	echo "TST:$lstrArrayId" >>/dev/stderr
-#	declare -p $lstrArrayId >>/dev/stderr
+#	echo "TST:$lstrArrayId" >&2
+#	declare -p $lstrArrayId >&2
 	
 	#set -x
 	local lstrArrayAllElements="${lstrArrayId}[@]"
 	local lstrArrayCopyTmp=("${!lstrArrayAllElements}")
 	#local lstrArraySize="#${lstrArrayId}[@]"
-#	echo "TST: ${lstrArrayCopyTmp[@]}" >>/dev/stderr
+#	echo "TST: ${lstrArrayCopyTmp[@]}" >&2
 	#local lnSize="${!lstrArraySize}"
 	local lnIndex=0
 	for strTmp in "${lstrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
-#			echo "strTmp='$strTmp' $lnIndex" >>/dev/stderr
-#			declare -p "$lstrArrayId" >>/dev/stderr
+#			echo "strTmp='$strTmp' $lnIndex" >&2
+#			declare -p "$lstrArrayId" >&2
 			
 		local lbUnset=false
 		if [[ -z "$lstrMatch" ]];then
@@ -758,13 +758,13 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 		if $lbUnset;then
 			#eval "unset $lstrArrayId[$lnIndex]"
 			unset lstrArrayCopyTmp[$lnIndex]
-#			declare -p "$lstrArrayId" >>/dev/stderr
+#			declare -p "$lstrArrayId" >&2
 		fi
 		((lnIndex++))&&:
 	done
 	#set +x
 	
-	#declare -p lstrArrayCopyTmp >>/dev/stderr #@@@R
+	#declare -p lstrArrayCopyTmp >&2 #@@@R
 	if((${#lstrArrayCopyTmp[@]}==0));then
 		eval "$lstrArrayId"'=()'
 	else
@@ -808,7 +808,7 @@ function SECFUNCbashSourceFiles() { #help
 	local lstrSourceFileList=""
 	if((`SECFUNCarraySize BASH_SOURCE`>0));then
 		for lnSourceFileIndex in "${!BASH_SOURCE[@]}";do
-#			echo ">>>lnSourceFileIndex=$lnSourceFileIndex,${#BASH_SOURCE[@]}-1,${BASH_SOURCE[lnSourceFileIndex]}" >>/dev/stderr
+#			echo ">>>lnSourceFileIndex=$lnSourceFileIndex,${#BASH_SOURCE[@]}-1,${BASH_SOURCE[lnSourceFileIndex]}" >&2
 			#if(( lnSourceFileIndex == (${#BASH_SOURCE[@]}-1) ));then #last is always this script...
 			if(( lnSourceFileIndex == 0 ));then #last shown, and 1st on loop, is always this script...
 				continue; #so skip it
@@ -831,7 +831,7 @@ function _SECFUNCfillDebugFunctionPerFileArray() {
 	local lstrFunctionId
 	for lstrLib in "${lastrLibs[@]}";do
 		local lastrFuncList=(`grep "^function SECFUNC" "$SECinstallPath/lib/ScriptEchoColor/utils/func$lstrLib.sh" |sed -r "$lsedOnlyFunctions" |sort`)
-#		echo "$lstrFuncList" >>/dev/stderr
+#		echo "$lstrFuncList" >&2
 #			|while read lstrFunctionId;do
 		for lstrFunctionId in ${lastrFuncList[@]};do
 			if [[ -n "${SECastrDebugFunctionPerFile[$lstrFunctionId]-}" ]];then
@@ -940,8 +940,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		#if ! ${!lstrVarId+false};then
 		if $lbShowValue;then
 			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcharEsc}[5m${!lstrVarId}${SECcharEsc}[25m'\3,"
-#			echo "$lstrLine">>/dev/stderr
-#			echo "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3," >>/dev/stderr
+#			echo "$lstrLine">&2
+#			echo "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3," >&2
 			echo "$lstrLine" |sed -r "s${SECsedTk}$lstrMatch${SECsedTk}\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3${SECsedTk}"
 		else
 			echo "$lstrLine"
@@ -952,7 +952,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		#while	read lstrLineMain;do
 		while	IFS= read -r lstrLineMain;do #IFS= required to prevent skipping /t
 		#while	IFS=$'\n' read lstrLineMain;do
-			#echo "lstrLine='$lstrLine'" >>/dev/stderr
+			#echo "lstrLine='$lstrLine'" >&2
 			echo "$lstrLineMain" \
 				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchOptionals" \
 				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchRequireds" 
@@ -1343,7 +1343,7 @@ function SECFUNCechoErr() { #help echo error messages
 			shift
 			lbLogOnly=true
 		else
-			echo " [`SECFUNCdtTimeForLogMessages`]SECERROR:invalid option '$1'" >>/dev/stderr; 
+			echo " [`SECFUNCdtTimeForLogMessages`]SECERROR:invalid option '$1'" >&2; 
 			return 1
 		fi
 		shift
@@ -1353,9 +1353,9 @@ function SECFUNCechoErr() { #help echo error messages
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
 	if ! $lbLogOnly;then
 		if $SEC_MsgColored;then
-			echo -e "\E[0m\E[91m${l_output}\E[0m" >>/dev/stderr
+			echo -e "\E[0m\E[91m${l_output}\E[0m" >&2
 		else
-			echo "${l_output}" >>/dev/stderr
+			echo "${l_output}" >&2
 		fi
 	fi
 	echo "${l_output}" >>"$SECstrFileErrorLog"
@@ -1452,11 +1452,11 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	local lnLength=0
 	local lstrLastFuncId=""
 	function SECFUNCechoDbg_updateStackVars(){
-#		SECFUNCppidList --comm "\n" >>/dev/stderr 2>&1
-#		echo "$$,$PPID" >>/dev/stderr
-#		(set |grep "^SECastr";) >>/dev/stderr 2>&1
-#		set |grep SECinstallPath >>/dev/stderr 2>&1
-#		declare -p SECastrFunctionStack >>/dev/stderr 2>&1
+#		SECFUNCppidList --comm "\n" >&2 2>&1
+#		echo "$$,$PPID" >&2
+#		(set |grep "^SECastr";) >&2 2>&1
+#		set |grep SECinstallPath >&2 2>&1
+#		declare -p SECastrFunctionStack >&2 2>&1
 #		if ${SECastrFunctionStack+false};then
 #			SECastrFunctionStack=()
 #		fi
@@ -1523,8 +1523,8 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	
 	function SECFUNCechoDbg_isOnTheList(){
 		local lstrFuncToCheck="${1-}"
-		#declare -p SECastrBashDebugFunctionIds >>/dev/stderr
-		#set |grep "^SEC" >>/dev/stderr
+		#declare -p SECastrBashDebugFunctionIds >&2
+		#set |grep "^SEC" >&2
 		if((${#SECastrBashDebugFunctionIds[@]}>0));then
 			local lnIndex
 			for lnIndex in ${!SECastrBashDebugFunctionIds[@]};do
@@ -1570,9 +1570,9 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 		fi
 		local l_output=" [`SECFUNCdtTimeForLogMessages`]SECDEBUG: ${strFuncStack}${lstrCaller}${strFuncInOut}$lstrText"
 		if $SEC_MsgColored;then
-			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >>/dev/stderr
+			echo -e "\E[0m\E[97m\E[47m${l_output}\E[0m" >&2
 		else
-			echo "${l_output}" >>/dev/stderr
+			echo "${l_output}" >&2
 		fi
 	fi
 	
@@ -1626,9 +1626,9 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 	###### main code
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[93m${l_output}\E[0m" >>/dev/stderr
+		echo -e "\E[0m\E[93m${l_output}\E[0m" >&2
 	else
-		echo "${l_output}" >>/dev/stderr
+		echo "${l_output}" >&2
 	fi
 }
 
@@ -1666,9 +1666,9 @@ function SECFUNCechoBugtrack() { #help bugtrack messages will only show if SEC_B
 	###### main code
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECBUGTRACK: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
-		echo -e "\E[0m\E[36m${l_output}\E[0m" >>/dev/stderr
+		echo -e "\E[0m\E[36m${l_output}\E[0m" >&2
 	else
-		echo "${l_output}" >>/dev/stderr
+		echo "${l_output}" >&2
 	fi
 }
 
@@ -2009,9 +2009,9 @@ function SECFUNCcheckActivateRunLog() { #help
 	
 	function _SECFUNCcheckActivateRunLog_report(){
 		if $lbVerbose || $lbSimpleReport;then
-			echo "SECINFO: $FUNCNAME: ${lastrAllParams[@]}: $@" >>/dev/stderr
-			ls /proc/$$/fd -l >>/dev/stderr
-			declare -p SECbRunLogEnabled SECnRunLogTeePid SECstrRunLogFile SECstrRunLogFileDefault&&: >>/dev/stderr
+			echo "SECINFO: $FUNCNAME: ${lastrAllParams[@]}: $@" >&2
+			ls /proc/$$/fd -l >&2
+			declare -p SECbRunLogEnabled SECnRunLogTeePid SECstrRunLogFile SECstrRunLogFileDefault&&: >&2
 		fi
 	}
 	
@@ -2029,7 +2029,7 @@ function SECFUNCcheckActivateRunLog() { #help
 	
 	if $SECbRunLogDisable || $lbRestoreDefaults;then
 #		exec 1>/dev/stdout
-#		exec 2>/dev/stderr
+#		exec 2>&2
 		if $SECbRunLogEnabled;then
 			_SECFUNCcheckActivateRunLog_report before
 			# 101 and 102 to try to avoid any conflicts
@@ -2110,8 +2110,8 @@ function SECFUNCcheckActivateRunLog() { #help
 			SECstrRunLogFile="$SECstrRunLogFileDefault" #ensure it is properly set to current script
 			
 			if ( ! SECFUNCisShellInteractive ) || $SECbRunLog;then
-		#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >>/dev/stderr
-				echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >>/dev/stderr
+		#		SEC_WARN=true SECFUNCechoWarnA "stderr and stdout copied to '$SECstrRunLogFile'" >&2
+				echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >&2
 			#	exec 1>"$SECstrRunLogFile"
 			#	exec 2>"$SECstrRunLogFile"
 				exec 101>&1 102>&2 #backup

@@ -98,7 +98,7 @@ function FUNCmozreplCoolness(){
 	local lstrUrl="$1"
 	lstrUrl="`echo "$lstrUrl" |sed -r "s;';\\\\\';g"`" #result is from ' to \' ...
 	#lstrUrl="`echo "$lstrUrl" |sed -r 's;'"'"';\\\'"'"';'`"
-	#echo ">>>> lstrUrl='$lstrUrl'" >>/dev/stderr
+	#echo ">>>> lstrUrl='$lstrUrl'" >&2
 	SECFUNCechoDbgA "lstrUrl='$lstrUrl'"
 	#TODO some way to know if homepage was found and if not, return false?
 	while true;do

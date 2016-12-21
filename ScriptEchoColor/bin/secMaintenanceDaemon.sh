@@ -135,7 +135,7 @@ function FUNCcheckDaemonStarted() {
 		rm "$strDaemonPidFile" 2>/dev/null
 		#rm "$strDaemonLogFile" 2>/dev/null
 		nPidDaemon="-1"
-#		echo ">>>ABC" >>/dev/stderr
+#		echo ">>>ABC" >&2
 		return 1
 	fi
 }
@@ -216,7 +216,7 @@ elif $bRestartDaemon;then
 	
 	# stdout must be redirected or the terminal wont let it be child...
 	# nohup or disown alone did not work...
-	$0 >>/dev/stderr &
+	$0 >&2 &
 	sleep 3 #wait a bit just to try to avoid messing the terminal output...
 	exit 0
 elif $bLogMonitor;then
@@ -343,7 +343,7 @@ function FUNCvalidateDaemon() {
 	fi
 	if [[ -n "$lnPidDaemon" ]] && [[ -d "/proc/$lnPidDaemon" ]];then
 		SECFUNCechoWarnA "(at $1) already running lnPidDaemon='$lnPidDaemon'"
-		#ps -p $lnPidDaemon >>/dev/stderr
+		#ps -p $lnPidDaemon >&2
 		exit 1
 	fi
 }
@@ -356,7 +356,7 @@ FUNCvalidateDaemon "after writting pid"
 ln -sf "$strDaemonPidFile" "$strSymlinkToDaemonPidFile"
 
 nPidDaemon=$$
-echo "ScriptEchoColor Maintenance Daemon started, nPidDaemon='$nPidDaemon', PPID='$PPID', strDaemonLogFile='$strDaemonLogFile'." >>/dev/stderr
+echo "ScriptEchoColor Maintenance Daemon started, nPidDaemon='$nPidDaemon', PPID='$PPID', strDaemonLogFile='$strDaemonLogFile'." >&2
 
 exec 2>>"$strDaemonLogFile"
 exec 1>&2
@@ -387,9 +387,9 @@ while true;do
 	##########################################################################
 	strCheckId="LockFilesOfDeadPids"
 	#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
-		#echo ">>>A" >>/dev/stderr
+		#echo ">>>A" >&2
 		IFS=$'\n' read -d '' -r -a astrFileLockList < <(SECFUNCfileLock --list)&&:
-		#echo ">>>B" >>/dev/stderr
+		#echo ">>>B" >&2
 		#SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
 		if((`SECFUNCarraySize astrFileLockList`>0));then 
 			for lstrLockFileIntermediary in "${astrFileLockList[@]}";do

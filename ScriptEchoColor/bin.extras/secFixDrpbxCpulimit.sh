@@ -154,7 +154,7 @@ while true;do #MainLoop
 	# start cpulimit
 	SECFUNCexecA --child -ce $strCpuLimitCmd
 #	strChildCmdRef="`SECFUNCexecA --child -ce $strCpuLimitCmd`"
-	if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >>/dev/stderr;continue;fi # continues at MainLoop, as it should not have exited
+	if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >&2;continue;fi # continues at MainLoop, as it should not have exited
 #	SECFUNCexecA -ce $strCpuLimitCmd &&: & nSubShellPid=$! # starts cpulimit as child subshell
 #	while true;do
 #		if [[ ! -d "/proc/$nSubShellPid" ]];then 
@@ -175,7 +175,7 @@ while true;do #MainLoop
 			fi
 		else
 #			if ! pgrep -fx "$strCpuLimitCmd";then continue 2;fi # continues at MainLoop to start cpulimit if it have exited for any reason
-			if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >>/dev/stderr;continue 2;fi # continues at MainLoop to start cpulimit if it have exited for any reason
+			if SECFUNCexecA --readchild "$SEClstrFuncExecLastChildRef" "chk:exit";then cat "$SEClstrFuncExecLastChildRef" >&2;continue 2;fi # continues at MainLoop to start cpulimit if it have exited for any reason
 			
 			if echoc -t $nQuestionSleep -q "suspend limitation?";then
 				SECFUNCexecA -ce kill -SIGKILL `pgrep -fx "$strCpuLimitCmd"`

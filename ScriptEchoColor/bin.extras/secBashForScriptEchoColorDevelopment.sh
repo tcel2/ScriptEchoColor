@@ -25,7 +25,7 @@
 #SECFUNCexecA -ce zenity --question&&:
 
 if ! type -P secinit >/dev/null;then
-	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >>/dev/stderr
+	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >&2
 	exit 1
 fi
 
@@ -38,17 +38,17 @@ export SEC_WARN=true
 export SECbFuncArraysRestoreVerbose=true
 
 eval `secinit --extras --nolog --force`
-declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
+declare -p SECDEVastrCmdTmp&&: >&2
 
 SECFUNCcheckActivateRunLog --report
 if [[ "$TERM" != "dumb" ]];then
 	SECFUNCcheckActivateRunLog -v --forcestdin
 fi
 
-#declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr;exit 
+#declare -p astr;set |egrep "^SEC_EXPORTED_ARRAY_" &&: >&2;exit 
 
 export SECDEVstrSelfName="`readlink -f "$0"`";SECDEVstrSelfName="`basename "$SECDEVstrSelfName"`"
-echo "Self: $0" >>/dev/stderr
+echo "Self: $0" >&2
 strFileCfg="$HOME/.${SECDEVstrSelfName}.cfg"
 
 export SECDEVbInitialized=false
@@ -128,7 +128,7 @@ if [[ -z "$SECDEVstrProjectPath" ]];then
 	SECDEVstrProjectPath="`cat "$strFileCfg"`"
 fi
 if [[ ! -f "$SECDEVstrProjectPath/bin.extras/$SECDEVstrSelfName" ]];then
-	echo "invalid project development path '$SECDEVstrProjectPath'" >>/dev/stderr
+	echo "invalid project development path '$SECDEVstrProjectPath'" >&2
 	exit 1
 fi
 
@@ -137,7 +137,7 @@ if $SECDEVbExecTwiceTest || ! SECFUNCexecA -ce cmp "$0" "$SECDEVstrProjectPath/b
 	SECDEVbExecTwice=true
 	SECDEVbExecTwiceTest=false # disabled now to prevent infinite loop
 fi
-declare -p SECDEVbExecTwice >>/dev/stderr
+declare -p SECDEVbExecTwice >&2
 
 if $SECDEVbFullDebug;then
 	export SEC_DEBUG=true
@@ -155,7 +155,7 @@ if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 	SECDEVbHasCmdTmp=true
 fi
 
-declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
+declare -p SECDEVastrCmdTmp&&: >&2
 
 function SECFUNCaddToRcFile() {
 	source "$HOME/.bashrc";
@@ -193,13 +193,13 @@ function SECFUNCaddToRcFile() {
 	
 	#export PROMPT_COMMAND="${PROMPT_COMMAND-}${PROMPT_COMMAND+;} echo -e \"$lstrBanner\"; ";
 	#export PS1="$(echo -e "\E[0m\E[34m\E[106mDev\E[0m")$PS1";\
-	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >>/dev/stderr
+	echo " PROMPT_COMMAND='$PROMPT_COMMAND'" >&2
 	
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.extras"
 	SECFUNCaddToString PATH ":" "-$SECDEVstrProjectPath/bin.examples"
-	#echo " PATH='$PATH'" >>/dev/stderr
-	echo -e "PATH=(\t`echo $PATH |sed 's":"\n\t"g'`)" >>/dev/stderr	
+	#echo " PATH='$PATH'" >&2
+	echo -e "PATH=(\t`echo $PATH |sed 's":"\n\t"g'`)" >&2	
 	
 	# must be after PATH setup !!!
 	if $SECDEVbSecInit;then
@@ -212,26 +212,26 @@ function SECFUNCaddToRcFile() {
 	# Must be after secinit!!! TODO if it is before secinit, SECFUNCbcPrettyCalcA "will not be recognized" but... aparently will cause any trouble? now what????
 	if $SECDEVbExecTwice;then #this grants all is updated
 		echo
-		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >>/dev/stderr
+		echo " SECDEVbExecTwice='$SECDEVbExecTwice'" >&2
 		echoc --info " Loading '$SECstrScriptSelfName' twice as the project development one differs."
 		echo
 		SECDEVbExecTwice=false #prevent infinite recursive loop
 		SECDEVbIsInExecTwiceMode=true
-		declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
+		declare -p SECDEVastrCmdTmp&&: >&2
 #		$SECDEVstrSelfName "${SECDEVastrCmdTmp[@]}" #all options are already in exported variables
 		SECFUNCexecA -ce SECFUNCarraysExport -v
 		
-		declare -p SECDEVstrSelfName >>/dev/stderr
-		alias >>/dev/stderr
-		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr # alias not set yet
+		declare -p SECDEVstrSelfName >&2
+		alias >&2
+		type SECFUNCbcPrettyCalcA&&: >&2 # alias not set yet
 		
 #		export SEC_DEBUGX=true;set -x
 		SECFUNCexecA -ce $SECDEVstrSelfName # No params needed. All options are already in exported variables
 #		set +x
-		echo "SECDEVINFO: just after twice run" >>/dev/stderr
-#		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr
-		echo "SECDEVINFO: just before twice exit" >>/dev/stderr
-		#TODO 2 lines? echo "SECDEVINFO: just before twice exit: `type SECFUNCbcPrettyCalcA&&: 2>&1`" >>/dev/stderr
+		echo "SECDEVINFO: just after twice run" >&2
+#		type SECFUNCbcPrettyCalcA&&: >&2
+		echo "SECDEVINFO: just before twice exit" >&2
+		#TODO 2 lines? echo "SECDEVINFO: just before twice exit: `type SECFUNCbcPrettyCalcA&&: 2>&1`" >&2
 		ps;SECFUNCechoWarnA "exiting";exit 0 #must exit to not execute the options twice, only once above.
 	fi
 	###################################### TWICE MODE - EXIT ###########################################
@@ -245,8 +245,8 @@ function SECFUNCaddToRcFile() {
 	if $SECDEVbUnboundErr;then
 		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
 	else
-#		echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >>/dev/stderr;set +u;
-		echo ' Unbound vars allowed at terminal' >>/dev/stderr
+#		echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >&2;set +u;
+		echo ' Unbound vars allowed at terminal' >&2
 	fi
 	
 	echo
@@ -256,7 +256,7 @@ function SECFUNCaddToRcFile() {
 	echo
 	
 	if $SECDEVbCdDevPath;then
-		echo " cd '$SECinstallPath'" >>/dev/stderr
+		echo " cd '$SECinstallPath'" >&2
 		cd "$SECinstallPath"
 	fi
 	
@@ -270,17 +270,17 @@ function SECFUNCaddToRcFile() {
 		#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
-#			set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
-			declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
+#			set |egrep "^SEC_EXPORTED_ARRAY_" >&2
+			declare -p SECDEVastrCmdTmp&&: >&2
 			( #eval `secinit --force`;
 				SECbRunLog=true #force log!
 				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
-				set |egrep "^SEC_EXPORTED_ARRAY_" >>/dev/stderr
-				declare -p SECDEVastrCmdTmp&&: >>/dev/stderr
+				set |egrep "^SEC_EXPORTED_ARRAY_" >&2
+				declare -p SECDEVastrCmdTmp&&: >&2
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");
 				declare -p astrCmdTmp
 #				type "${astrCmdTmp[0]}"&&:
-#				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >>/dev/stderr;
+#				echo "SECbRunLog=$SECbRunLog;SECbRunLogDisable=$SECbRunLogDisable;" >&2;
 				#SECFUNCcheckActivateRunLog; #force log!
 #				SECFUNCcheckActivateRunLog -v --restoredefaultoutputs
 
@@ -295,7 +295,7 @@ function SECFUNCaddToRcFile() {
 					# This is good because a few applications may not handle so much env vars.
 					SECFUNCcleanEnvironment;
 				fi 
-				echo " EXEC: '${astrCmdTmp[@]}'" >>/dev/stderr
+				echo " EXEC: '${astrCmdTmp[@]}'" >&2
 				"${astrCmdTmp[@]}";
 			)&&:;nRet=$?
 			if((nRet!=0));then
@@ -305,10 +305,10 @@ function SECFUNCaddToRcFile() {
 	fi
 	
 	if $SECDEVbExitAfterUserCmd;then
-		echo " SECDEVINFO: Exiting after user command..." >>/dev/stderr
+		echo " SECDEVINFO: Exiting after user command..." >&2
 		sleep 1
-#		ps >>/dev/stderr
-#		type SECFUNCbcPrettyCalcA&&: >>/dev/stderr
+#		ps >&2
+#		type SECFUNCbcPrettyCalcA&&: >&2
 		ps;SECFUNCechoWarnA "exiting";exit 0
 	fi
 
@@ -321,12 +321,12 @@ function SECFUNCaddToRcFile() {
 
 #history -a
 #SECFUNCdrawLine A
-#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr
+#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >&2
 #SECFUNCdrawLine B
 SECFUNCexecA -ce SECFUNCarraysExport -v
 #set |grep "^SEC_EX"
 #SECFUNCdrawLine C
-#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >>/dev/stderr
+#set |egrep "^SEC_EXPORTED_ARRAY_" &&: >&2
 #SECFUNCdrawLine D
 echoc --info "now running bash with modified/increased rc file"
 if ! SECFUNCexecA -ce bash --rcfile <(echo 'SECFUNCaddToRcFile;');then

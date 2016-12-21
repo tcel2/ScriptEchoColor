@@ -119,7 +119,7 @@ while true;do
 	echoc --info "strPreferedWM='$strPreferedWM'"
 	
 	if [[ -z "$strCurrent" ]];then #mainly for crash recovery
-		SECFUNCexecA -ce $strPreferedWM --replace >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+		SECFUNCexecA -ce $strPreferedWM --replace >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 		continue;
 	fi
 	
@@ -129,16 +129,16 @@ while true;do
 			if [[ "$strCurrent" == "compiz" ]];then
 				secFixWindow.sh --fixcompiz #this safely replaces compiz
 			else
-				SECFUNCexecA -ce secXtermDetached.sh compiz --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+				SECFUNCexecA -ce secXtermDetached.sh compiz --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			fi
 			strPreferedWM="compiz"
 			;; 
 		m)
-			SECFUNCexecA -ce secXtermDetached.sh metacity --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			SECFUNCexecA -ce secXtermDetached.sh metacity --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="metacity"
 			;; 
 		x)
-			SECFUNCexecA -ce secXtermDetached.sh xfwm4 --replace #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+			SECFUNCexecA -ce secXtermDetached.sh xfwm4 --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="xfwm4"
 			;; 
 		6)
@@ -148,7 +148,7 @@ while true;do
 	
 #	if [[ "$strCurrent" != "metacity" ]];then
 #		if echoc -q -t 10 "replace with metacity?";then
-#			SECFUNCexecA -ce metacity --replace >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+#			SECFUNCexecA -ce metacity --replace >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #			strPreferedWM="metacity"
 #			continue;
 #		fi
@@ -156,7 +156,7 @@ while true;do
 
 #	if [[ "$strCurrent" != "compiz" ]];then
 #		if echoc -q -t 10 "replace with compiz?";then
-#			SECFUNCexecA -ce compiz --replace >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+#			SECFUNCexecA -ce compiz --replace >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #			strPreferedWM="compiz"
 #			continue;
 #		fi

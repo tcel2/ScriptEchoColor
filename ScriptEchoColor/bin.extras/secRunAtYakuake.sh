@@ -25,13 +25,13 @@
 eval `secinit`
 
 function echoerr {
-  echo "$@" >>/dev/stderr
+  echo "$@" >&2
 }
 
 function FUNCaddSession {
   local l_newestSession=-1
 
-  if qdbus org.kde.yakuake /yakuake/sessions addSession >>/dev/stderr; then
+  if qdbus org.kde.yakuake /yakuake/sessions addSession >&2; then
     local l_anSessions=(`qdbus org.kde.yakuake /yakuake/sessions sessionIdList |tr ',' ' '`)
     #echoerr ${l_anSessions[*]}
     
@@ -120,7 +120,7 @@ function FUNCtask {
     fi
     
     if((l_newestSession>=0));then
-      qdbus org.kde.yakuake /yakuake/tabs setTabTitle $l_newestSession "$l_strTitle" >>/dev/stderr
+      qdbus org.kde.yakuake /yakuake/tabs setTabTitle $l_newestSession "$l_strTitle" >&2
 
       FUNCevenTermId $l_newestSession;local l_termToSplit=$FUNCevenTermId
       
@@ -134,7 +134,7 @@ function FUNCtask {
       if((execCmdAtTerm>=0));then
         echoerr "new term: cmd=$l_cmd,title=$l_strTitle,session=$l_newestSession,termId=$execCmdAtTerm."
 				sleep $nSleep
-        qdbus org.kde.yakuake /yakuake/sessions runCommandInTerminal $execCmdAtTerm "$l_cmd" >>/dev/stderr
+        qdbus org.kde.yakuake /yakuake/sessions runCommandInTerminal $execCmdAtTerm "$l_cmd" >&2
       else
         echoerr "ERROR: invalid terminal..."
       fi
@@ -157,7 +157,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		  sleep 1
 		done
 #		sleep 3
-#		qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >>/dev/stderr
+#		qdbus org.kde.yakuake /yakuake/sessions runCommand $0 >&2
 #		exit 0
 	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help nSleep (seconds) before running
 		shift

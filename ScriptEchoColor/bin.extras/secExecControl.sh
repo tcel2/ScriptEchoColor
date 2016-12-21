@@ -96,7 +96,7 @@ if $bDaemon;then
 				SECFUNCechoWarnA "invalid nPid='$nPid'"
 			fi
 		else
-			echo -ne "waiting for pids...\r" >>/dev/stderr
+			echo -ne "waiting for pids...\r" >&2
 		fi
 
 		strNewData="`tail -n +2 "$strFileCfg"`" #removes 1st line

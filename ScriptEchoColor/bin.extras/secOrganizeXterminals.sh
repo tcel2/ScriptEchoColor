@@ -100,7 +100,7 @@ function FUNCwindowList() {
 	#`tac` will make newest windows be ordered at last slots on screen
 	listWindowIdsSorted=(`echo "${listWindowIdsSorted[@]-}" |tr ' ' '\n' |tac`)
 	
-	#echo "listWindowIdsSorted[@]=(${listWindowIdsSorted[@]-})" >>/dev/stderr
+	#echo "listWindowIdsSorted[@]=(${listWindowIdsSorted[@]-})" >&2
 	echo "${listWindowIdsSorted[@]-}" #this output will be captured
 	
 	return 0

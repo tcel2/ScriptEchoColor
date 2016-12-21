@@ -66,7 +66,7 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 function FUNCflashScreen(){
-	echo "$FUNCNAME" >>/dev/stderr
+	echo "$FUNCNAME" >&2
 	for((i=0;i<3;i++));do 
 		xgamma -gamma 5 >>/dev/null 2>&1
 		sleep 0.1;

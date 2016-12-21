@@ -26,12 +26,12 @@
 
 eval `secinit --nochild --extras`
 
-echo " SECstrRunLogFile='$SECstrRunLogFile'" >>/dev/stderr
-echo " \$@='$@'" >>/dev/stderr
+echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
+echo " \$@='$@'" >&2
 
 #strFullSelfCmd="`basename $0` $@"
 export strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
-echo " strFullSelfCmd='$strFullSelfCmd'" >>/dev/stderr
+echo " strFullSelfCmd='$strFullSelfCmd'" >&2
 
 SECFUNCcfgReadDB
 echo "SECcfgFileName='$SECcfgFileName'"
@@ -97,7 +97,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
 	else
-		SECFUNCechoErrA "invalid option '$1'" >>/dev/stderr
+		SECFUNCechoErrA "invalid option '$1'" >&2
 		exit 1
 	fi
 	shift&&:
@@ -189,7 +189,7 @@ function FUNClog() { #params: <type with 3 letters> [comment]
 	fi
 	
 	case "$lstrType" in	"wrn"|"Err"|"Sne"|"ini"|"RUN"|"end");; #recognized ok
-		*) SECFUNCechoErrA "invalid lstrType='$lstrType'" >>/dev/stderr;
+		*) SECFUNCechoErrA "invalid lstrType='$lstrType'" >&2;
 			 _SECFUNCcriticalForceExit;;
 	esac
 	
@@ -200,7 +200,7 @@ function FUNClog() { #params: <type with 3 letters> [comment]
 		SECFUNCechoErrA "$lstrLogging";;
 	esac
 	
-	echo "$lstrLogging" >>/dev/stderr
+	echo "$lstrLogging" >&2
 	echo "$lstrLogging" >>"$strExecGlobalLogFile"
 };export -f FUNClog
 
@@ -211,7 +211,7 @@ if $bListWaiting;then
 fi
 
 if $bCheckPointDaemon;then
-	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >>/dev/stderr
+	echo "see Global Exec log for '`id -un`' at: $strExecGlobalLogFile" >&2
 	
 	if [[ -z "$strCheckPointCustomCmd" ]];then
 		FUNClog Err "invalid empty strCheckPointCustomCmd"
@@ -401,13 +401,13 @@ if $bCheckIfAlreadyRunning;then
 	#	if ! pgrep -f "$strFullSelfCmd";then
 		nPidOther=""
 		anPidList=(`pgrep -fx "${strFullSelfCmd}$"`)&&:
-		#echo "$$,${anPidList[@]}" >>/dev/stderr
+		#echo "$$,${anPidList[@]}" >&2
 		if anPidOther=(`echo "${anPidList[@]-}" |tr ' ' '\n' |grep -vw $$`);then #has not other pids than self
-			#echo " anPidOther[@]=(${anPidOther[@]})" >>/dev/stderr
+			#echo " anPidOther[@]=(${anPidOther[@]})" >&2
 			bFound=false
 			if((`SECFUNCarraySize anPidOther`>0));then
 				for nPidOther in ${anPidOther[@]};do
-					#echo "\"^ RUN -> .*;pid='$nPidOther';\"" >>/dev/stderr
+					#echo "\"^ RUN -> .*;pid='$nPidOther';\"" >&2
 					#if grep -q "^ RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
 					if grep -q " RUN -> .*;pid='$nPidOther';" "$strExecGlobalLogFile";then
 						bFound=true
@@ -490,7 +490,7 @@ function FUNCrun(){
 			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
 				SECFUNCcleanEnvironment; #all SEC environment will be cleared
 				#"$@";
-				declare -p PATH >>/dev/stderr
+				declare -p PATH >&2
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
 				"${astrRunParams[@]}"
 			)&&:;local lnRetAtom=$?
@@ -614,7 +614,7 @@ function FUNCrun(){
 #					local lstrCodeToEval="`zenity --entry \
 #						--title "$SECstrScriptSelfName[$$]" \
 #						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
-#					echo "eval: $lstrCodeToEval" >>/dev/stderr
+#					echo "eval: $lstrCodeToEval" >&2
 #					eval "$lstrCodeToEval"
 #				fi
 				if [[ -n "$strCodeToEval" ]];then
@@ -637,11 +637,11 @@ function FUNCrun(){
 #if $bXterm;then
 #	strTitle="${astrRunParams[@]}"
 #	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
-#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #else
 #	SECFUNCexecA -ce FUNCrun
 #fi
-#SECFUNCexecA -ce FUNCrun #>>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+#SECFUNCexecA -ce FUNCrun #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 if ! SECFUNCexecA -ce FUNCrun;then
 	SECFUNCechoErrA "exited with error..."
 fi

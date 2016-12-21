@@ -265,17 +265,17 @@ function FUNCexecParams() {
 	if $lbRun;then
 		local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
 		if $SECXbLogOnly || $SECXbNoHup;then
-			echo "lstrFileLogCmd='$lstrFileLogCmd'" >>/dev/stderr
+			echo "lstrFileLogCmd='$lstrFileLogCmd'" >&2
 			tail -F "$lstrFileLogCmd"&
 		fi
 	
 		echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"
 		if $SECXbLogOnly;then
 			# stdout must be redirected or the terminal wont let it be a detached child...
-			#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
-			#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr)&disown
-			#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr&
-			SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >>/dev/stderr & disown #TODO use nohup?
+			#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >&2)&disown
+			#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >&2)&disown
+			#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2&
+			SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2 & disown #TODO use nohup?
 			nPidCmd=$!
 		
 			while true;do
@@ -295,13 +295,13 @@ function FUNCexecParams() {
 				esac
 			
 				if [[ ! -d "/proc/$nPidCmd" ]];then
-					echo "nPidCmd='$nPidCmd' exited" >>/dev/stderr
+					echo "nPidCmd='$nPidCmd' exited" >&2
 					break;
 				fi
 			done
 		else
 			if $SECXbNoHup;then
-				SECFUNCexecA -ce nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >>/dev/stderr;nRet=$?
+				SECFUNCexecA -ce nohup bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >&2;nRet=$?
 			else
 				SECFUNCexecA -ce bash -c "${strSudoPrefix} ${strFUNCexecParams}";nRet=$?
 			fi
@@ -343,7 +343,7 @@ xterm -display "$nDisplay" -e "$strExec"&
 
 #strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
 #echo "Exec: $strExec"
-#nohup bash -c "xterm $SECXstrXtermOpts -display $nDisplay -e '$strExec'" >>/dev/stderr 2>&1 & disown
+#nohup bash -c "xterm $SECXstrXtermOpts -display $nDisplay -e '$strExec'" >&2 2>&1 & disown
 
 pidXtermTemp=$!
 

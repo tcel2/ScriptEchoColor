@@ -94,7 +94,7 @@ fi
 function FUNCadbServerPid(){
 	nPid="`pgrep -fx "adb -P .* fork-server server"`"&&:
 	if [[ -n "$nPid" ]];then
-		ps --no-headers -o pid,user,cmd -p "$nPid" >>/dev/stderr
+		ps --no-headers -o pid,user,cmd -p "$nPid" >&2
 		echo "$nPid"
 	fi
 }

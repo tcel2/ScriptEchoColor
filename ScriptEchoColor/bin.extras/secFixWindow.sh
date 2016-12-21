@@ -281,10 +281,10 @@ function FUNCvalidateNumber() {
 	local l_id=$1
 	local l_value=${!l_id}
 	if [[ -n "$l_value" ]] && [[ -n `echo "$l_value" |tr -d '[:digit:]'` ]];then
-		echo "invalid number '$l_value' for $l_id" >>/dev/stderr
+		echo "invalid number '$l_value' for $l_id" >&2
 		return 1
 	elif [[ -z "$l_value" ]];then
-		echoc -p "empty number at $l_id." >>/dev/stderr
+		echoc -p "empty number at $l_id." >&2
 		return 1
 	fi
 	return 0
@@ -341,7 +341,7 @@ function FUNCvalidateAll() {
 FUNCvalidateAll
 
 #alias ContAftErrA="SECFUNCechoErrA \"code='\`sed -n \"\${LINENO}p\" \"$0\"\`';\";continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
-alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?(windowId='${windowId-}')\" >>/dev/stderr;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
+alias ContAftErrA="echo \" Err:L\${LINENO}:WindowUnavailable?(windowId='${windowId-}')\" >&2;continue" # THIS alias WILL ONLY WORK PROPERLY if the failing command is in the same line of it!
 
 function FUNCisOnCurrentViewport(){ 
 	# actually checks if window is outside of current viewport,
@@ -511,7 +511,7 @@ while true; do
 	#			continue
 	#		fi
 	#	fi
-	#	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >>/dev/stderr
+	#	#echo "strWindowGeom='$strWindowGeom',windowName='$windowName',bWindowIsMissplaced='$bWindowIsMissplaced'" >&2
 	
 	#	# skip windows outside of current viewport
 	#	if((nWindowX+nWindowWidth < 0)) || ((nWindowY+nWindowHeight <0));then

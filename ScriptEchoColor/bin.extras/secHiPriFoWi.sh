@@ -26,8 +26,8 @@
 
 eval `secinit`
 
-#sudo -k moved from here.. #trap 'echo "Interrupted by user (Ctrl+c)" >/dev/stderr; bCleanExit=true; sudo -k; ' INT
-trap 'echo "Interrupted by user (Ctrl+c)" >/dev/stderr; bCleanExit=true; ' INT
+#sudo -k moved from here.. #trap 'echo "Interrupted by user (Ctrl+c)" >&2; bCleanExit=true; sudo -k; ' INT
+trap 'echo "Interrupted by user (Ctrl+c)" >&2; bCleanExit=true; ' INT
 SECFUNCcheckActivateRunLog --restoredefaultoutputs # to make it sure it will work with ctrl+c
 
 ################# INTERNAL CFG
@@ -70,7 +70,7 @@ function FUNCmsgErrQuit {
 }
 
 function FUNCmsgErr {
-  echo "PROBLEM: $@" >/dev/stderr
+  echo "PROBLEM: $@" >&2
 }
 
 #function FUNCcmpFloat {
@@ -255,10 +255,10 @@ done
 
 
 # report options
-#echo "nOptNiceHigh=$nOptNiceHigh" >/dev/stderr
-#echo "nOptDelay=$nOptDelay" >/dev/stderr
+#echo "nOptNiceHigh=$nOptNiceHigh" >&2
+#echo "nOptDelay=$nOptDelay" >&2
 #for((i=0;i<${#aIdOpts[*]};i++));do
-#  echo "${aIdOpts[i]}=`eval "\$${aIdOpts[i]}"`" >/dev/stderr
+#  echo "${aIdOpts[i]}=`eval "\$${aIdOpts[i]}"`" >&2
 #done
 
 #################### WORKing #####################

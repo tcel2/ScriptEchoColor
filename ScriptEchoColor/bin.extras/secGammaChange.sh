@@ -426,7 +426,7 @@ elif $bRandom;then
 	#@@@!!!bash-bug:    ((nRandon+=nRgfMin))
 	#@@@!!!bash-bug:    ((nRandon=nRandom+nRgfMin))
 		  nRandom=$((nRandom+nRgfMin))
-		  if((nRandom<nRgfMin||nRandom>nRgfMax));then echo "BUG: out of min/max range $nRandom" >/dev/stderr; fi
+		  if((nRandom<nRgfMin||nRandom>nRgfMax));then echo "BUG: out of min/max range $nRandom" >&2; fi
 	#@@@r    if((nRandom<nRgfMin)); then nRandom=$nRgfMin; fi 
 		  nTo=$nRandom
 		  if((nTo<nMinLimit));then
@@ -449,7 +449,7 @@ elif $bRandom;then
 
 	FUNCtoFloat() {
 		n=$1
-		if((n<nMinLimit||n>1000));then echo "BUG: out of xgamma range $n" >/dev/stderr; fi
+		if((n<nMinLimit||n>1000));then echo "BUG: out of xgamma range $n" >&2; fi
 		echo "scale=2;$1/100" |bc
 	}
 
@@ -516,7 +516,7 @@ elif $bChange;then
 #		
 #		FUNCchkFixGammaComponent "$lfGammaComp"
 ##		if   SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp<0.1";then
-##			#echo "asdf" >>/dev/stderr
+##			#echo "asdf" >&2
 ##			echo "0.1"
 ##		elif SECFUNCbcPrettyCalcA --cmpquiet "$lfGammaComp>10.0";then
 ##			echo "10.0"

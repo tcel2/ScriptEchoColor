@@ -60,7 +60,7 @@ nStartTime=`date +"%s%N"`
 
 # Must be alias because of LINENO
 stdout=" >>/dev/stdout"
-stderr=" >>/dev/stderr"
+stderr=" >&2"
 eval 'tput sc' $stderr # Save current cursor position in case there is line repositioning. It will be restored in the end.
 strRestorePos=""
 
@@ -132,14 +132,14 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 #	eval `secinit --core`
 #fi
 eval `secinit --fast` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
-#set |grep "^SECastr" >>/dev/stderr
+#set |grep "^SECastr" >&2
 
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
 if [[   -f "$strSpeedupFile" ]]; then
 	if [[ `head -n 1 "$strSpeedupFile"` != "$strCfgHeader" ]]; then
 #    mv -v "$strSpeedupFile" "$SEC_TmpFolder/speedup-"`date +%Y%m%d-%H%M%S`".old" 
 #    if [[ -f "$strSpeedupFile" ]]; then
-#      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >>/dev/stderr
+#      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >&2
 #      exit 1
 #    fi
 		rm "$strSpeedupFile"
@@ -224,9 +224,9 @@ FUNCmsg(){
 	fi
 	
 	if [[ "$strHead" == "INFO" ]]; then
-		echo $optEcho "$strHead: $strMsg" >>/dev/stderr
+		echo $optEcho "$strHead: $strMsg" >&2
 	else
-		echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >>/dev/stderr
+		echo $optEcho "$strHead $strSelfName $strFunc$nLine: $strMsg" >&2
 	fi
 	
 	#SECFUNCechoDbgA "$strHead $strSelfName $strFunc$nLine: $strMsg"
@@ -650,7 +650,7 @@ if ! $bOptHelp && ! $bOptHelpExtended && ! $bOptHelpExtendedInfo; then
 		strBeep=""
 	fi
 	if [[ -n "$strOptPROBLEM" ]]; then
-		echo -e "$strSelfName ${FUNCNAME-}() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >>/dev/stderr
+		echo -e "$strSelfName ${FUNCNAME-}() ln$LINENO Options PROBLEM: $strOptPROBLEM$strBeep" >&2
 		exit 1
 	fi
 fi
@@ -711,7 +711,7 @@ FUNCppidList(){ #TODO add these functionalities to SECFUNCppidList
 ##      "onlycommand"    ) bOnlyCommand=true;;
 ##      "onlyfullcmd"    ) bOnlyFullCmd=true;;
 			"onlyexecname"   ) bOnlyExecName=true;;
-			*)_hw;echo -e "invalid option \"$1\"" >>/dev/stderr;;
+			*)_hw;echo -e "invalid option \"$1\"" >&2;;
 		esac
 		shift
 	done
@@ -969,13 +969,13 @@ if [[   -f "$strUserCfgFile" ]]; then
 		strUserCfgFilePreviousVersion="$SECstrUserHomeConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
 		mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
 		if [[ -f "$strUserCfgFile" ]]; then
-			_he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >>/dev/stderr
+			_he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >&2
 			exit 1
 		fi
 	 
 		# Ask user to do the import
 		_hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-		FUNCread -n 1 strResp&&:;echo >>/dev/stderr; #`echo` to append a new line as read wont do that after we type a key
+		FUNCread -n 1 strResp&&:;echo >&2; #`echo` to append a new line as read wont do that after we type a key
 		if [[ "${strResp-}" != "y" ]]; then
 			_hi "Creating '$strUserCfgFile' with default values."
 			strUserCfgFilePreviousVersion=""
@@ -1013,7 +1013,7 @@ if [[ ! -f "$strUserCfgFile" ]]; then
 		astrValue[   13]="@{LYnr}"                   
 
 		if ! echo "$strCfgHeader" >"$strUserCfgFile"; then
-			_he;echo -e "Cannot create file '$strUserCfgFile', exiting..." >>/dev/stderr
+			_he;echo -e "Cannot create file '$strUserCfgFile', exiting..." >&2
 			exit 1
 		fi
 		echo "# Beware! this file is loaded like a include source file at $strSelfName" >>"$strUserCfgFile"
@@ -1059,7 +1059,7 @@ source "$strUserCfgFile"
 
 FUNCgfxTranslateChar(){
 	if (( ${#1} != 1 )); then
-		_hw;echo "parameter size must be 1 \"$1\"" >>/dev/stderr
+		_hw;echo "parameter size must be 1 \"$1\"" >&2
 	fi
 	if [[ "$1" == ' ' ]]; then 
 		echo -n " "
@@ -1086,7 +1086,7 @@ FUNCgfxTranslateCharE294(){
 		echo -en "\xE2\x94\\$1"
 		return
 	else
-		_hw;echo "invalid Hexa string 0$1" >>/dev/stderr
+		_hw;echo "invalid Hexa string 0$1" >&2
 	fi
 	echo -n
 }
@@ -1098,7 +1098,7 @@ FUNCtransExtdFmt(){
 			return
 		fi
 	done
-	_hw;echo "undefined extended format \"/$1\""'!!!' >>/dev/stderr
+	_hw;echo "undefined extended format \"/$1\""'!!!' >&2
 }
 
 FUNCtranslateColor(){
@@ -1122,7 +1122,7 @@ FUNCtranslateColor(){
 	fi
 
 	local param1stupper=`echo -n "${strParam1:0:1}" |tr '[:lower:]' '[:upper:]'`
-#	echo "cmd,${fgbg},${lt},${param1stupper},${strParam1}" >>/dev/stderr
+#	echo "cmd,${fgbg},${lt},${param1stupper},${strParam1}" >&2
 	eval echo -n "\$cmd${fgbg}${lt}${param1stupper}${strParam1:1}"
 #  case "$strParam1" in
 #  	"black")  eval echo -n "\$cmd${fgbg}${lt}Black"  ;return;;
@@ -1133,7 +1133,7 @@ FUNCtranslateColor(){
 #	  "magenta")eval echo -n "\$cmd${fgbg}${lt}Magenta";return;;
 #  	"cyan")   eval echo -n "\$cmd${fgbg}${lt}Cyan"   ;return;;
 #	  "white")  eval echo -n "\$cmd${fgbg}${lt}White"  ;return;;
-#  	*)_hw;echo "invalid color name $strParam1" >>/dev/stderr;;
+#  	*)_hw;echo "invalid color name $strParam1" >&2;;
 #  esac
 }
 
@@ -1230,7 +1230,7 @@ while [[ -n "${1-}" ]]; do
 		strString="${strString} "
 	fi
 	strString="${strString}${1}"
-	#echo "n=$((n++))" >>/dev/stderr
+	#echo "n=$((n++))" >&2
 	((n++))&&: #when n=0, this returns error!!!! :o 
 	shift
 done
@@ -1875,7 +1875,7 @@ fi
 FUNCturnOff(){
 		eval "b=\$$1"
 		if $b; then
-	_hw;echo "precedence is [$strOptPrecedence] turning off option $1" >>/dev/stderr
+	_hw;echo "precedence is [$strOptPrecedence] turning off option $1" >&2
 		fi
 		eval "$1=false"
 }
@@ -2080,7 +2080,7 @@ FUNCformatColor(){
 				strCMD=""
 				bExtendedFormat=false
 				if [[ -n "$strE294Temp" ]]; then
-					_hw;echo "strE294Temp has trash = \"$strE294Temp\"" >>/dev/stderr
+					_hw;echo "strE294Temp has trash = \"$strE294Temp\"" >&2
 				fi
 				strE294Temp="" #prevent previous trash
 			else
@@ -2316,7 +2316,7 @@ if $bAddYesNoQuestion || $bExtendedQuestionMode; then
 				if ((`expr index "$strEQMList" "$char"` == 0)); then
 					strEQMList="$strEQMList$char"
 				else
-					_hw;echo "this option key was already defined: $char" >>/dev/stderr
+					_hw;echo "this option key was already defined: $char" >&2
 				fi
 				FUNCEQMArrayAdd "@S"
 				bClose=false
@@ -2472,7 +2472,7 @@ function FUNCColorCMD(){
 				"--")bRecognized=true;bIgnore=true;; # bIgnore is at main loop: Do all @... color translations
 				"++")bRecognized=true;bIgnore=false;; 
 				"-"?|"+"?)
-					_hw;echo "unrecognized '$charPrev$char'" >>/dev/stderr
+					_hw;echo "unrecognized '$charPrev$char'" >&2
 					nSize=$(( ${#str} -2 ))
 					str="${str:0:nSize}"
 					continue;; #; strUnrecognizedChar="$strUnrecognizedChar-$charCC";;
@@ -2705,7 +2705,7 @@ fi
 
 #echo "nUnrecognizedCharCount=$nUnrecognizedCharCount"
 if ((nUnrecognizedCharCount!=0));then
-		_hw;echo "total unrecognized characters count = $nUnrecognizedCharCount " >>/dev/stderr #\"$strUnrecognizedChar\"
+		_hw;echo "total unrecognized characters count = $nUnrecognizedCharCount " >&2 #\"$strUnrecognizedChar\"
 fi
 
 if $bWARNBEEP && [[ $SEC_BEEP != "mute" ]]; then 
@@ -2721,17 +2721,17 @@ if $bWARNBEEP && [[ $SEC_BEEP != "mute" ]]; then
 fi
 
 FUNCclearInputBufferGetLastChar(){ # waits .1 seconds before collecting last pressed key, and outputs progress info
-	echo -n "$strClrKeyBufMsg" >>/dev/stderr # tells user that its clearing keyboard buffer and waiting 1 second
+	echo -n "$strClrKeyBufMsg" >&2 # tells user that its clearing keyboard buffer and waiting 1 second
 	local char=""
 	local nKeyPressed=1 # false
 	declare -a aProgress=("\|" "/" "-" '\\\\')
 	local nCount=0
 	while FUNCread -s -n 1 -t $nClrKeyBufDelay -p "" char; do 
-		echo -ne "${aProgress[$((nCount++ % 4))]}\b" >>/dev/stderr
+		echo -ne "${aProgress[$((nCount++ % 4))]}\b" >&2
 		nKeyPressed=0 # true
 	done 
 	local str=`echo -ne "$strClrKeyBufMsg" |tr "[:graph:]" " "`
-	echo -ne "\r$str \r" >>/dev/stderr # the space after str is in case clear key progress was shown
+	echo -ne "\r$str \r" >&2 # the space after str is in case clear key progress was shown
 	echo -n "$char" # this should go to who called this function, and not to normal stdout
 	return $nKeyPressed
 }

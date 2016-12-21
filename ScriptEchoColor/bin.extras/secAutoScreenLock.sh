@@ -25,7 +25,7 @@
 eval `secinit --extras`
 
 export SEC_SAYVOL=20
-#echo "SECstrRunLogFile=$SECstrRunLogFile" >>/dev/stderr
+#echo "SECstrRunLogFile=$SECstrRunLogFile" >&2
 
 bForceLightWeight=false
 bModeUnity=false
@@ -165,7 +165,7 @@ strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 if $bLockedCheckOnly;then
 	if $bModeUnity;then
 		while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
-	#		secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
+	#		secUnity3DWMLogMonitorDaemon.sh >&2 & disown
 			nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
 			echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
 		done
@@ -233,7 +233,7 @@ SECFUNCuniqueLock --id "$strDaemonId" --waitbecomedaemon
 if $bModeUnity;then
 	nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
 fi
-#secUnity3DWMLogMonitorDaemon.sh >>/dev/stderr & disown
+#secUnity3DWMLogMonitorDaemon.sh >&2 & disown
 #"$SECstrScriptSelfName" --unitylogdaemononly&
 
 nLightweightHackId=1

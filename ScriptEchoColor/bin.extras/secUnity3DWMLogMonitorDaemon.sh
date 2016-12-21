@@ -122,7 +122,7 @@ else
 			"${astrCmd[@]}" |tee "$CFGstrUnityLogFile"
 			
 #			while pgrep -fx "${astrCmd[*]}";do # [*] to be one param only
-#				echo "pid for cmd='${astrCmd[*]}'" >>/dev/stderr
+#				echo "pid for cmd='${astrCmd[*]}'" >&2
 #				sleep 5;
 #			done
 			SECFUNCechoErrA "Unity log monitor exited, restarting... cmd='${astrCmd[*]}'"

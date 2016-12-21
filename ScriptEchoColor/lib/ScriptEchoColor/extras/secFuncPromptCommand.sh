@@ -57,11 +57,11 @@ function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this func
 }
 
 function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so the uninitialized variable below will control it to happen only once
-#	echo -n "@I" >>/dev/stderr #TODO what is happening?? why this function is not run properly just once!??!?!?!
+#	echo -n "@I" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
 
 	# will initialize if it is unset, can be with Sec or Nano
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
-#		echo "@K" >>/dev/stderr # OK
+#		echo "@K" >&2 # OK
 		SECFUNCbeforePromptCommand_CustomUserCommand;
 		
 		SECdtBeforeCommandSec="`date +"%s"`"
@@ -70,13 +70,13 @@ function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so t
 		if ! ${SECDEVstrProjectPath+false};then
 			# developing mode detection
 			# TODO find a better way to make it work properly...
-			echo >>/dev/stderr #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
-			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >>/dev/stderr
+			echo >&2 #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
+			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >&2
 		else
-			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >>/dev/stderr
+			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >&2
 		fi
 	fi
-#	echo -n "@O" >>/dev/stderr #TODO what is happening?? why this function is not run properly just once!??!?!?!
+#	echo -n "@O" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
 }
 trap 'SECFUNCbeforePromptCommand;' DEBUG
 function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh" ]];then source "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh";fi

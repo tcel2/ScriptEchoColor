@@ -46,7 +46,7 @@ varset --default bForceDisableFastMedia=false
 
 function FUNCcheckFreeSpace() {
 	local lfileFastMediaReal=`readlink "$fastMedia"`
-	df -h "$lfileFastMediaReal" >>/dev/stderr
+	df -h "$lfileFastMediaReal" >&2
 	
 	local lsedDfAvailableSpace='s"^[^[:blank:]]*[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:digit:]]*[[:blank:]]*([[:digit:]]*)[[:blank:]]*.*"\1"'
 	local lnAvailableSpace=`df -B 1 "$lfileFastMediaReal" |tail -n 1 |sed -r "$lsedDfAvailableSpace"`

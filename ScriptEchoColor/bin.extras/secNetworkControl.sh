@@ -90,8 +90,8 @@ function FUNCinternetConnectivity() {
 
 function FUNCcheckInternet() {
 	if $bVerbose;then
-		echo "state:'`FUNCinternetState`'" >>/dev/stderr
-		echo "connectivity:'`FUNCinternetConnectivity`'" >>/dev/stderr
+		echo "state:'`FUNCinternetState`'" >&2
+		echo "connectivity:'`FUNCinternetConnectivity`'" >&2
 	fi
 	
   if FUNCinternetConnectivity >/dev/null;then

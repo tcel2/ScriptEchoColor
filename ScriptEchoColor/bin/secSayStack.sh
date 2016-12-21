@@ -314,8 +314,8 @@ function FUNCplay() {
 	
 #	if $bStdoutFilename;then
 ##		FUNCcacheFileToPlay "$lmd5sumText"
-##		ls --color /proc/$$/fd -l >>/dev/stderr 
-##		echo "$fileAudio" >>/dev/stderr 
+##		ls --color /proc/$$/fd -l >&2 
+##		echo "$fileAudio" >&2 
 ##		echo "$fileAudio" >>/dev/stdout
 #		echo "$fileAudio"
 #	fi
@@ -438,7 +438,7 @@ if [[ -z "$sayText" ]]; then
 	fi
 else
 	if $bOutputSayText;then
-		echo "SECSay: $sayText" >>/dev/stderr
+		echo "SECSay: $sayText" >&2
 	fi
 fi
 
@@ -576,11 +576,11 @@ while true; do
 			nSayVolGet="`FUNCgetParamValue "$strHead" SECsayVol`"
 			strSndEffectsGet="`FUNCgetParamValue "$strHead" SECstrSndEffects`"
 			
-#			echo "md5sumTextGet='$md5sumTextGet'" >>/dev/stderr
-#			echo "nSayVolGet='$nSayVolGet'" >>/dev/stderr
-#			echo "strSndEffectsGet='$strSndEffectsGet'" >>/dev/stderr
+#			echo "md5sumTextGet='$md5sumTextGet'" >&2
+#			echo "nSayVolGet='$nSayVolGet'" >&2
+#			echo "strSndEffectsGet='$strSndEffectsGet'" >&2
 			
-			#echo "strHead=$strHead" >>/dev/stderr
+			#echo "strHead=$strHead" >&2
 			bCanPlay=true
 			if [[ -z "$md5sumTextGet" ]];then
 				bCanPlay=false

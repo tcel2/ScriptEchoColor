@@ -96,7 +96,7 @@ function SECFUNCarraysExport() { #help export all arrays
 	# this is a list of arrays that are set by the system or bash, not by SEC
 	local lastrArraysToSkip=(`env -i bash -i -c declare 2>/dev/null |sed -r "$lsedArraysIds"`)
 	local lastrArrays=(`declare |sed -r "$lsedArraysIds"`)
-	if $lbVerbose;then declare -p lastrArrays >>/dev/stderr;fi
+	if $lbVerbose;then declare -p lastrArrays >&2;fi
 	lastrArraysToSkip+=(
 		BASH_REMATCH 
 		FUNCNAME 
@@ -110,7 +110,7 @@ function SECFUNCarraysExport() { #help export all arrays
 		for lstrArrayNameToSkip in ${lastrArraysToSkip[@]};do
 			if [[ "$lstrArrayName" == "$lstrArrayNameToSkip" ]];then
 #				lbSkip=true
-				if $lbVerbose;then echo "SKIP: $lstrArrayName" >>/dev/stderr;fi
+				if $lbVerbose;then echo "SKIP: $lstrArrayName" >&2;fi
 				continue 2; #continues outer loop
 #				break; # breaks this inner loop
 			fi
@@ -121,7 +121,7 @@ function SECFUNCarraysExport() { #help export all arrays
 		
 		# only export already exported arrays...
 		if ! declare -p "$lstrArrayName" |grep -q "^declare -.x";then
-			if $lbVerbose;then echo "SKIP: $lstrArrayName" >>/dev/stderr;fi
+			if $lbVerbose;then echo "SKIP: $lstrArrayName" >&2;fi
 			continue
 		fi
 		
@@ -136,15 +136,15 @@ function SECFUNCarraysExport() { #help export all arrays
 		
 		# creates the variable to be restored on a child shell
 		local lstrToExport="export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
-		if $lbVerbose;then echo "$lstrToExport" >>/dev/stderr;fi
+		if $lbVerbose;then echo "$lstrToExport" >&2;fi
 		eval "$lstrToExport"
 		
 		export SECbHasExportedArrays=true
 	done
 	
 	if $lbVerbose;then
-		declare -p SECcmdExportedAssociativeArrays >>/dev/stderr
-		declare -p SECbHasExportedArrays >>/dev/stderr
+		declare -p SECcmdExportedAssociativeArrays >&2
+		declare -p SECbHasExportedArrays >&2
 	fi
 	
 	SECFUNCdbgFuncOutA;
@@ -227,7 +227,7 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch; 
 	if $lbDelayMode;then
 		local lnOneDayInSeconds="$((3600*24))"
 		#((lfTime+=$SECnFixDate))
-#		echo "SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr
+#		echo "SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >&2
 		local lnDays="`SECFUNCbcPrettyCalcA --trunc --scale 0 "$lfTime/$lnOneDayInSeconds"`"
 		lfTime="`SECFUNCbcPrettyCalcA --scale 9 "$lfTime+$SECnFixDate"`"
 		
@@ -363,25 +363,25 @@ function SECFUNCprc() { #help use (the alias) as `SECFUNCprcA <otherFunction> [p
 		elif [[ "$1" == "--calledWithAlias" ]];then #DO NOT DOCUMENT THIS ONE! :P
 			lbCalledWithAlias=true
 		else
-			echo "$FUNCNAME:ERROR:invalid option '$1'" >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			echo "$FUNCNAME:ERROR:invalid option '$1'" >&2; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
 			_SECFUNCcriticalForceExit
 		fi
 		shift
 	done
 	
 	if [[ -z "$lstrCaller" ]];then
-			echo "SECERROR:$lstrCaller.$FUNCNAME: Must be called from other functions lstrCaller='$lstrCaller'." >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			echo "SECERROR:$lstrCaller.$FUNCNAME: Must be called from other functions lstrCaller='$lstrCaller'." >&2; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
 			_SECFUNCcriticalForceExit
 	fi
 	#if [[ -z "$lstrFuncCallerOfCaller" ]];then
 	if ! $lbCalledWithAlias;then
-			echo "SECERROR:$lstrCaller.$FUNCNAME: Use the alias 'SECFUNCprcA', and set this variable at caller function (current value is): SEClstrFuncCaller='${SEClstrFuncCaller-}'" >>/dev/stderr; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
+			echo "SECERROR:$lstrCaller.$FUNCNAME: Use the alias 'SECFUNCprcA', and set this variable at caller function (current value is): SEClstrFuncCaller='${SEClstrFuncCaller-}'" >&2; #DO NOT USE SECFUNCechoErrA here as it calls this function and will cause recursiveness
 			_SECFUNCcriticalForceExit
 	fi
 	
 	# no log or message on fail, as it is an execution preventer
 	if [[ "$lstrFuncCallerOfCaller" != "$1" ]];then
-#		echo "DIFF: lstrFuncCallerOfCaller='$lstrFuncCallerOfCaller' lstrCaller='$lstrCaller' FUNCNAME='$FUNCNAME' SEClstrFuncCaller='$SEClstrFuncCaller'" >>/dev/stderr
+#		echo "DIFF: lstrFuncCallerOfCaller='$lstrFuncCallerOfCaller' lstrCaller='$lstrCaller' FUNCNAME='$FUNCNAME' SEClstrFuncCaller='$SEClstrFuncCaller'" >&2
 		"$@"
 	fi
 }
@@ -496,7 +496,7 @@ function SECFUNCpidChecks() { #help pid checks #TODO remove deprecated code
 	if $lbHasOtherPidsPidSkip;then
 		# empty arrays create one empty line prevented with "^$"
 		local lnCount="`cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests" 2>/dev/null |grep -wv "$lnPid" |grep -v "^$" |wc -l`"
-		#echo "lnCount=$lnCount, `cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests"`" >>/dev/stderr
+		#echo "lnCount=$lnCount, `cat "$SECstrLockFileRequests" "$SECstrLockFileAceptedRequests"`" >&2
 		if((lnCount>0));then
 			return 0
 		else
@@ -895,11 +895,11 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lstrChildIndicator+="CHILD process (see var SEClstrFuncExecLastChildRef)"
 		fi
 		
-		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}${lstrExec}${lstrChildIndicator}${lstrColorSuffix}" >>/dev/stderr
+		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}${lstrExec}${lstrChildIndicator}${lstrColorSuffix}" >&2
 	fi
 	
 	if $bWaitKey;then
-		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >>/dev/stderr;read -n 1;
+		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >&2;read -n 1;
 	fi
 	
 	if $SECbExecJustEcho;then
@@ -923,7 +923,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   
 	export lstrFileRetVal=$(mktemp)
 	function SECFUNCexec_runAtom(){ #help <BASHPID> (useless?)
-		#trap >>/dev/stderr
+		#trap >&2
 		local lnBPid="$1"
 		
 		local lnPPid="$$"
@@ -978,7 +978,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGTERM $lnPidChild;fi;sleep 1;
 				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGKILL $lnPidChild;fi;sleep 1;
 				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGABRT $lnPidChild;fi;sleep 1;
-			};SECFUNCexec_atomKill $lnPPid >/dev/null 2>&1 & #echo "lnPPid='$lnPPid'" >>/dev/stderr
+			};SECFUNCexec_atomKill $lnPPid >/dev/null 2>&1 & #echo "lnPPid='$lnPPid'" >&2
 			
 			wait $lnPidChild&&:;lnRet=$?;echo "exit${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
 			echo "exitSignalInfo${SECcharTab}`SECFUNCerrCodeExplained ${lnRet}`" >>"$lstrFileRetVal";
@@ -1167,7 +1167,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	function SECFUNCbcPrettyCalc_bc() {
 		local lstrCalcTmp="$1"
 		if $lbCalcLog;then
-			echo "SECFUNCbcPrettyCalc_bc:CalcLog: '$lstrCalcTmp'" >>/dev/stderr;
+			echo "SECFUNCbcPrettyCalc_bc:CalcLog: '$lstrCalcTmp'" >&2;
 		fi
 		bc <<< "$lstrCalcTmp"
 	}
@@ -1175,7 +1175,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	if $lbRound;then
 		# NOTICE: bc does not exit with error on syntax error, but an empty output means there is error.
 #		lstrCalcTmp="scale=$((lnScale+1));$lstrOutput"
-#		if $lbCalcLog;then echo "$lstrCalcTmp" >>/dev/stderr;fi
+#		if $lbCalcLog;then echo "$lstrCalcTmp" >&2;fi
 #		lstrOutput="`bc <<< "$lstrCalcTmp"`"
 		lstrOutput="`SECFUNCbcPrettyCalc_bc \
 			"scale=$((lnScale+1));$lstrOutput"`"
@@ -1211,7 +1211,7 @@ function SECFUNCbcPrettyCalc() { #help prefer using SECFUNCbcPrettyCalcA
 	# if it is less than 1.0 prints leading "0" like "0.123" instead of ".123"
 #	lstrOutput="`SECFUNCbcPrettyCalc_bc \
 #		"scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x"`"
-#	echo "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x" >>/dev/stderr
+#	echo "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x" >&2
 #	lstrOutput="`SECFUNCbcPrettyCalc_bc	"scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \"-0\",-x else print x"`"
 	lstrOutput="`SECFUNCbcPrettyCalc_bc "scale=$lnScale;x=($lstrOutput)/1; if(x==0) print \"$lstrZeroDotZeroes\" else if(x>0 && x<1) print 0,x else if(x>-1 && x<0) print \\\"-\\\",0,-x else print x"`"
 	if [[ -z "$lstrOutput" ]];then
@@ -1341,7 +1341,7 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	
 	SECFUNCechoDbgA "#lstrWordsNoFmt=${#lstrWordsNoFmt}, lnTotalFillChars=$lnTotalFillChars, lnFillCharsLeft=$lnFillCharsLeft, lnFillCharsRight=$lnFillCharsRight"
 	
-#	echo "$lstrOutput$loptCarryageReturn" >>/dev/stderr
+#	echo "$lstrOutput$loptCarryageReturn" >&2
 	echo -e $loptNewLine "$lstrOutput$loptCarryageReturn"
 	
 	SECFUNCdbgFuncOutA;
@@ -1359,29 +1359,29 @@ function SECFUNCfixCorruptFile() { #help usually after a blackout?
 	lstrDataFile="`readlink -f "${lstrDataFile}"`"
 	
 	local lstrMsgCriticalCorruptDataFile="\E[0m\E[93m\E[41m\E[5m Critical: Corrupt data-file! \E[0m"
-	echo -e "$lstrMsgCriticalCorruptDataFile backuping..." >>/dev/stderr
-	cp -v "$lstrDataFile" "${lstrDataFile}.`SECFUNCdtFmt --filename`" >>/dev/stderr
-	echo " >>---[Possible lines with problem]--->" >>/dev/stderr
-	cat "$lstrDataFile" |cat -n |sed "/^[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:alnum:]_]*=.*/d" >>/dev/stderr
+	echo -e "$lstrMsgCriticalCorruptDataFile backuping..." >&2
+	cp -v "$lstrDataFile" "${lstrDataFile}.`SECFUNCdtFmt --filename`" >&2
+	echo " >>---[Possible lines with problem]--->" >&2
+	cat "$lstrDataFile" |cat -n |sed "/^[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:alnum:]_]*=.*/d" >&2
 	if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` This can happen after a blackout. It is advised to manually fix the data file. Removing it may cause script malfunction. Remove it anyway (y/...)? (any other key to manually fix it)" strResp;echo "$strResp"`" == "y" ]];then
-		echo >>/dev/stderr
-		rm -v "$lstrDataFile" >>/dev/stderr
+		echo >&2
+		rm -v "$lstrDataFile" >&2
 		
 		# recreate the datafile so symlinks dont get broken avoiding creating new files and disconnecting sec pids...
 		echo -n "" >"$lstrDataFile"
 		while true;do
 			if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` As you removed the file, it is adviseable to stop the script now with 'Ctrl+c', or you wish to continue running it at your own risk (y)?" strResp;echo "$strResp"`" == "y" ]];then
-				echo >>/dev/stderr
+				echo >&2
 				break;
 			fi
-			echo >>/dev/stderr
+			echo >&2
 		done
 	else
-		echo >>/dev/stderr
+		echo >&2
 		while [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` (waiting manual fix) ready to continue (y/...)?" strResp;echo "$strResp"`" != "y" ]];do
-			echo >>/dev/stderr
+			echo >&2
 		done
-		echo >>/dev/stderr
+		echo >&2
 	fi
 }
 
@@ -1550,7 +1550,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	
 	function SECFUNCdelay_get(){
 		local lfNow="`SECFUNCdtFmt`"
-#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
+#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >&2			
 		local lfDelayToOutput="`SECFUNCbcPrettyCalcA --scale 9 "${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"`"
 		local lstrShowId=""
 		if $lbShowId;then
@@ -1563,7 +1563,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			#SECFUNCtimePretty "$lfDelay"
 			#SECFUNCtimePretty "`SECFUNCbcPrettyCalcA "$lfDelay+$SECnFixDate"`"
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelay"
-			#echo "lfDelayToOutput='$lfDelayToOutput'" >>/dev/stderr
+			#echo "lfDelayToOutput='$lfDelayToOutput'" >&2
 			#SECFUNCdtFmt --delay --nodate --pretty "$lfDelayToOutput"
 			echo -n "$lstrShowId";SECFUNCdtFmt --delay --nozero --pretty "$lfDelayToOutput"
 		elif $lbGetPrettyFull;then
@@ -1596,7 +1596,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		fi
 		
 		local delay=`SECFUNCdelay_get`
-#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >>/dev/stderr			
+#		echo ">>>SECDBG: $FUNCNAME using SECFUNCbcPrettyCalcA" >&2			
 		if SECFUNCbcPrettyCalcA --cmpquiet "$delay>=$lnCheckDelayAt";then
 			SECFUNCdelay_init
 			return 0

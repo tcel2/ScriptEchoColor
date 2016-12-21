@@ -274,19 +274,19 @@ function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized executi
 		local lbAccepted=false
 		local lnSECONDS=$SECONDS
 		while true;do
-#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >&2
 			SECFUNCcfgReadDB #"${!lanRefPRL}"
 #			cat `SECFUNCcfgFileName --get`
 #			SECFUNCcfgFileName --show
-#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >&2
 #			SECFUNCcfgFileName --show
-#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >>/dev/stderr
-#			echo "lanRefPRL[@]=${lanRefPRL[@]-}" >>/dev/stderr
+#			SECFUNCexecA -ce declare -p lanRefPRL ${!lanRefPRL} >&2
+#			echo "lanRefPRL[@]=${lanRefPRL[@]-}" >&2
 			if((${#lanRefPRL[@]}>0));then
 				local lnPid="${lanRefPRL[0]}"
 				local lstrReport="$lstrId request from lnpid='$lnPid' accepted"
 				if ! $lbStack;then lstrReport="${lstrReport}, other requests dropped";fi
-				echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+				echo "${lstrPrefixMsg} $lstrReport" >&2
 				if $lbSpeak;then secSayStack.sh --showtext "request accepted";fi #to not speak so much as the report...
 #				SECFUNCcfgWriteVar "$lbCfgReq"=false # accepted, reset
 				
@@ -305,7 +305,7 @@ function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized executi
 				lbAccepted=true
 				break
 			else
-				echo -en "${lstrPrefixMsg} Waiting '$lstrId' request for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Waiting '$lstrId' request for $((SECONDS-lnSECONDS))s\r" >&2
 			fi # to break this loop
 			
 			if ! $lbWait;then break;fi
@@ -320,7 +320,7 @@ function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized executi
 		SECFUNCcfgWriteVar "${!lanRefPRL}";
 		
 		local lstrReport="$lstrId requested"
-		echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+		echo "${lstrPrefixMsg} $lstrReport" >&2
 
 		if $lbWait;then 
 			local lnSECONDS=$SECONDS
@@ -332,7 +332,7 @@ function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized executi
 					break;
 				fi
 				
-				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >&2
 				sleep 1
 			done
 		else
@@ -342,13 +342,13 @@ function SECFUNCsimpleSyncRequest() { #help <lstrId> simple synchronized executi
 		
 #		SECFUNCcfgWriteVar "$lbCfgReq"=true
 #		local lstrReport="$lstrId requested"
-#		echo "${lstrPrefixMsg} $lstrReport" >>/dev/stderr
+#		echo "${lstrPrefixMsg} $lstrReport" >&2
 #		if $lbSpeak;then secSayStack.sh --showtext "$lstrReport";fi
 #		local lnSECONDS=$SECONDS
 #		while true;do
 #			SECFUNCcfgReadDB
 #			if ${!lbCfgReq};then #true
-#				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+#				echo -en "${lstrPrefixMsg} Waiting request '$lstrId' be accepted for $((SECONDS-lnSECONDS))s\r" >&2
 #			else
 #				break;
 #			fi # after accepted it will be set to false
@@ -434,7 +434,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			local lnSECONDS=$SECONDS
 			while ${!lbCfgStopReq};do
 				SECFUNCcfgReadDB
-				echo -en "${lstrPrefixMsg} Waiting stop request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Waiting stop request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >&2
 				sleep 1
 			done
 		fi
@@ -445,7 +445,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			local lnSECONDS=$SECONDS
 			while ${!lbCfgContinueReq};do
 				SECFUNCcfgReadDB
-				echo -en "${lstrPrefixMsg} Waiting continue request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Waiting continue request '$lstrBaseId' be accepted for $((SECONDS-lnSECONDS))s\r" >&2
 				sleep 1
 			done
 		fi
@@ -459,7 +459,7 @@ function SECFUNCsyncStopContinue() { #help [lstrBaseId] help on synchronizing sc
 			while ! ${!lbCfgContinueReq};do
 				SECFUNCcfgReadDB
 				SECFUNCcfgWriteVar "$lbCfgStopReq"=false # put here to keep accepting stop requests in case they happen more than one time...
-				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for $((SECONDS-lnSECONDS))s\r" >>/dev/stderr
+				echo -en "${lstrPrefixMsg} Holding execution '$lstrBaseId' for $((SECONDS-lnSECONDS))s\r" >&2
 				sleep 1
 			done
 			if $lbSpeak;then secSayStack.sh --showtext  "continue request accepted";fi
@@ -624,7 +624,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 					break;
 				else
 #				if $SECbDaemonWasAlreadyRunning;then
-					echo -ne "$FUNCNAME: Wait other ($SECnDaemonPid) Daemon '$lstrId': `SECFUNCdelay "$FUNCNAME" --getsec`s...\r" >>/dev/stderr
+					echo -ne "$FUNCNAME: Wait other ($SECnDaemonPid) Daemon '$lstrId': `SECFUNCdelay "$FUNCNAME" --getsec`s...\r" >&2
 					sleep 1 #keep trying to become the daemon
 #				else
 #					break #has become the daemon, breaks loop..
@@ -664,7 +664,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 					local lstrQuickLock="${lstrUniqueFile}.ToCreateRealFile.lock"
 					if ln -s "$lstrUniqueFile" "$lstrQuickLock";then
 						rm "$lstrUniqueFile"
-						echo "[`SECFUNCdtTimeForLogMessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >>/dev/stderr
+						echo "[`SECFUNCdtTimeForLogMessages`]Removed lstrUniqueFile='$lstrUniqueFile' with dead lnPidCheck='$lnPidCheck'." >&2
 						rm "$lstrQuickLock" #after all is done
 					fi
 				fi
@@ -805,11 +805,11 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 	done
 	
 	local lpath="$SECstrUserHomeConfigPath/SEC.ScriptsConfigurationFiles"
-	#if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then mv -v "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >>/dev/stderr;	ln -sv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >>/dev/stderr; fi 
+	#if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then mv -v "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >&2;	ln -sv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >&2; fi 
 	if [[ ! -d "$lpath" ]];then
 		if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]] && [[ ! -L "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then #TODO remove this check one day, it is here just to provide an easy migration...
-			mv -Tv "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >>/dev/stderr; # just rename
-			ln -Tsv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >>/dev/stderr;
+			mv -Tv "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >&2; # just rename
+			ln -Tsv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >&2;
 		fi
 		mkdir -p "$lpath"
 	fi
@@ -822,7 +822,7 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 		if [[ -z "$SECcfgFileName" ]];then
 		#if [[ -z "$SECcfgFileName" ]];then
 			local lstrCanonicalFileName="`readlink -f "$0"`"
-			#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >>/dev/stderr
+			#echo "lstrCanonicalFileName=$lstrCanonicalFileName" >&2
 			#SECcfgFileName="$lpath/`basename "$0"`.cfg"
 			SECcfgFileName="$lpath/`basename "$lstrCanonicalFileName"`.cfg"
 		fi
@@ -926,10 +926,10 @@ function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars
 			#eval "`sed -r -e "$sedFixStoredArray" $SECcfgFileName`"
 			#source "$SECcfgFileName"
 			
-#			declare -p CFGanPidRequesterListForFancyWork >>/dev/stderr
-#			cat "$SECcfgFileName" >>/dev/stderr
+#			declare -p CFGanPidRequesterListForFancyWork >&2
+#			cat "$SECcfgFileName" >&2
 			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file? ugh????
-#			declare -p CFGanPidRequesterListForFancyWork >>/dev/stderr
+#			declare -p CFGanPidRequesterListForFancyWork >&2
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
 				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
@@ -1011,7 +1011,7 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	chmod u+rw,go-rw "$SECcfgFileName" #permissions for safety
 	
 	if $lbReport;then
-		echo "$lstrToWrite" >>/dev/stderr
+		echo "$lstrToWrite" >&2
 	fi
 	
 	return 0
@@ -1053,7 +1053,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
 			SECFUNCcfgWriteVar $lstrCfgVar
 			if $lbShowAll;then
-				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar-}'" >>/dev/stderr
+				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar-}'" >&2
 			fi
 		done
 	fi

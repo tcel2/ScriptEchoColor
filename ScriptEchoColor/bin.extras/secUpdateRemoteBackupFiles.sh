@@ -391,10 +391,10 @@ function FUNCzenitySelectFiles() {
 	local listSelected=`zenity --list --checklist --column="" --column="$lstrTitle" "$@"`&&:
 	
 	if [[ -n "$listSelected" ]];then
-		echoc --info "Selected files list:" >>/dev/stderr
-		echo "$listSelected" >>/dev/stderr
+		echoc --info "Selected files list:" >&2
+		echo "$listSelected" >&2
 		local alistSelected=(`echo "$listSelected" |sed -r "$sedEscapeQuotes" |sed -r "$sedEncloseLineOnQuotes" |sed -r "$sedTrSeparatorToQuotes"`)
-		echo "${alistSelected[@]}" >>/dev/stderr
+		echo "${alistSelected[@]}" >&2
 		echo "${alistSelected[@]}"
 	fi
 };export -f FUNCzenitySelectFiles
@@ -402,7 +402,7 @@ function FUNCzenitySelectAndAddFiles() {
 	local lstrFilesToAdd="`FUNCzenitySelectFiles "file to add" "$@"`"
 	if [[ -n "$lstrFilesToAdd" ]];then
 		echoc --info "Adding requested files: $lstrFilesToAdd"
-		#echo "lstrFilesToAdd='$lstrFilesToAdd'" >>/dev/stderr
+		#echo "lstrFilesToAdd='$lstrFilesToAdd'" >&2
 		eval $0 --skipnautilus --addfiles $lstrFilesToAdd
 	else
 		echoc --info "no files selected"
@@ -519,7 +519,7 @@ function FUNCcompressFile() {
 		fi
 		7z a $lstrPassOpt "$lstrFileCompressed" "$1" #to not echo the password
 		SECFUNCexecA -c --echo touch -r "$1" "$lstrFileCompressed"
-	) 1>/dev/stderr
+	) 1>&2
 	echo "$lstrFileCompressed"
 }
 function FUNCcheckUpdateAllCompressedFiles() {
@@ -812,7 +812,7 @@ elif $bLookForChanges;then
 					-and \( -not -xtype d \) \
 			)&&: #TODO it works but returns 1, why?
 			nFilesTot="${#astrFullFilesList[@]}"
-			#echo "#astrFullFilesList[@]=${#astrFullFilesList[@]}" >>/dev/stderr
+			#echo "#astrFullFilesList[@]=${#astrFullFilesList[@]}" >&2
 			for strFileBTR in "${astrFullFilesList[@]}";do
 				FUNCcopy $bDoIt "$strFileBTR";
 			done

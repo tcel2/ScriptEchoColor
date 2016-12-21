@@ -184,7 +184,7 @@ else
 						|gawk '!seen[$0]++'`)
 		#				|while read lnCurrent;do
 					for lnCurrent in ${lanCurrent[@]};do
-		#				echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >>/dev/stderr
+		#				echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >&2
 						if((lnPrevious>lnCurrent));then
 							SECFUNCechoDbgA "lnPrevious='$lnPrevious' > lnCurrent='$lnCurrent'"
 							((lnTotal+=lnPrevious))&&:
@@ -194,7 +194,7 @@ else
 					SECFUNCechoDbgA "lnTotal='$lnTotal' += lnPrevious='$lnPrevious'"
 					((lnTotal+=lnPrevious))&&:
 					echo "$lnTotal:$lnPrevious"
-		#			echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >>/dev/stderr
+		#			echo "1)lnCurrent='$lnCurrent',lnPrevious='$lnPrevious',lnTotal='$lnTotal'" >&2
 				}
 				
 				# recalc totals

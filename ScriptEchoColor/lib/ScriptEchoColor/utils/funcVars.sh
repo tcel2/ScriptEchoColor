@@ -123,13 +123,13 @@ function SECFUNCvarClearTmpFiles() { #help remove tmp files that have no related
 			SECFUNCshowHelp ${FUNCNAME}
 			SECFUNCdbgFuncOutA;return
 		else
-			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >&2
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
 	done
 	
-	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >>/dev/stderr
+	#local ltmpDateIn=`date +"%Y/%m/%d-%H:%M:%S.%N"`;echo -e "\nIN[$ltmpDateIn]: SECFUNCvarClearTmpFiles\n" >&2
 	
 	# a control file to clean once only after a delay
 	lstrClearControlFile="$SEC_TmpFolder/.SEC.ClearTmpFiles.LastDateTimeStamp"
@@ -215,7 +215,7 @@ function SECFUNCvarClearTmpFiles() { #help remove tmp files that have no related
 		|tail -n +2 2>/dev/null \
 		|while read lstrFoundFile; do SECFUNCvarClearTmpFiles_removeFilesForDeadPids "$lstrFoundFile";done
 	
-	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >>/dev/stderr
+	#echo -e "OUT[$ltmpDateIn]: SECFUNCvarClearTmpFiles" >&2
 	
 	touch "$lstrClearControlFile" #be the last thing after the main work so the delay without cpu usage is granted
 	SECFUNCdbgFuncOutA
@@ -363,7 +363,7 @@ function SECFUNCvarShowAll() { #help will shrink db and output it
 	done
 	
 	SECFUNCvarWriteDB
-	echo "$SECvarFile" >>/dev/stderr
+	echo "$SECvarFile" >&2
 	cat "$SECvarFile" #|grep -v " SECvars=" #remove control variables from the list
 	
 	return 0
@@ -500,7 +500,7 @@ function SECFUNCvarSet() { #help [options] <<var> <value>|<var>=<value>>\n\tImpo
 		elif [[ "$1" == "--" ]];then #SECFUNCvarSet_help remaining params after this are considered as not being options
 			lbStopParams=true;
 		else
-			#echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			#echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >&2
 			SECFUNCechoErrA "invalid option '$1'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
@@ -659,7 +659,7 @@ function SECFUNCvarIsSet() { #help equal to: SECFUNCvarIsRegistered
 	return $?
 }
 #function SECFUNCdebugMsg() {
-#	echo "SEC_DEBUG(`basename "$0"`): $@" >>/dev/stderr
+#	echo "SEC_DEBUG(`basename "$0"`): $@" >&2
 #}
 #function SECFUNCdebugMsgWaitAkey() {
 #	if $SEC_DEBUG_WAIT;then
@@ -718,7 +718,7 @@ function SECFUNCvarWaitValue() { #help [OPTIONS] <var> <value> [delay]: wait unt
 			if $l_bNot;then
 				lstrNot="NOT "
 			fi
-			echo -ne "waiting $l_var='$l_value' ${lstrNot}be '$l_valueCheck' for ${SECONDS}s...\r" >>/dev/stderr
+			echo -ne "waiting $l_var='$l_value' ${lstrNot}be '$l_valueCheck' for ${SECONDS}s...\r" >&2
 		fi
 	done
 }
@@ -867,9 +867,9 @@ function pSECFUNCvarLoadMissingVars() { #private:
 			fi
 		done
 	fi
-#	echo "SECvars=${SECvars[@]-}" >>/dev/stderr
-#	echo "MisVars=${l_varsMissing[@]}" >>/dev/stderr
-#	cat $SECvarFile |grep varTst |grep -v SECvars >>/dev/stderr
+#	echo "SECvars=${SECvars[@]-}" >&2
+#	echo "MisVars=${l_varsMissing[@]}" >&2
+#	cat $SECvarFile |grep varTst |grep -v SECvars >&2
 }
 
 function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
@@ -898,12 +898,12 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 		# if exists (is set, not unset), backup the value before reading DB
 		l_thisPidCounter=${SECmultiThreadEvenPids[$$]}
 	fi
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >&2
 	SECFUNCvarReadDB SECmultiThreadEvenPids #readonly read the full array (that will also bring the pids in the indexes!), just to know what other pids are doing; the stored SECmultiThreadEvenPids on the DB, is just an old value that was set by the last pid that write to the DB, not the real current value in the memory of that pid.
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >&2
 	#restore the backuped value, or set default if none
 	SECmultiThreadEvenPids[$$]=$l_thisPidCounter
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >&2
 	
 	#maintenance, remove dead pids from the list
 	if $l_bForceAllow;then 
@@ -955,9 +955,9 @@ function pSECFUNCvarMultiThreadEvenPidsAllowThis() { #private
 function SECFUNCvarSyncWriteReadDB() { #help this function should come in the beggining of a loop
 	SECFUNCdbgFuncInA
 	local l_lockPid
-	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >>/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >&2 #@@@R
 	if l_lockPid=`SECFUNCfileLock --islocked "$SECvarFile"`;then
-		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >>/dev/stderr
+		#echo "$$,l_lockPid=$l_lockPid,SECFUNCvarWriteDB" >&2
 		if [[ "$l_lockPid" == "$$" ]];then
 			#pSECFUNCvarRegister SECmultiThreadEvenPids
 			SECFUNCvarWriteDB --skiplock #the lock was created in the end of this function
@@ -968,16 +968,16 @@ function SECFUNCvarSyncWriteReadDB() { #help this function should come in the be
 	SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --init
 	while ! pSECFUNCvarMultiThreadEvenPidsAllowThis;do
 		sleep 0.1 #waits so other processes have a change to work with the BD
-		#echo "delay=`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`" >>/dev/stderr
+		#echo "delay=`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`" >&2
 		if((`SECFUNCdelay pSECFUNCvarMultiThreadEvenPidsAllowThis --getsec`>1));then #limit to allow other pids to process
 			pSECFUNCvarMultiThreadEvenPidsAllowThis --force
 			break;
 		fi
 	done
-	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >>/dev/stderr
+	#echo "TEST (`SECFUNCvarShow SECmultiThreadEvenPids`) "`declare -p SECmultiThreadEvenPids` >&2
 	
 	SECFUNCfileLock "$SECvarFile" # wait until able to get a lock for reading
-	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >>/dev/stderr #@@@R
+	#grep $$ $SEC_TmpFolder/.SEC.FileLock.*.lock.pid >&2 #@@@R
 	SECFUNCvarSet SECmultiThreadEvenPids #SECFUNCvarWriteDB --skiplock SECmultiThreadEvenPids
 	SECFUNCvarReadDB #will read the changes of other scripts and force them wait for this caller script to end its proccessing
 	
@@ -1058,7 +1058,7 @@ function SECFUNCvarWriteDB() { #help
 	#declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' -e "$l_sedRemoveArrayPliqs" >>"$SECvarFile"
 #	declare -p ${l_allVars[@]} 2>/dev/null |sed -r -e 's"^declare -[^ ]* ""' >>"$SECvarFile"
 	#declare -p ${l_allVars[@]} 2>/dev/null >>"$SECvarFile"
-	#pSECFUNCprepareEnvVarsToWriteDB "${l_allVars[@]}" >>/dev/stderr
+	#pSECFUNCprepareEnvVarsToWriteDB "${l_allVars[@]}" >&2
 	pSECFUNCprepareEnvVarsToWriteDB "${l_allVars[@]}" 2>/dev/null >>"$SECvarFile"
 #  else
 #	  echo >"$SECvarFile" #clean
@@ -1074,7 +1074,7 @@ function SECFUNCvarWriteDB() { #help
   
 	if $SEC_DEBUG && $SEC_DEBUG_SHOWDB; then 
 		SECFUNCechoDbgA "Show DB $SECvarFile"
-		cat "$SECvarFile" >>/dev/stderr
+		cat "$SECvarFile" >&2
 		if $SEC_DEBUG_WAIT;then
 			SECFUNCechoDbgA "press a key to continue..."
 			read -n 1
@@ -1101,7 +1101,7 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 		elif [[ "$1" == "--skip" ]];then #SECFUNCvarReadDB_help to skip reading only the optionally specified variable(s) 'varName'
 			l_bSkip=true
 		else
-			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >>/dev/stderr
+			echo "SECERROR(`basename "$0"`:$FUNCNAME): invalid option $1" >&2
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		shift
@@ -1112,7 +1112,7 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 	if $SEC_DEBUG; then 
 		SECFUNCechoDbgA "'$SECvarFile'"; 
 		if $SEC_DEBUG_SHOWDB;then
-			cat "$SECvarFile" >>/dev/stderr
+			cat "$SECvarFile" >&2
 		fi
 	fi
 	
