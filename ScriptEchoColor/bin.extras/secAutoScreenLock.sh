@@ -104,13 +104,17 @@ done
 function FUNCisLocked(){
 	# The lock may happen by other means than this script...
 	if $bModeUnity;then
-		if [[ -f "${strUnityLogFile-}" ]];then
-			if grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
-				return 0
-			fi
-		else
-			SECFUNCechoWarnA "unity log file strUnityLogFile='${strUnityLogFile-}' not available"
+		if [[ "`gdbus call -e -d com.canonical.Unity -o /com/canonical/Unity/Session -m com.canonical.Unity.Session.IsLocked |tr -d '(),'`" == "true" ]];then
+			return 0;
 		fi
+
+#		if [[ -f "${strUnityLogFile-}" ]];then
+#			if grep ".Locked ()\|.Unlocked ()" "$strUnityLogFile" |tail -n 1 |grep -q ".Locked ()";then #only locked and unlocked signals and get the last one
+#				return 0
+#			fi
+#		else
+#			SECFUNCechoWarnA "unity log file strUnityLogFile='${strUnityLogFile-}' not available"
+#		fi
 	elif $bModeXscreensaver;then
 		if xscreensaver-command -time |grep -q "screen locked since";then
 			return 0
@@ -126,9 +130,9 @@ function FUNCisLocked(){
 }
 
 #varset strUnityLogFile="$SECstrTmpFolderLog/.$SECstrScriptSelfName.UnitySession.$$.log"
-if $bModeUnity;then
-	varset strUnityLogFile="`secUnity3DWMLogMonitorDaemon.sh --getlogfile`"
-fi
+#if $bModeUnity;then
+#	varset strUnityLogFile="`secUnity3DWMLogMonitorDaemon.sh --getlogfile`"
+#fi
 
 strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 #strUnityLogDaemonId="${strDaemonId}_UnityLog"
@@ -163,24 +167,24 @@ strDaemonId="${SECstrScriptSelfName}_Display$DISPLAY"
 #	exit $?
 #el
 if $bLockedCheckOnly;then
-	if $bModeUnity;then
-		while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
-	#		secUnity3DWMLogMonitorDaemon.sh >&2 & disown
-			nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
-			echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
-		done
-	
-#	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
-#		if $bIgnoreDaemon;then
-#			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
-#			break;
-#		fi
-#		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
-#	done
-	
-		SECFUNCvarReadDB strUnityLogFile
-	fi
-	
+#	if $bModeUnity;then
+##		while ! secUnity3DWMLogMonitorDaemon.sh --isrunning;do
+##	#		secUnity3DWMLogMonitorDaemon.sh >&2 & disown
+##			nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+##			echoc -w -t 3 "waiting for unity 3d wm log monitor to start..."
+##		done
+#	
+##	while ! SECFUNCuniqueLock --id "$strDaemonId" --setdbtodaemononly;do
+##		if $bIgnoreDaemon;then
+##			SECFUNCechoWarnA "$SECstrScriptSelfName daemon not running, unity wm log will not be available"
+##			break;
+##		fi
+##		echoc -w -t 3 "waiting for $SECstrScriptSelfName daemon to provide unity wm log..."
+##	done
+#	
+##		SECFUNCvarReadDB strUnityLogFile
+#	fi
+
 	FUNCisLocked&&:
 	exit $?
 fi
@@ -230,9 +234,9 @@ fi
 SECFUNCuniqueLock --id "$strDaemonId" --waitbecomedaemon
 
 # after this, user can safely screen lock
-if $bModeUnity;then
-	nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
-fi
+#if $bModeUnity;then
+#	nohup secUnity3DWMLogMonitorDaemon.sh >>/dev/null&
+#fi
 #secUnity3DWMLogMonitorDaemon.sh >&2 & disown
 #"$SECstrScriptSelfName" --unitylogdaemononly&
 

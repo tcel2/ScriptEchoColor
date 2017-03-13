@@ -27,7 +27,6 @@ eval `secinit --extras`
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
-strExample="DefaultValue"
 CFGstrTest="Test"
 bSpeak=true
 astrRemainingParams=()
@@ -49,9 +48,6 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bChkIsRunning=true
 	elif [[ "$1" == "--nospeak" ]];then #help will not speak when ready
 		bSpeak=false
-	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
-		shift
-		strExample="${1-}"
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
