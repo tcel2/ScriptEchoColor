@@ -537,8 +537,6 @@ function FUNCrun(){
 			lstrTxt+="\tExitValue:$lnRet\n";
 			lstrTxt+="\t`SECFUNCerrCodeExplained $lnRet`\n";
 			lstrTxt+="\n";
-			lstrTxt+="At: `SECFUNCdtFmt --pretty`\n";
-			lstrTxt+="\n";
 		fi
 		
 		if $bStay;then
@@ -551,6 +549,8 @@ function FUNCrun(){
 		if $bStay || $lbErr;then
 			lstrTxt+="RunCommand(astrRunParams[@]):\n"
 			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
+			lstrTxt+="\n";
+			lstrTxt+="At: `SECFUNCdtFmt --pretty`\n";
 			lstrTxt+="\n";
 			lstrTxt+="LogInfoDbgCmd:\n";
 			lstrTxt+="\tsecMaintenanceDaemon.sh --dump $$\n";

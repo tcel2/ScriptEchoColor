@@ -46,6 +46,7 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	local lbPidOfLockFile=false
 	local lbGetLock=false
 	local lstrLockFile=""
+	local lstrRevalidateLock=""
 	local lfSleepDelay="`SECFUNCbcPrettyCalcA --scale 3 "$SECnLockRetryDelay/1000.0"`"
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfileLock_help show this help
@@ -53,17 +54,20 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 			SECFUNCdbgFuncOutA;return
 		elif [[ "$1" == "--unlock" ]];then #SECFUNCfileLock_help releases the lock for the specified file.
 			lbUnlock=true
-		elif [[ "$1" == "--delay" ]];then #SECFUNCfileLock_help sleep delay between lock attempts to easy on cpu usage
+		elif [[ "$1" == "--delay" ]];then #SECFUNCfileLock_help <lfSleepDelay> sleep delay between lock attempts to easy on cpu usage
 			shift
 			lfSleepDelay="${1-}"
 		elif [[ "$1" == "--islocked" ]];then #SECFUNCfileLock_help check if is locked and, if so, outputs the locking pid.
 			lbCheckIfIsLocked=true
 		elif [[ "$1" == "--nowait" ]];then #SECFUNCfileLock_help will not wait for lock to be freed and will return 1 if cannot get the lock
 			lbNoWait=true
-		elif [[ "$1" == "--pid" ]];then #SECFUNCfileLock_help DO NOT USE THIS. Only used at maintenance daemon.
+		elif [[ "$1" == "--revalidate" ]];then #SECFUNCfileLock_help <lstrRevalidateLock> ~single will revalidate the specified lockfile and return
+			shift
+			lstrRevalidateLock="${1-}"
+		elif [[ "$1" == "--pidOverride" ]];then #SECFUNCfileLock_help <lnPid> ~DoNotUse Only used at maintenance daemon.
 			shift
 			lnPid=${1-}
-		elif [[ "$1" == "--list" ]];then #SECFUNCfileLock_help list of lock files with pids
+		elif [[ "$1" == "--list" ]];then #SECFUNCfileLock_help list of lock files with pid
 			lbListLocksWithPids=true
 		elif [[ "$1" == "--getlock" ]];then #SECFUNCfileLock_help will return the lock file for the specified real file if it was locked
 			lbGetLock=true
@@ -79,6 +83,25 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 		shift
 	done
 	
+	if [[ -n "$lstrRevalidateLock" ]];then
+		#~ if [[ -L "${lstrRevalidateLock}" ]];then
+			if [[ ! -a "${lstrRevalidateLock}" ]];then # broken link
+				local lstrMissingTarget="`readlink "${lstrRevalidateLock}"`"
+				#~ if [[ ! -f "$lstrMissingTarget" ]];then
+					SECFUNCechoWarnA "removing broken lock link lstrRevalidateLock='${lstrRevalidateLock}', lstrMissingTarget='$lstrMissingTarget'"
+					rm -vf "${lstrRevalidateLock}" >&2
+					SECFUNCdbgFuncOutA;return 1
+				#~ else
+					#~ SECFUNCechoWarnA "TODO:IMPOSSIBLE? lstrMissingTarget='$lstrMissingTarget' exists?"
+				#~ fi
+			fi
+		#~ else
+			#~ SECFUNCechoWarnA "TODO-IMPOSSIBLE? should be a symlink lstrRevalidateLock='${lstrRevalidateLock}'"
+			#~ SECFUNCdbgFuncOutA;return 1
+		#~ fi
+		return 0
+	fi
+	
 	if $lbPidOfLockFile;then
 		local lnPidOfLockFile="`echo "$lstrLockFile" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
 		if [[ -z "$lnPidOfLockFile" ]] || [[ -n "`echo "$lnPidOfLockFile" |tr -d "[:digit:]"`" ]];then
@@ -90,7 +113,9 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 	fi
 	
 	if $lbListLocksWithPids;then
-		ls -1 "$SEC_TmpFolder/.SEC.FileLock."*".lock."* &&: 2>/dev/null		
+		ls -1 \
+			"$SEC_TmpFolder/.SEC.FileLock."*".lock" \
+			"$SEC_TmpFolder/.SEC.FileLock."*".lock."* &&: 2>/dev/null		
 		SECFUNCdbgFuncOutA; return 0;
 	fi
 	
@@ -142,34 +167,43 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 		local lfileLockPointsTo="`readlink "$lfileLock"`"
 		if [[ "$lfileLockPointsTo" == "$lfileLockPid" ]];then
 			rm "$lfileLock"
+		#~ elif [[ -L "${lfileLock}" ]] && [[ ! -a "${lfileLock}" ]] && [[ ! -a "$lfileLockPointsTo" ]];then
+			#~ SECFUNCechoWarnA "releasing broken lock link lfileLock='$lfileLock', missing lfileLockPointsTo='$lfileLockPointsTo'"
+			#~ rm "$lfileLock"
 		else # unable to unlock, lock owned by other pid...
 			SECFUNCechoWarnA "lfileLockPointsTo='$lfileLockPointsTo'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
-	else
-		# get the lock
-		if ! ln -s "$lfile" "$lfileLockPid" 2>/dev/null;then
+	else # try to acquire the lock
+		ln -s "$lfile" "$lfileLockPid" 2>/dev/null &&: # just create the pid link referencing the real file
+		
+		local lfileCurrentLockIs="`readlink "$lfileLock"`"&&:
+		if [[ "$lfileCurrentLockIs" == "$lfileLockPid" ]];then
+			# the script calling this, has already acquired the lock, so just return true
 			SECFUNCechoWarnA "already locked lfile='$lfile' with lfileLockPid='$lfileLockPid'"
 			SECFUNCdbgFuncOutA;return 0;
 		fi
 		
-		if SECFUNCbcPrettyCalcA --cmpquiet "$lfSleepDelay<0.001";then
+		# retry loop to acquire the lock
+		if SECFUNCbcPrettyCalcA --cmpquiet "$lfSleepDelay<0.001";then # fix delay
 			SECFUNCechoBugtrackA "SECnLockRetryDelay='$SECnLockRetryDelay' but lfSleepDelay='$lfSleepDelay'"
 			#lfSleepDelay="0.001"
 			lfSleepDelay="0.1" #seems something went wrong so use default
 		fi
-		
 		while true;do
 			if ln -s "$lfileLockPid" "$lfileLock" 2>/dev/null;then
-				break;
+				SECFUNCdbgFuncOutA; return 0;
+				#break;
 			fi
-		
+			
+			lstrCurrentLockIs="`readlink "$lfileLock"`"
+			
 			if $lbNoWait;then
 				SECFUNCdbgFuncOutA; return 1;
 			fi
 		
 			if SECFUNCdelay "${FUNCNAME}_lock" --checkorinit 3;then
-				SECFUNCechoWarnA "waiting to get lock for lfile='$lfile'"
+				SECFUNCechoWarnA "waiting to get lock for lfile='$lfile', lstrCurrentLockIs='$lstrCurrentLockIs'"
 			fi
 				
 			sleep $lfSleepDelay

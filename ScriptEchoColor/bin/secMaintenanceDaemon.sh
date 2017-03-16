@@ -110,7 +110,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bShowCriticalErrors=true
 	elif [[ "$1" == "--loglist" ]];then #help list all log files for running pids
 		bLogsList=true
-	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come before the monitor option to take effect
+	elif [[ "$1" == "--delay" ]];then #help delay used on monitors, can be float, MUST come after the monitor option to take effect
 		shift
 		fMonitorDelay="${1-}"
 	else
@@ -212,11 +212,13 @@ if $bKillDaemon;then
 	FUNCkillDaemon
 	exit 0
 elif $bRestartDaemon;then
+	echoc --info "this pid is $$"
+	
 	FUNCkillDaemon
 	
 	# stdout must be redirected or the terminal wont let it be child...
 	# nohup or disown alone did not work...
-	$0 >&2 &
+	$0 >&2 & # it may NOT be able to become the maintenance daemon from here, it can happen from any other running script...
 	sleep 3 #wait a bit just to try to avoid messing the terminal output...
 	exit 0
 elif $bLogMonitor;then
@@ -385,37 +387,55 @@ while true;do
 	##########################################################################
 	################### RELEASE LOCKS OF DEAD PIDS ###########################
 	##########################################################################
-	strCheckId="LockFilesOfDeadPids"
-	#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
-		#echo ">>>A" >&2
-		IFS=$'\n' read -d '' -r -a astrFileLockList < <(SECFUNCfileLock --list)&&:
-		#echo ">>>B" >&2
-		#SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
-		if((`SECFUNCarraySize astrFileLockList`>0));then 
-			for lstrLockFileIntermediary in "${astrFileLockList[@]}";do
-				#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
-				nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
-				if [[ ! -d "/proc/$nPid" ]];then
-					if [[ -L "$lstrLockFileIntermediary" ]];then
-						strFileReal="`readlink "$lstrLockFileIntermediary"`"
-						if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
-							echo " `SECFUNCdtFmt --pretty` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
-							if ! SECFUNCfileLock --pid $nPid --unlock "$strFileReal";then
-								SECFUNCechoWarnA "unable to unlock lstrLockFileIntermediary='$lstrLockFileIntermediary', strFileReal='$strFileReal'"
+	function FUNCreleaseLocksOfDeadPids() { # for easy browsing on IDE
+		strCheckId="LockFilesOfDeadPids"
+		#if SECFUNCdelay "$strCheckId" --checkorinit1 $nMinDelayMainLoop;then
+			#echo ">>>A" >&2
+			IFS=$'\n' read -d '' -r -a astrFileLockList < <(SECFUNCfileLock --list)&&:
+			#echo ">>>B" >&2
+			#SECFUNCfileLock --list |while read lstrLockFileIntermediary;do
+			if((`SECFUNCarraySize astrFileLockList`>0));then 
+				for lstrLockLink in "${astrFileLockList[@]}";do
+					if [[ "${lstrLockLink}" == *.lock ]];then
+						SECFUNCfileLock --revalidate "${lstrLockLink}"&&:
+						#~ if [[ ! -L "${lstrLockLink}" ]];then # broken link
+							#~ SECFUNCechoWarnA "should be a symlink lstrLockLink='${lstrLockLink}'"
+						#~ elif [[ ! -a "${lstrLockLink}" ]];then # broken link
+							#~ local lstrMissingTarget="`readlink "${lstrLockLink}"`"
+							#~ if [[ ! -f "$lstrMissingTarget" ]];then
+								#~ SECFUNCechoWarnA "removing broken lock link lstrLockLink='${lstrLockLink}', lstrMissingTarget='$lstrMissingTarget'"
+								#~ rm -vf "${lstrLockLink}"
+							#~ else
+								#~ SECFUNCechoWarnA "TODO:IMPOSSIBLE? lstrMissingTarget='$lstrMissingTarget' exists?"
+							#~ fi
+						#~ fi
+					else
+						local lstrLockFileIntermediary="$lstrLockLink" # is the link to the real file, but is not the lock per se
+						#nPid="`echo "$lstrLockFileIntermediary" |sed -r 's".*[.]([[:digit:]]*)$"\1"'`"
+						nPid="`SECFUNCfileLock --pidof "$lstrLockFileIntermediary"`"
+						if [[ ! -d "/proc/$nPid" ]];then
+							if [[ -L "$lstrLockFileIntermediary" ]];then
+								strFileReal="`readlink "$lstrLockFileIntermediary"`"
+								if [[ -n "$strFileReal" ]];then #safety? but empty symlinks arent possible..
+									echo " `SECFUNCdtFmt --pretty` Remove $strCheckId: nPid='$nPid' lstrLockFileIntermediary='$lstrLockFileIntermediary' strFileReal='$strFileReal'"
+									if ! SECFUNCfileLock --pidOverride $nPid --unlock "$strFileReal";then
+										SECFUNCechoWarnA "unable to unlock lstrLockFileIntermediary='$lstrLockFileIntermediary', strFileReal='$strFileReal'"
+									fi
+								fi
+							else
+								if [[ -f "$lstrLockFileIntermediary" ]];then
+									SECFUNCechoWarnA "TODO:IMPOSSIBLE? lstrLockFileIntermediary='$lstrLockFileIntermediary' should be a symlink..."
+								fi
 							fi
 						fi
-					else
-						if [[ -f "$lstrLockFileIntermediary" ]];then
-							SECFUNCechoWarnA "lstrLockFileIntermediary='$lstrLockFileIntermediary' should be a symlink..."
-						fi
 					fi
-				fi
-			done
-		fi
-	#fi
-
+				done
+			fi
+		#fi
+	};FUNCreleaseLocksOfDeadPids
+	
 	##########################################################################
-  ############### RELEASE UNIQUE DAEMON FILES OF DEAD PIDS #################
+	############### RELEASE UNIQUE DAEMON FILES OF DEAD PIDS #################
 	##########################################################################
 #	echo "Validate daemon unique files:"
 	SECFUNCuniqueLock --quiet --listclean #must come after locks cleaning to generate less log possible as it warns about missing real file on unlock attempt

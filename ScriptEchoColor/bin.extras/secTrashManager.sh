@@ -27,8 +27,9 @@ eval `secinit`
 strTrashFolderUser="$HOME/.local/share/Trash/files/"
 echo "strTrashFolderUser='$strTrashFolderUser'"
 strTrashFolder=""
-nFSSizeAvailGoalMB=1000 #1GB
+nFSSizeAvailGoalMB=1500 #1.5GB 
 nFileCountPerStep=100
+: ${nSleepDelay:=30}
 
 function FUNCmountedFs(){
 	df --output=target |tail -n +2 
@@ -317,7 +318,7 @@ while true;do
 
 	if $bRunOnce;then break;fi
 	
-	echoc -w -t 60
+	echoc -w -t $nSleepDelay
 done		
 
 #echoc --alert "work in progress..."
