@@ -196,13 +196,15 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 				#break;
 			fi
 			
-			lstrCurrentLockIs="`readlink "$lfileLock"`"
-			
 			if $lbNoWait;then
 				SECFUNCdbgFuncOutA; return 1;
 			fi
 		
 			if SECFUNCdelay "${FUNCNAME}_lock" --checkorinit 3;then
+				if ! lstrCurrentLockIs="`readlink "$lfileLock"`";then
+					lstrCurrentLockIs="(ERROR_READLINK)"
+				fi
+				
 				SECFUNCechoWarnA "waiting to get lock for lfile='$lfile', lstrCurrentLockIs='$lstrCurrentLockIs'"
 			fi
 				
