@@ -94,7 +94,7 @@ while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
 		bLogMonitor=true
 	elif [[ "$1" == "--lockmon" ]];then #help file locks monitor
 		bLockMonitor=true
-		fMonitorDelay=1
+		fMonitorDelay=10
 	elif [[ "$1" == "--pidmon" ]];then #help pids using SEC, monitor
 		bPidsMonitor=true
 		fMonitorDelay=30
@@ -227,11 +227,13 @@ elif $bLogMonitor;then
 	exit 0
 elif $bLockMonitor;then
 	while true;do
-		FUNClocksList --all
+		strAllLocks="`FUNClocksList --all`"
+		echo "$strAllLocks" |egrep "FileLock.*" -o |egrep -v "[.]lock "
 		nLocks="`FUNClocksList |wc -l`"
 		nLocksI="`FUNClocksList --intermediaryOnly |wc -l`"
 		SECFUNCdrawLine " nLocks='$nLocks' nLocksI='$nLocksI' ";
-		sleep $fMonitorDelay;
+		#~ sleep $fMonitorDelay;
+		echoc -w -t $fMonitorDelay
 	done
 	exit 0
 elif $bListPids;then

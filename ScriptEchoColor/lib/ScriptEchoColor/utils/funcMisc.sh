@@ -158,21 +158,16 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 			fi
 		fi
 	elif $lbUnlock;then
-#				rm -v "$lstrLockFileIntermediary"
-#				strLockFile="${lstrLockFileIntermediary%.$nPid}"
-#				if [[ "$lstrLockFileIntermediary" == "`readlink "$strLockFile"`" ]];then
-#					rm -v "$strLockFile"
-#				fi
-		rm "$lfileLockPid"
+		if ! rm "$lfileLockPid";then #will promptly remove the lockpid one
+			SECFUNCechoWarnA "failed to remove lfileLockPid='$lfileLockPid'"
+		fi
+		
 		local lfileLockPointsTo="`readlink "$lfileLock"`"
 		if [[ "$lfileLockPointsTo" == "$lfileLockPid" ]];then
 			rm "$lfileLock"
-		#~ elif [[ -L "${lfileLock}" ]] && [[ ! -a "${lfileLock}" ]] && [[ ! -a "$lfileLockPointsTo" ]];then
-			#~ SECFUNCechoWarnA "releasing broken lock link lfileLock='$lfileLock', missing lfileLockPointsTo='$lfileLockPointsTo'"
-			#~ rm "$lfileLock"
-		else # unable to unlock, lock owned by other pid...
-			SECFUNCechoWarnA "lfileLockPointsTo='$lfileLockPointsTo'"
-			SECFUNCdbgFuncOutA;return 1
+		else
+			SECFUNCechoWarnA "unable to unlock as actual lock lfileLock='$lfileLock' is owned by other pid lfileLockPointsTo='$lfileLockPointsTo'"
+			SECFUNCdbgFuncOutA;return 0 #return 1 
 		fi
 	else # try to acquire the lock
 		ln -s "$lfile" "$lfileLockPid" 2>/dev/null &&: # just create the pid link referencing the real file
