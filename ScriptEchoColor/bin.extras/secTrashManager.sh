@@ -157,13 +157,19 @@ function FUNCrm(){
 	
 	if [[ ! -L "$lstrFile" ]];then
 		if [[ -d "$lstrFile" ]];then
-			SECFUNCexecA -ce chmod -Rv +w "$lstrFile"
+			if ! SECFUNCexecA -ce chmod -Rv +w "$lstrFile";then
+				SECFUNCechoWarnA "failed to chmod at dir lstrFile='$lstrFile'"
+			fi
 		else
-			SECFUNCexecA -ce chmod -v +w "$lstrFile"
+			if ! SECFUNCexecA -ce chmod -v +w "$lstrFile";then
+				SECFUNCechoWarnA "failed to chmod at lstrFile='$lstrFile'"
+			fi
 		fi
 	fi
 	
-	SECFUNCexecA -ce rm "$lOpt" "$lstrFile"
+	if ! SECFUNCexecA -ce rm -vf "$lOpt" "$lstrFile";then
+		SECFUNCechoWarnA "failed to rm lstrFile='$lstrFile'"
+	fi
 }
 
 while true;do
