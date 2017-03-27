@@ -94,8 +94,14 @@ function SECFUNCarraysExport() { #help export all arrays
 	
 	local lsedArraysIds='s"^([[:alnum:]_]*)=\(.*"\1";tfound;d;:found' #this avoids using grep as it will show only matching lines labeled 'found' with 't'
 	# this is a list of arrays that are set by the system or bash, not by SEC
-	local lastrArraysToSkip=(`env -i bash -i -c declare 2>/dev/null |sed -r "$lsedArraysIds"`)
+	##############
+	# INFO lastrArraysToSkip has basic default bash arrays, BUT none are exported! therefore it is pointless as only already exported arrays will be re-exported
+	# IMPORTANT: PROBLEM! bash '-i' option will make the `declare` use 100% cpu when running like `script.sh&disown`, and will be endless loop!
+	##############
+	local lastrArraysToSkip=(`env -i bash -c declare 2>/dev/null |sed -r "$lsedArraysIds"`)
+	#local lastrArraysToSkip=(`env -i bash -i -c declare 2>/dev/null |egrep "^([[:alnum:]_]*)=\(" -o |cut -d= -f1`)
 	local lastrArrays=(`declare |sed -r "$lsedArraysIds"`)
+	#local lastrArrays=(`declare |egrep "^([[:alnum:]_]*)=\(" -o |cut -d= -f1`)
 	if $lbVerbose;then declare -p lastrArrays >&2;fi
 	lastrArraysToSkip+=(
 		BASH_REMATCH 
