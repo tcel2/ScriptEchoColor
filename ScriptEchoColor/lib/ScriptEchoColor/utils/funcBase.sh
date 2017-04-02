@@ -659,6 +659,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lstrChildReference=""
 	local lstrReadStatus=""
 	local lbCleanEnv=false
+	local lbRestoreDefOutputs=false;
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -673,6 +674,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			SEClstrFuncCaller="${1}"
 		elif [[ "$1" == "--cleanenv" || "$1" == "-l" ]];then #SECFUNCexec_help will clean the environment from this lib variables when running the command
 			lbCleanEnv=true
+		elif [[ "$1" == "--resdefop" ]];then #SECFUNCexec_help will restore default outputs just while running the command
+			lbRestoreDefOutputs=true;
 		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCexec_help output colored
 			lbColorize=true
 		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr (logging overrides this)
@@ -944,6 +947,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		function SECFUNCexec_runQuark(){
 			if $lbCleanEnv;then
 				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")
+			elif $lbRestoreDefOutputs;then
+				(SECFUNCrestoreDefaultOutputs;"${lastrParamsToExec[@]}")
 			else
 				"${lastrParamsToExec[@]}"
 			fi

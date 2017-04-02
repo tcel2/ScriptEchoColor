@@ -1968,7 +1968,7 @@ function SECFUNCppidList() { #help [separator] between pids
 }
 
 function SECFUNCrestoreDefaultOutputs() { #help same as `SECFUNCcheckActivateRunLog --restoredefaultoutputs "${@-}"`
-	if [[ "$1" == "--help" ]];then #SECFUNCrestoreDefaultOutputs_help
+	if [[ "${1-}" == "--help" ]];then #SECFUNCrestoreDefaultOutputs_help
 		SECFUNCshowHelp $FUNCNAME
 		return 0
 	fi
