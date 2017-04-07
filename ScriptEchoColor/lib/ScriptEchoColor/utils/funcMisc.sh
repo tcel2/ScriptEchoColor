@@ -164,7 +164,15 @@ function SECFUNCfileLock() { #help Waits until the specified file is unlocked/lo
 		
 		local lfileLockPointsTo="`readlink "$lfileLock"`"
 		if [[ "$lfileLockPointsTo" == "$lfileLockPid" ]];then
-			rm "$lfileLock"
+			if ! rm "$lfileLock";then
+				if [[ ! -L "$lfileLock" ]];then
+					SECFUNCechoWarnA "lfileLock='$lfileLock' does not exist anymore, look at maintenance daemon log files..."
+				else
+					SECFUNCechoErrA "unable to remove file lfileLock='$lfileLock'"
+					ls -l "$lfileLock" >&2
+					SECFUNCdbgFuncOutA;return 1
+				fi
+			fi
 		else
 			SECFUNCechoWarnA "unable to unlock as actual lock lfileLock='$lfileLock' is owned by other pid lfileLockPointsTo='$lfileLockPointsTo'"
 			SECFUNCdbgFuncOutA;return 0 #return 1 
