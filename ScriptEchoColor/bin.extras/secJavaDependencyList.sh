@@ -40,7 +40,7 @@ echo "${astrAllParams[@]}"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t<folderWithClassFiles> [[filter] [filter] ...]"
+		SECFUNCshowHelp --colorize "\t<folderWithClassFiles|file> [[filter] [filter] ...]"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
@@ -69,7 +69,23 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-strWorkPath="${1-.}"
+astrFileList=()
+strWorkPath="."
+strCheck="${1-}"
+if [[ -z "$strCheck" ]];then
+	strCheck="$strWorkPath"
+fi
+
+if [[ -d "$strCheck" ]];then
+	strWorkPath="$strCheck"
+	IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "*.class")&&:
+elif [[ -f "$strCheck" ]];then
+	astrFileList+=("$strCheck")
+else
+	SECFUNCexecA -ce ls -l "$strCheck"
+	echoc -p "invalid strCheck='$strCheck'"
+	exit 1
+fi
 
 #~ if [[ -n "${astrRemainingParams[@]-}" ]];then
 	#~ astrFilter+=("${astrRemainingParams[@]}")
@@ -77,7 +93,6 @@ strWorkPath="${1-.}"
 #~ strFilter="`echo "${astrFilter[@]}" |tr " " "|"`"
 #~ echoc --info "strFilter='$strFilter'"
 
-IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -iname "*.class")&&:
 for strFile in "${astrFileList[@]}";do
 	# tr: libs end with ';'
 	# egrep: libs begin with 'L'
