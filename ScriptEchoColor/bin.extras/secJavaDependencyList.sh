@@ -36,7 +36,7 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB #after default variables value setup above
-echo "${astrAllParams[@]}"
+#echo "${astrAllParams[@]}" >&2
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -66,7 +66,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
-SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+SECFUNCcfgAutoWriteAllVars 2>/dev/null #this will also show all config vars #TODO the output is going to >&1 even if being requested to >&2, why?
 
 # Main code
 astrFileList=()
@@ -94,15 +94,21 @@ fi
 #~ echoc --info "strFilter='$strFilter'"
 
 for strFile in "${astrFileList[@]}";do
-	# tr: libs end with ';'
-	# egrep: libs begin with 'L'
-	# egrep: libs have '/' in-between
-	# sort: remove repetitions and sort
-	# sed: show only the lib string part
-	strDeps="`strings "$strFile" |tr ';' '\n' |egrep "L.*/.*" -o |sort -u |sed -r "s'L(.*)'\1'"`"
-	#~ strDeps="`echo "$strDeps" |egrep -v "$strFilter"`"&&: # remove what is to be ignored
-	strDeps="`echo "$strDeps" |sed -r "s'.*'$strFile:&'"`" # prepend analized class file
-	echo "$strDeps"
+	############ parts explained
+	## tr: libs end with ';'
+	## egrep: remove redundant generics (ex.:SomeClass), as the referred class will be on the import, ex.: from ArrayList<SomeClass>
+	## egrep: libs begin with 'L'
+	## egrep: libs have '/' in-between
+	## sort: remove repetitions and sort
+	## sed: show only the lib string part
+	############
+	strDeps="`strings "$strFile" |tr ';' '\n' |egrep -v "[<]" |egrep "L[[:alnum:]]*/.*" -o |sort -u |sed -r "s'L(.*)'\1'"`"
+	#~ strDeps="`strings "$strFile" |tr ';' '\n' |egrep -v "[<]" |egrep "L.*/.*" -o |sort -u |sed -r "s'L(.*)'\1'"`"
+	if [[ -n "$strDeps" ]];then # inner classes (ex.: SomeClass$ISomeInterface) may have nothing to show
+		#~ strDeps="`echo "$strDeps" |egrep -v "$strFilter"`"&&: # remove what is to be ignored
+		strDeps="`echo "$strDeps" |sed -r "s'.*'$strFile:&'"`" # prepend analized class file
+		echo "$strDeps"
+	fi
 done
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
