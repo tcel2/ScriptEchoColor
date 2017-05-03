@@ -36,6 +36,19 @@ echo " strFullSelfCmd='$strFullSelfCmd'" >&2
 SECFUNCcfgReadDB
 echo "SECcfgFileName='$SECcfgFileName'"
 
+function FUNCcpuResourcesAvailable(){ #TODO use this to hold processes execution. create a queue manager and executor. each of this script call will be just a queue entry on the manager.
+	local lstrCpusIdle="$(mpstat 2 1 |grep average -i |tr ' ' '\n' |tail -n 1)" #this takes 2 seconds
+	local lstrLoadAvg="$(cat /proc/loadavg |cut -d' ' -f3)"
+	local lfLoadLimit="($(nproc) -0.5)" #the number of enabled cores less 0.5f
+	lobal lnRetBC="`bc <<< "($lstrLoadAvg < $lfLoadLimit) && ($lstrCpusIdle > 25.0)"`" 
+	if ! `exit $lnRetBC`;then #bc outputs 1 on success and 0 on failure, so invert the return status
+		return 0;
+	fi 
+	
+	return 1
+}
+#TODO if ! `exit $(bc <<< "($(cat /proc/loadavg |cut -d' ' -f3) < 3.5) && ($(mpstat 2 1 |grep average -i |tr ' ' '\n' |tail -n 1) > 25.0)")`;then echo ok;fi
+
 SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false #this grants startup always obbeying sleep
 varset bCheckPointConditionsMet=false
 export bWaitCheckPoint=false
