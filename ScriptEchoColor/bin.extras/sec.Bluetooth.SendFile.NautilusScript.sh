@@ -71,6 +71,7 @@ function FUNCrescan() {
 ####################### MAIN
 bNautilusMode=false
 bReUseLast=false
+bInteractive=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "<astrFileToPushList>... Send files thru bluetooth."
@@ -80,6 +81,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bNautilusMode=true
 	elif [[ "$1" == "--uselast" ]] || [[ "$1" == "-l" ]];then #help re-use the last chosen target bluetooth device
 		bReUseLast=true
+	elif [[ "$1" == "--noninteractive" ]] || [[ "$1" == "-n" ]];then #help just exit on failures and questions use defaults
+		bInteractive=false
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -128,52 +131,56 @@ if $bReUseLast;then
 	bUseLastChosenDevice=true
 else
 	if [[ -n "$strDeviceIdLastChosen" ]];then
-		if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
-			bUseLastChosenDevice=true
+		if $bInteractive;then
+			if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
+				bUseLastChosenDevice=true
+			fi
 		fi
 	fi
 fi
 
-if ! $bUseLastChosenDevice;then
-	strDeviceId=""
-	while [[ -z "$strDeviceId" ]];do
-		bRescan=false
-		if ! $bRescan && [[ -z "${astrDeviceList[@]-}" ]];then
-			bRescan=true
-		fi
-		if ! $bRescan && echoc -q -t 3 "re-scan bluetooth devices (exit ctrl+c)?";then
-			bRescan=true
-		fi
+if $bInteractive;then
+	if ! $bUseLastChosenDevice;then
+		strDeviceId=""
+		while [[ -z "$strDeviceId" ]];do
+			bRescan=false
+			if ! $bRescan && [[ -z "${astrDeviceList[@]-}" ]];then
+				bRescan=true
+			fi
+			if ! $bRescan && echoc -q -t 3 "re-scan bluetooth devices (exit ctrl+c)?";then
+				bRescan=true
+			fi
 
-		if $bRescan;then
-			while true;do
-				if FUNCrescan;then
-					break;
-				fi
-			
-				if ! echoc -q "no devices found, re-scan bluetooth devices?";then
-					exit 0
-				fi
+			if $bRescan;then
+				while true;do
+					if FUNCrescan;then
+						break;
+					fi
+				
+					if ! echoc -q "no devices found, re-scan bluetooth devices?";then
+						exit 0
+					fi
+				done
+			fi
+
+			astrZenityValues=()
+			nIndex=0
+			for strDeviceId in "${!astrDeviceList[@]}";do
+				astrZenityValues+=("$((nIndex++))")
+				astrZenityValues+=("$strDeviceId")
+				astrZenityValues+=("${astrDeviceList[$strDeviceId]}")
 			done
-		fi
+		
+			strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
+				--text="Select one Bluetooth device." \
+				--column="Index" --column="ID" --column="Name" \
+				"${astrZenityValues[@]}")&&:
 
-		astrZenityValues=()
-		nIndex=0
-		for strDeviceId in "${!astrDeviceList[@]}";do
-			astrZenityValues+=("$((nIndex++))")
-			astrZenityValues+=("$strDeviceId")
-			astrZenityValues+=("${astrDeviceList[$strDeviceId]}")
+			if [[ -n "$strDeviceId" ]];then
+				SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"
+			fi
 		done
-	
-		strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
-			--text="Select one Bluetooth device." \
-			--column="Index" --column="ID" --column="Name" \
-			"${astrZenityValues[@]}")&&:
-
-		if [[ -n "$strDeviceId" ]];then
-			SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"
-		fi
-	done
+	fi
 fi
 
 echoc --info "strDeviceIdLastChosen='$strDeviceIdLastChosen' Device Name='${astrDeviceList[$strDeviceIdLastChosen]-}'"
@@ -183,7 +190,11 @@ while true;do
 	if SECFUNCisNumber -dn "$nBluetoothChannel";then
 		break;
 	else
-		if echoc -q -t 3 -p "failed to acquire nBluetoothChannel='$nBluetoothChannel', exit?";then
+		if $bInteractive;then
+			if echoc -q -t 3 -p "failed to acquire nBluetoothChannel='$nBluetoothChannel', exit?";then
+				exit 1
+			fi
+		else
 			exit 1
 		fi
 	fi
@@ -211,5 +222,7 @@ if ! SECFUNCexec -c --echo \
 	echoc --info "TODO: even succeeding, the return status is always as failed. how to be sure it worked?"
 fi
 
-echoc -w -t 60
+if $bInteractive;then
+	echoc -w -t 60
+fi
 
