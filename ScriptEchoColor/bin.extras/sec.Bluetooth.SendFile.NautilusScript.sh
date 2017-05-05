@@ -70,6 +70,7 @@ function FUNCrescan() {
 
 ####################### MAIN
 bNautilusMode=false
+bReUseLast=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "<astrFileToPushList>... Send files thru bluetooth."
@@ -77,6 +78,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--nautilus" ]];then #internal use, no user help..., enables the nautilus mode.
 		bNautilusMode=true
+	elif [[ "$1" == "--uselast" ]] || [[ "$1" == "-l" ]];then #help re-use the last chosen target bluetooth device
+		bReUseLast=true
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -121,9 +124,13 @@ SECFUNCcfgReadDB
 
 echoc -x "cat \"$SECcfgFileName\""&&:
 
-if [[ -n "$strDeviceIdLastChosen" ]];then
-	if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
-		bUseLastChosenDevice=true
+if $bReUseLast;then
+	bUseLastChosenDevice=true
+else
+	if [[ -n "$strDeviceIdLastChosen" ]];then
+		if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
+			bUseLastChosenDevice=true
+		fi
 	fi
 fi
 
@@ -201,7 +208,7 @@ if ! SECFUNCexec -c --echo \
 		--bluetooth "$strDeviceIdLastChosen" \
 		--channel "$nBluetoothChannel" \
 		--put "${astrFileToPushList[@]}";then
-	echoc -p "failed."
+	echoc --info "TODO: even succeeding, the return status is always as failed. how to be sure it worked?"
 fi
 
 echoc -w -t 60
