@@ -916,7 +916,7 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 #  SECFUNCdbgFuncOutA;
 #  #set -x
 #}
-function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars at current env
+function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars at current env. \n\t!!!IMPORTANT!!! it seems to not work inside of some functions (test always)! TODO fix this?
 	SECFUNCdbgFuncInA;
 	#echo oi;eval `cat tst.db`;return
 	if [[ -z "$SECcfgFileName" ]];then
