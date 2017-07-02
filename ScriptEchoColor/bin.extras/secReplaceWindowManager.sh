@@ -39,6 +39,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strPreferedWM="metacity"
 	elif [[ "$1" == "--xfwm4" || "$1" == "-x" ]];then #help force xfwm4 the default auto recovery option
 		strPreferedWM="xfwm4"
+	elif [[ "$1" == "--kwin" || "$1" == "-k" ]];then #help force kwin the default auto recovery option
+		strPreferedWM="kwin"
+	elif [[ "$1" == "--mutter" || "$1" == "-u" ]];then #help force mutter the default auto recovery option
+		strPreferedWM="mutter"
 #	elif [[ "$1" == "--jwm" || "$1" == "-j" ]];then #help force jwm the default auto recovery option
 #		strPreferedWM="jwm"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
@@ -77,6 +81,10 @@ function FUNCcheckGetPreferedWm() {
 		lstrPreferedWM="metacity"
 	elif which xfwm4 2>&1 >>/dev/null;then
 		lstrPreferedWM="xfwm4"
+	elif which kwin 2>&1 >>/dev/null;then
+		lstrPreferedWM="kwin"
+	elif which mutter 2>&1 >>/dev/null;then
+		lstrPreferedWM="mutter"
 #	elif which jwm 2>&1 >>/dev/null;then
 #		lstrPreferedWM="jwm"
 	else
@@ -101,6 +109,10 @@ while true;do
 		strCurrent="metacity"
 	elif pgrep xfwm4 2>&1 >>/dev/null;then
 		strCurrent="xfwm4"
+	elif pgrep kwin 2>&1 >>/dev/null;then
+		strCurrent="kwin"
+	elif pgrep mutter 2>&1 >>/dev/null;then
+		strCurrent="mutter"
 #	elif pgrep jwm 2>&1 >>/dev/null;then
 #		strCurrent="jwm"
 	else
@@ -123,7 +135,13 @@ while true;do
 		continue;
 	fi
 	
-	echoc -t 10 -Q "replace window manager@O_compiz/_metacity/_xfwm4/holdFor_60s"&&:;
+	echoc -t 10 -Q "replace window manager@O
+		_compiz/
+		_metacity/
+		_xfwm4/
+		_kwin/
+		m_utter/
+		holdFor_60s"&&:;
 	case "`secascii $?`" in 
 		c)
 			if [[ "$strCurrent" == "compiz" ]];then
@@ -140,6 +158,14 @@ while true;do
 		x)
 			SECFUNCexecA -ce secXtermDetached.sh xfwm4 --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="xfwm4"
+			;; 
+		k)
+			SECFUNCexecA -ce secXtermDetached.sh kwin --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
+			strPreferedWM="kwin"
+			;; 
+		u)
+			SECFUNCexecA -ce secXtermDetached.sh mutter --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
+			strPreferedWM="mutter"
 			;; 
 		6)
 			echoc -w -t 60 "holding execution"

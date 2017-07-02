@@ -339,7 +339,7 @@ function FUNCexecParams() {
 
 strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
 echo "Exec: $strExec"
-xterm -display "$nDisplay" -e "$strExec"&
+xterm -display "$nDisplay" -e "$strExec"&disown
 
 #strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
 #echo "Exec: $strExec"
