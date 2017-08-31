@@ -68,11 +68,11 @@ if $bCreateThumbnailersFile;then
 		exit 1
 	fi
 	
-	strSetupData="[Thumbnailer Entry]\nExec=$0 %i %s %o\nMimeType=image/x-webp;"
+	strSetupData="[Thumbnailer Entry]\nExec=$0 %i %s %o\nMimeType=image/x-webp;image/webp;"
 	echoc --info "this will be written at setup file strSetupFile='$strSetupFile'"
 	echo -e "$strSetupData"
 	if echoc -q "do it?";then
-		echo -e "[Thumbnailer Entry]\nExec=$0 %i %s %o\nMimeType=image/x-webp;" \
+		echo -e "$strSetupData" \
 			|SECFUNCexecA -c --echo sudo -k tee "$strSetupFile"
 	fi
 	exit 0
