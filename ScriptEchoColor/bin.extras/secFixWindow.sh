@@ -240,7 +240,7 @@ elif $bListUnmappedWindows;then
 	echo -e "pid\twindowId\ttitle\tcmd";
 	for nWindowId in "${anWindowIdList[@]}";do 
 		if xwininfo -id $nWindowId |grep -q IsUnMapped;then 
-			nWindowPid=`xdotool getwindowpid $nWindowId 2>/dev/null`;
+			nWindowPid=`xdotool getwindowpid $nWindowId 2>/dev/null`&&:
 			if [[ -n "$nWindowPid" ]];then 
 				echo -e "$nWindowPid\t$nWindowId\t`xdotool getwindowname $nWindowId`\t`ps --no-headers -o cmd -p $nWindowPid`";
 			fi;
