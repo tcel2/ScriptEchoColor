@@ -36,12 +36,27 @@ bUmount=false
 bReadOnly=false
 bChkIsMultiLayer=false
 bRenumber=false
+strIgnoreLayerSuffix=".IGNORE_LAYER"
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "\t[strMountAt]"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo
+		echoc --info "layers ending with '$strIgnoreLayerSuffix' will be skipped, but are still useful for your organization ex. you can create a single layer and put on it symlinks or hardlinks to the ignored layers' files."
+		echo
+		echoc --info "create layers like (same size for numeric field) ex.:"
+		strBasicDirName="BasicDirName"
+		echo "$strBasicDirName.layer003.SomeDescription"
+		echo "$strBasicDirName.layer010.SomeDescription"
+		echo "$strBasicDirName.layer020.Some Description a"
+		echo "$strBasicDirName.layer030.Som Description b"
+		echo "$strBasicDirName.layer035.Some Description c${strIgnoreLayerSuffix}"
+		echo "$strBasicDirName.layer250.Some Desc d"
+		echo "$strBasicDirName.layer620.Sm Descrip e"
+		echo "..."
+		echoc --info "the high value layers will override lower value ones"
 		echo
 		SECFUNCshowHelp
 		exit 0
@@ -136,21 +151,17 @@ else
 fi
 
 #declare -A astrLayerList
-IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d -iname "${strMountAt}.layer*" |sort &&:)&&:
+#IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d -iname "${strMountAt}.layer*" |sort &&:)&&:
+IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d \( -iname "${strMountAt}.layer*" -and -not -name "*${strIgnoreLayerSuffix}" \) |sort &&:)&&:
+declare -p astrLayerList |tr "[" "\n"
 #if [[ -z "$strLayerBranch" ]];then
 if [[ -z "${astrLayerList[@]-}" ]];then # no layers found
-	echoc --info "create layers like (same size for numeric field) ex.:"
-	echo "${strMountAt}.layer010.SomeDescription"
-	echo "${strMountAt}.layer020.Some Description a"
-	echo "${strMountAt}.layer030.Some Description too"
-	echo "..."
-	echoc --info "the high value layers will override lower value ones"
-	echoc --info "run it again..."
+	echoc -p "no layers found"
 	exit 1
 fi
 for strLayer in "${astrLayerList[@]-}";do
-	if [[ "$strLayer" =~ .*[:=].* ]];then
-		echoc -p "invalid layer name (must not contain ':' or '=' used by aufs): $strLayer"
+	if [[ "$strLayer" =~ .*[:=,].* ]];then
+		echoc -p "invalid layer name (must not contain ':' or '=' used by aufs, neither ','): $strLayer"
 		exit 1
 	fi
 done
@@ -199,12 +210,22 @@ fi
 
 # the layers override priority is from left (top override) to right
 strLayerBranch=""
+astrLayerListInvert=()
 for strLayer in "${astrLayerList[@]}";do
 	if [[ -n "$strLayerBranch" ]];then strLayerBranch=":$strLayerBranch";fi
 	strLayerBranch="${strLayer}${strLayerBranch}"
+	astrLayerListInvert=("$strLayer" "${astrLayerListInvert[@]-}")
 done
 #strLayerBranch="`ls -d "${strMountAt}.layer"* |sort -r |tr "\n" ":" |sed -r 's"(.*):"\1"'`"&&:
-declare -p strLayerBranch
+#declare -p strLayerBranch astrLayerList astrLayerListInvert |tr ":[" "\n\n"
+declare -p astrLayerListInvert |tr "[" "\n"
+
+iMaxLayers=126 #it is 127 if including the write layer
+echoc --info "total layers = ${#astrLayerList[@]} (iMaxLayers='$iMaxLayers')"
+if((${#astrLayerList[@]}>iMaxLayers));then
+	echoc -p "AUFS layers limit seems to be $iMaxLayers, it may not work..." #TODO confirm also thru documentation?
+	if ! echoc -q "try/continue?";then exit 1;fi
+fi
 
 ########
 ### the leftmost layer will be the one receiving all writes made at the mounted folder, 
@@ -221,7 +242,22 @@ fi
 
 SECFUNCexecA -ce mkdir -vp "$strMountAt"
 declare -p strLayerBranch |tr ":" "\n"
-SECFUNCexecA -ce sudo -k mount -t aufs -o sync,br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
+#SECFUNCexecA -ce sudo -k mount -t aufs -o sync,br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
+SECFUNCexecA -ce sudo mount -v -t aufs -o "sync,br=$strWriteLayer" ${astrOpts[@]-} none "$strMountAt"
+for strLayer in "${astrLayerListInvert[@]}";do 
+	if [[ -z "$strLayer" ]];then continue;fi #skipper
+	if [[ ! -d "$strLayer" ]];then echoc -p "not a directory?";exit 1;fi 
+	
+  echo "appending strLayer='$strLayer'";
+  if ! sudo mount -v -o "remount,append:$strLayer" "$strMountAt";then
+    echoc -p "err=$?";
+    exit 1
+  fi;
+done
+SECFUNCexecA -ce sudo -k
+
+strSI="`mount |grep "$strMountAt type aufs" |egrep -o "si=[^)]*" |tr "=" "_"`"
+SECFUNCexecA -ce ls -l /sys/fs/aufs/$strSI/
 
 SECFUNCexecA -ce ls -d "${strMountAt}"*
 
