@@ -27,6 +27,7 @@ eval `secinit`
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
+strRegexFilter=""
 strExample="DefaultValue"
 CFGstrTest="Test"
 CFGnLayerNumberGap=10
@@ -62,15 +63,18 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
 	elif [[ "$1" == "-u" ]];then #help ~single unmount and exit
 		bUmount=true;
+	elif [[ "$1" == "--regex" ]];then #help <strRegexFilter> filter folders ex.: ".*(0010|0039|0014|0500).*"
+		shift
+		strRegexFilter="$1"
 	elif [[ "$1" == "--ro" ]];then #help the mount point will be readonly
 		bReadOnly=true;
 	elif [[ "$1" == "--is" ]];then #help ~single check if the specified folder is mounted as multilayer mountpoint, and exit status
 		bChkIsMultiLayer=true;
 	elif [[ "$1" == "--reorder" ]];then #help ~single will find all layers and renumber them with the pre-defined gap <CFGnLayerNumberGap>
 		bRenumber=true;
-	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
-		shift
-		strExample="${1-}"
+	#~ elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
+		#~ shift
+		#~ strExample="${1-}"
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
@@ -153,7 +157,20 @@ fi
 #declare -A astrLayerList
 #IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d -iname "${strMountAt}.layer*" |sort &&:)&&:
 IFS=$'\n' read -d '' -r -a astrLayerList < <(find "./" -maxdepth 1 -type d \( -iname "${strMountAt}.layer*" -and -not -name "*${strIgnoreLayerSuffix}" \) |sort &&:)&&:
+
+astrLayerListBkp=()
+if [[ -n "$strRegexFilter" ]];then
+	astrLayerListBkp=( "${astrLayerList[@]}" )
+	astrLayerList=()
+	for strLayer in "${astrLayerListBkp[@]}";do
+		if [[ "$strLayer" =~ $strRegexFilter ]];then
+			astrLayerList+=("$strLayer")
+		fi
+	done
+fi
+
 declare -p astrLayerList |tr "[" "\n"
+
 #if [[ -z "$strLayerBranch" ]];then
 if [[ -z "${astrLayerList[@]-}" ]];then # no layers found
 	echoc -p "no layers found"
@@ -241,7 +258,7 @@ if $bReadOnly;then
 fi
 
 SECFUNCexecA -ce mkdir -vp "$strMountAt"
-declare -p strLayerBranch |tr ":" "\n"
+#declare -p strLayerBranch |tr ":" "\n"
 #SECFUNCexecA -ce sudo -k mount -t aufs -o sync,br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
 SECFUNCexecA -ce sudo mount -v -t aufs -o "sync,br=$strWriteLayer" ${astrOpts[@]-} none "$strMountAt"
 for strLayer in "${astrLayerListInvert[@]}";do 
@@ -257,9 +274,10 @@ done
 SECFUNCexecA -ce sudo -k
 
 strSI="`mount |grep "$strMountAt type aufs" |egrep -o "si=[^)]*" |tr "=" "_"`"
-SECFUNCexecA -ce ls -l /sys/fs/aufs/$strSI/
+SECFUNCexecA -ce ls -l /sys/fs/aufs/$strSI/brid*
 
-SECFUNCexecA -ce ls -d "${strMountAt}"*
+#SECFUNCexecA -ce ls -d "${strMountAt}"*
+SECFUNCexecA -ce ls -d "${astrLayerList[@]}"
 
 #echoc -w "to umount and remove"
 #FUNCumount
