@@ -249,7 +249,7 @@ fi
 ### even if it is a write on a file present in a lower layer (such file will remain the same,
 ### at such lower layer, as long it is modified at the mounted folder)!
 ########
-strWriteLayer="${strMountAt}.writeLayer"
+strWriteLayer="${strMountAt}.0.WriteLayer" #.0 is good to keep on top on filemanagers
 SECFUNCexecA -ce mkdir -vp "$strWriteLayer"
 
 astrOpts=()
@@ -269,7 +269,7 @@ for strLayer in "${astrLayerListInvert[@]}";do
   if ! sudo mount -v -o "remount,append:$strLayer" "$strMountAt";then
     echoc -p "err=$?";
     exit 1
-  fi;
+  fi
 done
 SECFUNCexecA -ce sudo -k
 
@@ -281,5 +281,3 @@ SECFUNCexecA -ce ls -d "${astrLayerList[@]}"
 
 #echoc -w "to umount and remove"
 #FUNCumount
-
-

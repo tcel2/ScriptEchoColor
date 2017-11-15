@@ -989,7 +989,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lastrFile=("${SECastrFuncFilesShowHelp[@]}")
 		else
 			# as help text are comments and `type` wont show them, the real script files is required...
-			SECFUNCechoErrA "unable to access script file '${lastrFile[0]}'"
+			SECFUNCechoErrA "unable to access script file '${lastrFile[0]}' (obs.: lstrFunctionNameToken='$lstrFunctionNameToken')"
 			SECFUNCdbgFuncOutA;return 1
 		fi
 		#fix duplicity on array
