@@ -56,12 +56,6 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift&&:
 done
 
-if [[ -n "$strPreferedWM" ]];then
-	FUNCcheckGetPreferedWm "$strPreferedWM"
-fi
-
-SECFUNCuniqueLock --daemonwait
-
 function FUNCcheckGetPreferedWm() {
 	local lstrCheck="${1-}"
 	local lbFail=false
@@ -99,6 +93,12 @@ function FUNCcheckGetPreferedWm() {
 	
 	echo "$lstrPreferedWM"
 }
+
+if [[ -n "$strPreferedWM" ]];then
+	FUNCcheckGetPreferedWm "$strPreferedWM"
+fi
+
+SECFUNCuniqueLock --daemonwait
 
 strCurrent=""
 while true;do
