@@ -73,15 +73,18 @@ if ! $smbMounted; then
 	echoc -X "ls -ld '$whereToMountFullPath'"
 	echoc -x "du -b '$whereToMountFullPath'"
 	#echoc -X "sudo mount -t smbfs '$mountSmbPath' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase"
-	while ! echoc -x "sudo -k mount -t cifs '$mountSmbPath' '$whereToMountFullPath' -o username=`SECFUNCgetUserName`,nocase @B#YOUR SAMBA PASSWORD WILL BE ASKED NEXT!";do
+	strUserName="`SECFUNCgetUserName`"
+	while ! echoc -x "sudo -k mount -t cifs '$mountSmbPath' '$whereToMountFullPath' -o username=$strUserName,nocase @B#YOUR SAMBA PASSWORD WILL BE ASKED NEXT!";do
 		echoc --info "fix your samba user account"
-		echoc -X "sudo -k smbpasswd -a `SECFUNCgetUserName`"
+		echoc -X "sudo -k smbpasswd -a $strUserName"
 	done
 fi
 
 if echoc -q "run nautilus at '$whereToMountFullPath'?";then
 	nautilus "$whereToMountFullPath"
 fi
+
+echoc --info "paste all files at whereToMountFullPath='$whereToMountFullPath' so conflicts can be prevented."
 
 while ! echoc -q "press 'y' to remove samba share"; do
 	echo "wrong key..."
