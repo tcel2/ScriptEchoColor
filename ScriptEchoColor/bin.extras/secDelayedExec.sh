@@ -533,6 +533,10 @@ function FUNCrun(){
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
 		
+		#TODO what->?? old question: how t f can this fail when term is dump/closed ?????: if which yad;then
+		# BEWARE! `yad --version` returns 252!!!!!!! bYad=false;if SECFUNCexecA -ce yad --version;then bYad=true;fi
+		bYad=false;if which yad;then bYad=true;fi
+			
 		local lbErr=false
 		local lstrTxt=""
 		if $bStay;then
@@ -580,8 +584,8 @@ function FUNCrun(){
 			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";
 			
-			#TODO how t f can this fail when term is dump/closed ?????: if which yad;then
-			if SECFUNCexecA -ce yad --version;then
+			echo ">>>$LINENO"
+			if $bYad;then 
 				local lbEvalCode=false
 				: ${strCodeToEval:=""}
 				# annoying: --on-top
@@ -589,9 +593,23 @@ function FUNCrun(){
 				astrYadFields=(
 					bXterm #0
 					strCodeToEval #1
-				)
+				);declare -p astrYadFields
+				#~ astrYadFullCmd=(
+					#~ yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" 
+						#~ --separator="\n" 
+						#~ --sticky --center --selectable-labels 
+						#~ --form 
+						#~ --field "[${astrYadFields[0]}] Use Xterm:chk" 
+						#~ --field "[${astrYadFields[1]}]" 
+						#~ --button="retry:0" 
+						#~ --button="retry-DEV:2" 
+						#~ --button="gtk-close:1" 
+						#~ "${!astrYadFields[0]}" 
+						#~ "${!astrYadFields[1]}" 
+				#~ );declare -p astrYadFullCmd
+				#~ strYadOutput="`SECFUNCexecA -ce ${astrYadFullCmd[@]}`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
 				strYadOutput="`
-					yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
+					SECFUNCexecA -ce yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
 						--separator="\n" \
 						--sticky --center --selectable-labels \
 						--form \
@@ -603,37 +621,36 @@ function FUNCrun(){
 						"${!astrYadFields[0]}" \
 						"${!astrYadFields[1]}" 
 					`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
-#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" \
-#						--button="retry(EvalCode):4" \
-#						--button="retry-DEV(EvalCode):3" \
-#				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
+	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" \
+	#						--button="retry(EvalCode):4" \
+	#						--button="retry-DEV(EvalCode):3" \
+	#				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
 					if [[ "${astrYadReturnValues[0]-}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
 					strCodeToEval="${astrYadReturnValues[1]-}"
-#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
+	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
 					252)break;; #do not retry, end. Closed using the "window close" title button.
-#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
-#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
+	#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
+	#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
 				esac
 				
-#				if $lbEvalCode;then
-#					local lstrCodeToEval="`zenity --entry \
-#						--title "$SECstrScriptSelfName[$$]" \
-#						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
-#					echo "eval: $lstrCodeToEval" >&2
-#					eval "$lstrCodeToEval"
-#				fi
+	#				if $lbEvalCode;then
+	#					local lstrCodeToEval="`zenity --entry \
+	#						--title "$SECstrScriptSelfName[$$]" \
+	#						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
+	#					echo "eval: $lstrCodeToEval" >&2
+	#					eval "$lstrCodeToEval"
+	#				fi
 				if [[ -n "$strCodeToEval" ]];then
 					eval "$strCodeToEval"
 				fi
-				
 			else
 				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 					break;
