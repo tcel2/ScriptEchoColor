@@ -84,7 +84,7 @@ if [[ ! -d "$strDevPath/.git" ]];then
 fi
 ls -ld "$strDevPath/.git"
 
-if ! dpkg -p "$strDpkgPackage";then
+if ! dpkg -s "$strDpkgPackage";then
 	echoc -p "invalid strDpkgPackage='$strDpkgPackage'"
 	exit 1
 fi
@@ -202,7 +202,7 @@ while true;do
 	### UPDATE CONTROL DATA AND SHOW INFORMATION ###
 	
 	#echoc --info "Git helper (hit ctrl+c to exit)"
-	strSECInstalledVersion="`dpkg -p "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
+	strSECInstalledVersion="`dpkg -s "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
 	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
 	echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
 	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}';"
