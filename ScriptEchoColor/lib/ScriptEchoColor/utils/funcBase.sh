@@ -61,7 +61,7 @@ function SECFUNCrealFile(){ #help
 	echo "$lfile"
 }
 
-function SECFUNCarraysExport() { #help export all arrays
+function SECFUNCarraysExport() { #help export all arrays marked to be exported 'declare -x'
 	SECFUNCdbgFuncInA;
 	
 	# var init here
