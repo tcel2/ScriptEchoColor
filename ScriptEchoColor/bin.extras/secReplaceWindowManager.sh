@@ -209,22 +209,27 @@ while true;do
 				#~ SECFUNCexecA -ce secXtermDetached.sh compiz --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			fi
 			strPreferedWM="compiz"
+			bForceOnce=true
 			;; 
 		m)
 			#~ SECFUNCexecA -ce secXtermDetached.sh metacity --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="metacity"
+			bForceOnce=true
 			;; 
 		x)
 			#~ SECFUNCexecA -ce secXtermDetached.sh xfwm4 --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="xfwm4"
+			bForceOnce=true
 			;; 
 		k)
 			#~ SECFUNCexecA -ce secXtermDetached.sh kwin --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="kwin"
+			bForceOnce=true
 			;; 
 		u)
 			#~ SECFUNCexecA -ce secXtermDetached.sh mutter --replace #>&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 			strPreferedWM="mutter"
+			bForceOnce=true
 			;; 
 		6)
 			echoc -w -t 60 "holding execution"

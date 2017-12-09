@@ -135,8 +135,12 @@ if ! $bRunOnce;then
 	SECFUNCuniqueLock --waitbecomedaemon
 fi
 
-function FUNCavailFS(){
-	df -BM --output=avail "$strTrashFolder" |tail -n 1 |tr -d M
+#~ function FUNCavailFS(){
+	#~ df -BM --output=avail "$strTrashFolder" |tail -n 1 |tr -d M
+#~ }
+function FUNCavailMB(){ #help <strTrashFolder>
+	local lstrTrashFolder="$1"
+	df -BM --output=avail "$lstrTrashFolder" |tail -n 1 |tr -d M
 }
 
 function FUNCrm(){
@@ -198,11 +202,12 @@ while true;do
 		
 			SECFUNCexecA -ce cd "$strTrashFolder"
 			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
-			echoc --info "Available `FUNCavailFS`MB,nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+			nAvailMB="`FUNCavailMB $strTrashFolder`"
+			echoc --info "nAvailMB=${nAvailMB},nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
 			if((nTrashSizeMB==0));then return 0;fi #continue;fi
 		
 			# Remove files
-			if $bTest || ((`FUNCavailFS`<nFSSizeAvailGoalMB));then
+			if $bTest || ((${nAvailMB}<nFSSizeAvailGoalMB));then
 	#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
 	#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
 			
@@ -247,10 +252,10 @@ while true;do
 	#					|cut -d' ' -f6-7,9- \
 	#					|sed -r -e 's" "+"' -e 's" "\t"' -e 's".trashinfo$""' )&&:
 			
-				if((`SECFUNCarraySize astrEntryList`>0));then
+				if((`SECFUNCarraySize astrEntryList`>0));then #has files on trash to be deleted
 					nRmCount=0
 					nRmSizeTotalB=0
-					nAvailSizeB4RmB=$((`FUNCavailFS`*1000000))&&: # from M to B
+					nAvailSizeB4RmB=$((${nAvailMB}*1000000))&&: # from M to B
 					# has date and filename
 					for strEntry in "${astrEntryList[@]}";do
 						strFileDT="`echo "$strEntry" |cut -f1`"
@@ -286,7 +291,7 @@ while true;do
 						strReport+="strFile='$strFile',"
 						strReport+="nFileSizeB='$nFileSizeB',"
 						strReport+="strFileDT='$strFileDT',"
-						strReport+="AvailMB='`FUNCavailFS`',"
+						strReport+="AvailMB='`FUNCavailMB $strTrashFolder`'," #avail after each rm
 						strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
 						echo "$strReport"
 					
@@ -304,13 +309,17 @@ while true;do
 						((nRmSizeTotalB+=nFileSizeB))&&:
 				
 						if $bTest;then break;fi # to work at only with one file
-						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailFS`>nFSSizeAvailGoalMB));then
+						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nFSSizeAvailGoalMB));then
 						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nFSSizeAvailGoalMB*1000000) ));then
 							break;
 						fi
 					done
 				else
 					echoc --info "trash is empty"
+					
+					if(( nAvailMB < (nFSSizeAvailGoalMB/2) ));then
+						echoc -p --say "unable to free disk space!"&&:
+					fi
 				fi
 			fi
 			
