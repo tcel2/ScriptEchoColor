@@ -24,7 +24,24 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
+# THIS BELOW MUST BE BEFORE secinit!!!
+if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST option. It will grant .bashrc will be loaded previously to executing the command. Useful in case this project was installed for a single user only.
+	shift
+	export SECstrScriptSelfNameTmp="$0"
+	function SECFUNCrcTmp() {
+		echo "$FUNCNAME: $SECstrScriptSelfNameTmp $@" >&2
+		$SECstrScriptSelfNameTmp "$@"
+	};export -f SECFUNCrcTmp
+#	echo "INFO: Granting .bashrc will be loaded previously to executing the command." >&2
+	astrCmd=(bash -i -c 'SECFUNCrcTmp $0 "$@"' "$@");
+	echo "Exec: ${astrCmd[@]}" >&2
+	"${astrCmd[@]}"
+	exit $?
+fi
+# THIS ABOVE MUST BE BEFORE secinit!!!
+
 eval `secinit --nochild --extras`
+#source <(secinit --nochild --extras)
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
 echo " \$@='$@'" >&2
