@@ -533,7 +533,6 @@ function FUNCrun(){
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
 		
-		#TODO what->?? old question: how t f can this fail when term is dump/closed ?????: if which yad;then
 		# BEWARE! `yad --version` returns 252!!!!!!! bYad=false;if SECFUNCexecA -ce yad --version;then bYad=true;fi
 		bYad=false;if which yad;then bYad=true;fi
 			
@@ -617,6 +616,7 @@ function FUNCrun(){
 						--field "[${astrYadFields[1]}]" \
 						--button="retry:0" \
 						--button="retry-DEV:2" \
+						--button="dump;retry:3" \
 						--button="gtk-close:1" \
 						"${!astrYadFields[0]}" \
 						"${!astrYadFields[1]}" 
@@ -636,6 +636,7 @@ function FUNCrun(){
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
+					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;bash";;
 					252)break;; #do not retry, end. Closed using the "window close" title button.
 	#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
 	#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
@@ -652,6 +653,8 @@ function FUNCrun(){
 					eval "$strCodeToEval"
 				fi
 			else
+				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
+				lstrTxt+="\n";
 				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 					break;
 				fi
