@@ -129,9 +129,9 @@ renice -n $SEC_NICE -p $$ >/dev/null 2>&1
 # SPEEDUP
 #if [[ -z "${SEC_TmpFolder-}" ]];then
 #	SECvarCheckScriptSelfNameParentChange=false
-#	eval `secinit --core`
+#	source <(secinit --core)
 #fi
-eval `secinit --fast` #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
+source <(secinit --fast) #secinit is already optimized to be very fast in case it is already initialized properly (with all aliases active)
 #set |grep "^SECastr" >&2
 
 strSpeedupFile="$SEC_TmpFolder/.SEC.ScriptEchoColor.Colorizing.SpeedUp.cfg"
@@ -838,7 +838,7 @@ FUNCkillSelf(){
 }
 strArgPrefix="_SEC_ARG_PID_"
 FUNCargget(){
-	eval `secinit --vars`
+	source <(secinit --vars)
 	local strVar="${1-}"
 	if [[ -z "$strVar" ]]; then
 		strVar="${strArgPrefix}$PPID"
@@ -848,7 +848,7 @@ FUNCargget(){
 	FUNCkillSelf $?
 }
 FUNCargset(){ # [varId] <value> #only one parameter means there is only the value
-	eval `secinit --vars`
+	source <(secinit --vars)
 	if [[ -z "${2-}" ]];then
 		strVar="${strArgPrefix}$PPID"
 		strValue="$1"
@@ -860,7 +860,7 @@ FUNCargset(){ # [varId] <value> #only one parameter means there is only the valu
 	FUNCkillSelf $?
 }
 FUNCargclr(){
-	eval `secinit --vars`
+	source <(secinit --vars)
 	local strVar="$1"
 	if [[ -z "$strVar" ]]; then
 		strVar="${strArgPrefix}$PPID"
@@ -924,7 +924,7 @@ fi
 strCommandWasMsg=`basename $0`" $@"
 
 FUNCread() {
-	#eval `secinit --core` #for SECFUNCisShellInteractive
+	#source <(secinit --core) #for SECFUNCisShellInteractive
 	#read requires interactiveness.
 	if ! SECFUNCisShellInteractive;then
 		SECFUNCechoErrA "Shell is NOT interactive! ";
@@ -2895,7 +2895,7 @@ if $bWaitAKey; then #WAIT A KEY MODE
 		char="`FUNCclearInputBufferGetLastChar`"&&: #this outputs progress info
 	fi
 	FUNCdoTheEcho
-	#eval `secinit --core` #for SECFUNCisShellInteractive
+	#source <(secinit --core) #for SECFUNCisShellInteractive
 	if SECFUNCisShellInteractive;then
 		FUNCread -s -n 1 $strNWaitTime -p ""&&: # -s and -p helps when hit ctrl+c to not bug into invisible typed characters
 	else

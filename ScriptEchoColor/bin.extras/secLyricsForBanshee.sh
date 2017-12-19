@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+source <(secinit)
 
 strFileLyricsTmp="/tmp/$SECstrScriptSelfName.lyrics.tmp"
 strPathLyrics="$HOME/.cache/banshee-1/extensions/lyrics/"

@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+source <(secinit)
 
 #SECFUNCshowHelp --colorize "<device> ex.: sde (that must be at '/dev/')"
 #strDevBase="${1-}";

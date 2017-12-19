@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit --extras -i`
+source <(secinit --extras -i)
 
 strDpkgPackage=""
 strDevPath=""

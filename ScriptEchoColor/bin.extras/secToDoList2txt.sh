@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ##################### INIT/CFG/FUNCTIONS
-eval `secinit`
+source <(secinit)
 
 bHTML=true
 

@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+source <(secinit)
 
 echoc -p "not implemented yet, may be one day?"
 exit 1

@@ -37,7 +37,7 @@ fi
 export SEC_WARN=true
 export SECbFuncArraysRestoreVerbose=true
 
-eval `secinit --extras --nolog --force`
+source <(secinit --extras --nolog --force)
 declare -p SECDEVastrCmdTmp&&: >&2
 
 SECFUNCcheckActivateRunLog --report
@@ -99,7 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECDEVbExitAfterUserCmd=true
 	elif [[ "$1" == "-u" ]];then #help enforce 'unbound variable' error, beware at bash completion...
 		SECDEVbUnboundErr=true
-	elif [[ "$1" == "--noinit" ]];then #help dont: eval `secinit`
+	elif [[ "$1" == "--noinit" ]];then #help dont: source <(secinit)
 		SECDEVbSecInit=false
 	elif [[ "$1" == "--dbg" ]];then #help enable all debug options
 		SECDEVbFullDebug=true
@@ -247,7 +247,7 @@ function SECFUNCaddToRcFile() {
 	if $SECDEVbUnboundErr;then
 		echoc --alert ' Unbound vars NOT allowed at terminal, beware bash completion...'
 	else
-#		echo ' Unbound vars allowed at terminal (unless you exec by hand: eval `secinit -f`)' >&2;set +u;
+#		echo ' Unbound vars allowed at terminal (unless you exec by hand: source <(secinit -f))' >&2;set +u;
 		echo ' Unbound vars allowed at terminal' >&2
 	fi
 	
@@ -267,16 +267,16 @@ function SECFUNCaddToRcFile() {
 	
 	# user custom initial command
 	if $SECDEVbHasCmdTmp;then
-#		eval `secinit --force` # mainly to restore the exported arrays and initialize the log
+#		source <(secinit --force) # mainly to restore the exported arrays and initialize the log
 		#SECFUNCarraysRestore
 		#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #		if [[ -n "${SECDEVastrCmdTmp[@]-}" ]];then
 			#echo "SECDEVastrCmdTmp[@]=(${SECDEVastrCmdTmp[@]})"
 #			set |egrep "^SEC_EXPORTED_ARRAY_" >&2
 			declare -p SECDEVastrCmdTmp&&: >&2
-			( #eval `secinit --force`;
+			( #source <(secinit --force);
 				SECbRunLog=true #force log!
-				eval `secinit --extras --force` # mainly to restore the exported arrays and initialize the log
+				source <(secinit --extras --force) # mainly to restore the exported arrays and initialize the log
 				set |egrep "^SEC_EXPORTED_ARRAY_" >&2
 				declare -p SECDEVastrCmdTmp&&: >&2
 				astrCmdTmp=("${SECDEVastrCmdTmp[@]}");

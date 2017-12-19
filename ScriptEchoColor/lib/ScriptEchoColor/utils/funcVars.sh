@@ -34,7 +34,7 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcMisc.sh";
 
 #trap 'SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;exit 2;' INT
 
-#trap 'SEC_DEBUG=false;SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;kill -SIGINT $$;' INT #TODO THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: eval `secinit`; while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
+#trap 'SEC_DEBUG=false;SECFUNCvarReadDB;SECFUNCvarWriteDBwithLock;kill -SIGINT $$;' INT #TODO THIS TRAP IS BUGGING NORMAL EXECUTION, IMPROVE IT! to simulate the problem, uncomment it and: source <(secinit); while true; do echoc -w -t 10; done #now try to hit ctrl+c ...
 
 # Fix in case it is empty or something else, make it sure it is true or false.
 # The comparison must be inverse to default value!
@@ -230,7 +230,7 @@ function SECFUNCvarInit() { #help generic vars initializer
 	fi
 	
 	if $lbVarChildDb;then
-		SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using eval `secinit` #TODO are you sure?
+		SECFUNCvarSetDB #SECFUNCvarReadDB #important to update vars on parent shell when using source <(secinit) #TODO are you sure?
 	else
 		SECFUNCvarSetDB --forcerealfile
 	fi

@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ##################### INIT/CFG/FUNCTIONS
-eval `secinit`
+source <(secinit)
 
 declare -A astrDeviceList=()
 strDeviceIdLastChosen=""

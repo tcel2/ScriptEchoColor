@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit --ilog` # --ilog as this script may be called very often
+source <(secinit --ilog) # --ilog as this script may be called very often
 selfName="`basename "$0"`"
 
 SECFUNCcfgReadDB

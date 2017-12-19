@@ -25,7 +25,7 @@
 #@@@R would need to be at xterm& #trap 'ps -A |grep Xorg; ps -p $pidX1; sudo -k kill $pidX1;' INT #workaround to be able to stop the other X session
 
 ########################## INIT AND VARS #####################################
-eval `secinit --extras`
+source <(secinit --extras)
 SECFUNCechoDbgA "init"
 SECFUNCuniqueLock --setdbtodaemon #SECFUNCdaemonUniqueLock #SECisDaemonRunning
 SECFUNCechoDbgA "SECvarFile='$SECvarFile'"
@@ -55,7 +55,7 @@ sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
 #}; export -f FUNCxlock
 
 #function FUNCCHILDScreenLockLightWeight() {
-#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 #	while true;do
 #		if $bUseXscreensaver; then
 #			if FUNCisScreenLockRunning;then
@@ -72,7 +72,7 @@ sedOnlyPid='s"[ ]*([[:digit:]]*) .*"\1"'
 #};export -f FUNCCHILDScreenLockLightWeight
 
 function FUNCCHILDScreenLockNow() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	if $bUseXscreensaver; then
 		DISPLAY=:1 xscreensaver-command -lock
 #		while true;do
@@ -93,7 +93,7 @@ function FUNCCHILDScreenLockNow() {
 };export -f FUNCCHILDScreenLockNow
 
 function FUNCrestartPulseAudioDaemonChild() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	# restart pulseaudio daemon
 	SECFUNCexecA -c --echo pulseaudio -k
 	while true;do
@@ -105,7 +105,7 @@ function FUNCrestartPulseAudioDaemonChild() {
 };export -f FUNCrestartPulseAudioDaemonChild
 
 function FUNCCHILDPreventAutoLock() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	while true;do
 		if $bUseXscreensaver; then
 			if ! FUNCisScreenLockRunning;then
@@ -118,7 +118,7 @@ function FUNCCHILDPreventAutoLock() {
 };export -f FUNCCHILDPreventAutoLock
 
 #function FUNCCHILDScreenSaver() {
-#	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+#	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 #	#SECFUNCvarShow bUseXscreensaver #@@@r
 #	local strCmdXscreensaver1="xscreensaver -display :1"
 #	function FUNClightWeightXscreensaver() {
@@ -197,12 +197,12 @@ function FUNCclearCache() {
 };export -f FUNCclearCache
 
 function FUNCnvidiaCicle() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	
 	SECFUNCdbgFuncInA;
 	local nDirection=$1 # 1 or -1
 	
-	#eval `secinit` #required if using exported function on child environment
+	#source <(secinit) #required if using exported function on child environment
 	SECFUNCvarSet --default nvidiaCurrent -1
 	
 	local lockId="openNewX.nvidia"
@@ -264,7 +264,7 @@ function FUNCnvidiaCicle() {
 
 function FUNCscript() {
 	SECFUNCdbgFuncInA;
-	# scripts will be executed with all environment properly setup with eval `secinit`
+	# scripts will be executed with all environment properly setup with source <(secinit)
 	local lscriptName="${1-}"
 	shift&&:
 	
@@ -456,7 +456,7 @@ function FUNCkeepJwmAlive() {
 #};export -f FUNCxtermDetached
 
 function FUNCcmdAtNewX() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	eval "$cmdOpenNewX";
 	bash;
 }; export -f FUNCcmdAtNewX
@@ -508,7 +508,7 @@ function FUNCsoundEnablerDoNotCloseThisTerminal() {
 };export -f FUNCsoundEnablerDoNotCloseThisTerminal
 
 function FUNCechocInitBashInteractive() {
-	eval `secinit` # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
+	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	bash -i
 };export -f FUNCechocInitBashInteractive
 
@@ -988,7 +988,7 @@ fi
 pidXtermForNewX=-1
 if ! FUNCisX1running; then
 	function FUNCexecCmdX1(){
-		eval `secinit`
+		source <(secinit)
 		
 		echo "INFO: hit CTRL+C to exit the other X session and close this window";
 		echo "INFO: running in a thread (child proccess) to prevent ctrl+c from freezing this X session and the machine!";

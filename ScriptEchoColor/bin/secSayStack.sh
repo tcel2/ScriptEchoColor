@@ -24,7 +24,7 @@
 
 #source "`ScriptEchoColor --getinstallpath`/lib/ScriptEchoColor/utils/funcMisc.sh"
 #source "`secGetInstallPath`/lib/ScriptEchoColor/utils/funcMisc.sh"
-eval `secinit --ilog --misc`
+source <(secinit --ilog --misc)
 
 export _SECSAYselfBaseName="secSayStack.sh" #@@@!!! update me if needed!
 export _SECSAYfileSayStack="/tmp/SEC.SayStack.tmp"

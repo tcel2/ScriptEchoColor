@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 #set -x #@@@ comment
-eval `secinit`
+source <(secinit)
 
 SECFUNCuniqueLock --daemonwait
 #secDaemonsControl.sh --register

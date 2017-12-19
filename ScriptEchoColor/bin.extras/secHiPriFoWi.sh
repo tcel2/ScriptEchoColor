@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 # Project Email: teike@users.sourceforge.net
 
-eval `secinit`
+source <(secinit)
 
 #sudo -k moved from here.. #trap 'echo "Interrupted by user (Ctrl+c)" >&2; bCleanExit=true; sudo -k; ' INT
 trap 'echo "Interrupted by user (Ctrl+c)" >&2; bCleanExit=true; ' INT

@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ################# INIT
-eval `secinit`
+source <(secinit)
 
 #isDaemonRunning=false
 #if SECFUNCuniqueLock --quiet; then
@@ -204,7 +204,7 @@ function FUNCtmprAverage() {
 #};export -f FUNCmonTmpr
 
 function FUNCchildLimCpuFastLoop() {
-	eval `secinit`
+	source <(secinit)
 	#SECFUNCvarWaitRegister pidToLimit
 #	SECFUNCvarWaitRegister fSigStopDelay
 #	SECFUNCvarWaitRegister fSigRunDelay

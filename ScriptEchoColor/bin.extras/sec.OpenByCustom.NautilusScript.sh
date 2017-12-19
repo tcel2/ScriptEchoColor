@@ -27,7 +27,7 @@
 # $NAUTILUS_SCRIPT_CURRENT_URI
 # $NAUTILUS_SCRIPT_WINDOW_GEOMETRY
 
-eval `secinit --extras`
+source <(secinit --extras)
 
 strExample="DefaultValue"
 bCfgTest=false

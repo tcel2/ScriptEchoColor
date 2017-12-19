@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+source <(secinit)
 
 #strSelfName="`basename "$0"`"
 #strLogFile="/tmp/.${strSelfName}.log"

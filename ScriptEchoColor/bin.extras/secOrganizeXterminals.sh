@@ -25,7 +25,7 @@
 ############### INIT/CFG
 
 renice -n 19 -p $$
-eval `secinit`
+source <(secinit)
 
 #bAskNow=false
 #trap 'bAskNow=true;' INT #WHY the trap is not working!?!??!?!

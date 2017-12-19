@@ -31,7 +31,7 @@ FUNCtrap
 
 #echo "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
 #echo "SECstrScriptSelfName=$SECstrScriptSelfName"
-eval `secinit`;
+source <(secinit);
 #if [[ -L "$SECvarFile" ]];then	echoc --alert "warning $SECvarFile is for child pid";fi;
 #ps -p $PPID
 #echo "SECstrScriptSelfNameParent=$SECstrScriptSelfNameParent"
@@ -293,7 +293,7 @@ function FUNCinterruptAsk() {
 function FUNCcopy() {
 	SECFUNCdbgFuncInA
 	#FUNCtrap
-	#eval `secinit`
+	#source <(secinit)
 	#SECFUNCvarReadDB
 	
 	SECFUNCdelay $FUNCNAME --init
@@ -471,7 +471,7 @@ function FUNCunison(){
 
 function FUNClsNot() { #synchronize like
 	function FUNCfileCheck() {
-		#eval `secinit --base`
+		#source <(secinit --base)
 		SECFUNCdbgFuncInA; 
 		#echo "look for: $1"
 		local relativePath="$1"

@@ -25,7 +25,7 @@
 #echo "All Params: $@"
 
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile"
-eval `secinit`
+source <(secinit)
 #selfName="`basename "$0"`" #TODO why became the caller script name?
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile";echoc -w 
 
@@ -228,7 +228,7 @@ fi
 export strFUNCexecMainCmd="$1"
 export strFUNCexecParams=`SECFUNCparamsToEval "$@"`
 function FUNCexecParams() {
-	eval `secinit`
+	source <(secinit)
 	
 	local lbRun=true
 	if $SECXbDaemon;then

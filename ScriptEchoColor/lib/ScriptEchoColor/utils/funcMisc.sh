@@ -1128,8 +1128,8 @@ function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon e
 	};export -f _SECFUNCdaemonCheckHold_SubShell
 	
 	# secinit --base; is required so the non exported functions are defined and the aliases are expanded
-	#SECFUNCarraysExport;bash -c 'eval `secinit --base`;_SECFUNCdaemonCheckHold_SubShell;'
-	SECFUNCexecOnSubShell 'eval `secinit --ilog --fast`;_SECFUNCdaemonCheckHold_SubShell;' #--ilog to prevent creation of many temporary, and hard to track, log files.
+	#SECFUNCarraysExport;bash -c 'source <(secinit --base);_SECFUNCdaemonCheckHold_SubShell;'
+	SECFUNCexecOnSubShell 'source <(secinit --ilog --fast);_SECFUNCdaemonCheckHold_SubShell;' #--ilog to prevent creation of many temporary, and hard to track, log files.
 	
 	SECFUNCdbgFuncOutA;
 }

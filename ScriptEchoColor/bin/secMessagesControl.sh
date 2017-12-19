@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit --base`
+source <(secinit --base)
 
 #export SEC_WARN=true
 #export SEC_DEBUG=true

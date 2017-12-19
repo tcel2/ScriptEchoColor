@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit` #auto creates the DB based on script pid
+source <(secinit) #auto creates the DB based on script pid
 varsetdb -f #force independant DB (in case parent shell has it set)
 
 varset varA=10;

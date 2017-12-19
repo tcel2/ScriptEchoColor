@@ -43,7 +43,7 @@ if [[ "$1" == "--isdaemonstarted" ]];then #help check if daemon is running, retu
 	exit 1
 fi
 
-eval `secinit --novarchilddb --nomaintenancedaemon` 
+source <(secinit --novarchilddb --nomaintenancedaemon) 
 if [[ "$nPidDaemon" != "-1" ]];then
 	if [[ -d "/proc/$nPidDaemon" ]];then
 		SECFUNCvarSetDB $nPidDaemon
@@ -459,7 +459,7 @@ while true;do
 			nPidVarDbSize=$(stat -c %s "$strVarDBFile")
 			if((nPidVarDbSize<10000));then continue;fi;
 			nPidVarDbToShrink=$(SECFUNCvarGetPidOfFileDB "$strVarDBFile");
-			bash -c 'eval `secinit --vars`;SECFUNCvarSetDB '$nPidVarDbToShrink';SECFUNCvarWriteDB;';
+			bash -c 'source <(secinit --vars);SECFUNCvarSetDB '$nPidVarDbToShrink';SECFUNCvarWriteDB;';
 			nPidVarDbSizeNew=$(stat -c %s "$strVarDBFile")
 			echo "Shrinked '$strVarDBFile' from '$nPidVarDbSize' to '$nPidVarDbSizeNew'."
 		done

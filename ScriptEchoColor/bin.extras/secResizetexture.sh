@@ -104,7 +104,7 @@ function FUNCbkpFileName() {
 # if bOptRecursive is not set, initialize them all, it will be already set when this script is called by find command.
 bOnce=false
 if [[ ! -n ${bOptRecursive+dummy} ]]; then
-	eval `secinit`
+	source <(secinit)
 #	echoc -c
 	
 	SECvarOptWriteAlways=false

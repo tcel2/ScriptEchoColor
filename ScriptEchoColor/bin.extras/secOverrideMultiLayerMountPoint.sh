@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit`
+source <(secinit)
 
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script

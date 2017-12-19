@@ -24,7 +24,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ############################# INIT ###############################
-eval `secinit -i --ilog --novarchilddb` # --ilog because of the option '--checkhold' that is called by many scripts...
+source <(secinit -i --ilog --novarchilddb) # --ilog because of the option '--checkhold' that is called by many scripts...
 
 #if SECFUNCuniqueLock --isdaemonrunning;then
 #	SECFUNCuniqueLock --setdbtodaemon

@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 ########### INIT
-eval `secinit --extras`
+source <(secinit --extras)
 aWindowListToSkip=(
 	"^cairo-dock$"
 	"^Desktop$"

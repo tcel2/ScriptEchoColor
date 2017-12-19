@@ -23,7 +23,7 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 export SECbRunLog=true
-eval `secinit`
+source <(secinit)
 
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
@@ -86,7 +86,7 @@ fi
 #xterm -e 'bash -c "while ! xscreensaver-command --lock;do echo retryAt\$SECONDS; sleep 1;done;echo locked;sleep 60"'
 
 function FUNClockLoop(){
-	eval `secinit` #this will initialize the logging inside xterm...
+	source <(secinit) #this will initialize the logging inside xterm...
 #	echo "SECbRunLog='$SECbRunLog'"
 	
 	while true;do

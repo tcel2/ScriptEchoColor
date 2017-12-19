@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-eval `secinit` #auto create DB based on pid
+source <(secinit) #auto create DB based on pid
 
 pidOtherScript=`ps -A -o pid,command |grep secExplShareEnvVarsA.sh |grep -v grep |sed -r 's"^[ ]*([[:digit:]]*) .*"\1"'`
 varsetdb $pidOtherScript #changes the auto created DB to be the other script DB

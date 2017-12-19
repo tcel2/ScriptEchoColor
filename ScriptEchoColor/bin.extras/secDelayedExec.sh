@@ -40,7 +40,7 @@ if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST opt
 fi
 # THIS ABOVE MUST BE BEFORE secinit!!!
 
-eval `secinit --nochild --extras`
+source <(secinit --nochild --extras)
 #source <(secinit --nochild --extras)
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
@@ -493,7 +493,7 @@ fi
 
 export astrRunParams=("$@")
 function FUNCrun(){
-#	eval `secinit`
+#	source <(secinit)
 #	SECFUNCarraysRestore
 	nRunTimes=0
 	local lbDevMode=false
@@ -514,7 +514,7 @@ function FUNCrun(){
 		
 		export strFileRetVal=$(mktemp)
 		function FUNCrunAtom(){
-			eval `secinit` #this will apply the exported arrays
+			source <(secinit) #this will apply the exported arrays
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
 			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
@@ -687,7 +687,7 @@ function FUNCrun(){
 #if $bXterm;then
 #	strTitle="${astrRunParams[@]}"
 #	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
-#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "eval `secinit`:;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
+#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "source <(secinit):;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #else
 #	SECFUNCexecA -ce FUNCrun
 #fi
