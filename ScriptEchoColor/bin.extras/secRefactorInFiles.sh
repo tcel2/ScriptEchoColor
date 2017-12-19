@@ -175,7 +175,7 @@ if $bRevertToBackups;then
 		echoc --info "no backups found..."
 	fi
 #	declare -p astrBkpFileList
-#	if ! SECFUNCexec -ce find "${strWorkPath}/" -iname "*.${strBkpSuffix}" -exec ls -l "{}" \; ; then
+#	if ! SECFUNCexecA -ce find "${strWorkPath}/" -iname "*.${strBkpSuffix}" -exec ls -l "{}" \; ; then
 #		echoc -p "no backup found..."
 #		exit 1
 #	fi
@@ -193,27 +193,33 @@ fi
 
 # Main code
 function _FUNCreportMatches() {
-	SECFUNCdrawLine --left "strFile='$strFile'"
+	SECFUNCdrawLine --left "=== strFile='$strFile'"
 	
 	echoc --info "color diff prevision"
 	
 	#echoc --info "BEFORE"
-	local lstrBefore="`SECFUNCexec -ce egrep --color=always "${strRegexMatch}" "$strFile"&&:`"
+	local lstrBefore="`SECFUNCexecA -ce egrep --color=always "${strRegexMatch}" "$strFile"&&:`"
 	
 	# this check may not work if sed replacing string is too complex to be ready to fgrep
-	local lstrBeware="`SECFUNCexec -ce fgrep --color=always "${strReplaceWith}" "$strFile"&&:`"
+	local lstrBeware="`SECFUNCexecA -ce fgrep --color=always "${strReplaceWith}" "$strFile"&&:`"
 	if [[ -n "$lstrBeware" ]];then echoc --alert "Beware, replace already exists!!"; echo "$lstrBeware";fi
 	
 	#echoc --info "AFTER"
-	local lstrAfter="`SECFUNCexec -ce sed -n -r "s@${strRegexMatch}@${strReplaceWith}@gp" "$strFile"&&:`" #|SECFUNCexec -ce fgrep --color=always "${strReplaceWith}"&&:
+	local lstrAfter="`SECFUNCexecA -ce sed -n -r "s@${strRegexMatch}@${strReplaceWith}@gp" "$strFile"&&:`" #|SECFUNCexecA -ce fgrep --color=always "${strReplaceWith}"&&:
 	
-	if SECFUNCexec -ce colordiff <(echo "$lstrBefore") <(echo "$lstrAfter");then :;fi #TODO why &&: didnt work?
+	if SECFUNCexecA -ce colordiff <(echo "$lstrBefore") <(echo "$lstrAfter");then :;fi #TODO why &&: didnt work?
 }
 
 IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -regex ".*/${strRegexFileFilter}")&&:
 #declare -p strRegexFileFilter strWorkPath
 if((`SECFUNCarraySize astrFileList`>0));then
 	for strFile in "${astrFileList[@]}";do
+		if [[ -L "$strFile" ]];then
+			SECFUNCdrawLine --left "=== SymlinkFound: strFile='$strFile'"
+			ls -l "$strFile"
+			strFile="`readlink -e "$strFile"`" # sed would replace symlinks with real files...
+		fi
+		
 		if egrep -q "$strRegexMatch" "$strFile";then
 			egrep -Hc "$strRegexMatch" "$strFile"
 			if SECFUNCarrayContains astrFileIgnore "$strFile";then
@@ -239,17 +245,17 @@ if((`SECFUNCarraySize astrFileList`>0));then
 				if [[ -f "$strFileBkp" ]];then
 					echoc --info "backup already exists, moving it to old"
 					strFileBkpOld="`echo "$strFileBkp" |sed -r "s'(.*)/(.*)'\1/\2.${strOldBkpToken}$strBkpKey.${strBkpSuffix}'"`"
-					SECFUNCexec -ce mv -vT "$strFileBkp" "$strFileBkpOld"
+					SECFUNCexecA -ce mv -vT "$strFileBkp" "$strFileBkpOld"
 				fi
-				SECFUNCexec -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
+				SECFUNCexecA -ce sed -i".${strBkpSuffix}" -r "s@${strRegexMatch}@${strReplaceWith}@g" "$strFile"
 #				if $bBkpHidden;then
 					mv "$strFileBkpNormal" "$strFileBkp" #overcome sed restriction of only suffixing the file
 #				fi
 				if [[ -f "$strFileBkp" ]];then
-					SECFUNCexec -ce ls -l "$strFileBkp"
-					SECFUNCexec -ce colordiff "$strFileBkp" "$strFile"&&:
+					SECFUNCexecA -ce ls -l "$strFileBkp"
+					SECFUNCexecA -ce colordiff "$strFileBkp" "$strFile"&&:
 				else
-					SECFUNCexec -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
+					SECFUNCexecA -ce egrep --color=always "${strReplaceWith}" "$strFile"&&:
 				fi
 			else
 				_FUNCreportMatches
