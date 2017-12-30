@@ -1,6 +1,5 @@
 IMPORTANT!
-	This file `lib/ScriptEchoColor/utils/funcVars.sh`	is experimental code! 
-	It is loaded when you use: eval `secinit`
+	This file `lib/ScriptEchoColor/utils/funcVars.sh` is loaded when you use: source <(secinit)
 	Its main purpose is to share global variables between parent and child, in a way both can write and read each others modifications, what may be unsafe...
 	Only use it on non critical (non sudo, non root, non critical work) scripts.
 	(just learned about http://modules.sourceforge.net/, on research atm)
@@ -22,7 +21,7 @@ EXAMPLES:
 
 SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
 	at top of your script type:
-		eval `secinit`
+		source <(secinit)
 	see:
 		secLibsInit.sh --help
 	for more info on using it.
@@ -31,10 +30,10 @@ SHARE ENVIRONMENT VARIABLES BETWEEN BASH SHELLS:
 KNOWN BUGS and LIMITATIONS:
 
 TODO (fix at top):
-	fix: str should not receive stderr output: SECbRunLog=true str="`eval $(secinit);echo abc >>/dev/stderr`"
+	fix: substitute eval for equivalent code everywhere it is being used: grep eval -rnIw
+	fix: str should not receive stderr output: str="`source <(secinit);echo abc >&2`"
 	fix: if SECbRunLog=true, trap INT on scripts wont work...
 	fix: remove all `source` that are not for libs files; also change the way vars work to not use "source" by splitting varid and value and recreating varid="value"
-	fix: eval is used everywhere.. use eval properly only... `grep eval * -rnc --exclude="*~" |grep -v ":0"`
   fix: SECFUNCvarSet (and other functions) without parameters gets crazy..
   fix: echoc "\$" not working!!!
   fix: arrow keys detection: left right; to select question options
@@ -87,7 +86,7 @@ NOTES (highlights) (for tech info look at CHANGES section):
 	update to GPL3
 	
 	Fixed invisible typed characters after hit ctrl+c on `echoc -q`!
-	Fixed: eval `secinit`; while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
+	Fixed: source <(secinit); while true; do echoc -w -t 10; done #it wont stop with ctrl+c ...
 	Fixed: use `set +o histexpand` on ~/.bashrc; echoc "abc!" causes error: 'bash: !": event not found'; workaround is to append space like this "abc! "
 	Fixed: ...loads of things I didnt take note...
 	

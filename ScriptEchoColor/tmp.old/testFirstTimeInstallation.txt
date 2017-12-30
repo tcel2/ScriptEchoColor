@@ -1,8 +1,0 @@
-rm -v /tmp/SEC.secMaintenanceDaemon.sh.$USER.DaemonPid;rm -vr /dev/shm/.SEC.$USER/;rm -vr ~/.ScriptEchoColor/
-
-cd $HOME
-
-git clone git://git.code.sf.net/p/scriptechocolor/git scriptechocolor-git
-cd scriptechocolor-git/ScriptEchoColor/
-./secEnableWithoutInstalling.sh
-

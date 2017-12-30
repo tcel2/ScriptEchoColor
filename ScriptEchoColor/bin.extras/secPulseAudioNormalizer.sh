@@ -96,7 +96,9 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 #	SECFUNCexecA -ce pulseaudio -D
 #fi
 
-strAudioOutput="`pacmd list-sinks |egrep "[[:blank:]]*name: " |sed -r 's".*<(.*)>"\1"'`";
+#strAudioOutput="`pacmd list-sinks |egrep "[[:blank:]]*name: " |sed -r 's".*<(.*)>"\1"'`";
+strDefaultAudioOutput="`pacmd list-sinks |grep "* index" -A 1 |grep name |sed -r 's".*<(.*)>"\1"'`";
+declare -p strDefaultAudioOutput 
 
 strPrefixName="ladspa_"
 strSinkName="${strPrefixName}sink"
@@ -109,7 +111,7 @@ if $bEnable;then
 				load-module \
 				module-ladspa-sink \
 				sink_name="$strSinkName" \
-				master="$strAudioOutput" \
+				master="$strDefaultAudioOutput" \
 				plugin="${strDriver}" \
 				label=dysonCompress \
 				control="$strDriverOpt"
