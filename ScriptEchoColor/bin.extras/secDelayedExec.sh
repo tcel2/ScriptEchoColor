@@ -539,6 +539,7 @@ function FUNCrun(){
 			astrTmp[0]="`basename "${astrTmp[0]}"`"
 			strTitle="${astrTmp[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+			strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
