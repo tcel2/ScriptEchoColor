@@ -81,7 +81,11 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 if $bDaemon;then
-	sudo /usr/sbin/iotop --batch --time --only --quiet --delay=1 --kilobytes 2>&1 |tee $HOME/log/iotop.log
+	while true;do
+		if ! sudo /usr/sbin/iotop --batch --time --only --quiet --delay=1 --kilobytes 2>&1 |tee $HOME/log/iotop.log;then
+			echoc -p "iotop error"
+		fi
+	done
 	exit #should not be reached
 fi
 
