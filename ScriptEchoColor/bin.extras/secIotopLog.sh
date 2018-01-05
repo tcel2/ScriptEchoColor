@@ -44,12 +44,7 @@ bDaemon=false
 : ${CFGnWMinKB:=$CFGnMinKB}
 : ${CFGnWMinPerc:=$CFGnMinPerc}
 
-#: ${CFGnColumns:=`tput cols`}
-#nColumns=`stty -a |egrep "columns [[:digit:]]*" -o |cut -d ' ' -f2`
-#nColumns=`stty size 2>/dev/null |cut -d" " -f2`
-read nRows nColumns < <(stty size)
-
-declare -p CFGnMinKB CFGnMinPerc CFGnRMinKB CFGnRMinPerc CFGnWMinKB CFGnWMinPerc nColumns
+declare -p CFGnMinKB CFGnMinPerc CFGnRMinKB CFGnRMinPerc CFGnWMinKB CFGnWMinPerc
 
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -98,6 +93,11 @@ fi
 	#~ |egrep -v "Total|Actual" \
 	#~ |sed -r "s@(.{`tput cols`}).*@\1@" \
 	#~ |awk "( \$5 > $nMinKB || \$7 > $nMinKB ) && ( \$9 > $nMinPerc || \$11 > $nMinPerc )"
+
+#: ${CFGnColumns:=`tput cols`}
+#nColumns=`stty -a |egrep "columns [[:digit:]]*" -o |cut -d ' ' -f2`
+#nColumns=`stty size 2>/dev/null |cut -d" " -f2`
+read nRows nColumns < <(stty size)
 
 tail -n 10000 $HOME/log/iotop.log \
 	|egrep -v "Total|Actual" \
