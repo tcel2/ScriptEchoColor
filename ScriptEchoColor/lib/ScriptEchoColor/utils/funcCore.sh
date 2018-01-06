@@ -904,7 +904,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		elif [[ "$1" == "--checkMissPlacedFunctionHelps" ]];then #SECFUNCshowHelp_help list all functions help tokens on *.sh scripts recursively
 			grep "#[[:alnum:]]*_help " * --include="*.sh" -rIoh
 			SECFUNCdbgFuncOutA;return
-		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help ([lstrScriptFile] <lbSort> this is not an actual option, it is just to show self tests only...)
+		elif [[ "${1-}" == "--dummy-selftest" ]];then #SECFUNCshowHelp_help ([lstrScriptFile] [lstrColorizeEcho] <lbSort> <lbOnlyVars> this is not an actual option, it is just to show self tests only...)
 			#SECFUNCshowHelp_help (This is the multiline test at an option.)
 			:
 		else
@@ -917,10 +917,15 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	# Colors: light blue=94, light yellow=93, light green=92, light cyan=96, light red=91
 	#local le=$(printf '\033') # Escape char to provide colors on sed on terminal
 	local lsedMatchRequireds='([<])([^>]*)([>])'
-	local lsedMatchOptionals='([[])([^]]*)([]])'
-	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcharEsc}[96m[\2]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
-	local lsedColorizeRequireds="s,$lsedMatchRequireds,${SECcolorCancel}${SECcolorLightRed}<\2>${SECcolorCancel},g"
-	local lsedColorizeTheOption="s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),${SECcolorCancel}${SECcharEsc}[92m\1\2\3${SECcolorCancel},g"
+#	local lsedMatchOptionals='([[])([^]]*)([]])'
+#	local lsedMatchOptionals='([[])([^0-9]{0,1}+[^]]*)([]])' #color codes are `SECcharEsc + '[' + digit... + m`. Variables always begin with alpha char. So deny 0-9 matches that mean colors.
+#	local lsedMatchOptionals="([^${SECcharEsc}][[])([a-zA-Z][^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+	local lsedMatchOptionals="([^${SECcharEsc}][[])([a-zA-Z][^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+#	local lsedMatchOptionals="[^${SECcharEsc}].([[])([^]]*)([]])"
+#	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcharEsc}[96m[\2]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcolorLightCyan}[\2${SECcolorLightCyan}]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeRequireds="s,$lsedMatchRequireds,${SECcolorCancel}${SECcolorLightRed}<\2${SECcolorLightRed}>${SECcolorCancel},g"
+	local lsedColorizeTheOption="s,([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]]),${SECcolorCancel}${SECcolorLightGreen}\1\2\3${SECcolorCancel},g"
 	local lsedTranslateEscn='s,\\n,\n,g'
 	local lsedTranslateEsct='s,\\t,\t,g'
 
@@ -929,7 +934,14 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		IFS= read -r lstrLine #IFS= required to prevent skipping \t, and -r required to not interpret "\"
 		#IFS=$'\n' read lstrLine
 		
-		local lstrMatch="$1"
+		local lstrMode="$1";shift
+		local lstrMatch="$1";shift
+		
+		local lstrColorClosing="${SECcolorLightRed}" #"req"
+		if [[ "$lstrMode" == "opt" ]];then
+			lstrColorClosing="${SECcolorLightCyan}"
+		fi
+		
 		local lstrVarId="`echo "$lstrLine" |sed -r "s,.*$lstrMatch.*,\2,"`"
 		local lbShowValue=true
 		if [[ "$lstrVarId" == "FUNCNAME" ]];then
@@ -943,7 +955,11 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcharEsc}[5m${!lstrVarId}${SECcharEsc}[25m'\3,"
 #			echo "$lstrLine">&2
 #			echo "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3," >&2
-			echo "$lstrLine" |sed -r "s${SECsedTk}$lstrMatch${SECsedTk}\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3${SECsedTk}"
+#			echo "$lstrLine" |sed -r "s${SECsedTk}$lstrMatch${SECsedTk}\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3${SECsedTk}"
+			local lsedExtractValue='s@[^=]*="(.*)"@\1@'
+			local lstrVarIdValue="$(declare -p $lstrVarId |sed -r "$lsedExtractValue")"
+			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2='${SECcolorLightYellow}${lstrVarIdValue}${lstrColorClosing}'\3${SECcolorCancel}${SECsedTk}"
+#			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2='${SECcolorCancel}${lstrVarIdValue}${SECcolorLightRed}'\3${SECsedTk}"
 		else
 			echo "$lstrLine"
 		fi
@@ -955,8 +971,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		#while	IFS=$'\n' read lstrLineMain;do
 			#echo "lstrLine='$lstrLine'" >&2
 			echo "$lstrLineMain" \
-				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchOptionals" \
-				|_SECFUNCshowHelp_SECFUNCmatch "$lsedMatchRequireds" 
+				|_SECFUNCshowHelp_SECFUNCmatch opt "$lsedMatchOptionals" \
+				|_SECFUNCshowHelp_SECFUNCmatch req "$lsedMatchRequireds" 
 		done
 	}
 	
@@ -1099,7 +1115,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		local lsedRemoveTokenOR='s,(.*"[[:blank:]]*)[|]{2}([[:blank:]]*".*),\1\2,' #if present
 	#	local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g'
 		#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g'
-		local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcharEsc}'[0m'${SECcharEsc}'[92m\1'${SECcharEsc}'[0m\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
+		local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[_[:alnum:]{}-]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t'${SECcolorCancel}${SECcolorLightGreen}'\1'${SECcolorCancel}'\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
 		#local lsedRemoveComparedVariable='s,[[:blank:]]*"\$[-_[:alnum:]{}]*"[[:blank:]]*==[[:blank:]]*"([-_[:alnum:]]*)"[[:blank:]]*,\t\1\t,g' #some options may not have -- or -, so this redundantly colorizes all options for sure
 		local lsedRemoveHelpToken='s,#'${lstrFunctionNameToken}'help,,'
 	#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'

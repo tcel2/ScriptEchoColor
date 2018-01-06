@@ -37,22 +37,27 @@ SECFUNCcfgReadDB #after default variables value setup above
 bDaemon=false
 nChangeInterval=3600
 strWallPPath="$HOME/Pictures/Wallpapers/"
+strFindRegex=".*[.]\(jpg\|png\)"
+declare -p strFindRegex
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "\tAuto changes wallpaper after delay. <strWallPPath> [strFindRegex] a"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--daemon" || "$1" == "-d" ]];then #help
 		bDaemon=true
-	elif [[ "$1" == "--change" || "$1" == "-c" ]];then #help <nChangeInterval> change interval in seconds
+	elif [[ "$1" == "--change" || "$1" == "-c" ]];then #help <nChangeInterval> change wallpaper interval in seconds
 		shift
 		nChangeInterval=$1
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift
 		strWallPPath="$1"
+	elif [[ "$1" == "--find" || "$1" == "-f" ]];then #help <strFindRegex>
+		shift
+		strFindRegex="$1"
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
@@ -76,16 +81,35 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 cd $strWallPPath;
 
+nDelayMsg=3
+
+function FUNCchkUpdateFileList() {
+		nTotFiles=${#astrFileList[@]}
+		if((nTotFiles==0));then
+			IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex") &&:
+			if [[ -z "${1-}" ]];then
+				FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
+				if((nTotFiles==0));then
+					echoc -w -t $nDelayMsg -p "no files found at '`pwd`'"
+					return 1
+				else
+					echoc -w -t $nDelayMsg "updated files list"
+				fi
+			fi
+		fi
+		return 0
+}
+
 if $bDaemon;then
+	nTotFiles=0
 	astrFileList=()
 	while true;do 
-		if((${#astrFileList[@]}==0));then
-			IFS=$'\n' read -d '' -r -a astrFileList < <(ls -1) &&:
-		fi
-		nSelect=$((RANDOM%${#astrFileList[@]}));
+		if ! FUNCchkUpdateFileList;then continue;fi
+		
+		nSelect=$((RANDOM%nTotFiles));
 		strFile="`pwd`/${astrFileList[$nSelect]}";
 		
-		declare -p astrFileList nSelect strFile
+		declare -p astrFileList nSelect nTotFiles strFile |tr '[' '\n'
 		
 		#TODO auto download wallpapers
 		
@@ -93,7 +117,7 @@ if $bDaemon;then
 		unset astrFileList[$nSelect]
 		astrFileList=("${astrFileList[@]}")
 		
-		gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
+		SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
 		echoc -w -t $nChangeInterval;
 	done
 fi
