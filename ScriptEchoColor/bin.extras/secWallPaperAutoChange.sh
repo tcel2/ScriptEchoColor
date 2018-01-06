@@ -42,7 +42,7 @@ declare -p strFindRegex
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\tAuto changes wallpaper after delay. <strWallPPath> [strFindRegex] a"
+		SECFUNCshowHelp --colorize "\tAuto changes wallpaper after delay."
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
