@@ -116,6 +116,7 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	_SECFUNCtrapErr_addLine "strSECFUNCtrapErrCustomMsg='${strSECFUNCtrapErrCustomMsg-}';"
 	_SECFUNCtrapErr_addLine "SECstrRunLogFile='${SECstrRunLogFile-}';"
 	_SECFUNCtrapErr_addLine "SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName-},LINENO=${lstrLineNo-}';"
+#	_SECFUNCtrapErr_addLine "BASH_COMMAND='`tr '\n' ';' <<< "${lstrBashCommand-}"`';"
 	_SECFUNCtrapErr_addLine "BASH_COMMAND='${lstrBashCommand-}';"
 	_SECFUNCtrapErr_addLine "BASH_SOURCE[@]='(${lstrBashSourceListTrap-})';"
 	_SECFUNCtrapErr_addLine "lnRetTrap='$lnRetTrap';"
