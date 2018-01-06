@@ -84,20 +84,24 @@ cd $strWallPPath;
 nDelayMsg=3
 
 function FUNCchkUpdateFileList() {
-		nTotFiles=${#astrFileList[@]}
-		if((nTotFiles==0));then
-			IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex") &&:
-			if [[ -z "${1-}" ]];then
-				FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
-				if((nTotFiles==0));then
-					echoc -w -t $nDelayMsg -p "no files found at '`pwd`'"
-					return 1
-				else
-					echoc -w -t $nDelayMsg "updated files list"
-				fi
+	nTotFiles=${#astrFileList[@]}
+	
+	if((nTotFiles==0));then
+		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex") &&: # re-fill
+		if [[ -z "${1-}" ]];then
+			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
+			if((nTotFiles==0));then
+				echoc -w -t $nDelayMsg -p "no files found at '`pwd`'"
+				return 1
+			else
+				echoc -w -t $nDelayMsg "updated files list"
 			fi
 		fi
-		return 0
+	else
+		astrFileList=("${astrFileList[@]}") # this will update the indexes
+	fi
+	
+	return 0
 }
 
 if $bDaemon;then
@@ -115,7 +119,6 @@ if $bDaemon;then
 		
 		#excluding
 		unset astrFileList[$nSelect]
-		astrFileList=("${astrFileList[@]}")
 		
 		SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
 		echoc -w -t $nChangeInterval;
