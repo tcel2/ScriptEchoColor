@@ -107,6 +107,8 @@ function FUNCchkUpdateFileList() {
 if $bDaemon;then
 	nTotFiles=0
 	astrFileList=()
+	bFastMode=false
+	nSleep=$nChangeInterval
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
@@ -121,7 +123,14 @@ if $bDaemon;then
 		unset astrFileList[$nSelect]
 		
 		SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
-		echoc -w -t $nChangeInterval;
+		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
+			SECFUNCtoggleBoolean bFastMode
+			if $bFastMode;then
+				nSleep=3
+			else
+				nSleep=$nChangeInterval
+			fi
+		fi
 	done
 fi
 
