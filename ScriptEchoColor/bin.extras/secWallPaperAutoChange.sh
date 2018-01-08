@@ -39,6 +39,7 @@ nChangeInterval=3600
 strWallPPath="$HOME/Pictures/Wallpapers/"
 strFindRegex=".*[.]\(jpg\|png\)"
 declare -p strFindRegex
+nChangeIFast=5
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -52,10 +53,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--change" || "$1" == "-c" ]];then #help <nChangeInterval> change wallpaper interval in seconds
 		shift
 		nChangeInterval=$1
+	elif [[ "$1" == "--fast" || "$1" == "-f" ]];then #help <nChangeIFast> fast change wallpaper interval in seconds
+		shift
+		nChangeIFast=$1
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift
 		strWallPPath="$1"
-	elif [[ "$1" == "--find" || "$1" == "-f" ]];then #help <strFindRegex>
+	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
 		shift
 		strFindRegex="$1"
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -126,7 +130,7 @@ if $bDaemon;then
 		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
 			SECFUNCtoggleBoolean bFastMode
 			if $bFastMode;then
-				nSleep=3
+				nSleep=$nChangeIFast
 			else
 				nSleep=$nChangeInterval
 			fi
