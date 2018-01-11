@@ -231,13 +231,22 @@ while true;do
 							|sort \
 							|head -n $nFileCountPerStep)&&:
 				fi
-				# This will use the trashinfo file datetime as reference! probably 100% precise!
-				# A token '&' is used to help on precisely parsing the `ls` output making it usable with `cut`.
+				#####
+				## It has to be `ls` because it sorts by datetime! TODO `find` cant do it too?
+				## This will use the trashinfo file datetime as reference, probably 100% precise! 
+				## `grep` is important to make it sure it will remove really trashed files by it's info that ends with '.trashinfo' !!!!!!!!
+				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
+				#####
+				sedStripDatetimeAndFilename='s"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"'
 				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-					ls -ltr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
+					ls -altr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
+						|egrep ".trashinfo$" \
 						|head -n $((nFileCountPerStep+1)) \
-						|tail -n +2 \
-						|sed -r -e 's"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"' -e 's".trashinfo$""' )&&:
+						|sed -r -e "$sedStripDatetimeAndFilename" -e 's".trashinfo$""' )&&:
+#						|head -n $((nFileCountPerStep+1)) \
+#						|tail -n +2 \
+				## grep -v eliminates "." and ".."
+#						|egrep -v "[.]$|[.][.]$" \
 	#			# `tail` +2 to skip total line. `sed` to convert 1st space to tab making it usable with `cut`
 	#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
 	#				ls -ltr --time-style='+%Y%m%d+%H%M%S.%N' "../info/" \
