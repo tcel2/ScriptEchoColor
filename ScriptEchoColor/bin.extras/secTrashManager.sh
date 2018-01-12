@@ -50,10 +50,11 @@ bRunOnce=false
 strChkTrashConsistencyFolder=false
 #bTouchToDelDT=false
 SECFUNCcfgReadDB #after default variables value setup above
+bAskedCustomGoal=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "\tIt will respect asked goal if has filter and on run once mode."
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo "Mounted FS (to use on filter):";FUNCmountedFs
 		echo
@@ -62,6 +63,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--goal" || "$1" == "-g" ]];then #help <nFSSizeAvailGoalMB> 
 		shift
 		nFSSizeAvailGoalMB="${1-}"
+		bAskedCustomGoal=true
 	elif [[ "$1" == "--step" || "$1" == "-s" ]];then #help <nFileCountPerStep> per check will work with this files count
 		shift
 		nFileCountPerStep="${1-}"
@@ -207,9 +209,17 @@ while true;do
 			nFSTotalSizeMB="`df --block-size=1MiB --output=size . |tail -n 1 |awk '{print $1}'`"
 			nGoal5Perc=$((nFSTotalSizeMB/20)) # goal as 5% of FS total size
 			nThisFSAvailGoalMB=$nFSSizeAvailGoalMB
-			if((nGoal5Perc<nThisFSAvailGoalMB));then
-				nThisFSAvailGoalMB=$nGoal5Perc
+			if $bRunOnce && $bAskedCustomGoal && [[ -n "$strFilterRegex" ]];then
+				: # keep the specified goal for these conditions
+			else
+				if((nGoal5Perc<nThisFSAvailGoalMB));then
+					nThisFSAvailGoalMB=$nGoal5Perc
+				fi
 			fi
+#			if [[ -z "$strFilterRegex" ]] && ! $bRunOnce && ((nGoal5Perc<nThisFSAvailGoalMB));then
+#			if((nGoal5Perc<nThisFSAvailGoalMB));then
+#				nThisFSAvailGoalMB=$nGoal5Perc
+#			fi
 			
 			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
 			nAvailMB="`FUNCavailMB $strTrashFolder`"
