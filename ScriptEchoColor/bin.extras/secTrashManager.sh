@@ -109,6 +109,8 @@ fi
 
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+n1MB=$((1024**2))
+
 #if $bTouchToDelDT;then
 #	strTouchDT="`egrep "^DeletionDate=" "$strFile" |cut -d'=' -f2`"
 #	exit 0
@@ -200,14 +202,22 @@ while true;do
 	#		ls -ld "$strTrashFolder"&&:
 			if [[ ! -d "$strTrashFolder" ]];then return 0;fi #continue;fi
 		
-			SECFUNCexecA -ce cd "$strTrashFolder"
+			SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
+			
+			nFSTotalSizeMB="`df --block-size=1MiB --output=size . |tail -n 1 |awk '{print $1}'`"
+			nGoal5Perc=$((nFSTotalSizeMB/20)) # goal as 5% of FS total size
+			nThisFSAvailGoalMB=$nFSSizeAvailGoalMB
+			if((nGoal5Perc<nThisFSAvailGoalMB));then
+				nThisFSAvailGoalMB=$nGoal5Perc
+			fi
+			
 			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
 			nAvailMB="`FUNCavailMB $strTrashFolder`"
-			echoc --info "nAvailMB=${nAvailMB},nFSSizeAvailGoalMB='$nFSSizeAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+			echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
 			if((nTrashSizeMB==0));then return 0;fi #continue;fi
-		
+			
 			# Remove files
-			if $bTest || ((${nAvailMB}<nFSSizeAvailGoalMB));then
+			if $bTest || ((${nAvailMB}<nThisFSAvailGoalMB));then
 	#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
 	#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
 			
@@ -264,7 +274,7 @@ while true;do
 				if((`SECFUNCarraySize astrEntryList`>0));then #has files on trash to be deleted
 					nRmCount=0
 					nRmSizeTotalB=0
-					nAvailSizeB4RmB=$((${nAvailMB}*1000000))&&: # from M to B
+					nAvailSizeB4RmB=$((${nAvailMB}*n1MB))&&: # from M to B
 					# has date and filename
 					for strEntry in "${astrEntryList[@]}";do
 						strFileDT="`echo "$strEntry" |cut -f1`"
@@ -292,7 +302,7 @@ while true;do
 						else
 							nFileSizeB="`stat -c "%s" "./$strFile"`"
 						fi
-						nFileSizeMB=$((nFileSizeB/(1024*1024)))&&:
+						nFileSizeMB=$((nFileSizeB/n1MB))&&:
 						((nRmCount++))&&:
 					
 						strReport=""
@@ -318,15 +328,15 @@ while true;do
 						((nRmSizeTotalB+=nFileSizeB))&&:
 				
 						if $bTest;then break;fi # to work at only with one file
-						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nFSSizeAvailGoalMB));then
-						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nFSSizeAvailGoalMB*1000000) ));then
+						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nThisFSAvailGoalMB));then
+						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nThisFSAvailGoalMB*n1MB) ));then
 							break;
 						fi
 					done
 				else
 					echoc --info "trash is empty"
 					
-					if(( nAvailMB < (nFSSizeAvailGoalMB/2) ));then
+					if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
 						echoc -p --say "unable to free disk space!"&&:
 					fi
 				fi
