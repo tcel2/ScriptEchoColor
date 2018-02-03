@@ -459,6 +459,7 @@ function WINEFUNCchkSelfScript() {
 		echo
 		echoc --alert "run these commands:"
 		echo "cd '${WINEBASE}';pwd;"
+		echo "mkdir -vp '${WINEPREFIX}/';"
 		echo "mv -v '$SECstrScriptSelfName' '${WINEPREFIX}/';"
 		echo "ln -vs '${WINEPREFIX}/$SECstrScriptSelfName' '$SECstrScriptSelfName';"
 		echo "${WINEBASE}/bin/runWINEREDIRECT.sh; #to create the quickrun symlink"

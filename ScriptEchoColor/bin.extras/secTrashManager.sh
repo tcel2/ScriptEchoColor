@@ -56,6 +56,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "\tIt will respect asked goal if has filter and on run once mode."
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo "#TODO use \`trash-rm\` one day."
 		echo "Mounted FS (to use on filter):";FUNCmountedFs
 		echo
 		SECFUNCshowHelp
@@ -210,10 +211,11 @@ while true;do
 			nGoal5Perc=$((nFSTotalSizeMB/20)) # goal as 5% of FS total size
 			nThisFSAvailGoalMB=$nFSSizeAvailGoalMB
 			if $bRunOnce && $bAskedCustomGoal && [[ -n "$strFilterRegex" ]];then
-				: # keep the specified goal for these conditions
+				echoc --info "Special condition: has filter, is run once, asked custom goal. Will keep the specified goal for these conditions"
 			else
 				if((nGoal5Perc<nThisFSAvailGoalMB));then
 					nThisFSAvailGoalMB=$nGoal5Perc
+					echoc --info "Using 5% goal"
 				fi
 			fi
 #			if [[ -z "$strFilterRegex" ]] && ! $bRunOnce && ((nGoal5Perc<nThisFSAvailGoalMB));then
