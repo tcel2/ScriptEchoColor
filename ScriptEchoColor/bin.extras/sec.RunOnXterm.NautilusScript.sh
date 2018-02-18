@@ -25,6 +25,8 @@
 source <(secinit --extras)
 
 function FUNCdoIt() {
+	source <(secinit --extras) #to apply aliases. TODO --fast wasnt enough at @RefLink:1, complaining about unbound SECbExecJustEcho at SECFUNCexec
+	
 	#sedUrlDecoder='s % \\\\x g'
 	#path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 	#eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
@@ -45,6 +47,7 @@ function FUNCdoIt() {
 		#xterm -e "bash -i -c \"$strFile\"" # -i required to force it work on ubuntu 12.10
 		(
 			cd "`dirname "${strFile}"`"
+			SECFUNCexecA -ce pwd # @RefLink:1
 			SECFUNCexecA -ce secXtermDetached.sh "$strFile"
 		)
 		lbFirstDone=true

@@ -95,10 +95,10 @@ function FUNCCHILDScreenLockNow() {
 function FUNCrestartPulseAudioDaemonChild() {
 	source <(secinit) # necessary when running a child terminal, sometimes may work without this, but other times wont work properly without this!
 	# restart pulseaudio daemon
-	SECFUNCexecA -c --echo pulseaudio -k
+	SECFUNCexecA -ce pulseaudio -k
 	while true;do
 		if ! pgrep -x pulseaudio;then
-			SECFUNCexecA -c --echo pulseaudio -D	
+			SECFUNCexecA -ce pulseaudio -D	
 		fi
 		sleep 3
 	done
@@ -470,12 +470,12 @@ function FUNCfixPulseaudioThruTCP() {
 		local lstrFileDefaultPA="$lstrPathPulseUser/default.pa"
 		local lstrDefaultPAcfg="load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1"
 		if [[ ! -f "$lstrPathPulseUser/default.pa" ]];then
-			SECFUNCexecA -c --echo cp -v /etc/pulse/default.pa "$lstrPathPulseUser"
+			SECFUNCexecA -ce cp -v /etc/pulse/default.pa "$lstrPathPulseUser"
 			echo "$lstrDefaultPAcfg" >>"$lstrFileDefaultPA"
 		else
 			if ! grep "$lstrDefaultPAcfg" "$lstrFileDefaultPA";then
 				if echoc -q "missing pulseaudio TCP configuration at: default.pa, recreate it on next run?";then
-					SECFUNCexecA -c --echo mv -vf "$lstrFileDefaultPA" "${lstrFileDefaultPA}.`SECFUNCdtFmt --filename`.bkp"
+					SECFUNCexecA -ce mv -vf "$lstrFileDefaultPA" "${lstrFileDefaultPA}.`SECFUNCdtFmt --filename`.bkp"
 					exit 1
 				fi
 			fi
@@ -487,8 +487,9 @@ function FUNCfixPulseaudioThruTCP() {
 			echo "$lstrClientPAcfg" >"$lstrFileClientPA"
 		else
 			if ! grep "$lstrClientPAcfg" "$lstrFileClientPA";then
-				if echoc -q "missing pulseaudio TCP configuration at: client.conf, recreate it on next run?";then
-					SECFUNCexecA -c --echo mv -vf "$lstrFileClientPA" "${lstrFileClientPA}.`SECFUNCdtFmt --filename`.bkp"
+				SECFUNCexecA -ce cat "$lstrFileClientPA"
+				if echoc -q "missing pulseaudio TCP configuration at: lstrFileClientPA='$lstrFileClientPA'. Exiting now. Recreate it on next run (current one will be backuped)?";then
+					SECFUNCexecA -ce mv -vf "$lstrFileClientPA" "${lstrFileClientPA}.`SECFUNCdtFmt --filename`.bkp"
 					exit 1
 				fi
 			fi
@@ -499,7 +500,7 @@ function FUNCfixPulseaudioThruTCP() {
 function FUNCsoundEnablerDoNotCloseThisTerminal() {
 	echoc --info "this makes sound work on X :1"
 	
-	SECFUNCexecA -c --echo pax11publish -D :1 -e
+	SECFUNCexecA -ce pax11publish -D :1 -e
 	
 	echo "DO NOT CLOSE THIS TERMINAL, ck-launch-session";
 	ck-launch-session;
@@ -937,7 +938,7 @@ if $useJWM; then
 	#          <Key key="XF86AudioRaiseVolume">exec:'"xterm -e \"\" #kill=skip"'</Key>
 	#          <Key key="XF86AudioLowerVolume">exec:'"xterm -e \"\" #kill=skip"'</Key>
 
-    SECFUNCexecA -c --echo jwm -p&&:
+    SECFUNCexecA -ce jwm -p&&:
     strJwmMessages="`jwm -p 2>&1`"&&:
     # ignore non problematic messages
     strJwmMessages="`echo "$strJwmMessages" |egrep -v "JWM: warning: .* could not open include: /etc/jwm/debian-menu$"`"&&:

@@ -56,6 +56,7 @@ export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""
 bOnTop=false
+: ${TERM:=xterm};export TERM #this is important in case not being called from another terminal
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	SECFUNCsingleLetterOptionsA
 	#echo "Param: $1"
