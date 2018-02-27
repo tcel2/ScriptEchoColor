@@ -1,1 +1,0 @@
-secExportArray.sh

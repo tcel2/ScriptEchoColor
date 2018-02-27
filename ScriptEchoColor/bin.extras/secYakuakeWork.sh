@@ -142,14 +142,29 @@ function FUNCtask {
   done
 }
 
+function FUNCactiveYakuakeTermId() {
+	#if [[ -z "${PS1-}" ]];then return 0;fi #only for interactive shells
+	astrPPid=(`SECFUNCppidList`);
+	if SECFUNCarrayContains astrPPid `pgrep yakuake`;then 
+		nYakActiveTermId=`qdbus org.kde.yakuake /yakuake/sessions activeTerminalId`;
+	fi
+	
+	return 0
+}
+
 #wait for yakuake to start
+nYakActiveTermId=-1
 nSleep=0
 bNewSessionAlways=false
 nAddSessions=0
+strCurrentSTitle=""
+bTitleAsCommandBeingRun=false
+FUNCactiveYakuakeTermId # initial setup
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 	  #grep "\"--" $0 |grep -v grep
 		SECFUNCshowHelp --colorize "Uses qdbus to open new sessions and terminals at Yakuake."
+		echoc -p "TODO: fixing, not fully functional!"
 		SECFUNCshowHelp
 		exit
 	elif [[ "$1" == "--checkAndRun" || "$1" == "-c" ]]; then #help check if yakuake is running before running the command at it
@@ -167,6 +182,17 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--justaddsessions" || "$1" == "-a" ]];then #help just add <nAddSessions> and exit
 		shift
 		nAddSessions="${1-}"
+	elif [[ "$1" == "-t" ]];then #help <strCurrentSTitle> set current session tab title
+		shift
+		strCurrentSTitle="${1-}"
+	elif [[ "$1" == "-r" ]];then #help set current session tab title as the command for the run arguments
+		bTitleAsCommandBeingRun=true
+	elif [[ "$1" == "--is" ]];then #help if is running at yakuake return 0 (true). and will output the yakuake terminal id.
+		if((nYakActiveTermId>=0));then
+			echo "$nYakActiveTermId"
+			exit 0
+		fi
+		exit 1
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -229,32 +255,35 @@ if((nAddSessions>0));then
 	exit 0
 fi
 
-echoc -p "$0, further functionalities needs fixing, is currently broken..";exit 1;
+#echoc -p "$0, further functionalities needs fixing, is currently broken..";exit 1;
 
 if ! SECFUNCisNumber -dn $nSleep;then
 	echoc -p invalid "nSleep='$nSleep'"
 	exit 1
 fi
 
-params="$@"
+astrRunCmd=("$@")
 
-if [[ -n "$params" ]]; then
-  if [[ "${params:0:1}" == "-" ]]; then
-    echo "ERROR: invalid option $1..."
-    read -n 1
-    exit 1
-  else
-    #FUNCtask "$1"
-    FUNCtask "$params"
-    exit 0
-    #strExec=`type -P "$1"`
-    #if [[ -x "$strExec" ]]; then
-    #  FUNCtask `basename "$strExec"`
-    #  exit 0
-    #fi
-  fi
+if $bTitleAsCommandBeingRun;then
+	for strPart in "${astrRunCmd[@]}";do
+		if [[ "${strPart:0:1}" == "-" ]];then continue;fi
+		if [[ "$strPart" == "sudo" ]];then continue;fi
+		strCurrentSTitle="$strPart"
+		break;
+	done
 fi
 
+if ((nYakActiveTermId>=0)) && [[ -n "$strCurrentSTitle" ]];then
+	qdbus org.kde.yakuake /yakuake/tabs setTabTitle $nYakActiveTermId "$strCurrentSTitle";
+fi
+
+if [[ -n "${astrRunCmd[@]-}" ]]; then
+	#FUNCtask "${astrRunCmd[@]}"
+	SECFUNCexecA -ce "${astrRunCmd[@]}"
+fi
+
+exit 0 ################### review code below?
+	
 echoerr "Running at Yakuake!"
 
 cfgFile="$HOME/.`basename $0`.cfg"

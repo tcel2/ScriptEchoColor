@@ -1,1 +1,0 @@
-secDaemonsControl.sh

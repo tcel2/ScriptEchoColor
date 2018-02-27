@@ -1,1 +1,0 @@
-secGetParentestWindow.sh

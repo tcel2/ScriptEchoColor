@@ -29,7 +29,7 @@ strPath=`echo "$strPath" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xar
 #strPath="${strPath:${#strLess}}"
 
 cmd="mc \"$strPath\""
-runAtYakuake.sh "$cmd"
+secYakuakeWork.sh "$cmd"
 
 # $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS
 # $NAUTILUS_SCRIPT_SELECTED_URIS

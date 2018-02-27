@@ -1,1 +1,0 @@
-secRunAtYakuake.sh

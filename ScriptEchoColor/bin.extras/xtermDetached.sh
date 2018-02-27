@@ -1,1 +1,0 @@
-secXtermDetached.sh

@@ -1,1 +1,0 @@
-secResizetexture.sh

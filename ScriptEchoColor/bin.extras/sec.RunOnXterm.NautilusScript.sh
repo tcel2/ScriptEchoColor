@@ -30,7 +30,11 @@ function FUNCdoIt() {
 	#sedUrlDecoder='s % \\\\x g'
 	#path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 	#eval astrFiles=(`echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS" |sed 's".*"\"&\""'`)
-	IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+	if [[ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS-}" ]];then
+		IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")
+	else	
+		astrFiles=("$@")
+	fi
 	#for((n=0;n<${#astrFiles[@]};n++));do
 	for strFile in "${astrFiles[@]}";do
 		echo "will run: $strFile"
@@ -48,7 +52,8 @@ function FUNCdoIt() {
 		(
 			cd "`dirname "${strFile}"`"
 			SECFUNCexecA -ce pwd # @RefLink:1
-			SECFUNCexecA -ce secXtermDetached.sh "$strFile"
+#			SECFUNCexecA -ce secXtermDetached.sh --ontop "$strFile"
+			SECFUNCexecA -ce secXtermDetached.sh "$strFile" # this is not a temporary xterm, do not make it "OnTop"
 		)
 		lbFirstDone=true
 		
@@ -58,7 +63,7 @@ function FUNCdoIt() {
 
 #echo "NAUTILUS_SCRIPT_CURRENT_URI='$NAUTILUS_SCRIPT_CURRENT_URI'"
 #if [[ -n "$NAUTILUS_SCRIPT_CURRENT_URI" ]];then
-	SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@"
+	SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.
 #else
 #	SECFUNCexecA -ce FUNCdoIt "$@" #user at commandline
 #fi
