@@ -153,6 +153,7 @@ function FUNCactiveYakuakeTermId() {
 }
 
 #wait for yakuake to start
+#: ${SECbAllowYakTermTitleChange:=true}
 nYakActiveTermId=-1
 nSleep=0
 bNewSessionAlways=false
@@ -160,6 +161,7 @@ nAddSessions=0
 strCurrentSTitle=""
 bTitleAsCommandBeingRun=false
 FUNCactiveYakuakeTermId # initial setup
+bDoRun=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 	  #grep "\"--" $0 |grep -v grep
@@ -187,12 +189,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strCurrentSTitle="${1-}"
 	elif [[ "$1" == "-r" ]];then #help set current session tab title as the command for the run arguments
 		bTitleAsCommandBeingRun=true
+	elif [[ "$1" == "--tr" ]];then #help set current session tab title as the command for the run arguments (but do not run it)
+		bTitleAsCommandBeingRun=true
+		bDoRun=false
 	elif [[ "$1" == "--is" ]];then #help if is running at yakuake return 0 (true). and will output the yakuake terminal id.
 		if((nYakActiveTermId>=0));then
 			echo "$nYakActiveTermId"
 			exit 0
 		fi
 		exit 1
+#		SECbAllowYakTermTitleChange=false
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -277,9 +283,11 @@ if ((nYakActiveTermId>=0)) && [[ -n "$strCurrentSTitle" ]];then
 	qdbus org.kde.yakuake /yakuake/tabs setTabTitle $nYakActiveTermId "$strCurrentSTitle";
 fi
 
-if [[ -n "${astrRunCmd[@]-}" ]]; then
-	#FUNCtask "${astrRunCmd[@]}"
-	SECFUNCexecA -ce "${astrRunCmd[@]}"
+if $bDoRun;then
+	if [[ -n "${astrRunCmd[@]-}" ]]; then
+		#FUNCtask "${astrRunCmd[@]}"
+		SECFUNCexecA -ce "${astrRunCmd[@]}"
+	fi
 fi
 
 exit 0 ################### review code below?
