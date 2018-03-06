@@ -72,9 +72,9 @@ function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so t
 			# TODO find a better way to make it work properly...
 			echo >&2 #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
 			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >&2
-			if secYakuakeWork.sh --is >/dev/null;then
-				secYakuakeWork.sh --tr $BASH_COMMAND
-			fi
+			#~ if secYakuakeWork.sh --is >/dev/null;then
+      secYakuakeWork.sh --tr $BASH_COMMAND
+			#~ fi
 		else
 			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >&2
 		fi

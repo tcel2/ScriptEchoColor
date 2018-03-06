@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+source <(secinit)
+
 # nautilus passing params is strange, dont try to use them...
 #while [[ -n "$1" ]]; do
 #	echoc --info "$1"
@@ -33,5 +35,4 @@ function FUNCdoIt() {
 	secUpdateRemoteBackupFiles.sh #has builtin support to work with nautilus!
 #	echoc -w 
 };export -f FUNCdoIt
-bash -i -c "xtermDetached.sh --skipcascade FUNCdoIt"
-
+SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.
