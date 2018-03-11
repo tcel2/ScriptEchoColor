@@ -1364,64 +1364,65 @@ if $bOptHelp; then
 		echo "usage: $strSelfName [-<c|x|X|v|V|q|Q|S|w|p><pmORbrktulLiI>] [-enE] [\"string\""]
 		echo
 		echo "Main options:"
-		echo " -c: show caller"
-		echo " -x: execute string as command line"
-		echo " -X: execute string as command line and kill ParentPID on error (BEWARE)"
-		echo " -v: echo and help change environment (see $optHelpExtended) ex.: \"cd ..\""
-		echo " -V: echo and help change environment, with exit command BEWARE (see $optHelpExtended)"
-		echo " -q: question mode"
-		echo " -Q: extra question mode"
-		echo " -S: question mode where you can type a String"
-		echo " -w: wait mode"
-		echo " -p: problem mode"
+		echo " -c show caller"
+		echo " -x execute string as command line"
+		echo " -X execute string as command line and kill ParentPID on error (BEWARE)"
+		echo " -v echo and help change environment (see $optHelpExtended) ex.: \"cd ..\""
+		echo " -V echo and help change environment, with exit command BEWARE (see $optHelpExtended)"
+		echo " -q question mode"
+		echo " -Q extra question mode"
+		echo " -S question mode where you can type a String"
+		echo " -w wait mode"
+		echo " -p problem mode"
 		echo " (do not use toguether, but auto choice precedence is: $strOptPrecedence)"
 		echo
 		echo "Options that can be combined with main options:"
-		echo " -p: problem mode, can only be combined with main options -q or -w"
-		echo " -n -e -E: bash echo options, see 'help echo'"
-		echo " -m: Mute beep"
-		echo " -O: ensure output to /dev/stdout"
-		echo " -R: send output to /dev/stderr"
-		echo " -b: Beep (see also SEC_BEEP)"
-		echo " -r: reset previous settings"
-		echo " -k: keep settings after end (color settings and position) (requires: export SECbAllowUseLastFmt=true;)"
-		echo " -t <value>: time to wait before continuing"
-		echo " -u: output Unformatted"
+		echo " -p problem mode, can only be combined with main options -q or -w"
+		echo " -n -e -E bash echo options, see 'help echo'"
+		echo " -m Mute beep"
+		echo " -O ensure output to /dev/stdout"
+		echo " -R send output to /dev/stderr"
+		echo " -b Beep (see also SEC_BEEP)"
+		echo " -r reset previous settings"
+		echo " -k keep settings after end (color settings and position) (requires: export SECbAllowUseLastFmt=true;)"
+		echo " -t <value> time to wait before continuing"
+		echo " -u output Unformatted"
 #    echo " -l <logfile>: append unformatted text to logfile file"
 #    echo " -L: append unformatted text to logfile file at SEC_LOG_FILE (or default)"
-		echo " -i: trap SIGINT"
-		echo " -I: trap SIGINT and kill ParentPID (BEWARE)"
-		echo " --: arguments after this are taken as normal text"
+		echo " -i trap SIGINT"
+		echo " -I trap SIGINT and kill ParentPID (BEWARE)"
+		echo " -- arguments after this are taken as normal text"
 		echo
 		echo "Extra Options:"
-		echo " $optHelp: this \"short\" help"
-		echo " $optHelpListEscape: echo escape functionalities"
-		echo " $optHelpLGM: common? chars between most terminal types"
-		echo " $optHelpLGT: all macs chars"
-		echo " $optHelpLGE: all escaped \\xE2\\x94\\xHEXA chars"
-		echo " $optHelpListExtdFmt: extended format list"
-		echo " $optHelpLibs: show help info about libs functions"
-		echo " $optHelpExtended: extended help/usage information and examples!"
-		echo " $optHelpExtendedInfo: same as extended help but shown with \`| less -R\`"
-		echo " $optInfo: easy info coloring"
-		echo " $optAlert: easy alert coloring"
-		echo " $optTest: test terminal capabilities and helps to bug report"
-		echo " $optInstallPath: usefull to source libs on your scripts"
-		echo " $optParentPidList: show a list of the parent pids (parent of parent of...)"
-		echo " $optGuessTermEmulator: show the parent executable name guessed as terminal emulator that is running $strSelfName"
-		echo " $optEscapedChars: show what you would use with 'echo -e'"
-		echo " $optVersion: show just \"$strSelfName $g_nVersion\" then exits"
-		echo " $optVersionCheck <Version>: return '0' on 'current version' >= required 'Version', otherwise return '1'"
-		echo " $optIdea <Index>: executes one of the available usage ideas (1 til ${#astrIdea[*]})"
-#    echo " $optLogFileName: show the log file name being used (also automatic one)"
-		echo " ${optGfxMostreliable}: (it is the default) use most realiable gfx chars trans. table"
-		echo " ${optGfxTputmacs}: use tput smacs/rmacs gfx chars mode"
-		echo " ${optGfxE294char}: use full gfx translation table"
-		echo " ${optRecreateConfigFile}: will remove $strUserCfgFile to be recreated with defaults"
-#    echo " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
-		echo " ${optSay}: use festival to say the text!"
-		echo " ${optWaitSay}: like ${optSay} but wait until speech ends before exiting."
-		echo " ${optExecuteRetry}: in conjunction with -x or -X, will ask if you want to retry the failed command."
+    strExpand="expand --tabs=30"
+		echo -e " $optHelp\tthis \"short\" help" |$strExpand
+		echo -e " $optHelpListEscape\techo escape functionalities" |$strExpand
+		echo -e " $optHelpLGM\tcommon? chars between most terminal types" |$strExpand
+		echo -e " $optHelpLGT\tall macs chars" |$strExpand
+		echo -e " $optHelpLGE\tall escaped \\\\xE2\\\\x94\\\\xHEXA chars" |$strExpand
+		echo -e " $optHelpListExtdFmt\textended format list" |$strExpand
+		echo -e " $optHelpLibs\tshow help info about libs functions" |$strExpand
+		echo -e " $optHelpExtended\textended help/usage information and examples!" |$strExpand
+		echo -e " $optHelpExtendedInfo\tsame as extended help but shown with \`| less -R\`" |$strExpand
+		echo -e " $optInfo\teasy info coloring" |$strExpand
+		echo -e " $optAlert\teasy alert coloring" |$strExpand
+		echo -e " $optTest\ttest terminal capabilities and helps to bug report" |$strExpand
+		echo -e " $optInstallPath\tusefull to source libs on your scripts" |$strExpand
+		echo -e " $optParentPidList\tshow a list of the parent pids (parent of parent of...)" |$strExpand
+		echo -e " $optGuessTermEmulator\tshow the parent executable name guessed as terminal emulator that is running $strSelfName" |$strExpand
+		echo -e " $optEscapedChars\tshow what you would use with 'echo -e'" |$strExpand
+		echo -e " $optVersion\tshow just \"$strSelfName $g_nVersion\" then exits" |$strExpand
+		echo -e " $optVersionCheck\t<Version> return '0' on 'current version' >= required 'Version', otherwise return '1'" |$strExpand
+		echo -e " $optIdea\t<Index> executes one of the available usage ideas (1 til ${#astrIdea[*]})" |$strExpand
+#    echo -e " $optLogFileName show the log file name being used (also automatic one)"
+		echo -e " ${optGfxMostreliable}\t(it is the default) use most realiable gfx chars trans. table" |$strExpand
+		echo -e " ${optGfxTputmacs}\tuse tput smacs/rmacs gfx chars mode" |$strExpand
+		echo -e " ${optGfxE294char}\tuse full gfx translation table" |$strExpand
+		echo -e " ${optRecreateConfigFile}\twill remove $strUserCfgFile to be recreated with defaults" |$strExpand
+#    echo -e " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
+		echo -e " ${optSay}\tuse festival to say the text!" |$strExpand
+		echo -e " ${optWaitSay}\tlike ${optSay} but wait until speech ends before exiting." |$strExpand
+		echo -e " ${optExecuteRetry}\tin conjunction with -x or -X, will ask if you want to retry the failed command." |$strExpand
 		echo 
 		echo "String format summary (@/@{}):"
 		echo " @{:}     \"graphics\" mode"
