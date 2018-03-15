@@ -40,7 +40,7 @@ source <(secinit);
 ############### INTERNAL CFG
 sedQuoteLines='s".*"\"&\""'
 sedRemoveHomePath="s;^$HOME;.;"
-sedQuoteLinesForZenitySelection="s;.*;false \"&\";"
+#sedQuoteLinesForZenitySelection="s;.*;false \"&\";"
 #sedEncloseLineOnPliqs="s;.*;'&';"
 sedEncloseLineOnQuotes="s;.*;\"&\";"
 #sedTrSeparatorToPliqs="s;[|];' ';g"
@@ -487,18 +487,24 @@ function FUNClsNot() { #synchronize like
 	#pwd -L
 	
 	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileCheck \"$relativeToHome\" \"{}\"" \; |sort`
-	listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
-	if [[ -n "$listOfFiles" ]];then
+	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |sort -f)&&:
+	if((${#astrFileList[@]-} > 0));then
 		echoc --info "File list that are not at Remote Backup Folder:"
-		echo "$listOfFiles"
+    SECFUNCexecA -ce ls -ltr "${astrFileList[@]}"
+    #for strFile in "${astrFileList[@]}";do echo "$strFile";done
+		#declare -p c |tr '[' '\n'
 		
 		if ! $bAddFilesMode && echoc -t 60 -q "select what files you want to add?";then
 			bAddFilesMode=true
 		fi
 		
 		if $bAddFilesMode;then
-			eval alistOfFiles=(`echo "$listOfFiles" |sed -r "$sedEscapeQuotes" |sed -r  "$sedQuoteLinesForZenitySelection"`)
-			FUNCzenitySelectAndAddFiles "${alistOfFiles[@]}"
+      IFS=$'\n' read -d '' -r -a astrFileList < <(for strFile in "${astrFileList[@]}";do echo "$strFile" |sed -r "$sedEscapeQuotes";done)&&: #escape quotes
+      IFS=$'\n' read -d '' -r -a astrFileList < <(for strFile in "${astrFileList[@]}";do echo false; echo "$strFile";done)&&: #prepare to be used by zenity ex.: false "filename" (that is per entry, false is the checkbox state)
+			#eval alistOfFiles=(`echo "$listOfFiles" |sed -r "$sedEscapeQuotes" |sed -r  "$sedQuoteLinesForZenitySelection"`)
+			#FUNCzenitySelectAndAddFiles "${alistOfFiles[@]}"
+      FUNCzenitySelectAndAddFiles "${astrFileList[@]}"
 		fi
 	else
 		echoc --info "All files are at Remote Backup Folder! "
