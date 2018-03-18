@@ -82,6 +82,8 @@ export bRunAllNow=false
 export bRespectedSleep=false
 export bXterm=false
 export strCheckPointCustomCmd
+export bEnableSECWarnMessages=false #initially false to not mess output
+export bCleanSECenv=true;
 export astrXtermOpts=()
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
@@ -513,12 +515,25 @@ function FUNCrun(){
 #		)&&:;nRet=$?
 		
 		export strFileRetVal=$(mktemp)
+    export SEC_WARN=$bEnableSECWarnMessages
 		function FUNCrunAtom(){
 			source <(secinit) #this will apply the exported arrays
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
 			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
-				SECFUNCcleanEnvironment; #all SEC environment will be cleared
+      
+        evalCleanEnv=":";
+        if $bCleanSECenv;then
+          evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain why this is important!?
+        fi
+        eval "$evalCleanEnv" # TODO this way prevents problems caused if being called inside the 'if' block?
+        
+        evalSECWarn=":"
+        if ! $bCleanSECenv;then # with SEC env cleaned, SEC_WARN shouldnt be there too
+          evalSECWarn="export SEC_WARN=$bEnableSECWarnMessages"
+        fi
+        eval "$evalSECWarn"
+        
 				#"$@";
 				declare -p PATH >&2
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
@@ -580,13 +595,15 @@ function FUNCrun(){
 		# end Log
 		FUNClog end "RunDelay=`SECFUNCdelay RUN --getpretty`"
 		
+    strDumpRetryBtnTxt="dump;retry"
+    
 		if $bStay || $lbErr;then
 			lstrTxt+="RunCommand(astrRunParams[@]):\n"
 			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
 			lstrTxt+="\n";
 			lstrTxt+="At: `SECFUNCdtFmt --pretty`\n";
 			lstrTxt+="\n";
-			lstrTxt+="LogInfoDbgCmd:\n";
+			lstrTxt+="LogInfoDbgCmd(try '$strDumpRetryBtnTxt' button):\n";
 			lstrTxt+="\tsecMaintenanceDaemon.sh --dump $$\n";
 			lstrTxt+="\n";
 			lstrTxt+="DbgInfo:\n";
@@ -603,13 +620,17 @@ function FUNCrun(){
 			
 			echo ">>>$LINENO"
 			if $bYad;then 
+        bEnableSECWarnMessages=true #the 1st time a problem happens, set to true to help on retries debugging
+        bCleanSECenv=false #the 1st time a problem happens, set to false to help on retries debugging
 				local lbEvalCode=false
-				: ${strCodeToEval:=""}
+				: ${strCodeToEval:=":"}
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				astrYadFields=(
 					bXterm #0
 					strCodeToEval #1
+          bEnableSECWarnMessages #2
+          bCleanSECenv #3
 				);declare -p astrYadFields
 				#~ astrYadFullCmd=(
 					#~ yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" 
@@ -631,14 +652,18 @@ function FUNCrun(){
 						--sticky --center --selectable-labels \
 						--form \
 						--field "[${astrYadFields[0]}] Use Xterm:chk" \
-						--field "[${astrYadFields[1]}]" \
+						--field "[${astrYadFields[1]}] b4 run" \
+						--field "[${astrYadFields[2]}] :chk" \
+						--field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" \
 						--button="retry:0" \
 						--button="retry-DEV:2" \
-						--button="dump;retry:3" \
+						--button="${strDumpRetryBtnTxt}:3" \
 						--button="gtk-close:1" \
 						"${!astrYadFields[0]}" \
-						"${!astrYadFields[1]}" 
-					`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
+						"${!astrYadFields[1]}" \
+						"${!astrYadFields[2]}" \
+						"${!astrYadFields[3]}" 
+					`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
 	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" \
 	#						--button="retry(EvalCode):4" \
 	#						--button="retry-DEV(EvalCode):3" \
@@ -646,15 +671,18 @@ function FUNCrun(){
 				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
-					if [[ "${astrYadReturnValues[0]-}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
-					strCodeToEval="${astrYadReturnValues[1]-}"
+					if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+					strCodeToEval="${astrYadReturnValues[1]}"
+					if [[ "${astrYadReturnValues[2]}" == "TRUE" ]];then bEnableSECWarnMessages=true;else bEnableSECWarnMessages=false;fi 
+					if [[ "${astrYadReturnValues[3]}" == "TRUE" ]];then bCleanSECenv=true;else bCleanSECenv=false;fi 
+					#bCleanSECenv="`echo ${astrYadReturnValues[3]} |tr "[:upper:]" "[:lower:]"`"
 	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
 				case $nRet in 
 					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
-					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;bash";;
+					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
 					252)break;; #do not retry, end. Closed using the "window close" title button.
 	#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
 	#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
@@ -667,9 +695,10 @@ function FUNCrun(){
 	#					echo "eval: $lstrCodeToEval" >&2
 	#					eval "$lstrCodeToEval"
 	#				fi
-				if [[ -n "$strCodeToEval" ]];then
-					eval "$strCodeToEval"
-				fi
+				#~ if [[ -n "$strCodeToEval" ]];then
+					#~ eval "$strCodeToEval"
+				#~ fi
+				eval "$strCodeToEval" # empty eval causes no trouble, TODO may help with some commands if outside 'if' block?
 			else
 				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
 				lstrTxt+="\n";

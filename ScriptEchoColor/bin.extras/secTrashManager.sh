@@ -149,20 +149,28 @@ function FUNCavailMB(){ #help <strTrashFolder>
 }
 
 function FUNCrm(){
+  SECFUNCdbgFuncInA
 	local lOpt="$1";shift
 	local lstrFile="$1";shift #or directory
 	
-	if ! [[ -L "$lstrFile" ]];then #TODO this may let a symlink outside of trash (by using ex.: ../../..) to be removed
-		if [[ "$lstrFile" =~ .*[.][.].* ]];then
-			lstrFile="`readlink -en "$lstrFile"`"
+  if [[ ! -a "$lstrFile" ]];then
+		SECFUNCechoWarnA "file does not exist lstrFile='$lstrFile' ?"
+    SECFUNCdbgFuncOutA;return 0;
+  fi
+  
+	if ! [[ -L "$lstrFile" ]];then
+		if [[ "$lstrFile" =~ .*[.][.].* ]];then # this prevents a symlink outside of trash (by using ex.: ../../..) to be removed
+      echo "fixing target from: lstrFile='$lstrFile'" >&2
+			lstrFile="`readlink -en "$lstrFile"`" # the real path to the file!
+      echo "fixing target to  : lstrFile='$lstrFile'" >&2
 		fi
 	fi
 	
-	#safety
-	if ! [[ "$lstrFile" =~ [/].*[/][.]*Trash[-/].* ]];then
-		echoc -p "invalid trash path: $lstrFile"
-		exit 1
-	fi
+	#safety (must be inside Trash)
+  if ! [[ "$lstrFile" =~ [/].*[/][.]*Trash[-/].* ]];then
+    echoc -p "invalid trash path: lstrFile='$lstrFile'"
+    SECFUNCdbgFuncOutA;exit 1
+  fi
 	
 	if [[ ! -L "$lstrFile" ]];then
 		if [[ -d "$lstrFile" ]];then
@@ -179,6 +187,8 @@ function FUNCrm(){
 	if ! SECFUNCexecA -ce rm -vf "$lOpt" "$lstrFile";then
 		SECFUNCechoWarnA "failed to rm lstrFile='$lstrFile'"
 	fi
+  
+  SECFUNCdbgFuncOutA;return 0;
 }
 
 while true;do
@@ -190,6 +200,8 @@ while true;do
 		fi
 		
 		function FUNCcheckFS() {
+      SECFUNCdbgFuncInA
+      
 			# Validations
 			if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
 				strTrashFolder="$strMountedFS"
@@ -200,10 +212,10 @@ while true;do
 			if ! echo "$strTrashFolder" |grep -qi "trash";then 
 				# minimal :( safety check ...
 				SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
-				return 0 #continue;
+				SECFUNCdbgFuncOutA;return 0 #continue;
 			fi
 	#		ls -ld "$strTrashFolder"&&:
-			if [[ ! -d "$strTrashFolder" ]];then return 0;fi #continue;fi
+			if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
 		
 			SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
 			
@@ -226,7 +238,7 @@ while true;do
 			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
 			nAvailMB="`FUNCavailMB $strTrashFolder`"
 			echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
-			if((nTrashSizeMB==0));then return 0;fi #continue;fi
+			if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
 			
 			# Remove files
 			if $bTest || ((${nAvailMB}<nThisFSAvailGoalMB));then
@@ -259,6 +271,12 @@ while true;do
 				## `grep` is important to make it sure it will remove really trashed files by it's info that ends with '.trashinfo' !!!!!!!!
 				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
 				#####
+        while egrep "Path=.*%0A" ../info/*.trashinfo;do
+          echoc --alert "invalid filenames!!!"
+          echoc --info "there are files with invalid names on the trash! they have to be cleaned manually for now @g:@r("
+          echoc -w
+        done
+        
 				sedStripDatetimeAndFilename='s"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"'
 				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
 					ls -altr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
@@ -354,7 +372,7 @@ while true;do
 				fi
 			fi
 			
-			return 0
+			SECFUNCdbgFuncOutA;return 0
 		};export -f FUNCcheckFS
 		(FUNCcheckFS) # to make the "pid using FS detection system" unlink with this script
 		
