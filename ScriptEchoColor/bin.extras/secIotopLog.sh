@@ -22,16 +22,16 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-source <(secinit)
+source <(secinit --fast) #TODO --fast breaks SECFUNCcfgReadDB
 
-: ${strEnvVarUserCanModify:="test"}
-export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
-export strEnvVarUserCanModify2 #help test
-strExample="DefaultValue"
-CFGstrTest="Test"
+#TODO : ${strEnvVarUserCanModify:="test"}
+#TODO export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+#TODO export strEnvVarUserCanModify2 #help test
+#TODO strExample="DefaultValue"
+#TODO CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
-SECFUNCcfgReadDB #after default variables value setup above
+#TODO SECFUNCcfgReadDB #after default variables value setup above
 bDaemon=false
 
 # these variables can be set b4 run by the user
@@ -77,7 +77,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
-SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+# moved to the end to not impact performance on critical moments... SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 if $bDaemon;then
@@ -109,5 +109,7 @@ tail -n 10000 $HOME/log/iotop.log \
 	|awk "\$5 >= $CFGnRMinKB || \$7 >= $CFGnWMinKB || \$9 >= $CFGnRMinPerc || \$11 >= $CFGnWMinPerc"
 #	|awk "\$5 >= $nRMinKB && \$7 >= $nWMinKB && \$9 >= $nRMinPerc && \$11 >= $nWMinPerc"
 
+#TODO source <(secinit) #TODO --fast at beggining should be enough? or may be some simple function to init what is required there?
+#TODO SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting

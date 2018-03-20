@@ -43,7 +43,7 @@ strExample="DefaultValue"
 CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
-bTest=false
+bTest1=false
 bDummyRun=false
 strFilterRegex=""
 bRunOnce=false
@@ -69,7 +69,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift
 		nFileCountPerStep="${1-}"
 	elif [[ "$1" == "--test1" ]];then #help will work in one trashed file
-		bTest=true
+		bTest1=true
 	elif [[ "$1" == "--chk" ]];then #help <strChkTrashConsistencyFolder> ~single check trashinfo consistency and exit
 		shift
 		strChkTrashConsistencyFolder="${1-}"
@@ -148,49 +148,63 @@ function FUNCavailMB(){ #help <strTrashFolder>
 	df -BM --output=avail "$lstrTrashFolder" |tail -n 1 |tr -d M
 }
 
-function FUNCrm(){
+function _FUNCrm_deprecated(){
   SECFUNCdbgFuncInA
-	local lOpt="$1";shift
 	local lstrFile="$1";shift #or directory
 	
   if [[ ! -a "$lstrFile" ]];then
-		SECFUNCechoWarnA "file does not exist lstrFile='$lstrFile' ?"
+		SECFUNCechoWarnA "file already does not exist lstrFile='$lstrFile', skipping..." # user may have deleted manually b4 this script
     SECFUNCdbgFuncOutA;return 0;
   fi
   
-	if ! [[ -L "$lstrFile" ]];then
-		if [[ "$lstrFile" =~ .*[.][.].* ]];then # this prevents a symlink outside of trash (by using ex.: ../../..) to be removed
-      echo "fixing target from: lstrFile='$lstrFile'" >&2
-			lstrFile="`readlink -en "$lstrFile"`" # the real path to the file!
-      echo "fixing target to  : lstrFile='$lstrFile'" >&2
-		fi
+  if [[ ! -L "$lstrFile" ]];then
+    local lstrChkCanonical="`readlink -en "$lstrFile"`" # despite not being a symlink, the param must match a canonical file
+    if [[ "$lstrFile" != "$lstrChkCanonical" ]];then
+      SECFUNCechoErrA "filename param should be the canonical file '$lstrFile'!='$lstrChkCanonical' ?"
+      SECFUNCdbgFuncOutA;return 1; 
+    fi
+  fi
+  
+	if [[ "$lstrFile" =~ .*/[.][.]/.* ]];then
+    SECFUNCechoErrA "filename param must not contain '..' to remain inside the Trash lstrFile='$lstrFile'"
+    SECFUNCdbgFuncOutA;return 1; 
 	fi
 	
-	#safety (must be inside Trash)
   if ! [[ "$lstrFile" =~ [/].*[/][.]*Trash[-/].* ]];then
-    echoc -p "invalid trash path: lstrFile='$lstrFile'"
-    SECFUNCdbgFuncOutA;exit 1
+    SECFUNCechoErrA "not inside a Trash path: lstrFile='$lstrFile'"
+    SECFUNCdbgFuncOutA;return 1
   fi
 	
-	if [[ ! -L "$lstrFile" ]];then
+	if [[ ! -L "$lstrFile" ]];then # CHMOD only real files and paths not symlinks
 		if [[ -d "$lstrFile" ]];then
-			if ! SECFUNCexecA -ce chmod -Rv +w "$lstrFile";then
+			if ! SECFUNCexecA -ce chmod -Rc +w "$lstrFile";then
 				SECFUNCechoWarnA "failed to chmod at dir lstrFile='$lstrFile'"
 			fi
 		else
-			if ! SECFUNCexecA -ce chmod -v +w "$lstrFile";then
+			if ! SECFUNCexecA -ce chmod -c +w "$lstrFile";then
 				SECFUNCechoWarnA "failed to chmod at lstrFile='$lstrFile'"
 			fi
 		fi
 	fi
 	
-	if ! SECFUNCexecA -ce rm -vf "$lOpt" "$lstrFile";then
+  strRmOpt="-vf"
+	if [[ ! -L "$lstrFile" ]];then # !!! for recursiveness on directory, MUST NOT BE SYMLINK !!!
+    if [[ -d "$lstrFile" ]]; then strRmOpt+="r";fi
+  fi
+	if ! SECFUNCexecA -ce rm $strRmOpt --one-file-system --preserve-root "$lstrFile";then # THE REMOVAL
 		SECFUNCechoWarnA "failed to rm lstrFile='$lstrFile'"
 	fi
   
   SECFUNCdbgFuncOutA;return 0;
 }
 
+strRmLog="$SECstrUserScriptCfgPath/rm.log"
+mv -vf "${strRmLog}.2" "${strRmLog}.3"&&: # these are to keep logs for old runs but not eternally.
+mv -vf "${strRmLog}.1" "${strRmLog}.2"&&:
+mv -vf "${strRmLog}"   "${strRmLog}.1"&&:
+mkdir -vp "`dirname "${strRmLog}"`"
+#echo -n >"${strRmLog}" #just create it to make `tee -a` work
+strRmLogTmp="`mktemp`"
 while true;do
 	IFS=$'\n' read -d '' -r -a astrMountedFSList < <(FUNCmountedFs)&&:
 	astrMountedFSList+=("$strTrashFolderUser")
@@ -241,7 +255,7 @@ while true;do
 			if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
 			
 			# Remove files
-			if $bTest || ((${nAvailMB}<nThisFSAvailGoalMB));then
+			if $bTest1 || ((${nAvailMB}<nThisFSAvailGoalMB));then
 	#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
 	#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
 			
@@ -310,54 +324,95 @@ while true;do
 						strFileDT="`echo "$strEntry" |cut -f1`"
 						strFile="`echo "$strEntry" |cut -f2`"
 	#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
-					
+            
+            bSymlink=false
 						bDirectory=false
-						if [[ -d "$strFile" ]];then 
-							bDirectory=true
-	#						SECFUNCechoWarnA "Directories are not supported yet '$strFile'" #TODO remove directories?
-	#						continue
-						elif [[ -L "$strFile" ]];then 
-							: # symbolic links are ok
-						elif [[ ! -f "$strFile" ]];then 
-							# delete the trashinfo file for a missing trashed file
-							SECFUNCechoWarnA "Missing real file strFile='$strFile', removing trashinfo for it."
-							if ! $bDummyRun;then
-								FUNCrm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
-							fi
-							continue; 
-						fi 
-					
-						if $bDirectory;then
-							nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
-						else
-							nFileSizeB="`stat -c "%s" "./$strFile"`"
-						fi
-						nFileSizeMB=$((nFileSizeB/n1MB))&&:
-						((nRmCount++))&&:
-					
-						strReport=""
-						strReport+="nRmCount='$nRmCount',"
-						strReport+="strFile='$strFile',"
-						strReport+="nFileSizeB='$nFileSizeB',"
-						strReport+="strFileDT='$strFileDT',"
-						strReport+="AvailMB='`FUNCavailMB $strTrashFolder`'," #avail after each rm
-						strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
-						echo "$strReport"
+            strRmTrashInfoFile="`readlink -en "/$strTrashFolder/../info/${strFile}.trashinfo"`"
+						bRmFileOrPath=true
+						bRmTrashInfo=true
+            
+            if [[ -L "$strFile" ]];then bSymlink=true;fi # symlinks are ok to be removed directly. SYMLINK TEST above all IS MANDATORY to not consider it as a directory!
+            
+            if ! $bSymlink;then
+              if [[ -d "$strFile" ]];then 
+                bDirectory=true;
+              elif [[ ! -f "$strFile" ]];then 
+                SECFUNCechoWarnA "Missing real file strFile='$strFile', just removing trashinfo for it."
+                bRmFileOrPath=false
+              fi 
+            fi
+            
+            nFileSizeB=0
+            nFileSizeMB=0
+            if $bRmFileOrPath;then
+              if $bDirectory;then
+                nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
+              else
+                nFileSizeB="`stat -c "%s" "./$strFile"`"
+              fi
+              nFileSizeMB=$((nFileSizeB/n1MB))&&:
+              ((nRmCount++))&&:
+            
+              strReport=""
+              strReport+="nRmCount='$nRmCount',"
+              strReport+="strFile='$strFile',"
+              strReport+="nFileSizeB='$nFileSizeB',"
+              strReport+="strFileDT='$strFileDT',"
+              strReport+="AvailMB='`FUNCavailMB $strTrashFolder`'," #avail after each rm
+              strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
+              echo "$strReport"
+            fi
 					
 						if ! $bDummyRun;then
-							if ! $bDirectory;then
-								# extra security on removing a file, will use it's full path, therefore surely inside of trash folder
-								FUNCrm -vf "/$strTrashFolder/$strFile"
-							else
-								# removes directory recursively
-								FUNCrm -rvf "/$strTrashFolder/$strFile/"
-							fi
-							FUNCrm -vf "/$strTrashFolder/../info/${strFile}.trashinfo"&&:
+              
+              ################ file/path
+              if $bRmFileOrPath;then
+                strWorkFile="$strFile"
+                if ! $bSymlink;then strWorkFile="`readlink -en "/$strTrashFolder/$strFile"`";fi # canonical for normal file/path
+              
+                if ! $bSymlink;then # CHMOD only real files and paths and NOT to where symlinks are pointing!
+                  if $bDirectory;then
+                    if ! SECFUNCexecA -ce chmod -Rc +w "$strWorkFile/";then
+                      SECFUNCechoWarnA "failed to chmod at dir strWorkFile='$strWorkFile'"
+                    fi
+                  else
+                    if ! SECFUNCexecA -ce chmod -c +w "$strWorkFile";then
+                      SECFUNCechoWarnA "failed to chmod at strWorkFile='$strWorkFile'"
+                    fi
+                  fi
+                fi
+                
+                strRmOpt="-vf"
+                if $bDirectory;then strRmOpt+="r";fi
+                if ! SECFUNCexecA -ce rm $strRmOpt --one-file-system --preserve-root "$strWorkFile" >"$strRmLogTmp" 2>&1;then #################### FILE/PATH REMOVAL
+                  SECFUNCechoWarnA "failed to rm strWorkFile='$strWorkFile'"
+                fi
+                cat "$strRmLogTmp" |tee -a "$strRmLog" # using tee directly on the command will not return the command exit value...
+                
+                ########### CRITICAL DOUBLE CHECK. 
+                ### Despite all checks already performed, make it sure nothing wrong was removed! 
+                ### But... this is quite useless tho...
+                ### it is mainly to make it sure the script isnt broken...
+                ### but the related file(s) will already be lost...
+                ### TODO may be, find a way to restore the removed files, using inodes?
+                ###########
+                strCriticalCheck="[\"']`readlink -en /$strTrashFolder/`"
+                #echo test >>"$strRmLogTmp"
+                strWrong="`egrep -v "$strCriticalCheck" "$strRmLogTmp"`"&&:
+                if [[ -n "$strWrong" ]];then
+                  echoc -p "below should not have happened..."
+                  declare -p strWrong
+                  _SECFUNCcriticalForceExit
+                fi
+              fi
+              
+              ################ trashinfo
+							if $bRmTrashInfo;then rm -vf "$strRmTrashInfoFile"&&:;fi ############### TRASH INFO REMOVAL
 						fi
 					
 						((nRmSizeTotalB+=nFileSizeB))&&:
 				
-						if $bTest;then break;fi # to work at only with one file
+						if $bTest1;then break;fi # to work at only with one file
 						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nThisFSAvailGoalMB));then
 						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nThisFSAvailGoalMB*n1MB) ));then
 							break;
@@ -376,7 +431,7 @@ while true;do
 		};export -f FUNCcheckFS
 		(FUNCcheckFS) # to make the "pid using FS detection system" unlink with this script
 		
-		#if $bTest;then break;fi # to work at only the user default trash folder
+		#if $bTest1;then break;fi # to work at only the user default trash folder
 		
 	done
 

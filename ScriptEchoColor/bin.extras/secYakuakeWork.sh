@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-source <(secinit)
+source <(secinit --fast) #TODO --fast here is useful to improve performance mainly when setting the session tab title, but may cause some trouble with other options?
 
 function echoerr {
   echo "$@" >&2

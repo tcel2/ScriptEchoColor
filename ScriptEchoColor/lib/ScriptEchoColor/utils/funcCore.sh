@@ -180,13 +180,14 @@ function _SECFUNCbugTrackExec() {
 : ${SECstrFileCriticalErrorLog:="/tmp/.SEC.CriticalMsgs.`id -un`.log"}
 export SECstrFileCriticalErrorLog
 function _SECFUNCcriticalForceExit() {
-	local lstrCriticalMsg=" CRITICAL!!! unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
+	local lstrCriticalMsg1=" CRITICAL!!! "
+	local lstrCriticalMsg2=" unable to continue!!! hit 'ctrl+c' to fix your code or report bug!!! "
 #	echo " `date "+%Y%m%d+%H%M%S.%N"`,p$$;`basename "$0"`;$lstrCriticalMsg" >>"/tmp/.SEC.CriticalMsgs.`id -u`.log"
-	_SECFUNClogMsg "$SECstrFileCriticalErrorLog" "$lstrCriticalMsg"
+	_SECFUNClogMsg "$SECstrFileCriticalErrorLog" "$lstrCriticalMsg1$lstrCriticalMsg2"
 	if test -t 0;then
 		while true;do
 			#read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m CRITICAL!!! unable to continue!!! press 'ctrl+c' to fix your code or report bug!!! \E[0m"`" >&2
-			read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg}\E[0m"`" >&2
+			read -n 1 -p "`echo -e "\E[0m\E[31m\E[103m\E[5m${lstrCriticalMsg1}\E[0m\E[31m\E[103m${lstrCriticalMsg2}\E[0m"`" >&2
 			sleep 1
 		done
 	fi
