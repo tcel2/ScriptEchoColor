@@ -24,7 +24,7 @@
 
 source <(secinit)
 
-strTrashFolderUser="`readlink -en "$HOME/.local/share/Trash/files/"`"
+strTrashFolderUser="`realpath -ezs "$HOME/.local/share/Trash/files/"`"
 declare -p strTrashFolderUser
 strTrashFolder=""
 nFSSizeAvailGoalMB=1500 #1.5GB 
@@ -158,7 +158,7 @@ function _FUNCrm_deprecated(){
   fi
   
   if [[ ! -L "$lstrFile" ]];then
-    local lstrChkCanonical="`readlink -en "$lstrFile"`" # despite not being a symlink, the param must match a canonical file
+    local lstrChkCanonical="`realpath -ezs "$lstrFile"`" # despite not being a symlink, the param must match a canonical file
     if [[ "$lstrFile" != "$lstrChkCanonical" ]];then
       SECFUNCechoErrA "filename param should be the canonical file '$lstrFile'!='$lstrChkCanonical' ?"
       SECFUNCdbgFuncOutA;return 1; 
@@ -230,7 +230,7 @@ while true;do
 			fi
 	#		ls -ld "$strTrashFolder"&&:
 			if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
-			strTrashFolder="`readlink -en "$strTrashFolder"`"
+			strTrashFolder="`realpath -ezs "$strTrashFolder"`"
       declare -p strTrashFolder
 		
 			SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
@@ -329,7 +329,7 @@ while true;do
             
             bSymlink=false
 						bDirectory=false
-            strRmTrashInfoFile="`readlink -en "/$strTrashFolder/../info/${strFile}.trashinfo"`"
+            strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"
 						bRmFileOrPath=true
 						bRmTrashInfo=true
             
@@ -369,13 +369,14 @@ while true;do
               
               ################ file/path
               if $bRmFileOrPath;then
-                strWorkFile="$strTrashFolder/$strFile" # TODO is just this good enough for symlinks? find something like readlink but as cp --no-dereference does, full abs path not following the symlink...
+                strWorkFile="`realpath -ezs "$strTrashFolder/$strFile"`"
                 strRmOpt="-vf"
                 
                 if $bSymlink;then
-                  echo "Removing symlink: '$strWorkFile'" # make it clear the special still complex case. TODO find a way to readlink canonical for THE SYMLINK ITSELF not where it points to :(
+#                  strWorkFile="`realpath -z --strip "$strTrashFolder/$strFile"`"
+                  echo "Removing symlink: '$strWorkFile'"
                 else
-                  strWorkFile="`readlink -en "$strWorkFile"`" # canonical for normal file/path, just to make it double sure...
+#                  strWorkFile="`readlink -en "$strWorkFile"`" # canonical for normal file/path, just to make it double sure...
                 
                   # CHMOD only real files and paths and NOT to where symlinks are pointing!
                   if $bDirectory;then
@@ -403,7 +404,7 @@ while true;do
                 ### but the related file(s) will already be lost...
                 ### TODO may be, find a way to restore the removed files, using inodes?
                 ###########
-                strCriticalCheckRmLog="[\"']`readlink -en /$strTrashFolder/`"
+                strCriticalCheckRmLog="[\"']`realpath -ezs /$strTrashFolder/`"
                 #echo test >>"$strRmLogTmp"
                 strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
                 if [[ -n "$strWrong" ]];then
