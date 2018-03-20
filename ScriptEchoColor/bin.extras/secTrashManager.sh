@@ -24,8 +24,8 @@
 
 source <(secinit)
 
-strTrashFolderUser="$HOME/.local/share/Trash/files/"
-echo "strTrashFolderUser='$strTrashFolderUser'"
+strTrashFolderUser="`readlink -en "$HOME/.local/share/Trash/files/"`"
+declare -p strTrashFolderUser
 strTrashFolder=""
 nFSSizeAvailGoalMB=1500 #1.5GB 
 nFileCountPerStep=100
@@ -224,12 +224,14 @@ while true;do
 			fi
 			SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
 			if ! echo "$strTrashFolder" |grep -qi "trash";then 
-				# minimal :( safety check ...
+				# minimal dumb :( safety check ...
 				SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
 				SECFUNCdbgFuncOutA;return 0 #continue;
 			fi
 	#		ls -ld "$strTrashFolder"&&:
 			if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
+			strTrashFolder="`readlink -en "$strTrashFolder"`"
+      declare -p strTrashFolder
 		
 			SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
 			
@@ -250,7 +252,7 @@ while true;do
 #			fi
 			
 			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
-			nAvailMB="`FUNCavailMB $strTrashFolder`"
+			nAvailMB="`FUNCavailMB "$strTrashFolder"`"
 			echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
 			if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
 			
@@ -358,7 +360,7 @@ while true;do
               strReport+="strFile='$strFile',"
               strReport+="nFileSizeB='$nFileSizeB',"
               strReport+="strFileDT='$strFileDT',"
-              strReport+="AvailMB='`FUNCavailMB $strTrashFolder`'," #avail after each rm
+              strReport+="AvailMB='`FUNCavailMB "$strTrashFolder"`'," #avail after each rm
               strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
               echo "$strReport"
             fi
@@ -367,14 +369,21 @@ while true;do
               
               ################ file/path
               if $bRmFileOrPath;then
-                strWorkFile="$strFile"
-                if ! $bSymlink;then strWorkFile="`readlink -en "/$strTrashFolder/$strFile"`";fi # canonical for normal file/path
-              
-                if ! $bSymlink;then # CHMOD only real files and paths and NOT to where symlinks are pointing!
+                strWorkFile="$strTrashFolder/$strFile" # TODO is just this good enough for symlinks? find something like readlink but as cp --no-dereference does, full abs path not following the symlink...
+                strRmOpt="-vf"
+                
+                if $bSymlink;then
+                  echo "Removing symlink: '$strWorkFile'" # make it clear the special still complex case. TODO find a way to readlink canonical for THE SYMLINK ITSELF not where it points to :(
+                else
+                  strWorkFile="`readlink -en "$strWorkFile"`" # canonical for normal file/path, just to make it double sure...
+                
+                  # CHMOD only real files and paths and NOT to where symlinks are pointing!
                   if $bDirectory;then
                     if ! SECFUNCexecA -ce chmod -Rc +w "$strWorkFile/";then
                       SECFUNCechoWarnA "failed to chmod at dir strWorkFile='$strWorkFile'"
                     fi
+                    
+                    strRmOpt+="r"
                   else
                     if ! SECFUNCexecA -ce chmod -c +w "$strWorkFile";then
                       SECFUNCechoWarnA "failed to chmod at strWorkFile='$strWorkFile'"
@@ -382,8 +391,6 @@ while true;do
                   fi
                 fi
                 
-                strRmOpt="-vf"
-                if $bDirectory;then strRmOpt+="r";fi
                 if ! SECFUNCexecA -ce rm $strRmOpt --one-file-system --preserve-root "$strWorkFile" >"$strRmLogTmp" 2>&1;then #################### FILE/PATH REMOVAL
                   SECFUNCechoWarnA "failed to rm strWorkFile='$strWorkFile'"
                 fi
@@ -396,9 +403,9 @@ while true;do
                 ### but the related file(s) will already be lost...
                 ### TODO may be, find a way to restore the removed files, using inodes?
                 ###########
-                strCriticalCheck="[\"']`readlink -en /$strTrashFolder/`"
+                strCriticalCheckRmLog="[\"']`readlink -en /$strTrashFolder/`"
                 #echo test >>"$strRmLogTmp"
-                strWrong="`egrep -v "$strCriticalCheck" "$strRmLogTmp"`"&&:
+                strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
                 if [[ -n "$strWrong" ]];then
                   echoc -p "below should not have happened..."
                   declare -p strWrong
