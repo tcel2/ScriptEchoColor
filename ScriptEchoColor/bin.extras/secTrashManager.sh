@@ -332,8 +332,12 @@ while true;do
             strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"
 						bRmFileOrPath=true
 						bRmTrashInfo=true
+            strRPExist="e" #only allow existing target
             
-            if [[ -L "$strFile" ]];then bSymlink=true;fi # symlinks are ok to be removed directly. SYMLINK TEST above all IS MANDATORY to not consider it as a directory!
+            if [[ -L "$strFile" ]];then  # symlinks are ok to be removed directly. SYMLINK TEST above/before all others IS MANDATORY to not consider it as a directory!
+              bSymlink=true;
+              strRPExist="m" #allow not existing target
+            fi 
             
             if ! $bSymlink;then
               if [[ -d "$strFile" ]];then 
@@ -369,7 +373,9 @@ while true;do
               
               ################ file/path
               if $bRmFileOrPath;then
-                strWorkFile="`realpath -ezs "$strTrashFolder/$strFile"`"
+                if ! strWorkFile="`realpath -${strRPExist}zs "$strTrashFolder/$strFile"`";then
+                  SECFUNCechoWarnA "what happened? strTrashFolder='$strTrashFolder' strFile='$strFile' strWorkFile='$strWorkFile'" 
+                fi
                 strRmOpt="-vf"
                 
                 if $bSymlink;then
@@ -404,10 +410,11 @@ while true;do
                 ### but the related file(s) will already be lost...
                 ### TODO may be, find a way to restore the removed files, using inodes?
                 ###########
-                strCriticalCheckRmLog="[\"']`realpath -ezs /$strTrashFolder/`"
+                strCriticalCheckRmLog="[\"']`realpath -ezs /$strTrashFolder/`" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
                 #echo test >>"$strRmLogTmp"
                 strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
                 if [[ -n "$strWrong" ]];then
+                  echoc --say "sec trash cleaner error"
                   echoc -p "below should not have happened..."
                   declare -p strWrong
                   _SECFUNCcriticalForceExit
