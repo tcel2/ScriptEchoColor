@@ -337,6 +337,9 @@ function FUNCexecParams() {
 #	fi
 #};export -f FUNCwatchLog
 
+strXtermTmp="ThisTempIntermediaryQuickFastXtermWillBeKilled"
+bKillTmpXterm=true
+trap "bKillTmpXterm=false;echoc -p '$strXtermTmp wont be killed.'" SIGUSR1
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strCmdDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
 function FUNCxtermFinal() {
   source <(secinit)
@@ -345,23 +348,42 @@ function FUNCxtermFinal() {
   SECFUNCexecA -ce xterm \
     $SECXstrXtermOpts \
     -display $nDisplay \
-    -xrm 'XTerm.vt100.allowTitleOps: false' \
-    -T "$strPseudoFunctionId ${strSkipCascade}${strKillSkip}" \
-    -e "$strPseudoFunctionId"
+    -xrm 'XTerm.vt100.allowTitleOps: false' -T "$strPseudoFunctionId ${strSkipCascade}${strKillSkip}" \
+    -e "$strPseudoFunctionId"; #local lnRet=$?
+#  return $lnRet
+  return 1 # should not reach here, but if it does, will be captured
 };export -f FUNCxtermFinal
-strXtermTmp="ThisTempIntermediaryQuickFastXtermWillBeKilled"
-strCmdRead="read -p '$strXtermTmp: Waiting you read the problem above that just happened, press a key to end...' -n 1"
-strExec="bash -i -c 'FUNCxtermFinal'; $strCmdRead;"
+#strCmdRead="read -p '$strXtermTmp: Waiting you read above, press a key to end...' -n 1"
+strCmdRead="kill -SIGUSR1 $$; echoc -w '$strXtermTmp: Waiting you read the problem above, press a key to end...'"
+strExec="bash -i -c 'FUNCxtermFinal'"
 echo "Exec: $strExec"
+
+##################################################
+############ this xterm will be killed! ##########
 #xterm -display "$nDisplay" -e "echo '${strXtermTmp}:'; $strExec" >>/dev/stderr & disown;pidXtermTemp=$! # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
-xterm -display "$nDisplay" -xrm 'XTerm.vt100.allowTitleOps: false' -T "$strXtermTmp" -e "echo '${strXtermTmp}:'; $strExec" & disown;pidXtermTemp=$! # this xterm will be killed!
+SECFUNCexecA -ce xterm \
+  -display "$nDisplay" \
+  -xrm 'XTerm.vt100.allowTitleOps: false' -T "$strXtermTmp" \
+  -e "echo '${strXtermTmp}:'; if ! $strExec;then $strCmdRead;fi" & disown;pidSubShell=$!
+#ps -ppid 
+while true;do
+  strGetXterm="`ps -o pid,cmd --ppid $pidSubShell --no-headers`"&&:
+  echo "Check: $strGetXterm"
+  pidXtermTemp="`echo "$strGetXterm" |grep "[x]term" -w |cut -f1 -d' '`"&&:
+  if [[ -n "$pidXtermTemp" ]];then 
+    SECFUNCexecA -ce ps -p $pidXtermTemp
+    break;
+  fi
+  echoc -w -t 1 "wait xterm start"
+done
+#  -e "echo '${strXtermTmp}:'; $strExec; $strCmdRead;" >>/dev/stderr & disown;pidXtermTemp=$! # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
 
 #strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
 #echo "Exec: $strExec"
 #nohup bash -c "xterm $SECXstrXtermOpts -display $nDisplay -e '$strExec'" >&2 2>&1 & disown
 
-while ! ps --ppid $pidXtermTemp; do
-		if ! ps -p $pidXtermTemp;then
+while ! ps --ppid $pidXtermTemp; do #TODO re-understand and test why this is here and explain...
+		if ! ps -p $pidXtermTemp;then # break if xterm is no more
     #if ! [[ -d "/proc/$pidXtermTemp" ]];then
 			break
 		fi
@@ -403,8 +425,17 @@ if $bOnTop;then
 	#SECFUNCCwindowOnTop --stop "${strPseudoFunctionId}.*"
 fi
 
-if [[ -d "/proc/$pidXtermTemp" ]];then #it may have run so fast that doesnt exist anymore
-	kill -SIGINT $pidXtermTemp
+#ls -ld "/proc/$pidXtermTemp"&&:
+echoc -w -t 5 "waiting to be sure all is ok"
+if $bKillTmpXterm;then
+  if [[ -d "/proc/$pidXtermTemp" ]];then #it may have run so fast that doesnt exist anymore
+    echoc --info "killing $strXtermTmp pidXtermTemp='$pidXtermTemp'"
+    SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "${pidXtermTemp}.*[x]term "&&:
+  #	SECFUNCexecA -ce kill -SIGINT $pidXtermTemp
+    SECFUNCexecA -ce kill -SIGKILL $pidXtermTemp
+  fi
+else
+  echoc -p "some problem happened"
 fi
 #fi
 #echoc -w -t 5
