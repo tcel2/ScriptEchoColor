@@ -24,9 +24,15 @@
 
 source <(secinit)
 
-: ${CFGnTstCmdRepeatCount:=8000};export CFGnTstCmdRepeatCount; #help
+: ${CFGnTstCmdRepeatCount:=8000}
+export CFGnTstCmdRepeatCount; #help
+
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+
+: ${bChkSimpleTest:=false}
+export bChkSimpleTest #help
+
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bExample=false
@@ -80,6 +86,8 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 nCores="`grep "core id" /proc/cpuinfo |wc -l`"
 #nMax=$((nCores==1?1:nCores-1));
 
+export bChkCpuLoad=true
+
 function FUNCchkCanRunNext() {
   SECFUNCdelay testSpeed --init;
   
@@ -95,16 +103,19 @@ function FUNCchkCanRunNext() {
   #~ if((nCores==1)) && SECFUNCbcPrettyCalc --cmpquiet "$strPercCpuAllCores>50";then return 1;fi # 50%
   #~ echo ok
   
+  ######## this test may be enough as it is based on lack of cpu iddleness! :D
   nPercCpuTimeSpendIddle="`vmstat 1 2|tail -n 1|awk '{print $15}'`"; # this will spend 2 seconds!!!
   nAllCoresCpuUsage=$((100-$nPercCpuTimeSpendIddle));
   echo "CPU usage: $nAllCoresCpuUsage"
   if((nAllCoresCpuUsage>(100-nFreeCpuPercToAllow)));then return 1;fi
   echo ok
   
-  strRecentLoadAvg="`cat /proc/loadavg |awk '{print $1}'`"
-  echo "CPU loadavg: $strRecentLoadAvg"
-  if SECFUNCbcPrettyCalc --cmpquiet "$strRecentLoadAvg>$((nCores))";then return 1;fi
-  echo ok
+  if $bChkCpuLoad;then
+    strRecentLoadAvg="`cat /proc/loadavg |awk '{print $1}'`"
+    echo "CPU loadavg: $strRecentLoadAvg"
+    if SECFUNCbcPrettyCalc --cmpquiet "$strRecentLoadAvg>$((nCores))";then return 1;fi
+    echo ok
+  fi
   
   return 0
 }
@@ -149,7 +160,9 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
   while ! FUNCchkCanRunNext;do
-    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
+#    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
+    if echoc -q -t 5 "ignore cpu load?";then
+      bChkCpuLoad=false
       break;
     fi
   done # check cpu
@@ -177,7 +190,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   #eval "$strCmd" 1>/dev/null 2>&1 & disown
   #echo "cmdPid=$! #$strCmd"
   
-  echoc -w -t 5 #to let the app kick in
+  echoc -w -t 1 #to let the app kick in
 done
 
 #echoc -w -t 60
