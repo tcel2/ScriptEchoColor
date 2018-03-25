@@ -141,6 +141,7 @@ if $bListOnly;then exit 0;fi
 echoc --info "running commands sequentially as the system allows it if not encumbered"
 #SECbExecJustEcho=false
 export SECCFGbOverrideRunThisNow=true
+iCount=0
 for strCmd in "${astrCmdListOrdered[@]}";do
   SECFUNCdrawLine #--left "$strCmd"
   
@@ -154,7 +155,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   done # check cpu
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
-  echo "Cmd: $strCmd"
+  echo "Cmd$((iCount++))/${#astrCmdListOrdered[@]}: $strCmd"
   
   #~ export strCmd
   #~ function FUNCrun() {
@@ -167,6 +168,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   #~ secXtermDetached.sh --nohup FUNCrun&&:
   
   eval secXtermDetached.sh --nohup $strCmd # strCmd needs eval TODO find other way?
+  #eval secXtermDetached.sh $strCmd >>/dev/stderr & disown # strCmd needs eval TODO find other way?
   #eval secDelayedExec.sh -x $strCmd 
   
   #secDelayedExec.sh -x FUNCrun&&:

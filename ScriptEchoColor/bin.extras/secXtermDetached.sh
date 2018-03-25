@@ -96,7 +96,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECXbDoNotClose=true
 	elif [[ "$1" == "--logonly" ]];then #help the shown xterm will be just a log monitoring, unable to interact with the application running on it, with options to manage it
 		SECXbLogOnly=true
-	elif [[ "$1" == "--nohup" ]];then #help the command will be executed with nohup, so will keep running even if terminal closes. It is more interesting to use --logonly as you will be able to manage that pid.
+	elif [[ "$1" == "--nohup" ]];then #help the command will be executed with nohup, so will keep running even if terminal closes but will ignore input! It is more interesting to use --logonly as you will be able to manage that pid.
 		SECXbNoHup=true
 	elif [[ "$1" == "--xtermopts" ]];then #help <SECXstrXtermOpts> pass the next param as options to xterm
 		shift
