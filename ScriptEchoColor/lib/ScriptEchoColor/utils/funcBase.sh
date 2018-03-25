@@ -627,6 +627,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 }
 
 : ${SECbExecJustEcho:=true} #;export SECbExecJustEcho
+: ${SECbExecVerboseEchoAllowed:=false}
 #: ${SECbExecDefaultOptions:=""}
 function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
 	local lbOmitOutput=false
@@ -660,6 +661,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lstrReadStatus=""
 	local lbCleanEnv=false
 	local lbRestoreDefOutputs=false;
+  local bVerboseEchoRequested=false;
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -685,10 +687,12 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			_SECFUNCcriticalForceExit
 		elif [[ "$1" == "--waitkey" ]];then #SECFUNCexec_help wait a key before executing the command
 			bWaitKey=true
-		elif [[ "$1" == "--elapsed" ]];then #SECFUNCexec_help quiet, ommit command output to stdout and
+		elif [[ "$1" == "--elapsed" ]];then #SECFUNCexec_help show command elapsed time
 			bShowElapsed=true;
 		elif [[ "$1" == "--echo" || "$1" == "-e" ]];then #SECFUNCexec_help echo the command that will be executed, output goes to /dev/stderr
 			bExecEcho=true;
+		elif [[ "$1" == "--verboseecho" || "$1" == "-E" ]];then #SECFUNCexec_help like --echo (and overrides it) but will ONLY echo if SECbExecVerboseEchoAllowed=true (good to lower the verbosity)
+      bVerboseEchoRequested=true
 		elif [[ "$1" == "--justecho" || "$1" == "-j" ]];then #SECFUNCexec_help if global SECbExecJustEcho is false (default is true), command will be run normally, not just echoed. Basically: wont execute, will just echo what would be executed without any format to be easily reused as command anywhere; this output goes to /dev/stdout
 			bJustEcho=true;
 		elif [[ "$1" == "--justechonoquotes" ]];then #SECFUNCexec_help like --justecho but will not use quotes
@@ -738,6 +742,13 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		shift
 	done
 	
+  if $bVerboseEchoRequested;then 
+    bExecEcho=true;
+    if ! $SECbExecVerboseEchoAllowed;then 
+      bExecEcho=false;
+    fi
+  fi
+  
 	if [[ -n "$lstrChildReference" ]];then
 #		local lnRefPid="` echo "$lstrChildReference" |cut -f1`"
 #		local lnRefFile="`echo "$lstrChildReference" |cut -f2`"
@@ -961,20 +972,20 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 				SECFUNCexec_runQuark >>"$SEClstrLogFileSECFUNCexec" 2>&1 &	lnPidChild=$!
 			else
 				echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-				SECFUNCexec_runQuark &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
+				SECFUNCexec_runQuark >>"$SEClstrLogFileSECFUNCexec" 2>&1 &&: ; lnSECFUNCexecReturnValue=$?
 			fi
 		else
 			if $lbOmitOutput;then
 				if $lbChild;then # detach always require log, above
 					SECFUNCexec_runQuark >/dev/null 2>&1 &	lnPidChild=$!
 				else
-					SECFUNCexec_runQuark &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuark >/dev/null 2>&1 &&: ; lnSECFUNCexecReturnValue=$?
 				fi
 			else
 				if $lbChild;then # detach always require log, above
 					SECFUNCexec_runQuark &	lnPidChild=$!
 				else
-					SECFUNCexec_runQuark &&: ;lnSECFUNCexecReturnValue=$?
+					SECFUNCexec_runQuark &&: ; lnSECFUNCexecReturnValue=$?
 				fi
 			fi
 		fi

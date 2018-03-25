@@ -2193,7 +2193,7 @@ mkdir -p "$SECstrTmpFolderLog"
 export SECbRunLogForce # the override default, only actually used at secLibsInit.sh
 
 : ${SECbRunLog:=false} 
-export SECbRunLog #help user can set this true at .bashrc, but applications inside scripts like `less` will not work properly
+export SECbRunLog #help user can set this true at .bashrc, but applications inside scripts like `less` will not work properly, and anything redirected to stderr will end on stdout, mainly for debugging, use with caution
 
 : ${SECbRunLogParentInherited:=false}
 export SECbRunLogParentInherited

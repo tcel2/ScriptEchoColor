@@ -40,8 +40,8 @@ if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST opt
 fi
 # THIS ABOVE MUST BE BEFORE secinit!!!
 
-source <(secinit --nochild --extras)
 #source <(secinit --nochild --extras)
+source <(secinit)
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
 echo " \$@='$@'" >&2
@@ -51,7 +51,7 @@ export strFullSelfCmd="`ps --no-headers -o cmd -p $$`"
 echo " strFullSelfCmd='$strFullSelfCmd'" >&2
 
 SECFUNCcfgReadDB
-echo "SECcfgFileName='$SECcfgFileName'"
+echo " SECcfgFileName='$SECcfgFileName'" >&2
 
 function FUNCcpuResourcesAvailable(){ #TODO use this to hold processes execution. create a queue manager and executor. each of this script call will be just a queue entry on the manager.
 	local lstrCpusIdle="$(mpstat 2 1 |grep average -i |tr ' ' '\n' |tail -n 1)" #this takes 2 seconds
@@ -66,7 +66,16 @@ function FUNCcpuResourcesAvailable(){ #TODO use this to hold processes execution
 }
 #TODO if ! `exit $(bc <<< "($(cat /proc/loadavg |cut -d' ' -f3) < 3.5) && ($(mpstat 2 1 |grep average -i |tr ' ' '\n' |tail -n 1) > 25.0)")`;then echo ok;fi
 
-SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false #this grants startup always obbeying sleep
+: ${CFGbUseSequentialScript:=false} 
+export CFGbUseSequentialScript #help if true, this will allow use the sequential script
+
+: ${SECCFGbOverrideRunAllNow:=false} 
+export SECCFGbOverrideRunAllNow #help if false, this grants startup always obbeying sleep. Set to 'true' to skip sleep delays of all tasks, and exit.
+
+: ${SECCFGbOverrideRunThisNow:=false} 
+export SECCFGbOverrideRunThisNow #help if true will ignore wait and sleep options
+
+SECFUNCcfgWriteVar SECCFGbOverrideRunAllNow=false # override WRITE to grant it will work properly on next boot w/o using an old cfg value from the cfg file TODO deprecate all this work and use sequential mode (other script)
 varset bCheckPointConditionsMet=false
 export bWaitCheckPoint=false
 export nDelayAtLoops=1
@@ -84,6 +93,9 @@ export bXterm=false
 export strCheckPointCustomCmd
 export bEnableSECWarnMessages=false #initially false to not mess output
 export bCleanSECenv=true;
+export bGetGlobalLogFile=false;
+astrRemainingParams=()
+astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
@@ -91,10 +103,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCshowHelp --colorize "[options] <command> [command params]..."
 		SECFUNCshowHelp --nosort
 		exit
-	elif [[ "$1" == "--sleep" || "$1" == "-s" ]];then #help <nSleepFor> seconds before executing the command with its params.
+	elif [[ "$1" == "--SequentialCfg" ]];then #help will not execute anything, it is just to let the sequential script use this command as reference, only if CFGbUseSequentialScript=true
+    if $CFGbUseSequentialScript;then exit 0;fi #as fast as possible
+	elif [[ "$1" == "-s" || "$1" == "--sleep" ]];then #help <nSleepFor> seconds before executing the command with its params, can be like 00010 00120, will be considered as decimal, and is good for sorting
 		shift
-		nSleepFor="${1-}"
-	elif [[ "$1" == "--respectedsleep" || "$1" == "-r" ]];then #help with this, sleep delay will be respected and --SECCFGbOverrideRunAllNow will be ignored.
+		nSleepFor="$((10#${1-}))" # make it sure the number will be in decimal
+	elif [[ "$1" == "-r" || "$1" == "--respectedsleep" ]];then #help with this, sleep delay will be respected and SECCFGbOverrideRunAllNow will be ignored.
 		bRespectedSleep=true
 	elif [[ "$1" == "--delay" ]];then #help set a delay (can be float) to be used at LOOPs
 		shift
@@ -108,11 +122,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		strCheckPointCustomCmd="${1-}"
 		bCheckPointDaemon=true
 		bCheckPointDaemonHold=true
-	elif [[ "$1" == "--waitcheckpoint" || "$1" == "-w" ]];then #help ~loop after nSleepFor, also waits checkpoint tmp file to be removed
+	elif [[ "$1" == "-w" || "$1" == "--waitcheckpoint" ]];then #help ~loop after nSleepFor, also waits checkpoint tmp file to be removed
 		bWaitCheckPoint=true
 	elif [[ "$1" == "--nounique" ]];then #help skip checking if this exactly same command is already running, otherwise, will wait the other command to end
 		bCheckIfAlreadyRunning=false
-	elif [[ "$1" == "--shouldnotexit" || "$1" == "-d" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
+	elif [[ "$1" == "-d" || "$1" == "--shouldnotexit" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
 	elif [[ "$1" == "--listconcurrent" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
@@ -120,14 +134,27 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListIniCommands=true
 	elif [[ "$1" == "--listwaiting" ]];then #help list commands that entered (ini) the log file but havent RUN yet
 		bListWaiting=true
-	elif [[ "$1" == "--xterm" || "$1" == "-x" ]];then #help use xterm to run the command
+	elif [[ "$1" == "-x" || "$1" == "--xterm" ]];then #help use xterm to run the command
 		bXterm=true
+	elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help use xterm to run the command
+		bGetGlobalLogFile=true
+	elif [[ "$1" == "-O" || "$1" == "--order" ]];then #help <NUMBER> dummy option and dummy "required" parameter (ex.: 00023). Only used to easily sort all the commands being run by this script
+		:
 	elif [[ "$1" == "--xtermopts" ]];then #help "<astrXtermOpts>" options to xterm like background color etc.
 		shift
 		astrXtermOpts=(${1-})
-	elif [[ "$1" == "--SECCFGbOverrideRunAllNow" ]];then #help <SECCFGbOverrideRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
+	elif [[ "$1" == "--runallnow" ]];then #help <bRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+		pSECFUNCcfgOptSet "$@";exit 0;
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
+		shift #astrRemainingParams=("$@")
+		while ! ${1+false};do	# checks if param is set
+			astrRemainingParams+=("$1")
+			shift #will consume all remaining params
+		done
 	else
 		SECFUNCechoErrA "invalid option '$1'" >&2
 		exit 1
@@ -137,6 +164,11 @@ done
 
 export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
 export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+
+if $bGetGlobalLogFile;then
+  echo "$strExecGlobalLogFile"
+  exit 0
+fi
 
 function FUNCcheckIfWaitCmdsHaveRun() {
 	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \
@@ -346,7 +378,7 @@ FUNClog ini
 #	
 #	echo
 #fi
-if $bWaitCheckPoint;then
+if $bWaitCheckPoint && ! $SECCFGbOverrideRunThisNow;then
 	SECFUNCdelay bWaitCheckPoint --init
 	nPidDaemon=-1
 	strFileUnique="`SECFUNCuniqueLock --getuniquefile`"
@@ -398,6 +430,8 @@ fi
 function FUNCsleep() { #timings are adjusted against each other, the checkpoint is actually a starting point
 	local lnSleepFor="$1"
 	
+  if $SECCFGbOverrideRunThisNow;then return 0;fi
+  
 #	SECONDS=0
 	while true;do
 		SECFUNCcfgReadDB SECCFGbOverrideRunAllNow
@@ -417,7 +451,7 @@ function FUNCsleep() { #timings are adjusted against each other, the checkpoint 
 			lnSleepFor=0
 		fi
 		
-		echo "sleeping for: $lnSleepStep of $nSleepFor"
+		echo "sleep ${lnSleepStep}s remaining ${lnSleepFor}s tot ${nSleepFor}s"
 		sleep $lnSleepStep
 		
 		if((lnSleepFor==0));then 

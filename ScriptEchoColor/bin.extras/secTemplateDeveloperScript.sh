@@ -104,10 +104,11 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
+bExample=false
 CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
-SECFUNCcfgReadDB #after default variables value setup above
+SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -116,9 +117,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help <strExample> MISSING DESCRIPTION
+	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
+	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
+		bExample=true
+	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help MISSING DESCRIPTION
+		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
