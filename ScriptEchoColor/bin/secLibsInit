@@ -242,7 +242,7 @@ fi
 if $bMaintenanceDaemon;then
 	if ! secMaintenanceDaemon.sh --isdaemonstarted >>/dev/stderr;then
 		# nohup or disown alone did not work...
-		secMaintenanceDaemon.sh >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned...
+		secMaintenanceDaemon.sh >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
 		#TODO try this: nohup secMaintenanceDaemon.sh </dev/null >>/dev/null 2>&1 &  #to try to completely detach it from the terminal?
 	fi
 fi

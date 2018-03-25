@@ -180,7 +180,15 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   #~ };export -f FUNCrun
   #~ secXtermDetached.sh --nohup FUNCrun&&:
   
-  eval secXtermDetached.sh --nohup $strCmd # strCmd needs eval TODO find other way?
+  ######
+  ### strCmd needs eval TODO find other way?
+  ######
+  eval $strCmd >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
+  
+  ### strCmd being secDelayedExec.sh will not need input, therefore --nohup.
+  #eval secXtermDetached.sh $strCmd
+#  eval secXtermDetached.sh --nohup $strCmd
+#  eval secXtermDetached.sh --logonly $strCmd
   #eval secXtermDetached.sh $strCmd >>/dev/stderr & disown # strCmd needs eval TODO find other way?
   #eval secDelayedExec.sh -x $strCmd 
   

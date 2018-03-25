@@ -276,6 +276,7 @@ function FUNCexecParams() {
 			#(eval "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >&2)&disown
 			#(bash -c "${strSudoPrefix} ${strFUNCexecParams}" 2>"$lstrFileLogCmd" >&2)&disown
 			#nohup bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2&
+#			SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2 & disown #TODO use nohup?
 			SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2 & disown #TODO use nohup?
 			nPidCmd=$!
 		
@@ -338,9 +339,9 @@ function FUNCexecParams() {
 
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strCmdDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
 
-strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId;${strSkipCascade}${strKillSkip}'\"; read -n 1"
+strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId; ${strSkipCascade}${strKillSkip}'\"; read -p waitingOneKeypress -n 1" #TODO this read works?
 echo "Exec: $strExec"
-xterm -display "$nDisplay" -e "$strExec"&disown
+xterm -display "$nDisplay" -e "$strExec" >>/dev/stderr & disown  # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
 
 #strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
 #echo "Exec: $strExec"
