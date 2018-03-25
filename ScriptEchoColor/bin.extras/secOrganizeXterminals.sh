@@ -38,6 +38,7 @@ bDaemon=false
 nViewPortAskedX=0
 nViewPortAskedY=0
 bDaemonHold=true
+nDaemonLoop=-1
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "append '#skipOrganize' to commands like: xterm -e \"ls #skipOrganize\", so such terminals wont be organized!"
@@ -45,6 +46,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		exit 0
 	elif [[ "$1" == "--daemon" ]]; then #help keep running in a loop
 		bDaemon=true
+	elif [[ "$1" == "--loop" ]]; then #help <nDaemonLoop> run for n loops and exit
+    shift
+		nDaemonLoop="$1"
+    bDaemon=true
 	elif [[ "$1" == "--nodaemonhold" ]]; then #help prevent being hold by daemon hold functionality
 		bDaemonHold=false
 	elif [[ "$1" == "--viewport" ]]; then #help <nViewPortAskedX> <nViewPortAskedY> what compiz viewport to place terminals?
@@ -322,6 +327,12 @@ if $bDaemon; then
 		if echoc -n -q -t 60 "\rtile now";then
 			bOrganizeNow=true
 		fi
+    
+    if((nDaemonLoop>-1));then
+      echoc --info "nDaemonLoop='$nDaemonLoop'"
+      if((nDaemonLoop==0));then break;fi
+      ((nDaemonLoop--))&&:
+    fi
 	done
 	exit 0
 else

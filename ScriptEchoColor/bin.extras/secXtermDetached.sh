@@ -25,7 +25,7 @@
 #echo "All Params: $@"
 
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile"
-source <(secinit)
+source <(secinit --extras)
 #selfName="`basename "$0"`" #TODO why became the caller script name?
 #echo "SECvarFile=$SECvarFile";ls -l "$SECvarFile";echoc -w 
 
@@ -38,24 +38,24 @@ source <(secinit)
 
 #bDoNotClose=false
 export SECXbDoNotClose=false
-bSkipCascade=false
-bWaitDBsymlink=true
-bKillSkip=false
+export bSkipCascade=false
+export bWaitDBsymlink=true
+export bKillSkip=false
 export SECXbDaemon=false
 export SECXnMaxWaitOtherDaemon=60
 export SECXnNice=0
-nDisplay="$DISPLAY"
+export nDisplay="$DISPLAY"
 export SECXnExitWait=0
-strTitleDefault="Xterm_Detached" #TODO check if this is useless?
+export strTitleDefault="Xterm_Detached" #TODO check if this is useless?
 varset strTitle="$strTitleDefault"
-strTitleForce=""
+export strTitleForce=""
 #export bLog=$SECbTermLog
 #export strLogFile=""
 echoc --info "Options: ${@-}"
 export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""
-bOnTop=false
+export bOnTop=false
 : ${TERM:=xterm};export TERM #this is important in case not being called from another terminal
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	SECFUNCsingleLetterOptionsA
@@ -151,12 +151,12 @@ if((SECXnNice<0));then
 	strSudoPrefix="sudo -k nice -n $SECXnNice "
 fi
 
-strSkipCascade=""
+export strSkipCascade=""
 if $bSkipCascade;then
 	strSkipCascade=" #skipOrganize"
 fi
 
-strKillSkip=""
+export strKillSkip=""
 if $bKillSkip;then
 	strKillSkip="#kill=skip"
 fi
@@ -197,7 +197,7 @@ fi
 #fi
 
 # trick to avoid error message where function id may conflict (may already exist) #TODO unnecessary?
-strPseudoFunctionId="${strTitle}_pid$$_Title"
+export strPseudoFunctionId="${strTitle}_pid$$_Title"
 while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	# the identifier must not be being used already by file, function, alias etc...
 	strPseudoFunctionId="${strPseudoFunctionId}_"
@@ -206,7 +206,7 @@ done
 #eval "function $strPseudoFunctionId () { FUNCexecParams${cmdLogFile}${strCmdDoNotClose}; };export -f $strPseudoFunctionId"
 #eval "function $strPseudoFunctionId () { eval \`secinit\`;FUNCexecParams${strCmdDoNotClose}; };export -f $strPseudoFunctionId"
 #eval "function $strPseudoFunctionId () { eval \`secinit\`;FUNCexecParams; };export -f $strPseudoFunctionId"
-eval "function $strPseudoFunctionId () { FUNCexecParams; };export -f $strPseudoFunctionId"
+eval "function $strPseudoFunctionId () { unset $strPseudoFunctionId; FUNCexecParams; };export -f $strPseudoFunctionId"
 #type $strPseudoFunctionId
 
 # konsole handles better ctrl+s ctrl+q BUT is 100% buggy to exec cmds :P
@@ -338,19 +338,31 @@ function FUNCexecParams() {
 #};export -f FUNCwatchLog
 
 #strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm -display $nDisplay -e '$strTitle;FUNCexecParams${cmdLogFile}${strCmdDoNotClose}${strSkipCascade}${strKillSkip}'\"; read -n 1"
-
-strExec="echo \"TEMP xterm...\"; bash -i -c \"xterm $SECXstrXtermOpts -display $nDisplay -e '$strPseudoFunctionId; ${strSkipCascade}${strKillSkip}'\"; read -p waitingOneKeypress -n 1" #TODO this read works?
+function FUNCxtermFinal() {
+  source <(secinit)
+  declare -p SHELL
+#  xterm $SECXstrXtermOpts -display $nDisplay -xrm 'XTerm.vt100.allowTitleOps: false' -T "$strPseudoFunctionId ${strSkipCascade}${strKillSkip}" -e "$strPseudoFunctionId" 
+  SECFUNCexecA -ce xterm \
+    $SECXstrXtermOpts \
+    -display $nDisplay \
+    -xrm 'XTerm.vt100.allowTitleOps: false' \
+    -T "$strPseudoFunctionId ${strSkipCascade}${strKillSkip}" \
+    -e "$strPseudoFunctionId"
+};export -f FUNCxtermFinal
+strXtermTmp="ThisTempIntermediaryQuickFastXtermWillBeKilled"
+strCmdRead="read -p '$strXtermTmp: Waiting you read the problem above that just happened, press a key to end...' -n 1"
+strExec="bash -i -c 'FUNCxtermFinal'; $strCmdRead;"
 echo "Exec: $strExec"
-xterm -display "$nDisplay" -e "$strExec" >>/dev/stderr & disown  # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
+#xterm -display "$nDisplay" -e "echo '${strXtermTmp}:'; $strExec" >>/dev/stderr & disown;pidXtermTemp=$! # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
+xterm -display "$nDisplay" -xrm 'XTerm.vt100.allowTitleOps: false' -T "$strXtermTmp" -e "echo '${strXtermTmp}:'; $strExec" & disown;pidXtermTemp=$! # this xterm will be killed!
 
 #strExec="$strPseudoFunctionId;${strSkipCascade}${strKillSkip}"
 #echo "Exec: $strExec"
 #nohup bash -c "xterm $SECXstrXtermOpts -display $nDisplay -e '$strExec'" >&2 2>&1 & disown
 
-pidXtermTemp=$!
-
 while ! ps --ppid $pidXtermTemp; do
 		if ! ps -p $pidXtermTemp;then
+    #if ! [[ -d "/proc/$pidXtermTemp" ]];then
 			break
 		fi
 		ps -o pid,ppid,comm -p $pidXtermTemp
@@ -387,7 +399,7 @@ fi
 
 if $bOnTop;then
 	#TODO wait xterm window become responsive to accept ontop command, or test if it is ontop before exiting...
-	SECFUNCCwindowCmd --delay 1 "${strPseudoFunctionId}.*" #must be here because the xterm window may still not be ready to receive the command!
+	SECFUNCexecA -ce SECFUNCCwindowCmd --ontop --delay 1 "${strPseudoFunctionId}.*" #must be here because the xterm window may still not be ready to receive the command!
 	#SECFUNCCwindowOnTop --stop "${strPseudoFunctionId}.*"
 fi
 

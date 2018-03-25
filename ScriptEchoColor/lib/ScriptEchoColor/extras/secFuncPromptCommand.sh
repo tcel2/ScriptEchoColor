@@ -34,11 +34,19 @@ function SECFUNCcheckIfSudoIsActive() { #help
 		echo -n "\E[0m\E[93m\E[41m\E[1m\E[5m SUDO \E[0m"; 
 		echo #without newline, the terminal seems to bugout with lines that are too big... discomment this if you find any problems...
 		#SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
-		xtermcontrol --bg darkred
+    if [[ "$TERM" == "linux" ]];then
+      setterm -background red #TODO dark red?
+    else #TODO make it sure the command will work?
+      xtermcontrol --bg darkred
+    fi
 	else
 #		if [[ -n "$SECstrXtermBgBkp" ]];then
 		#if [[ "$SECstrXtermBgBkp" != "`xtermcontrol --get-bg 2>/dev/null`" ]];then
-		xtermcontrol --bg "$SECstrXtermBgBkp"
+    if [[ "$TERM" == "linux" ]];then
+      setterm -background black #TODO how to get the default/previous console color???
+    else #TODO make it sure the command will work?
+      xtermcontrol --bg "$SECstrXtermBgBkp"
+    fi
 		#fi
 #		fi
 	fi; 
