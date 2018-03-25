@@ -147,21 +147,33 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   echo "Cmd: $strCmd"
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
-  while ! FUNCchkCanRunNext;do echoc -w -t 5 "waiting cpu free up a bit";done # check cpu
+  while ! FUNCchkCanRunNext;do
+    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
+      break;
+    fi
+  done # check cpu
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
   echo "Cmd: $strCmd"
   export strCmd
   function FUNCrun() {
-    eval "$strCmd"
+    eval "nohup $strCmd" & disown
+    echo "cmdPid=$! #$strCmd"
+    echoc -w -t 5 "do not close too fast"
+    return 0
   };export -f FUNCrun
-  secXtermDetached.sh FUNCrun
+  secXtermDetached.sh FUNCrun&&:
+  
+  #eval secXtermDetached.sh $strCmd 
+  #eval secDelayedExec.sh -x $strCmd 
+  
+  #secDelayedExec.sh -x FUNCrun&&:
   #xterm -e "$strCmd"&disown
   #echo "Eval: $strCmd"
   #eval "$strCmd" 1>/dev/null 2>&1 & disown
   #echo "cmdPid=$! #$strCmd"
   
-  sleep 5 #to let the app kick in
+  echoc -w -t 5 #to let the app kick in
 done
 
 echoc -w -t 60
