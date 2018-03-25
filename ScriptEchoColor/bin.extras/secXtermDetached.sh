@@ -387,7 +387,7 @@ fi
 
 if $bOnTop;then
 	#TODO wait xterm window become responsive to accept ontop command, or test if it is ontop before exiting...
-	SECFUNCCwindowOnTop --delay 1 "${strPseudoFunctionId}.*" #must be here because the xterm window may still not be ready to receive the command!
+	SECFUNCCwindowCmd --delay 1 "${strPseudoFunctionId}.*" #must be here because the xterm window may still not be ready to receive the command!
 	#SECFUNCCwindowOnTop --stop "${strPseudoFunctionId}.*"
 fi
 

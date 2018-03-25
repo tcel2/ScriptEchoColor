@@ -592,6 +592,7 @@ function FUNCrun(){
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
+      declare -p TERM
 			strCmd="${astrCmdToRun[@]}"
 			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
 		else

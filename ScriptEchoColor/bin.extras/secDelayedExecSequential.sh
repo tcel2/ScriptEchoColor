@@ -33,6 +33,9 @@ export strEnvVarUserCanModify #help this variable will be accepted if modified b
 : ${bChkSimpleTest:=false}
 export bChkSimpleTest #help
 
+: ${bChkCpuLoad:=false}
+export bChkCpuLoad #help
+
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bExample=false
@@ -85,8 +88,6 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 nCores="`grep "core id" /proc/cpuinfo |wc -l`"
 #nMax=$((nCores==1?1:nCores-1));
-
-export bChkCpuLoad=true
 
 function FUNCchkCanRunNext() {
   SECFUNCdelay testSpeed --init;
@@ -160,11 +161,12 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
   while ! FUNCchkCanRunNext;do
+    echoc -w -t 5 "wait cpu free up a bit"
 #    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
-    if echoc -q -t 5 "ignore cpu load?";then
-      bChkCpuLoad=false
-      break;
-    fi
+    #~ if echoc -q -t 5 "ignore cpu load?";then
+      #~ bChkCpuLoad=false
+      #~ break;
+    #~ fi
   done # check cpu
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
