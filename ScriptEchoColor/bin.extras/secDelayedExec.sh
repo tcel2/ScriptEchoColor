@@ -136,7 +136,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListWaiting=true
 	elif [[ "$1" == "-x" || "$1" == "--xterm" ]];then #help use xterm to run the command
 		bXterm=true
-	elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help use xterm to run the command
+	elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
 		bGetGlobalLogFile=true
 	elif [[ "$1" == "-O" || "$1" == "--order" ]];then #help <NUMBER> dummy option and dummy "required" parameter (ex.: 00023). Only used to easily sort all the commands being run by this script
 		:

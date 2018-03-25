@@ -224,5 +224,5 @@ for strCmd in "${astrCmdListOrdered[@]}";do
 done
 
 #echoc -w -t 60
-
+#while true;do echo "$$ $SECstrScriptSelfName loop sleep 1h";sleep 3600;done
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting

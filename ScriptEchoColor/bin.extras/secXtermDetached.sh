@@ -265,6 +265,7 @@ function FUNCexecParams() {
 	
 	if $lbRun;then
 		local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
+    echo -n >>"$lstrFileLogCmd" #to just create it
 		if $SECXbLogOnly || $SECXbNoHup;then
 			echo "lstrFileLogCmd='$lstrFileLogCmd'" >&2
 			tail -F "$lstrFileLogCmd"&
@@ -357,6 +358,14 @@ function FUNCxtermFinal() {
 strCmdRead="kill -SIGUSR1 $$; echoc -w '$strXtermTmp: Waiting you read the problem above, press a key to end...'"
 strExec="bash -i -c 'FUNCxtermFinal'"
 echo "Exec: $strExec"
+
+
+#export nPidCmd=-1
+#if $SECXbLogOnly;then
+#  # stdout must be redirected or the terminal wont let it be a detached child...
+#  SECFUNCexecA -ce bash -c "eval '${strSudoPrefix} ${strFUNCexecParams}'" 2>"$lstrFileLogCmd" >&2 & disown #TODO use nohup?
+#  export nPidCmd=$!
+#fi
 
 ##################################################
 ############ this xterm will be killed! ##########
