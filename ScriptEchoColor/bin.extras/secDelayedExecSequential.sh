@@ -185,7 +185,27 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   ######
   ### strCmd needs eval TODO find other way?
   ######
-  eval $strCmd >>/dev/stderr & disown # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
+#  (
+#    exec >>/dev/stderr 2>&1
+#    eval $strCmd >>/dev/stderr 2>&1 & disown # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
+
+
+#AlmostOK#   eval $strCmd >/dev/null 2>&1 & disown # /dev/null prevents messing this log
+
+#~ #    ps -o ppid,pid,cmd -p $$
+    #~ (eval $strCmd >/dev/null 2>&1 & disown)&disown;nSubShellPid=$! # /dev/null prevents messing this log
+#~ #    ps -o ppid,pid,cmd -p $nSubShellPid
+    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "${nSubShellPid}" -C 10&&:
+    #~ eval "strCmdDbgTmp='$strCmd'"
+    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "$strCmd" -C 10&&:
+    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "$strCmdDbgTmp" -C 10&&:
+#~ #    SECFUNCexecA -ce kill $nSubShellPid
+    
+#    bash -c "$strCmd&" # >/dev/null 2>&1 & disown
+    bash -c "$strCmd&" >/dev/null 2>&1
+    SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -C 10&&: # strCmd will (expectedly) not end with '$" -C 10' :)
+    
+#  )
   
   ### strCmd being secDelayedExec.sh will not need input, therefore --nohup.
   #eval secXtermDetached.sh $strCmd

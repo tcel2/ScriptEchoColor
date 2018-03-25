@@ -597,7 +597,7 @@ function FUNCrun(){
 			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
 		else
 #			declare -p astrRunParams
-			SECFUNCexecA -ce "${astrCmdToRun[@]}"
+			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
 		fi		
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
 		
