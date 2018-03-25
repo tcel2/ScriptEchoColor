@@ -155,16 +155,18 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
   echo "Cmd: $strCmd"
-  export strCmd
-  function FUNCrun() {
-    eval "nohup $strCmd" & disown
-    echo "cmdPid=$! #$strCmd"
-    echoc -w -t 5 "do not close too fast"
-    return 0
-  };export -f FUNCrun
-  secXtermDetached.sh FUNCrun&&:
   
-  #eval secXtermDetached.sh $strCmd 
+  #~ export strCmd
+  #~ function FUNCrun() {
+    #~ #eval "nohup $strCmd" & disown
+    #~ eval "$strCmd" & disown
+    #~ echo "cmdPid=$! #$strCmd"
+    #~ echoc -w -t 5 "do not close too fast"
+    #~ return 0
+  #~ };export -f FUNCrun
+  #~ secXtermDetached.sh --nohup FUNCrun&&:
+  
+  eval secXtermDetached.sh --nohup $strCmd # strCmd needs eval TODO find other way?
   #eval secDelayedExec.sh -x $strCmd 
   
   #secDelayedExec.sh -x FUNCrun&&:
@@ -176,6 +178,6 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   echoc -w -t 5 #to let the app kick in
 done
 
-echoc -w -t 60
+#echoc -w -t 60
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
