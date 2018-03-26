@@ -119,10 +119,6 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	shift
 done
 
-if $bBkpFd;then
-  echo 'SECFUNCfdBkp;'
-fi
-
 if $bHelpFast || $bHelpCore || $bHelpBase || $bHelpMisc || $bHelpVars || $bHelpExtras;then
 	function FUNChelp(){
 		echo
@@ -222,6 +218,12 @@ elif $bExtras;then
 		echo "source \"$SECinstallPath/lib/ScriptEchoColor/utils/funcExtras.sh\";" #it imports funcMisc.sh
 		bVars=true #to allow SECFUNCvarInit to work
 	fi
+fi
+
+################################## function calls only after here!!! #################################################
+
+if $bBkpFd;then
+  echo 'SECFUNCfdBkp;'
 fi
 
 if $bInteractiveRequired;then #this check must happen before fast exit
