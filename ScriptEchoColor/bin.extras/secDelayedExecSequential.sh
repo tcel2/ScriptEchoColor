@@ -166,7 +166,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
   while ! FUNCchkCanRunNext;do
-    echoc -w -t 5 "wait cpu free up a bit"
+    echoc -w -t 1 "wait cpu free up a bit"
 #    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
     #~ if echoc -q -t 5 "ignore cpu load?";then
       #~ bChkCpuLoad=false
@@ -208,7 +208,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
     
 #    bash -c "$strCmd&" # >/dev/null 2>&1 & disown
     bash -c "$strCmd&" >/dev/null 2>&1
-    SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -C 10&&: # strCmd will (expectedly) not end with '$" -C 10' :)
+    SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: # strCmd will (expectedly) not end with '$" -B 2' :)
     
     echo " Seq -> `SECFUNCdtFmt --logmessages`;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
 #  )

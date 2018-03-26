@@ -266,3 +266,4 @@ elif $bReleaseAll;then
 	varset bOnHoldByExternalRequest=false
 fi
 
+exit 0

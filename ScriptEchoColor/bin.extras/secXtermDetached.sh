@@ -378,7 +378,7 @@ SECFUNCexecA -ce xterm \
 while true;do
   strGetXterm="`ps -o pid,cmd --ppid $pidSubShell --no-headers`"&&:
   echo "Check: $strGetXterm"
-  pidXtermTemp="`echo "$strGetXterm" |grep "[x]term" -w |cut -f1 -d' '`"&&:
+  pidXtermTemp="`echo "$strGetXterm" |grep "[x]term" -w |awk '{print $1}'`"&&:
   if [[ -n "$pidXtermTemp" ]];then 
     SECFUNCexecA -ce ps -p $pidXtermTemp
     break;

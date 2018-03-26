@@ -104,6 +104,7 @@ export bEnableSECWarnMessages=false #initially false to not mess output
 export bCleanSECenv=true;
 #~ export bGetGlobalLogFile=false;
 export nAutoRetryDelay=-1
+export bAutoRetryAlways=false
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
@@ -141,6 +142,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--autoretry" ]];then #help <nAutoRetryDelay> for the daemon mode, if the command exits with error, will auto retry after delay if it is >= 0
     shift
 		nAutoRetryDelay="${1-}"
+	elif [[ "$1" == "--autoretryalways" ]];then #help <nAutoRetryDelay> for the daemon mode, if the command exits BY ANY REASON, will auto retry after delay if it is >= 0
+    shift
+		nAutoRetryDelay="${1-}"
+    bAutoRetryAlways=true
 	elif [[ "$1" == "--listconcurrent" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
 	elif [[ "$1" == "--listcmdsini" ]];then #help list commands that entered (ini) the log file
@@ -657,7 +662,7 @@ function FUNCrun(){
       --selectable-labels
     )
     
-    if $lbErr && ((nAutoRetryDelay>=0));then
+    if [ $lbErr || $bAutoRetryAlways ] && ((nAutoRetryDelay>=0));then
       strRetryMsg=""
       strRetryMsg+="Daemon Stopped, command:\n"
       strRetryMsg+="${astrRunParams[@]}\n"
