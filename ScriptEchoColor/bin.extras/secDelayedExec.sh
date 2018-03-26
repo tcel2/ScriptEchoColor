@@ -42,6 +42,13 @@ fi
 
 #source <(secinit --nochild --extras)
 source <(secinit)
+export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+# THIS BELOW MUST BE JUST AFTER secinit!!!
+if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help 
+  #SECFUNCfdReport
+  echo "$strExecGlobalLogFile" # no echo to stderr or stdout must happen before this! if running under nohup it is worse because both fd1 and fd2 will point to the same pipe!!! :(
+  exit 0
+fi
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
 echo " \$@='$@'" >&2
@@ -65,6 +72,8 @@ function FUNCcpuResourcesAvailable(){ #TODO use this to hold processes execution
 	return 1
 }
 #TODO if ! `exit $(bc <<< "($(cat /proc/loadavg |cut -d' ' -f3) < 3.5) && ($(mpstat 2 1 |grep average -i |tr ' ' '\n' |tail -n 1) > 25.0)")`;then echo ok;fi
+
+#ls -l --color=always "/proc/$$/fd" >&2
 
 : ${CFGbUseSequentialScript:=false} 
 export CFGbUseSequentialScript #help if true, this will allow use the sequential script
@@ -93,7 +102,7 @@ export bXterm=false
 export strCheckPointCustomCmd
 export bEnableSECWarnMessages=false #initially false to not mess output
 export bCleanSECenv=true;
-export bGetGlobalLogFile=false;
+#~ export bGetGlobalLogFile=false;
 export nAutoRetryDelay=-1
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
@@ -140,8 +149,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListWaiting=true
 	elif [[ "$1" == "-x" || "$1" == "--xterm" ]];then #help use xterm to run the command
 		bXterm=true
-	elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
-		bGetGlobalLogFile=true
+	#~ elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
+		#~ bGetGlobalLogFile=true
 	elif [[ "$1" == "-O" || "$1" == "--order" ]];then #help <NUMBER> dummy option and dummy "required" parameter (ex.: 00023). Only used to easily sort all the commands being run by this script
 		:
 	elif [[ "$1" == "--xtermopts" ]];then #help "<astrXtermOpts>" options to xterm like background color etc.
@@ -167,12 +176,25 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 done
 
 export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
-export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
 
-if $bGetGlobalLogFile;then
-  echo "$strExecGlobalLogFile"
-  exit 0
-fi
+#if $bGetGlobalLogFile;then
+##  (
+#    #~ SECFUNCfdReport
+#    #~ SECFUNCfdRestoreOrBkp --bkp
+#    #~ SECFUNCfdReport
+#    #~ SECFUNCrestoreDefaultOutputs;
+#    #~ SECFUNCfdReport
+#    
+#    #~ SECFUNCfdReport
+#    #~ SECFUNCfdBkp
+#    #~ SECFUNCfdReport
+#    #~ SECFUNCfdRestore
+#    SECFUNCfdReport
+#    echo "$strExecGlobalLogFile"
+#    #~ SECFUNCfdReport
+##  )
+#  exit 0
+#fi
 
 function FUNCcheckIfWaitCmdsHaveRun() {
 	#grep "^ ini -> [[:alnum:]+.]*;w+[[:alnum:]]*s;pid=" "$strExecGlobalLogFile" \

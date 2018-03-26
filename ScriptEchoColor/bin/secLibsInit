@@ -44,6 +44,7 @@ bForceReload=false
 bExportFunctions=true
 bInheritParentPidLogFile=false
 bInteractiveRequired=false
+bBkpFd=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
@@ -101,6 +102,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bRunLogForce=true
 	elif [[ "$1" == "--nolog" ]];then #help as SECbRunLog may have been set previously to calling this script, this ensures it gets disabled (unless SECbRunLogForce has been set also).
 		bRunLogDisable=true
+	elif [[ "$1" == "--nobkpfd" ]];then #help as SECbRunLog may have been set previously to calling this script, this ensures it gets disabled (unless SECbRunLogForce has been set also).
+		bBkpFd=false
 	elif [[ "$1" == "--ilog" ]];then #help inherit parent log config
 		bInheritParentPidLogFile=true
 	elif [[ "$1" == "--interactive" || "$1" == "-i" ]];then #help requires shell to be interactive or will fail
@@ -115,6 +118,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift
 done
+
+if $bBkpFd;then
+  echo 'SECFUNCfdBkp;'
+fi
 
 if $bHelpFast || $bHelpCore || $bHelpBase || $bHelpMisc || $bHelpVars || $bHelpExtras;then
 	function FUNChelp(){
@@ -222,7 +229,7 @@ if $bInteractiveRequired;then #this check must happen before fast exit
 fi
 
 if $bFastExit;then
-	exit
+	exit  ###################################################### FAST EXIT HERE #####################################################
 fi
 
 # export function before running any function!

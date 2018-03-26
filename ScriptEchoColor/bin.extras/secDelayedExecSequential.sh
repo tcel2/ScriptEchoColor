@@ -24,6 +24,8 @@
 
 source <(secinit)
 
+#ls -l --color=always "/proc/$$/fd" >&2
+
 : ${CFGnTstCmdRepeatCount:=8000}
 export CFGnTstCmdRepeatCount; #help
 
@@ -45,6 +47,8 @@ astrAllParams=("${@-}") # this may be useful
 nFreeCpuPercToAllow=25
 strFilter=""
 bListOnly=false
+#SECFUNCfdReport;SECFUNCrestoreDefaultOutputs;SECFUNCfdReport;strLogFile="`secDelayedExec.sh --getgloballogfile`";SECFUNCfdReport;declare -p strLogFile;exit 0
+strLogFile="`secDelayedExec.sh --getgloballogfile`"; #declare -p strLogFile;exit 0
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -121,7 +125,6 @@ function FUNCchkCanRunNext() {
   return 0
 }
 
-#strDEG="`secDelayedExec.sh --getgloballogfile`"
 cd $HOME/.config/autostart/
 
 ########## autostart cfg files
@@ -157,6 +160,8 @@ iCount=0
 for strCmd in "${astrCmdListOrdered[@]}";do
   SECFUNCdrawLine #--left "$strCmd"
   
+  ((iCount++))&&:
+  
   echo "Cmd: $strCmd"
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
@@ -170,7 +175,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   done # check cpu
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
-  echo "Cmd$((iCount++))/${#astrCmdListOrdered[@]}: $strCmd"
+  echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
   
   #~ export strCmd
   #~ function FUNCrun() {
@@ -205,6 +210,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
     bash -c "$strCmd&" >/dev/null 2>&1
     SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -C 10&&: # strCmd will (expectedly) not end with '$" -C 10' :)
     
+    echo " Seq -> `SECFUNCdtFmt --logmessages`;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
 #  )
   
   ### strCmd being secDelayedExec.sh will not need input, therefore --nohup.

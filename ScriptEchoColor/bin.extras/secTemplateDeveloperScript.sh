@@ -66,6 +66,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	SECFUNCdbgFuncInA;
 	# var init here
 	local lstrExample="DefaultValue"
+  local lbExample=false
 	local lastrRemainingParams=()
 	local lastrAllParams=("${@-}") # this may be useful
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -76,6 +77,8 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
 			shift
 			lstrExample="${1-}"
+    elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
+      lbExample=true
 		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set

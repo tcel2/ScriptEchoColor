@@ -1995,7 +1995,135 @@ function SECFUNCrestoreDefaultOutputs() { #help same as `SECFUNCcheckActivateRun
 		return 0
 	fi
 	
-	SECFUNCcheckActivateRunLog --restoredefaultoutputs "${@-}" #keep its return status
+	#SECFUNCcheckActivateRunLog --restoredefaultoutputs "${@-}" #keep its return status
+  SECFUNCfdRestore
+}
+
+function SECFUNCfdReport(){ #help list detailed fd
+  ls -l --color=always "/proc/$$/fd" >&2
+}
+
+function SECFUNCfdBkp() { #help
+  #TODO is the fd backup useless? may be when redirecting to files, terminal or pipes may remain on the backuped fd(s), try to test it...
+  SECFUNCfdRestore --bkp "$@" #so --help will work here too
+}
+
+function SECFUNCfdRestore() { #help restore (default) or backup file descriptors (fd) only if it is a terminal OR a pipe
+	SECFUNCdbgFuncInA;
+	# var init here
+	local lstrExample="DefaultValue"
+  local lbExample=false
+	local lastrRemainingParams=()
+  local lbBkp=false
+  local lbUseFd0=false
+	local lastrAllParams=("${@-}") # this may be useful
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCfdRestore_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfdRestore_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
+    elif [[ "$1" == "-b" || "$1" == "--bkp" ]];then #SECFUNCfdRestore_help MISSING DESCRIPTION
+      lbBkp=true
+    elif [[ "$1" == "-0" || "$1" == "--usefd0" ]];then #SECFUNCfdRestore_help MISSING DESCRIPTION
+      lbUseFd0=true
+		elif [[ "$1" == "--" ]];then #SECFUNCfdRestore_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	#validate params here
+	
+	# code here
+  #~ local lbBkp=false;if [[ "${1-}" == "--bkp" ]];then lbBkp=true;fi
+  #~ local lbUseFd0=false;if [[ "${1-}" == "--usefd0" ]];then lbUseFd0=true;fi
+  
+  function _SECFUNCfdRestore_fdOk() {
+    if [[ -t $1 ]] || [[ "`readlink /proc/$$/fd/$1`" =~ pipe:.* ]];then return 0;fi
+    return 1
+  }
+  
+  if ! $lbBkp && $lbUseFd0;then # restore
+    if [[ -t 0 ]];then # if stdin is terminal
+      exec 1>&0;
+      exec 2>&0;
+      
+      if [[ -t 1 ]] && [[ -t 2 ]];then
+        return 0;
+      else
+        SECFUNCechoWarnA "restore based on fd 0 failed for fd 1 and/or 2, trying with backups"
+      fi
+    fi
+  fi
+  
+  local lnFdBase=100;
+  local lbResFd1Ok=false
+  local lbResFd2Ok=false
+  local lnBkpTot=3
+  local lnBkpCount1=0
+  local lnBkpCount2=0
+  local i
+  for((i=0;i<lnBkpTot;i++));do #TODO is 10 too much?
+    if $lbBkp;then
+      if ! [[ -a /proc/$$/fd/$((lnFdBase+1)) ]];then
+        eval "exec $((lnFdBase+1))>&1"
+      fi
+      #if [[ -t $((lnFdBase+1)) ]];then ((lnBkpCount1++))&&:;fi
+      if _SECFUNCfdRestore_fdOk $((lnFdBase+1));then ((lnBkpCount1++))&&:;fi
+      
+      if ! [[ -a /proc/$$/fd/$((lnFdBase+2)) ]];then
+        eval "exec $((lnFdBase+2))>&2"
+      fi
+      #if [[ -t $((lnFdBase+2)) ]];then ((lnBkpCount2++))&&:;fi
+      if _SECFUNCfdRestore_fdOk $((lnFdBase+2));then ((lnBkpCount2++))&&:;fi
+    else
+      #if [[ -t 1 ]];then lbResFd1Ok=true;fi
+      if _SECFUNCfdRestore_fdOk 1;then lbResFd1Ok=true;fi 
+      if ! $lbResFd1Ok;then
+        if [[ -t $((lnFdBase+1)) ]];then
+          eval "exec 1>&$((lnFdBase+1))"
+          lbResFd1Ok=true
+        fi
+      fi
+      
+      #if [[ -t 2 ]];then lbResFd2Ok=true;fi
+      if _SECFUNCfdRestore_fdOk 2;then lbResFd1Ok=true;fi 
+      if ! $lbResFd2Ok;then
+        if [[ -t $((lnFdBase+2)) ]];then
+          eval "exec 2>&$((lnFdBase+2))"
+          lbResFd2Ok=true
+        fi
+      fi
+      
+      if $lbResFd1Ok && $lbResFd2Ok;then break;fi
+    fi
+    
+    ((lnFdBase+=10))&&: #so it ends always in 1 or 2
+  done
+  
+  if $lbBkp;then
+    if((lnBkpCount1==0));then SECFUNCechoWarnA "fd 1 bkp lnBkpCount1='$lnBkpCount1'";fi;
+    if((lnBkpCount2==0));then SECFUNCechoWarnA "fd 2 bkp lnBkpCount2='$lnBkpCount2'";fi;
+  else
+    if ! $lbResFd1Ok;then SECFUNCechoWarnA "fd 1 restore failed";fi
+    if ! $lbResFd2Ok;then SECFUNCechoWarnA "fd 2 restore failed";fi
+  fi
+  
+	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 function SECFUNCcheckActivateRunLog() { #help
@@ -2032,7 +2160,9 @@ function SECFUNCcheckActivateRunLog() { #help
 	function _SECFUNCcheckActivateRunLog_report(){
 		if $lbVerbose || $lbSimpleReport;then
 			echo "SECINFO: $FUNCNAME: ${lastrAllParams[@]}: $@" >&2
-			ls /proc/$$/fd -l >&2
+			#ls /proc/$$/fd -l >&2
+      #ls -l --color=always "/proc/$$/fd" >&2
+      SECFUNCfdReport
 			declare -p SECbRunLogEnabled SECnRunLogTeePid SECstrRunLogFile SECstrRunLogFileDefault&&: >&2
 		fi
 	}
@@ -2054,21 +2184,21 @@ function SECFUNCcheckActivateRunLog() { #help
 #		exec 2>&2
 		if $SECbRunLogEnabled;then
 			_SECFUNCcheckActivateRunLog_report before
-			# 101 and 102 to try to avoid any conflicts
-			#TODO should check for fd availability...
-			if [[ -t 101 ]];then
-				exec 1>&101
-			else
-				exec 1>&0 # if broken, fallback to stdin
-				SECFUNCechoWarnA "fd 101 was broken..." #after the redirection of course...
-			fi
+      SECFUNCfdRestore
+			#~ # 101 and 102 to try to avoid any conflicts
+			#~ if [[ -t 101 ]];then
+				#~ exec 1>&101
+			#~ else
+				#~ exec 1>&0 # if broken, fallback to stdin
+				#~ SECFUNCechoWarnA "fd 101 was broken..." #after the redirection of course...
+			#~ fi
 			
-			if [[ -t 102 ]];then
-				exec 2>&102
-			else
-				exec 2>&0 # if broken, fallback to stdin
-				SECFUNCechoWarnA "fd 102 was broken..." #after the redirection of course...
-			fi
+			#~ if [[ -t 102 ]];then
+				#~ exec 2>&102
+			#~ else
+				#~ exec 2>&0 # if broken, fallback to stdin
+				#~ SECFUNCechoWarnA "fd 102 was broken..." #after the redirection of course...
+			#~ fi
 			
 #			exec 1>&101 2>&102 #restore (if not yet enabled it would redirect to nothing and bug out)
 			_SECFUNCcheckActivateRunLog_report after
@@ -2136,7 +2266,15 @@ function SECFUNCcheckActivateRunLog() { #help
 				echo " SECINFO: stderr and stdout copied to '$SECstrRunLogFile'." >&2
 			#	exec 1>"$SECstrRunLogFile"
 			#	exec 2>"$SECstrRunLogFile"
-				exec 101>&1 102>&2 #backup
+        
+        # make some backups 
+        SECFUNCfdBkp
+        #~ nFdBase=100;
+        #~ for((i=0;i<10;i++));do
+          #~ eval "exec $((nFdBase+1))>&1 $((nFdBase+2))>&2" #backup
+          #~ ((nFdBase+=10))
+        #~ done
+        
 				exec > >(tee "$SECstrRunLogFile") #TODO this caused error once, WHY??? and... can it be protected in some way? while sleep?
 				exec 2>&1
 				
