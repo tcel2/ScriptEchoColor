@@ -94,6 +94,7 @@ export strCheckPointCustomCmd
 export bEnableSECWarnMessages=false #initially false to not mess output
 export bCleanSECenv=true;
 export bGetGlobalLogFile=false;
+export nAutoRetryDelay=-1
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
@@ -128,6 +129,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckIfAlreadyRunning=false
 	elif [[ "$1" == "-d" || "$1" == "--shouldnotexit" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
+	elif [[ "$1" == "--autoretry" ]];then #help <nAutoRetryDelay> for the daemon mode, if the command exits with error, will auto retry after delay if it is >= 0
+    shift
+		nAutoRetryDelay="${1-}"
 	elif [[ "$1" == "--listconcurrent" ]];then #help list pids that are already running and new pids trying to run the same command
 		bListAlreadyRunningAndNew=true
 	elif [[ "$1" == "--listcmdsini" ]];then #help list commands that entered (ini) the log file
@@ -623,6 +627,39 @@ function FUNCrun(){
 			lstrTxt+="\n";
 		fi
 		
+    astrYadBasicOpts=(
+      --title "$SECstrScriptSelfName[$$]" 
+      --separator="\n"
+      --sticky
+      --center
+      --selectable-labels
+    )
+    
+    if $lbErr && ((nAutoRetryDelay>=0));then
+      strRetryMsg=""
+      strRetryMsg+="Daemon Stopped, command:\n"
+      strRetryMsg+="${astrRunParams[@]}\n"
+      strRetryMsg+="\n"
+      strRetryMsg+="Exited with error $lnRet\n"
+      strRetryMsg+="\n"
+      strRetryMsg+="Click OK or close this dialog to open the detailed retry dialog instead."
+      strRetryMsg+="\n"
+      
+      nStep=$((100/nAutoRetryDelay));
+      (
+        i=0;
+        while true;do 
+          if((i<100));then echo $i;fi; 
+          sleep 1; 
+          ((i+=nStep))&&:; 
+          if((i>=100));then echo 99.9;sleep 1;break;fi; # --auto-close will make yad exit on 100, so this looks better at least
+        done
+      ) | yad "${astrYadBasicOpts[@]}" --auto-close --button="OK - Just Retry Now:0" --text="$strRetryMsg" --progress ----percentage=0;nYadRetryRet=$?
+#      ) | yad "${astrYadBasicOpts[@]}" --auto-close --progress-text="$strRetryMsg" --progress ----percentage=0;nYadRetryRet=$?
+        
+        if((nYadRetryRet==0));then continue;fi
+    fi
+    
 		if $bStay;then
 			FUNClog Sne "Should not have exited..."
 		fi
@@ -681,10 +718,15 @@ function FUNCrun(){
 						#~ "${!astrYadFields[1]}" 
 				#~ );declare -p astrYadFullCmd
 				#~ strYadOutput="`SECFUNCexecA -ce ${astrYadFullCmd[@]}`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
+            #~ --title "$SECstrScriptSelfName[$$]" \
+						#~ --separator="\n" \
+						#~ --sticky \
+            #~ --center \
+            #~ --selectable-labels 
 				strYadOutput="`
-					SECFUNCexecA -ce yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" \
-						--separator="\n" \
-						--sticky --center --selectable-labels \
+					SECFUNCexecA -ce yad \
+            ${astrYadBasicOpts[@]} \
+            --text "$lstrTxt" \
 						--form \
 						--field "[${astrYadFields[0]}] Use Xterm:chk" \
 						--field "[${astrYadFields[1]}] b4 run" \
