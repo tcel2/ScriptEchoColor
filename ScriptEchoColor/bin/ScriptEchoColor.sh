@@ -1907,7 +1907,7 @@ elif $bProblem ||
 	
 	if $bProblem; then
 		strString="$strHeadProblem$strString"
-		SECFUNCechoErrA --logonly "'$strString' at BASH_SOURCE[@]='${BASH_SOURCE[@]}'" #no error happened here.. just to log the problem mode!
+		SECFUNCechoErrA --logonly "'$strString' at BASH_SOURCE[@]='${BASH_SOURCE[@]-}'" #no error happened here.. just to log the problem mode!
 	
 		if   $bAddYesNoQuestion || $bExtendedQuestionMode || $bStringQuestion; then
 			if $bStringQuestion && ((fWaitTime > 0)); then

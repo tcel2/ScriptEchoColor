@@ -76,8 +76,12 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 # Main code
 while true;do
+  if $bDaemon;then SECFUNCcfgReadDB;fi #to know about additions
+  
   if [[ -n "${strAddFolder-}" ]];then
     if [[ -d "${strAddFolder}" ]];then
       if [[ -L "$strAddFolder" ]];then
