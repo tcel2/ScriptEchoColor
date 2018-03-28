@@ -34,7 +34,7 @@ source "$SECinstallPath/lib/ScriptEchoColor/utils/funcVars.sh";
 #TODO this wont work..., find a workaround?: export _SECCstrkillSelfMsg='(to stop this, execute \`kill $BASHPID\`)' #for functions that run as child process SECC
 
 declare -a SECastrSECFUNCCwindowCmd_ChildRegex=()
-function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will run a child process in loop til the window is found and commands are issued towards it
+function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a child process in loop til the window is found and commands are issued towards it
 	local lnDelay=3
 	local lstrStopMatchRegex=""
 	local lbMaximize=false
@@ -49,12 +49,15 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 	local lbChild=true
 	local lbMinimize=false
 	local lnTimeout=60
+  local lstrXdotoolSearchBy="--name"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
-			#SECFUNCshowHelp --colorize "a child process will wait to issue the action towards <lstrWindowTitleRegex> "
+			#SECFUNCshowHelp --colorize "a child process will wait to issue the action towards <lstrMatchRegex> "
 			SECFUNCshowHelp $FUNCNAME
 			return 0
+		elif [[ "$1" == "--class" || "$1" == "--classname" ]];then #SECFUNCCwindowCmd_help search window by (see `xdotool search` for details), default is --name
+			lstrXdotoolSearchBy="$1"
 		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
 			lbOnTop=true
 		elif [[ "$1" == "--focus" ]];then #SECFUNCCwindowCmd_help focus window
@@ -83,7 +86,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		elif [[ "$1" == "--timeout" || "$1" == "-o" ]];then #SECFUNCCwindowCmd_help <lnTimeout> after this timeout, will stop looking for window to match
 			shift 
 			lnTimeout="${1-}"
-		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrWindowTitleRegex> will look for this function running instances related to specified window title and stop them. Implies --nochild.
+		elif [[ "$1" == "--stop" || "$1" == "-s" ]];then #SECFUNCCwindowCmd_help <lstrMatchRegex> will look for this function running instances related to specified window title and stop them. Implies --nochild.
 			shift
 			lstrStopMatchRegex="${1-}" #TODO pointless..
 			
@@ -147,16 +150,16 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 		return 1
 	fi
 	
-	local lstrWindowTitleRegex="${1-}"
-	if [[ -z "$lstrWindowTitleRegex" ]];then
-		SECFUNCechoErrA "lstrWindowTitleRegex='$lstrWindowTitleRegex' missing"
+	local lstrMatchRegex="${1-}"
+	if [[ -z "$lstrMatchRegex" ]];then
+		SECFUNCechoErrA "lstrMatchRegex='$lstrMatchRegex' missing"
 		return 1
 	fi
-	export lstrWindowTitleRegex
+	export lstrMatchRegex
 	
-	local lstrWarnMsg="still no window found with title lstrWindowTitleRegex='$lstrWindowTitleRegex'"
+	local lstrWarnMsg="still no window found matching regex '$lstrMatchRegex'"
 	if $lbWait;then
-		while ! xdotool search --name "$lstrWindowTitleRegex";do
+		while ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";do
 			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg"
 			sleep $lnDelay;
 		done
@@ -172,8 +175,8 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 			if $lbStop;then
 				break
 			fi
-			export lstrWindowTitleRegex
-			local lnWindowId="`xdotool search --name "$lstrWindowTitleRegex"`"
+			export lstrMatchRegex
+			local lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
 			if SECFUNCisNumber -nd "$lnWindowId";then
 				##################
 				# each option will be issued one time, so must be disabled 
@@ -191,7 +194,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 				if $lbMinimize && xdotool windowminimize $lnWindowId;then
 					lbMinimize=false;
 				fi
-				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then
+				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then #TODO xdotool doesnt work well for this? because of top systray panel?
 					lbMoveGeom=false;
 				fi
 				#############
@@ -219,7 +222,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrWindowTitleRegex> this will 
 	};export -f SECFUNCCwindowCmd_ChildLoop
 	(SECFUNCCwindowCmd_ChildLoop)&lnChildPid=$!;if ! $lbChild;then wait;fi
 	
-	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrWindowTitleRegex"
+	SECastrSECFUNCCwindowCmd_ChildRegex[lnChildPid]="$lstrMatchRegex"
 	#echo "$lnChildPid"
 	
 	return 0
