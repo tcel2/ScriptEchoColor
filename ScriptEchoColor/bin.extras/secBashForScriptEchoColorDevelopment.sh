@@ -38,7 +38,7 @@ export SEC_WARN=true
 export SECbFuncArraysRestoreVerbose=true
 
 source <(secinit --extras --nolog --force)
-declare -p SECDEVastrCmdTmp&&: >&2
+declare -p SECDEVastrCmdTmp&&: >&2 #no problem if not set, this is just a report...
 
 SECFUNCcheckActivateRunLog --report
 if [[ "$TERM" != "dumb" ]];then

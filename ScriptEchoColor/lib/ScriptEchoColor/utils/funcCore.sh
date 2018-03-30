@@ -1999,37 +1999,125 @@ function SECFUNCrestoreDefaultOutputs() { #help same as `SECFUNCcheckActivateRun
   SECFUNCfdRestore
 }
 
+if [[ -z "${SECanFdList-}" ]];then SECanFdList=();fi # any better way to initialize arrays? this fails: `: ${SECanFdList:=()}`
+function SECFUNCfdUpdateList() { #help SECanFdList
+  declare -gax SECanFdList
+  IFS=$'\n' read -d '' -r -a SECanFdList < <(ls "/proc/$$/fd/")&&:
+  return 0
+}
+
+function SECFUNCfdGetTermOutput() { #help this outputs to stdout (fall back returned fd is current err output)
+  local loutput="`readlink /proc/$$/fd/2`" # defaults to current err output 
+	local lastrAllParams=("${@-}") # this may be useful
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCfdGetTermOutput_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfdGetTermOutput_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
+    elif [[ "$1" == "-o" || "$1" == "--out" ]];then #SECFUNCfdGetTermOutput_help sets fall back to current default "out" output
+      loutput="`readlink /proc/$$/fd/1`"
+		elif [[ "$1" == "--" ]];then #SECFUNCfdGetTermOutput_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+  
+  SECFUNCfdUpdateList
+  for lnFd in "${SECanFdList[@]}";do 
+    if [[ -t "$lnFd" ]];then
+      loutput="`readlink /proc/$$/fd/$lnFd`" # let it crash if fails here...
+    fi
+  done
+  
+  echo "$loutput"
+}
+
 function SECFUNCfdReport(){ #help list detailed fd
-  ls -l --color=always "/proc/$$/fd" >&2
+  #~ for((i=0;i<=2;i++));do
+    #~ ls -l --color=always "/proc/$$/fd/$i" >&2
+    #~ declare -p SECbkpFd$i&&:
+  #~ done
+  #~ local lnFdList;
+  local loutput="`SECFUNCfdGetTermOutput`"; # fd  list went subshell lost
+  #~ SECFUNCfdUpdateList
+  #~ IFS=$'\n' read -d '' -r -a lnFdList < <(ls "/proc/$$/fd/")&&:
+  #~ for lnFd in "${SECanFdList[@]}";do 
+    #~ if [[ -t "$lnFd" ]];then
+      #~ # if &2 is redirected try to find a valid terminal fd for it TODO should this be optional?
+      #~ loutput="`readlink /proc/$$/fd/$lnFd`"
+      #~ break;
+    #~ fi
+  #~ done
+  
+  declare -p SECbkpTermFd >$loutput &&:
+  
+  local lnFd; 
+  SECFUNCfdUpdateList
+  for lnFd in "${SECanFdList[@]}";do
+    ls -l --color=always "/proc/$$/fd/$lnFd" >$loutput &&:
+    if((lnFd<=2));then
+      declare -p "SECbkpFd${lnFd}" >$loutput &&:
+    fi
+  done
 }
 
 function SECFUNCfdBkp() { #help
   #TODO is the fd backup useless? may be when redirecting to files, terminal or pipes may remain on the backuped fd(s), try to test it...
-  SECFUNCfdRestore --bkp "$@" #so --help will work here too
+  SECFUNCfd --bkp "$@" #so --help will work here too
 }
 
-function SECFUNCfdRestore() { #help restore (default) or backup file descriptors (fd) only if it is a terminal OR a pipe
+function SECFUNCfdRestore() { #help 
+  #TODO help msg?: restore (default) or backup file descriptors (fd) only if it is a terminal OR a pipe
+  SECFUNCfd --restore "$@" #so --help will work here too
+}
+
+function SECFUNCfdPanic() { #help PANIC!! will try to retore fd to terminal
+  SECFUNCfd --forceterm "$@"
+}
+
+: ${SECbkpTermFd:=""}
+function SECFUNCfd() { #help fd 
 	SECFUNCdbgFuncInA;
 	# var init here
 	local lstrExample="DefaultValue"
   local lbExample=false
 	local lastrRemainingParams=()
   local lbBkp=false
-  local lbUseFd0=false
+  local lbForceTerm=false
+  #~ local lbUseFd0=false
 	local lastrAllParams=("${@-}") # this may be useful
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCfdRestore_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCfd_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfdRestore_help <lstrExample> MISSING DESCRIPTION
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfd_help <lstrExample> MISSING DESCRIPTION
 			shift
 			lstrExample="${1-}"
-    elif [[ "$1" == "-b" || "$1" == "--bkp" ]];then #SECFUNCfdRestore_help MISSING DESCRIPTION
+    elif [[ "$1" == "-b" || "$1" == "--bkp" ]];then #SECFUNCfd_help MISSING DESCRIPTION
       lbBkp=true
-    elif [[ "$1" == "-0" || "$1" == "--usefd0" ]];then #SECFUNCfdRestore_help MISSING DESCRIPTION
-      lbUseFd0=true
-		elif [[ "$1" == "--" ]];then #SECFUNCfdRestore_help params after this are ignored as being these options, and stored at lastrRemainingParams
+    elif [[ "$1" == "-r" || "$1" == "--restore" ]];then #SECFUNCfd_help default
+      lbBkp=false # TODO this may be useless...
+    #~ elif [[ "$1" == "-0" || "$1" == "--usefd0" ]];then #SECFUNCfd_help MISSING DESCRIPTION
+      #~ lbUseFd0=true
+    elif [[ "$1" == "-t" || "$1" == "--forceterm" ]];then #SECFUNCfd_help force restore to a terminal fd if available (warning: this will break all redirections)
+      lbBkp=false # TODO this may be useless...
+      lbForceTerm=true
+		elif [[ "$1" == "--" ]];then #SECFUNCfd_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
@@ -2052,76 +2140,125 @@ function SECFUNCfdRestore() { #help restore (default) or backup file descriptors
   #~ local lbBkp=false;if [[ "${1-}" == "--bkp" ]];then lbBkp=true;fi
   #~ local lbUseFd0=false;if [[ "${1-}" == "--usefd0" ]];then lbUseFd0=true;fi
   
-  function _SECFUNCfdRestore_fdOk() {
-    if [[ -t $1 ]] || [[ "`readlink /proc/$$/fd/$1`" =~ pipe:.* ]];then return 0;fi
+  function _SECFUNCfd_fdOk() { # <lnFdIndex> <lstrFd>
+    #~ local lnFdIndex="$1";shift
+    #~ local lstrFd="$1";shift
+    
+    if [[ -t $lnFdIndex ]] || [[ -c "$lstrFd" ]] || [[ "$lstrFd" =~ ^pipe:.* ]];then return 0;fi #TODO what about "socket:.*" ?
     return 1
   }
   
-  if ! $lbBkp && $lbUseFd0;then # restore
-    if [[ -t 0 ]];then # if stdin is terminal
-      exec 1>&0;
-      exec 2>&0;
-      
-      if [[ -t 1 ]] && [[ -t 2 ]];then
-        return 0;
-      else
-        SECFUNCechoWarnA "restore based on fd 0 failed for fd 1 and/or 2, trying with backups"
-      fi
-    fi
-  fi
-  
-  local lnFdBase=100;
-  local lbResFd1Ok=false
-  local lbResFd2Ok=false
-  local lnBkpTot=3
-  local lnBkpCount1=0
-  local lnBkpCount2=0
-  local i
-  for((i=0;i<lnBkpTot;i++));do #TODO is 10 too much?
-    if $lbBkp;then
-      if ! [[ -a /proc/$$/fd/$((lnFdBase+1)) ]];then
-        eval "exec $((lnFdBase+1))>&1"
-      fi
-      #if [[ -t $((lnFdBase+1)) ]];then ((lnBkpCount1++))&&:;fi
-      if _SECFUNCfdRestore_fdOk $((lnFdBase+1));then ((lnBkpCount1++))&&:;fi
-      
-      if ! [[ -a /proc/$$/fd/$((lnFdBase+2)) ]];then
-        eval "exec $((lnFdBase+2))>&2"
-      fi
-      #if [[ -t $((lnFdBase+2)) ]];then ((lnBkpCount2++))&&:;fi
-      if _SECFUNCfdRestore_fdOk $((lnFdBase+2));then ((lnBkpCount2++))&&:;fi
-    else
-      #if [[ -t 1 ]];then lbResFd1Ok=true;fi
-      if _SECFUNCfdRestore_fdOk 1;then lbResFd1Ok=true;fi 
-      if ! $lbResFd1Ok;then
-        if [[ -t $((lnFdBase+1)) ]];then
-          eval "exec 1>&$((lnFdBase+1))"
-          lbResFd1Ok=true
-        fi
-      fi
-      
-      #if [[ -t 2 ]];then lbResFd2Ok=true;fi
-      if _SECFUNCfdRestore_fdOk 2;then lbResFd1Ok=true;fi 
-      if ! $lbResFd2Ok;then
-        if [[ -t $((lnFdBase+2)) ]];then
-          eval "exec 2>&$((lnFdBase+2))"
-          lbResFd2Ok=true
-        fi
-      fi
-      
-      if $lbResFd1Ok && $lbResFd2Ok;then break;fi
+  function _SECFUNCfd_fdBkp() { # <lnFdIndex> <lstrFd> <lstrBkpId>
+    #~ local lnFdIndex="$1";shift
+    #~ local lstrFd="$1";shift
+    #~ local lstrBkpId="$1";shift
+
+    if [[ -z "${!lstrBkpId-}" ]];then
+      if _SECFUNCfd_fdOk;then #"$lnFdIndex" "$lstrFd";then
+        declare -gx $lstrBkpId="$lstrFd"
+      fi 
     fi
     
-    ((lnFdBase+=10))&&: #so it ends always in 1 or 2
+    return 0;
+  }
+  
+  if $lbBkp;then # special Terminal FD backup
+    SECFUNCfdUpdateList
+    local lnFdIndex; 
+    for lnFdIndex in "${SECanFdList[@]}";do
+      if [[ -t "$lnFdIndex" ]];then 
+        declare -gx SECbkpTermFd="`readlink /proc/$$/fd/${lnFdIndex}`";
+      fi 
+    done
+  fi
+  
+  for((i=0;i<=2;i++));do
+    local lnFdIndex="$i"
+    local lstrFd="`readlink /proc/$$/fd/${lnFdIndex}`"
+    local lstrBkpId="SECbkpFd${lnFdIndex}"
+    #~ declare -p lstrBkpId >>/dev/stderr
+    if $lbBkp;then
+      #~ if [[ -t "$lnFdIndex ]];then declare -gx SECbkpTermFd="$lstrFd";fi # special Terminal FD backup
+      _SECFUNCfd_fdBkp #"${lnFdIndex}" "${lstrFd}" "${lstrBkpId}"
+    else
+      local lstrFdRestore="${!lstrBkpId-}"
+      if $lbForceTerm && [[ -n "$SECbkpTermFd" ]];then
+        lstrFdRestore="$SECbkpTermFd"
+      fi
+      
+      if [[ -n "$lstrFdRestore" ]] && [[ "$lstrFd" != "$lstrFdRestore" ]];then
+        eval "exec ${lnFdIndex}>${lstrFdRestore}"
+      fi
+    fi
   done
   
-  if $lbBkp;then
-    if((lnBkpCount1==0));then SECFUNCechoWarnA "fd 1 bkp lnBkpCount1='$lnBkpCount1'";fi;
-    if((lnBkpCount2==0));then SECFUNCechoWarnA "fd 2 bkp lnBkpCount2='$lnBkpCount2'";fi;
-  else
-    if ! $lbResFd1Ok;then SECFUNCechoWarnA "fd 1 restore failed";fi
-    if ! $lbResFd2Ok;then SECFUNCechoWarnA "fd 2 restore failed";fi
-  fi
+  #~ if ! $lbBkp && $lbUseFd0;then # restore
+    #~ if [[ -t 0 ]];then # if stdin is terminal
+      #~ exec 1>&0;
+      #~ exec 2>&0;
+      
+      #~ if [[ -t 1 ]] && [[ -t 2 ]];then
+        #~ return 0;
+      #~ else
+        #~ SECFUNCechoWarnA "restore based on fd 0 failed for fd 1 and/or 2, trying with backups"
+      #~ fi
+    #~ fi
+  #~ fi
+  
+  #~ local lnFdBase=100;
+  #~ local lbResFd1Ok=false
+  #~ local lbResFd2Ok=false
+  #~ local lnBkpTot=3 
+  #~ local lnBkpCount1=0
+  #~ local lnBkpCount2=0
+  #~ local i
+  #~ for((i=0;i<lnBkpTot;i++));do
+    #~ if $lbBkp;then
+      #~ #declare -gx SECFUNCfdRestore_bkpFd0
+      
+      #~ if ! [[ -a /proc/$$/fd/$((lnFdBase+1)) ]];then
+        #~ eval "exec $((lnFdBase+1))>&1"
+      #~ fi
+      #~ #if [[ -t $((lnFdBase+1)) ]];then ((lnBkpCount1++))&&:;fi
+      #~ if _SECFUNCfdRestore_fdOk $((lnFdBase+1));then ((lnBkpCount1++))&&:;fi
+      
+      #~ if ! [[ -a /proc/$$/fd/$((lnFdBase+2)) ]];then
+        #~ eval "exec $((lnFdBase+2))>&2"
+      #~ fi
+      #~ #if [[ -t $((lnFdBase+2)) ]];then ((lnBkpCount2++))&&:;fi
+      #~ if _SECFUNCfdRestore_fdOk $((lnFdBase+2));then ((lnBkpCount2++))&&:;fi
+    #~ else
+      #~ #if [[ -t 1 ]];then lbResFd1Ok=true;fi
+      #~ if _SECFUNCfdRestore_fdOk 1;then lbResFd1Ok=true;fi 
+      #~ if ! $lbResFd1Ok;then
+        #~ if [[ -t $((lnFdBase+1)) ]];then
+          #~ eval "exec 1>&$((lnFdBase+1))"
+          #~ lbResFd1Ok=true
+        #~ fi
+      #~ fi
+      
+      #~ #if [[ -t 2 ]];then lbResFd2Ok=true;fi
+      #~ if _SECFUNCfdRestore_fdOk 2;then lbResFd1Ok=true;fi 
+      #~ if ! $lbResFd2Ok;then
+        #~ if [[ -t $((lnFdBase+2)) ]];then
+          #~ eval "exec 2>&$((lnFdBase+2))"
+          #~ lbResFd2Ok=true
+        #~ fi
+      #~ fi
+      
+      #~ if $lbResFd1Ok && $lbResFd2Ok;then break;fi
+    #~ fi
+    
+    #~ ((lnFdBase+=10))&&: #so it ends always in 0, 1 or 2
+  #~ done
+  
+  #~ if $lbBkp;then
+    #~ if((lnBkpCount1==0));then SECFUNCechoWarnA "fd 1 bkp lnBkpCount1='$lnBkpCount1'";fi;
+    #~ if((lnBkpCount2==0));then SECFUNCechoWarnA "fd 2 bkp lnBkpCount2='$lnBkpCount2'";fi;
+  #~ else
+    #~ if ! $lbResFd1Ok;then SECFUNCechoWarnA "fd 1 restore failed";fi
+    #~ if ! $lbResFd2Ok;then SECFUNCechoWarnA "fd 2 restore failed";fi
+  #~ fi
   
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
