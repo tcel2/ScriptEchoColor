@@ -162,6 +162,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 		while ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";do
 			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg"
 			sleep $lnDelay;
+      
+			if SECFUNCdelay lnTimeout --checkorinit $lnTimeout;then
+				SECFUNCechoErr "$lstrWarnMsg (TIMEOUT)"
+				break;
+			fi
 		done
 		return 0
 	fi

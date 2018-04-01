@@ -31,15 +31,19 @@ export strEnvVarUserCanModify #help this variable will be accepted if modified b
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
+strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB #after default variables value setup above
 bDaemon=false
 nChangeInterval=3600
+nChHueFastModeTimes=10
+nRandomHueInterval=$((nChangeInterval/nChHueFastModeTimes))
 strWallPPath="$HOME/Pictures/Wallpapers/"
 strFindRegex=".*[.]\(jpg\|png\)"
 declare -p strFindRegex
-nChangeIFast=5
+nChangeFast=5
+nChangeHue=7
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -51,20 +55,20 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--daemon" || "$1" == "-d" ]];then #help
 		bDaemon=true
 	elif [[ "$1" == "--change" || "$1" == "-c" ]];then #help <nChangeInterval> change wallpaper interval in seconds
-		shift
-		nChangeInterval=$1
-	elif [[ "$1" == "--fast" || "$1" == "-f" ]];then #help <nChangeIFast> fast change wallpaper interval in seconds
-		shift
-		nChangeIFast=$1
+		shift;nChangeInterval=$1
+	elif [[ "$1" == "--fast" || "$1" == "-f" ]];then #help <nChangeFast> fast change wallpaper interval in seconds
+		shift;nChangeFast=$1
+	elif [[ "$1" == "--hue" || "$1" == "-h" ]];then #help <nChangeHue> <nRandomHueInterval> <nChHueFastModeTimes> play with hue values random +-nChangeHue%. The nRandomHueInterval only makes sense if less than nChangeInterval. The nChHueFastModeTimes determines how many times the image will not change to a new one, while just changing the hue of current one.
+		shift;nChangeHue="$1";
+    shift;nRandomHueInterval="$1";
+	elif [[ "$1" == "--nohue" || "$1" == "-H" ]];then #help disable the hue mode (that is default)
+    nChangeHue=0
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
-		shift
-		strWallPPath="$1"
+		shift;strWallPPath="$1"
 	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
-		shift
-		strFindRegex="$1"
+		shift;strFindRegex="$1"
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
-		shift
-		pSECFUNCcfgOptSet "$@";exit 0;
+		shift;pSECFUNCcfgOptSet "$@";exit 0;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
@@ -91,7 +95,7 @@ function FUNCchkUpdateFileList() {
 	nTotFiles=${#astrFileList[@]}
 	
 	if((nTotFiles==0));then
-		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex") &&: # re-fill
+		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex" |grep -v "$strBaseTmpFileName") &&: # re-fill
 		if [[ -z "${1-}" ]];then
 			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
 			if((nTotFiles==0));then
@@ -113,28 +117,85 @@ if $bDaemon;then
 	astrFileList=()
 	bFastMode=false
 	nSleep=$nChangeInterval
+  nCurrChIntvl=$nChangeInterval
+  nSumSleep=0
+  bChangeImage=true
+  nChHueFastModeCount=0
+  strTmpFile="/home/teique/Pictures/Wallpapers/$strBaseTmpFileName"
+  SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strTmpFile";
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
-		nSelect=$((RANDOM%nTotFiles));
-		strFile="`pwd`/${astrFileList[$nSelect]}";
+    if $bChangeImage;then
+      nSelect=$((RANDOM%nTotFiles));
+      strFile="`pwd`/${astrFileList[$nSelect]}";
+      
+      declare -p astrFileList nSelect nTotFiles strFile |tr '[' '\n'
+      
+      #TODO auto download wallpapers one new per loop
+      
+      #excluding current from shuffle list
+      unset astrFileList[$nSelect]
+    fi
 		
-		declare -p astrFileList nSelect nTotFiles strFile |tr '[' '\n'
-		
-		#TODO auto download wallpapers
-		
-		#excluding
-		unset astrFileList[$nSelect]
-		
-		SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
+    if((nChangeHue!=0));then
+      nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      declare -p nAddR nAddG nAddB
+      
+      strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
+      
+      SECFUNCexecA -ce convert "$strFile" \
+        -colorspace HSL \
+                   -channel R -evaluate add ${nAddR}% \
+          +channel -channel G -evaluate add ${nAddG}% \
+          +channel -channel B -evaluate add ${nAddB}% \
+          +channel -set colorspace HSL -colorspace sRGB "$strTmpFilePreparing"
+          
+      SECFUNCexecA -ce mv -f "$strTmpFilePreparing" "$strTmpFile"
+      
+      if $bFastMode;then
+        if((nChHueFastModeCount<nChHueFastModeTimes));then
+          ((nChHueFastModeCount++))&&:;
+          bChangeImage=false;declare -p bChangeImage
+        else
+          nChHueFastModeCount=0;declare -p nChHueFastModeCount
+          bChangeImage=true;declare -p bChangeImage
+        fi
+        declare -p nChHueFastModeCount nChHueFastModeTimes
+      else
+        if((nRandomHueInterval>0));then 
+          nSleep=$nRandomHueInterval;declare -p nSleep
+          declare -p nChangeInterval
+          declare -p nSumSleep
+          ((nSumSleep+=$nRandomHueInterval))&&:
+          if((nSumSleep<nChangeInterval));then
+            bChangeImage=false;declare -p bChangeImage
+          else
+            nSumSleep=0;declare -p nSumSleep
+            bChangeImage=true;declare -p bChangeImage
+          fi
+        else
+          bChangeImage=true;declare -p bChangeImage
+        fi
+      fi
+    else
+      SECFUNCexecA -ce cp -f "$strFile" "$strTmpFile"
+    fi
+    
+		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
 		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
 			SECFUNCtoggleBoolean bFastMode
 			if $bFastMode;then
-				nSleep=$nChangeIFast
+				nSleep=$nChangeFast;declare -p nSleep
 			else
-				nSleep=$nChangeInterval
+				nSleep=$nChangeInterval;declare -p nSleep
 			fi
+      bChangeImage=true;declare -p bChangeImage #user action changes the image promptly
+      nSumSleep=0;declare -p nSumSleep
 		fi
+    
 	done
 fi
 

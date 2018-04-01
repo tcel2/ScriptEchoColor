@@ -1040,7 +1040,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		echo -e "\t\E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}"
 		
 		######################### function description
-		local lstrFuncDesc=`grep -h "$lstrRegexFuncMatch" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`
+		local lstrFuncDesc="`grep -h "$lstrRegexFuncMatch" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`"
 		if [[ -n "$lstrFuncDesc" ]];then
 			echo -e "\t$lstrFuncDesc" \
 				|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
@@ -2181,6 +2181,8 @@ function SECFUNCfd() { #help fd
       #~ if [[ -t "$lnFdIndex ]];then declare -gx SECbkpTermFd="$lstrFd";fi # special Terminal FD backup
       _SECFUNCfd_fdBkp #"${lnFdIndex}" "${lstrFd}" "${lstrBkpId}"
     else
+      SECFUNCfdReport #TODO this is just a workaround to actually let the restore work (WHY IT WORKS? AND ONLY ON THIS CODE LINE!!? I dont like magic...), test case: SECFUNCexecA -ce --resdefop bash; #and inside of new bash instance: SECFUNCexec --help #comment this code line and the last test case command will freeze...
+        
       local lstrFdRestore="${!lstrBkpId-}"
       if $lbForceTerm && [[ -n "$SECbkpTermFd" ]];then
         lstrFdRestore="$SECbkpTermFd"

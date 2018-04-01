@@ -166,9 +166,9 @@ if $bInteractive;then
 			astrZenityValues=()
 			nIndex=0
 			for strDeviceId in "${!astrDeviceList[@]}";do
-				astrZenityValues+=("$((nIndex++))")
-				astrZenityValues+=("$strDeviceId")
-				astrZenityValues+=("${astrDeviceList[$strDeviceId]}")
+				astrZenityValues+=( "$((nIndex++))" )
+				astrZenityValues+=( "$strDeviceId" )
+				astrZenityValues+=( "${astrDeviceList[$strDeviceId]}" )
 			done
 		
 			strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
@@ -191,7 +191,7 @@ while true;do
 		break;
 	else
 		if $bInteractive;then
-			if echoc -q -t 3 -p "failed to acquire nBluetoothChannel='$nBluetoothChannel', exit?";then
+			if echoc -q -t 3 -p "failed to acquire nBluetoothChannel='$nBluetoothChannel', exit? (if not, will retry)";then
 				exit 1
 			fi
 		else

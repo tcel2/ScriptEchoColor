@@ -722,7 +722,8 @@ function FUNCrun(){
         bEnableSECWarnMessages=true #the 1st time a problem happens, set to true to help on retries debugging
         bCleanSECenv=false #the 1st time a problem happens, set to false to help on retries debugging
 				local lbEvalCode=false
-				: ${strCodeToEval:=":"}
+#				: ${strCodeToEval:=":"}
+				: ${strCodeToEval:="`declare -p astrRunParams`"}
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				astrYadFields=(
