@@ -67,6 +67,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift;strWallPPath="$1"
 	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
 		shift;strFindRegex="$1"
+	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
+		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift;pSECFUNCcfgOptSet "$@";exit 0;
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
@@ -146,14 +148,14 @@ if $bDaemon;then
       
       strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
       
-      SECFUNCexecA -ce convert "$strFile" \
+      SECFUNCexecA -cE convert "$strFile" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
           +channel -channel B -evaluate add ${nAddB}% \
           +channel -set colorspace HSL -colorspace sRGB "$strTmpFilePreparing"
           
-      SECFUNCexecA -ce mv -f "$strTmpFilePreparing" "$strTmpFile"
+      SECFUNCexecA -cE mv -f "$strTmpFilePreparing" "$strTmpFile"
       
       if $bFastMode;then
         if((nChHueFastModeCount<nChHueFastModeTimes));then
@@ -181,7 +183,7 @@ if $bDaemon;then
         fi
       fi
     else
-      SECFUNCexecA -ce cp -f "$strFile" "$strTmpFile"
+      SECFUNCexecA -cE cp -f "$strFile" "$strTmpFile"
     fi
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
