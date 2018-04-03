@@ -123,7 +123,7 @@ if $bDaemon;then
   nSumSleep=0
   bChangeImage=true
   nChHueFastModeCount=0
-  strTmpFile="/home/teique/Pictures/Wallpapers/$strBaseTmpFileName"
+  strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
   SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strTmpFile";
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
