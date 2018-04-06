@@ -131,11 +131,11 @@ cd $HOME/.config/autostart/
 IFS=$'\n' read -d '' -r -a astrFileList < <(grep enabled=true * |cut -d: -f1)&&:
 
 ########## autostart commands
-IFS=$'\n' read -d '' -r -a astrCmdList < <(grep "Exec=" -h "${astrFileList[@]}" -h |sed 's"^Exec=""' |sort)&&:
+IFS=$'\n' read -d '' -r -a astrCmdList < <(egrep "Exec=.* --SequentialCfg " -h "${astrFileList[@]}" -h |sed 's"^Exec=""' |sort)&&:
 #declare -p astrCmdList |tr '[' '\n'
 
 ########## prepare list to be ordered
-sedGetSleepTime="s'.*-s ([[:digit:]]*) .*'\1'"
+sedGetSleepTime="s'.*-s[ ]*([[:digit:]]*) .*'\1'"
 astrCmdListToSort=()
 for strCmd in "${astrCmdList[@]}";do
   nIndex=$((10#`echo "$strCmd" |sed -r "$sedGetSleepTime"`));

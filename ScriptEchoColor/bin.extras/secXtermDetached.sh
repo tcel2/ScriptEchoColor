@@ -80,7 +80,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--daemonmaxwait" ]];then #help <SECXnMaxWaitOtherDaemon> the max delay in seconds to wait other daemon exit, wait forever by setting to -1
 		shift&&:
 		SECXnMaxWaitOtherDaemon="${1-}"
-	elif [[ "$1" == "--title" ]];then #help hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
+	elif [[ "$1" == "--title" ]];then #help <strTitleForce> hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
 #		strTitleForce="`SECFUNCfixId "$1"`"
 		strTitleForce="${1-}"
