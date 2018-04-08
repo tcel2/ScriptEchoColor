@@ -1359,6 +1359,7 @@ if $bOptTest; then
 	exit 0
 fi
 
+strExtraQModeExmpl="$strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"&&:; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
 if $bOptHelp; then
 		echo "$strSelfName version $g_nVersion"
 		echo "usage: $strSelfName [-<c|x|X|v|V|q|Q|S|w|p><pmORbrktulLiI>] [-enE] [\"string\""]
@@ -1370,7 +1371,7 @@ if $bOptHelp; then
 		echo " -v echo and help change environment (see $optHelpExtended) ex.: \"cd ..\""
 		echo " -V echo and help change environment, with exit command BEWARE (see $optHelpExtended)"
 		echo " -q question mode"
-		echo " -Q extra question mode"
+		echo " -Q extra question mode ex.: ${strExtraQModeExmpl}"
 		echo " -S question mode where you can type a String"
 		echo " -w wait mode"
 		echo " -p problem mode"
@@ -1524,7 +1525,7 @@ if $bOptHelpExtended; then
 		echo "    Options must be unique (do not repeat keys)"
 		echo "    OBS.: Invalid keys will return 0 (true) in oposition to normal options that return non 0 (false)"'!!!'
 		echo "    example:"
-		echo "    $strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"&&:; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
+    echo "    ${strExtraQModeExmpl}"
 		echo
 		echo " -S Question mode where you can type a string"
 		echo "    @D: begins ending string part with default answer string"

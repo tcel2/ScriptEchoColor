@@ -64,9 +64,33 @@ varset --default bInterruptAsk=false
 export pathBackupsToRemote=""
 export strCompressPasswd=""
 SECFUNCcfgReadDB
-echo $SECcfgFileName
+#echo $SECcfgFileName
 
 ############### OPTIONS
+
+function FUNCfileDoNotExist() { # [--nooutput] <fileAtCurPath> WILL WORK ONLY IF IT IS AT CURRENT PATH!
+  SECFUNCdbgFuncInA;
+  
+  local lbOutput=true
+  if [[ "$1" == "--nooutput" ]];then
+    lbOutput=false
+    shift
+  fi
+  local fileAtCurPath="`basename "$1"`";shift
+  
+	local relativeToHomePath=`pwd -L |sed -r "$sedRemoveHomePath"`
+  
+  local fileCheck="$pathBackupsToRemote/$relativeToHomePath/$fileAtCurPath";
+  
+  #declare -p fileAtCurPath relativeToHomePath fileCheck >&2
+  
+  if [[ ! -f "$fileCheck" ]];then
+    if $lbOutput;then echo "$fileAtCurPath";fi
+    return 0
+  fi;
+  
+  SECFUNCdbgFuncOutA;return 1;
+};export -f FUNCfileDoNotExist;
 
 bAddFilesMode=false
 bRmRBFfilesMode=false
@@ -133,8 +157,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--autogit" ]]; then #help all files at Remote Backup Folder will be versioned (with history)
 		varset --show bAutoGit=true
 	elif [[ "$1" == "--gitignore" ]];then #help <file> set the file to be ignored on automatic git add all
-		shift
-		fileToIgnoreOnGitAdd="${1-}"
+		shift;fileToIgnoreOnGitAdd="${1-}"
 	elif [[ "$1" == "--autosync" ]]; then #help will automatically copy the changes without asking
 		varset --show bAutoSync=true
 	elif [[ "$1" == "--lsr" ]]; then #help will list what files, of current folder recursively, are at Remote Backup Folder!
@@ -142,6 +165,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		exit 0
 	elif [[ "$1" == "--lsnot" ]]; then #help will list files of current folder are NOT at Remote Backup Folder (use with --addfiles to show a dialog at X to select files to add!)
 		bLsNot=true
+	elif [[ "$1" == "-k" || "$1" == "--justcheck" ]]; then #help <strJustCheck> check if the specified file is configured already
+		shift;strJustCheck="${1-}"
+    if FUNCfileDoNotExist --nooutput "$strJustCheck";then exit 1;fi
+    exit 0 # the file is configured
 	elif [[ "$1" == "--lsmisshist" ]]; then #help will list missing files on Remote Backup Folder that are still on "history log" file (use with --addfiles to show a dialog at X to select files to re-add!)
 		bLsMissHist=true
 	elif [[ "$1" == "--recreatehist" ]]; then #help will recreate the history file based on what is at Remote Backup Folder..
@@ -153,10 +180,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	elif [[ "$1" == "--forcemigrationtounisonmode" ]]; then #help revalidates the list of RBF files to sync with the symlinks at control dir
 		bForceMigrationToUnisonMode=true
 	elif [[ "$1" == "--secvarset" ]];then #help <var> <value> direct access to SEC vars; if <var> is "help", list SEC vars allowed to be set by user.
-		shift
-		strSecVarId="${1-}"
-		shift
-		strSecVarValue="${1-}"
+		shift;strSecVarId="${1-}"
+		shift;strSecVarValue="${1-}"
 			
 		SECFUNCuniqueLock --setdbtodaemon #if daemon is running change its vars, if not, set to be used on current daemon
 		if [[ "$strSecVarId" == "help" ]];then
@@ -470,25 +495,14 @@ function FUNCunison(){
 };export -f FUNCunison
 
 function FUNClsNot() { #synchronize like
-	function FUNCfileCheck() {
-		#source <(secinit --base)
-		SECFUNCdbgFuncInA; 
-		#echo "look for: $1"
-		local relativePath="$1"
-		local fileAtCurPath="$2"
-		local fileCheck="$pathBackupsToRemote/$relativePath/$fileAtCurPath"; 
-		if [[ ! -f "$fileCheck" ]];then 
-			echo "$fileAtCurPath";
-		fi; 
-		SECFUNCdbgFuncOutA;
-	};export -f FUNCfileCheck;
-	relativeToHome=`pwd -L |sed -r "$sedRemoveHomePath"`
+	#relativeToHome=`pwd -L |sed -r "$sedRemoveHomePath"`
 	#echo "relativeToHome=$relativeToHome"
 	#pwd -L
 	
-	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileCheck \"$relativeToHome\" \"{}\"" \; |sort`
-	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileCheck "$relativeToHome" "$lstrFileFound";done |sort -f)&&:
+	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileDoNotExist \"$relativeToHome\" \"{}\"" \; |sort`
+	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
+#  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$relativeToHome" "$lstrFileFound";done |sort -f)&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$lstrFileFound"&&:;done |sort -f)&&:
 	if((${#astrFileList[@]-} > 0));then
 		echoc --info "File list that are not at Remote Backup Folder:"
     SECFUNCexecA -ce ls -ltr "${astrFileList[@]}"

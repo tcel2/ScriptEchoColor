@@ -187,16 +187,31 @@ if $bDaemon;then
     fi
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
-		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
-			SECFUNCtoggleBoolean bFastMode
-			if $bFastMode;then
-				nSleep=$nChangeFast;declare -p nSleep
-			else
-				nSleep=$nChangeInterval;declare -p nSleep
-			fi
-      bChangeImage=true;declare -p bChangeImage #user action changes the image promptly
+    bResetCounters=false;
+    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now"&&:; case "`secascii $?`" in 
+      c)
+        bChangeImage=true
+        bResetCounters=true
+        ;;
+      f)
+        SECFUNCtoggleBoolean bFastMode
+        if $bFastMode;then
+          nSleep=$nChangeFast;declare -p nSleep
+        else
+          nSleep=$nChangeInterval;declare -p nSleep
+        fi
+        bResetCounters=true
+        ;; 
+      r)
+        bResetCounters=true
+        ;; 
+    esac
+#		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
+
+    if $bResetCounters;then
       nSumSleep=0;declare -p nSumSleep
-		fi
+      nChHueFastModeCount=0;declare -p nChHueFastModeCount
+    fi
     
 	done
 fi

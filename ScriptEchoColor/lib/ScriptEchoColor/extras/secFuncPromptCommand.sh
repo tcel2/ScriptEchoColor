@@ -75,17 +75,18 @@ function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so t
 		SECdtBeforeCommandSec="`date +"%s"`"
 		SECdtBeforeCommandNano="`date +"%N"`"
 		
-		if ! ${SECDEVstrProjectPath+false};then
-			# developing mode detection
-			# TODO find a better way to make it work properly...
-			echo >&2 #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
-			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >&2
-			#~ if secYakuakeWork.sh --is >/dev/null;then
-      secYakuakeWork.sh --tr $BASH_COMMAND
-			#~ fi
-		else
-			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >&2
-		fi
+#		if ! ${SECDEVstrProjectPath+false};then
+#			# developing mode detection
+#			# TODO find a better way to make it work properly...
+#			echo >&2 #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
+#			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >&2
+#			#~ if secYakuakeWork.sh --is >/dev/null;then
+#      secYakuakeWork.sh --tr $BASH_COMMAND
+#			#~ fi
+#		else
+#			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >&2
+#		fi
+		echo -n "(CmdBeginAt='`date +"$formatFullDateTime"`')" >&2
 	fi
 #	echo -n "@O" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
 }
