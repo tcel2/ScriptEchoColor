@@ -183,9 +183,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--justaddsessions" || "$1" == "-a" ]];then #help just add <nAddSessions> and exit
 		shift
 		nAddSessions="${1-}"
-	elif [[ "$1" == "-t" ]];then #help <strCurrentSTitle> set current session tab title
+	elif [[ "$1" == "-t" ]];then #help <strCurrentSTitle> set current session sticky tab title (will prepend '!' to it), can only be used once.
 		shift
 		strCurrentSTitle="${1-}"
+    if [[ -n "$strCurrentSTitle" ]];then strCurrentSTitle="!${strCurrentSTitle}";fi
 	elif [[ "$1" == "-r" ]];then #help set current session tab title as the command for the run arguments
 		bTitleAsCommandBeingRun=true
 	elif [[ "$1" == "--tr" ]];then #help set current session tab title as the command for the run arguments (but do not run it)
@@ -279,7 +280,10 @@ if $bTitleAsCommandBeingRun;then
 fi
 
 if ((nYakActiveTermId>=0)) && [[ -n "$strCurrentSTitle" ]];then
-	qdbus org.kde.yakuake /yakuake/tabs setTabTitle $nYakActiveTermId "$strCurrentSTitle";
+  strGetTitle="`qdbus org.kde.yakuake /yakuake/tabs tabTitle $nYakActiveTermId`"
+  if [[ "${strGetTitle:0:1}" != '!' ]];then
+    qdbus org.kde.yakuake /yakuake/tabs setTabTitle $nYakActiveTermId "$strCurrentSTitle";
+  fi
 fi
 
 if $bDoRun;then
