@@ -247,7 +247,7 @@ while true;do
 		c)
 			echoc --alert "SOURCEFORGE PassWord @{-n} may be asked...";
 			strTitleRegex="^Git Gui [(]`basename "$strDevPath"`[)] ${strDevPath}$"
-			SECFUNCCwindowCmd --timeout 1200 --ontop "$strTitleRegex"
+			SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
 			echoc -x "git gui"&&: 
