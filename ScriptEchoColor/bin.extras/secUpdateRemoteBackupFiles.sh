@@ -592,7 +592,7 @@ if $bDaemon;then
 	while true; do
 #		nice -n 19 $0 --lookforchanges --confirmalways $strBkgWrkopt
 		nice -n 19 $0 --lookforchanges --confirmalways 
-		echoc -w -t 5 "daemons sleep too..."
+#		echoc -w -t 5 "daemons sleep too..."
 		
 		#if SECFUNCdelay daemonHold --checkorinit 5;then
 		if ! $bUseUnison;then
