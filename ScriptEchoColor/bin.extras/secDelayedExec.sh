@@ -94,6 +94,8 @@ export nSleepFor=0
 export bListAlreadyRunningAndNew=false
 export bListIniCommands=false
 export bStay=false
+export bStayForce=false
+export strEvalStayForce=""
 export bListWaiting=false
 export bCheckPointDaemonHold=false
 export bRunAllNow=false
@@ -139,6 +141,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckIfAlreadyRunning=false
 	elif [[ "$1" == "-d" || "$1" == "--shouldnotexit" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
+	elif [[ "$1" == "-D" || "$1" == "--checkstillrunning" ]];then #help ~daemon <strEvalStayForce> like -d but as the app will detach itself, this grants it will be re-run if it exits.  strEvalStayForce will be run to test if it is still running ex.: 'qdbus |grep SomeAppCommand'
+    shift;strEvalStayForce="$1"
+		bStayForce=true
 	elif [[ "$1" == "--autoretry" ]];then #help <nAutoRetryDelay> for the daemon mode, if the command exits with error, will auto retry after delay if it is >= 0
     shift
 		nAutoRetryDelay="${1-}"
@@ -589,7 +594,7 @@ function FUNCrun(){
       
         evalCleanEnv=":";
         if $bCleanSECenv;then
-          evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain why this is important!?
+          evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain why this is important/useful!?
         fi
         eval "$evalCleanEnv" # TODO this way prevents problems caused if being called inside the 'if' block?
         
@@ -602,7 +607,16 @@ function FUNCrun(){
 				#"$@";
 				declare -p PATH >&2
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
+#        anSPidB4=(`ps --no-headers -o pid --sid $$`)
 				"${astrRunParams[@]}"
+#        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
+        if $bStayForce;then
+          while eval "$strEvalStayForce";do
+#            anPGrep=(`pgrep -fx "^${astrRunParams[@]}$"`)
+            echo "Still running: ${astrRunParams[@]}"
+            sleep 5
+          done
+        fi
 			)&&:;local lnRetAtom=$?
 			echo "$lnRetAtom" >"$strFileRetVal";
 		};export -f FUNCrunAtom
@@ -637,7 +651,7 @@ function FUNCrun(){
 			
 		local lbErr=false
 		local lstrTxt=""
-		if $bStay;then
+		if $bStay || $bStayForce;then
 			lstrTxt+="(Sne) should not have exited! (daemon)\n"
 			lstrTxt+="\n";
 		fi
@@ -687,7 +701,7 @@ function FUNCrun(){
         if((nYadRetryRet==0));then continue;fi
     fi
     
-		if $bStay;then
+		if $bStay || $bStayForce;then
 			FUNClog Sne "Should not have exited..."
 		fi
 		
@@ -696,7 +710,7 @@ function FUNCrun(){
 		
     strDumpRetryBtnTxt="dump;retry"
     
-		if $bStay || $lbErr;then
+		if $bStay || $bStayForce || $lbErr;then
 			lstrTxt+="RunCommand(astrRunParams[@]):\n"
 			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
 			lstrTxt+="\n";
