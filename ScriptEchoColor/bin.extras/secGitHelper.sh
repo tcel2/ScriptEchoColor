@@ -25,7 +25,7 @@
 source <(secinit --extras -i)
 
 strDpkgPackage=""
-strDevPath=""
+export strDevPath=""
 strChangesFile=""
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -124,12 +124,30 @@ function FUNCgitDiffCheckShow() {
 }
 
 function FUNCgenerateChangesLogFileGitGuiLoop() {
-	while pgrep -fx "git gui" >/dev/null;do 
+  sleep 3; # so git gui have some time to start..
+#	while pgrep -fx "git gui" >/dev/null;do #TopLoop
+	while true;do #TopLoop
+    local lanPid=(`ps --no-headers -o pid -p $(pgrep -fx "git gui")`);
+    local lnPid
+    local bFound=false;
+    for lnPid in "${lanPid[@]}";do 
+      local lstrPidPath="`readlink /proc/$lnPid/cwd`"
+      #declare -p lnPid lstrPidPath strDevPath
+      if [[ "$lstrPidPath" == "$strDevPath" ]];then
+        bFound=true
+        break
+      fi
+    done
+    if ! $bFound;then 
+      echoc --info "git gui exited."
+      break;
+    fi
+    
 		nLastSize="`stat -c %s "$strChangesFile"`"
 		FUNCgenerateChangesLogFile; 
 		nNewSize="`stat -c %s "$strChangesFile"`"
 		if((nLastSize!=nNewSize));then
-			echo "updated: '`basename "$strChangesFile"`'"
+			echoc --info "updated: '`basename "$strChangesFile"`'"
 		fi
 		sleep 3;
 	done
@@ -228,7 +246,7 @@ while true;do
 			;; 
 		c)
 			echoc --alert "SOURCEFORGE PassWord @{-n} may be asked...";
-			strTitleRegex="^Git Gui (.*): push .*"
+			strTitleRegex="^Git Gui [(]`basename "$strDevPath"`[)] ${strDevPath}$"
 			SECFUNCCwindowCmd --timeout 1200 --ontop "$strTitleRegex"
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
