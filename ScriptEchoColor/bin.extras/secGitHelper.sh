@@ -130,14 +130,16 @@ function FUNCgenerateChangesLogFileGitGuiLoop() {
     local lanPid=(`ps --no-headers -o pid -p $(pgrep -fx "git gui")`);
     local lnPid
     local bFound=false;
-    for lnPid in "${lanPid[@]}";do 
-      local lstrPidPath="`readlink /proc/$lnPid/cwd`"
-      #declare -p lnPid lstrPidPath strDevPath
-      if [[ "$lstrPidPath" == "$strDevPath" ]];then
-        bFound=true
-        break
-      fi
-    done
+    if [[ -n "${lanPid[@]-}" ]];then
+      for lnPid in "${lanPid[@]}";do 
+        local lstrPidPath="`readlink /proc/$lnPid/cwd`"
+        #declare -p lnPid lstrPidPath strDevPath
+        if [[ "$lstrPidPath" == "$strDevPath" ]];then
+          bFound=true
+          break
+        fi
+      done
+    fi
     if ! $bFound;then 
       echoc --info "git gui exited."
       break;
