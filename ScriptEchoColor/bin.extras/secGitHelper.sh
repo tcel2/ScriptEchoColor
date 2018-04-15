@@ -252,8 +252,11 @@ while true;do
 			SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
-			SECFUNCexecA -ce  git gui&&: & wait&&: #as child it shows the graphical askpass
-			SECFUNCCwindowCmd --stop "$strTitleRegex"
+#			SECFUNCexecA -ce  git gui&&: & wait&&:
+			SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
+      while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
+			#SECFUNCCwindowCmd --stop "$strTitleRegex"
+      #while SECFUNCCwindowCmd --wait "$strTitleRegex";do sleep 1;done
 			;; 
 		d)
 			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:
