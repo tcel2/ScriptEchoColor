@@ -49,6 +49,8 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 	local lbChild=true
 	local lbMinimize=false
 	local lnTimeout=60
+  local lbWaitExit=false;
+  local lbCheck=false
   local lstrXdotoolSearchBy="--name"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
@@ -93,6 +95,10 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			lbChild=false
 		elif [[ "$1" == "--wait" || "$1" == "-w" ]];then #SECFUNCCwindowCmd_help just wait regex match a window and return 0
 			lbWait=true
+		elif [[ "$1" == "--waitexit" ]];then #SECFUNCCwindowCmd_help wait until specified regex window closes
+			lbWaitExit=true
+		elif [[ "$1" == "--check" ]];then #SECFUNCCwindowCmd_help check if some window matches the regex and exit 0 if any does or 1 otherwise
+			lbCheck=true
 		elif [[ "$1" == "--nochild" || "$1" == "-n" ]];then #SECFUNCCwindowCmd_help do not run as child. Useful after a previous line using --wait option.
 			lbChild=false
 		elif [[ "$1" == "--" ]];then #SECFUNCCwindowCmd_help params after this are ignored as being these options
@@ -169,6 +175,23 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			fi
 		done
 		return 0
+	fi
+  
+	if $lbWaitExit;then
+		while xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";do
+			sleep $lnDelay;
+      
+			if SECFUNCdelay lnTimeout --checkorinit $lnTimeout;then
+				SECFUNCechoErr "$lstrWarnMsg (TIMEOUT)"
+				break;
+			fi
+		done
+		return 0
+	fi
+  
+	if $lbCheck;then
+		if xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then return 0;fi
+		return 1
 	fi
 	
 	function SECFUNCCwindowCmd_ChildLoop() {

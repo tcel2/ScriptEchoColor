@@ -253,10 +253,13 @@ while true;do
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
 #			SECFUNCexecA -ce  git gui&&: & wait&&:
-			SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
-      while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
+      xterm -e "nohup git gui&disown;sleep 1"
+			#SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
+      #while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
 			#SECFUNCCwindowCmd --stop "$strTitleRegex"
       #while SECFUNCCwindowCmd --wait "$strTitleRegex";do sleep 1;done
+      SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
+      SECFUNCCwindowCmd --waitexit "$strTitleRegex" 
 			;; 
 		d)
 			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:
