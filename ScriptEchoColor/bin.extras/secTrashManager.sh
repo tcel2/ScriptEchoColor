@@ -287,12 +287,31 @@ while true;do
 				## `grep` is important to make it sure it will remove really trashed files by it's info that ends with '.trashinfo' !!!!!!!!
 				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
 				#####
-        while egrep "Path=.*%0A" ../info/*.trashinfo;do
-          echoc --alert "invalid filenames!!!"
-          echoc --info "there are files with invalid names on the trash! they have to be cleaned manually for now @g:@r("
-          echoc -w
+        while true;do
+#        while egrep "Path=.*%0A" ../info/*.trashinfo;do
+          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"'`);
+          bAllOk=true
+          for strHexa in "${astrHexaChars[@]}";do 
+            if((strHexa>=0x20 && strHexa<=0x7E));then 
+              :
+            else
+              bAllOk=false
+            fi;
+          done
+          
+          if $bAllOk;then 
+            break;
+          else
+            echoc --alert "invalid filenames!!!"
+            egrep "%.." ../info/*.trashinfo
+            echoc --info "there are files with invalid names on the trash! they have to be cleaned manually for now @g:@r(" #TODO inodes?
+            echoc -w
+          fi
         done
         
+        #######################################################################################
+        ### The real filenames are based on entries that come from the '*.trashinfo' files. ###
+        #######################################################################################
 				sedStripDatetimeAndFilename='s"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"'
 				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
 					ls -altr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
@@ -329,9 +348,12 @@ while true;do
             
             bSymlink=false
 						bDirectory=false
-            strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"
-						bRmFileOrPath=true
+            
 						bRmTrashInfo=true
+            strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"&&:
+            if [[ ! -f "$strRmTrashInfoFile" ]];then bRmTrashInfo=false;fi
+            
+						bRmFileOrPath=true
             strRPExist="e" #only allow existing target
             
             if [[ -L "$strFile" ]];then  # symlinks are ok to be removed directly. SYMLINK TEST above/before all others IS MANDATORY to not consider it as a directory!
@@ -421,8 +443,8 @@ while true;do
                 fi
               fi
               
-              ################ trashinfo
-							if $bRmTrashInfo;then rm -vf "$strRmTrashInfoFile"&&:;fi ############### TRASH INFO REMOVAL
+              ################ trashinfo ##################################################################
+							if $bRmTrashInfo;then rm -vf "$strRmTrashInfoFile"&&:;fi ############### TRASH INFO REMOVAL #
 						fi
 					
 						((nRmSizeTotalB+=nFileSizeB))&&:
