@@ -288,7 +288,6 @@ while true;do
 				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
 				#####
         while true;do
-#        while egrep "Path=.*%0A" ../info/*.trashinfo;do
           astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"'`)&&:
           bAllOk=true
           if((`SECFUNCarraySize astrHexaChars`>0));then
