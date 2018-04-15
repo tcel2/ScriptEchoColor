@@ -252,7 +252,7 @@ while true;do
 			SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
 			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
-			echoc -x "git gui"&&: 
+			SECFUNCexecA -ce  git gui&&: & wait&&: #as child it shows the graphical askpass
 			SECFUNCCwindowCmd --stop "$strTitleRegex"
 			;; 
 		d)
