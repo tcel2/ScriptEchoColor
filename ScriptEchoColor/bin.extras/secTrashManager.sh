@@ -289,15 +289,17 @@ while true;do
 				#####
         while true;do
 #        while egrep "Path=.*%0A" ../info/*.trashinfo;do
-          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"'`);
+          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"'`)&&:
           bAllOk=true
-          for strHexa in "${astrHexaChars[@]}";do 
-            if((strHexa>=0x20 && strHexa<=0x7E));then 
-              :
-            else
-              bAllOk=false
-            fi;
-          done
+          if((`SECFUNCarraySize astrHexaChars`>0));then
+            for strHexa in "${astrHexaChars[@]}";do 
+              if((strHexa>=0x20 && strHexa<=0x7E));then 
+                :
+              else
+                bAllOk=false
+              fi;
+            done
+          fi
           
           if $bAllOk;then 
             break;
