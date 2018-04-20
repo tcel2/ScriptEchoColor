@@ -139,7 +139,9 @@ while true;do
     fi
     
     SECFUNCexecA -cE${strExecQuietOpt} trash -vf "${strName}.tar"&&: #safety
-    SECFUNCexecA -cE${strExecQuietOpt} tar -vcf "${strName}.tar" "./${strName}/"
+    while ! SECFUNCexecA -cE${strExecQuietOpt} tar -vcf "${strName}.tar" "./${strName}/";do
+      echoc -w "'tar' failed. Probably files got modified during it."
+    done
     
     SECFUNCexecA -cE${strExecQuietOpt} trash -vf "${strName}.tar.7z"&&: #may not exist yet
     SECFUNCexecA -ce${strExecQuietOpt} nice -n 19 7z a "${strName}.tar.7z" "${strName}.tar"
