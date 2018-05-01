@@ -372,7 +372,7 @@ function FUNCcopy() {
 		
 		cmdCopy="cp -vfLp \"$HOME/$strFile\" \"$pathBackupsToRemote/$strFile\""
 		if $bDoIt; then
-			echoc --info "working with: $strFile"
+			SECFUNCdrawLine --left " working with: $strFile "
 			eval "$cmdRm"
 			eval "$cmdCopy"
 		else
@@ -749,7 +749,7 @@ elif $bAddFilesMode; then
 			strFile="`pwd`/$strFile"
 		fi
 		
-		echoc --info "working with: $strFile"
+		SECFUNCdrawLine --left " working with: $strFile "
 		
 		if [[ "${strFile:0:${#pathBackupsToRemote}}" == "${pathBackupsToRemote}" ]]; then
 			echoc -p "can only work with files outside of Remote Backup Folder!!!"
