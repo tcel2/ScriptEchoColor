@@ -288,13 +288,17 @@ while true;do
 				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
 				#####
         while true;do
-          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"'`)&&:
+#          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"' |sort -u`)&&:
+          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sort -u`)&&:
           bAllOk=true
           if((`SECFUNCarraySize astrHexaChars`>0));then
-            for strHexa in "${astrHexaChars[@]}";do 
+            for strPHexa in "${astrHexaChars[@]}";do 
+              strHexa="0x${strPHexa#%}"
               if((strHexa>=0x20 && strHexa<=0x7E));then 
                 :
               else
+                SECFUNCdrawLine " $strPHexa "
+                egrep "$strPHexa" ../info/*.trashinfo
                 bAllOk=false
               fi;
             done
@@ -303,10 +307,11 @@ while true;do
           if $bAllOk;then 
             break;
           else
-            echoc --alert "invalid filenames!!!"
-            egrep "%.." ../info/*.trashinfo
-            echoc --info "there are files with invalid names on the trash! they have to be cleaned manually for now @g:@r(" #TODO inodes?
-            echoc -w
+            #egrep "%.." ../info/*.trashinfo
+            while ! echoc -t 600 -q "there are files with invalid names on the trash! they have to be cleaned manually for now @s@g:@r(@S, retry?";do #TODO inodes?
+              echoc --alert --say "invalid trash file names"
+            done
+            
           fi
         done
         
@@ -319,23 +324,6 @@ while true;do
 						|egrep ".trashinfo$" \
 						|head -n $((nFileCountPerStep+1)) \
 						|sed -r -e "$sedStripDatetimeAndFilename" -e 's".trashinfo$""' )&&:
-#						|head -n $((nFileCountPerStep+1)) \
-#						|tail -n +2 \
-				## grep -v eliminates "." and ".."
-#						|egrep -v "[.]$|[.][.]$" \
-	#			# `tail` +2 to skip total line. `sed` to convert 1st space to tab making it usable with `cut`
-	#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-	#				ls -ltr --time-style='+%Y%m%d+%H%M%S.%N' "../info/" \
-	#					|tail -n +2 \
-	#					|head -n $nFileCountPerStep \
-	#					|cut -d' ' -f6- \
-	#					|sed -r -e 's" "\t"' -e 's".trashinfo$""' )&&:
-	#			IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-	#				ls -ltr --time-style=full-iso "../info/" \
-	#					|tail -n +2 \
-	#					|head -n $nFileCountPerStep \
-	#					|cut -d' ' -f6-7,9- \
-	#					|sed -r -e 's" "+"' -e 's" "\t"' -e 's".trashinfo$""' )&&:
 			
 				if((`SECFUNCarraySize astrEntryList`>0));then #has files on trash to be deleted
 					nRmCount=0
@@ -477,56 +465,6 @@ while true;do
 	
 	echoc -w -t $nSleepDelay
 done		
-
-#echoc --alert "work in progress..."
-
-#declare -A astrTrashGoals
-#while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-#	SECFUNCsingleLetterOptionsA;
-#	if [[ "$1" == "--help" ]];then #help
-#		SECFUNCshowHelp --colorize "#MISSING DESCRIPTION script main help text goes here"
-#		SECFUNCshowHelp
-#		exit 0
-#	elif [[ "$1" == "--freespacegoal" || "$1" == "-f" ]];then #help <strTrashPath> <nSizeInMegabytes> define, for each possibly mounted trash, a minimum free space
-#		shift;strTrashPath="${1-}"
-#		if [[ ! -d "$strTrashPath" ]];then echoc -p "invalid strTrashPath='$strTrashPath'";exit 1;fi
-#		shift;nSizeInMegabytes="${1-}"
-#		if ! SECFUNCisNumber -dn "$nSizeInMegabytes";then echoc -p "invalid nSizeInMegabytes='$nSizeInMegabytes'";exit 1;fi
-#		astrTrashGoals[$strTrashPath]=$nSizeInMegabytes
-#	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
-#		shift
-#		break
-#	else
-#		echoc -p "invalid option '$1'"
-#		$0 --help
-#		exit 1
-#	fi
-#	shift
-#done
-
-
-#IFS=$'\n' read -d '' -r -a astrTrashList < <(mount |sed -r 's".* on (.*) type .*"\1/.Trash-$UID"' |sort)&&:
-
-#nTot=${#astrTrashList[@]}
-##echo "DEBUG: tot $nTot"
-#for((i=0;i<nTot;i++));do 
-#	strTrash="${astrTrashList[i]}"; 
-#	if [[ -d "$strTrash" ]];then 
-#		echoc --info "found: $strTrash";
-#	else 
-##		echo "DEBUG: unsetting $i ${astrTrashList[i]} "
-#		unset astrTrashList[i];
-#	fi;
-#done;
-
-#for strTrash in "${astrTrashList[@]}";do 
-#	nSizeGoal="${astrTrashGoals[$strTrash]-}"
-#	if [[ -n "$nSizeGoal" ]];then
-#		echoc --info "working with: $strTrash, current free space:, goal:${nSizeGoal}MB" 
-#	else
-#		echoc --info "no goal defined for: $strTrash"
-#	fi
-#done
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 

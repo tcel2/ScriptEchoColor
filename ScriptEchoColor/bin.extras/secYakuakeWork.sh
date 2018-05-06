@@ -271,10 +271,15 @@ fi
 astrRunCmd=("$@")
 
 if $bTitleAsCommandBeingRun;then
+  bSudo=false;
 	for strPart in "${astrRunCmd[@]}";do
 		if [[ "${strPart:0:1}" == "-" ]];then continue;fi
-		if [[ "$strPart" == "sudo" ]];then continue;fi
+		if [[ "$strPart" == "sudo" ]];then bSudo=true;continue;fi
+    
 		strCurrentSTitle="$strPart"
+    
+    if $bSudo;then strCurrentSTitle="!$strCurrentSTitle";fi
+    
 		break;
 	done
 fi

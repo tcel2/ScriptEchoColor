@@ -43,6 +43,16 @@ function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
 	done
 }
 
+function GAMEFUNCwaitGameExit() { #help
+	while true;do
+		if ! GAMEFUNCcheckIfGameIsRunning "$lstrFileExecutable";then
+			break
+		fi
+		echoc --info "waiting lstrFileExecutable='$lstrFileExecutable' stop running..."
+		sleep 3
+	done
+}
+
 SECFUNCdelay GAMEFUNCexitIfGameExits --init
 function GAMEFUNCexitIfGameExits() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
