@@ -38,7 +38,7 @@ function FUNCbluetoothChannel () {
 }
 
 function FUNCrescan() {
-	astrDeviceList=()
+	# do not empty the list to keep undetected configured! #astrDeviceList=()
 	
 	echoc --alert "wait, bluetooth devices being scanned..."
 	if ! strDevices="`hcitool scan |tail -n +2`";then #skips 1st "scanning..." line
