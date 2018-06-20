@@ -467,10 +467,12 @@ function FUNCfixPulseaudioThruTCP() {
 		local lstrPathPulseUser="$HOME/.pulse/"
 		mkdir -vp "$lstrPathPulseUser"
 		
+    echoc --info "pulseaudio thru TPC will make \`pasuspender sleep 0.02\` fail with 'Sound server is not local, not suspending.' tho..."
+    
 		local lstrFileDefaultPA="$lstrPathPulseUser/default.pa"
 		local lstrDefaultPAcfg="load-module module-native-protocol-tcp auth-ip-acl=127.0.0.1"
 		if [[ ! -f "$lstrPathPulseUser/default.pa" ]];then
-			SECFUNCexecA -ce cp -v /etc/pulse/default.pa "$lstrPathPulseUser"
+      echo ".include /etc/pulse/default.pa" >>"$lstrFileDefaultPA" # SECFUNCexecA -ce cp -v /etc/pulse/default.pa "$lstrPathPulseUser"
 			echo "$lstrDefaultPAcfg" >>"$lstrFileDefaultPA"
 		else
 			if ! grep "$lstrDefaultPAcfg" "$lstrFileDefaultPA";then

@@ -44,6 +44,8 @@ strFindRegex=".*[.]\(jpg\|png\)"
 declare -p strFindRegex
 nChangeFast=5
 nChangeHue=7
+bFlip=false;
+bFlop=false;
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -58,6 +60,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift;nChangeInterval=$1
 	elif [[ "$1" == "--fast" || "$1" == "-f" ]];then #help <nChangeFast> fast change wallpaper interval in seconds
 		shift;nChangeFast=$1
+	elif [[ "$1" == "--flip" ]];then #help allows random flip (vertical)
+		bFlip=true;
+	elif [[ "$1" == "--flop" ]];then #help allows random flop (horizontal)
+		bFlop=true;
 	elif [[ "$1" == "--hue" || "$1" == "-h" ]];then #help <nChangeHue> <nRandomHueInterval> <nChHueFastModeTimes> play with hue values random +-nChangeHue%. The nRandomHueInterval only makes sense if less than nChangeInterval. The nChHueFastModeTimes determines how many times the image will not change to a new one, while just changing the hue of current one.
 		shift;nChangeHue="$1";
     shift;nRandomHueInterval="$1";
@@ -125,6 +131,8 @@ if $bDaemon;then
   nChHueFastModeCount=0
   strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
   SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strTmpFile";
+  bFlipKeep=false;
+  bFlopKeep=false;
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
@@ -148,6 +156,12 @@ if $bDaemon;then
       
       strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
       
+      if $bChangeImage;then
+        bFlipKeep=false; bFlopKeep=false;
+        if $bFlip && ((RANDOM%2==0));then bFlipKeep=true;fi
+        if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
+      fi
+    
       SECFUNCexecA -cE convert "$strFile" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
@@ -155,6 +169,15 @@ if $bDaemon;then
           +channel -channel B -evaluate add ${nAddB}% \
           +channel -set colorspace HSL -colorspace sRGB "$strTmpFilePreparing"
           
+      if $bFlipKeep;then 
+        SECFUNCexecA -cE convert -flip "$strTmpFilePreparing" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+      fi
+      if $bFlopKeep;then
+        SECFUNCexecA -cE convert -flop "$strTmpFilePreparing" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+      fi
+        
       SECFUNCexecA -cE mv -f "$strTmpFilePreparing" "$strTmpFile"
       
       if $bFastMode;then

@@ -29,7 +29,7 @@ source <(secinit)
 
 function GAMEFUNCcheckIfGameIsRunning() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
-	pgrep "$lstrFileExecutable" 2>&1 >/dev/null
+	pgrep -f "$lstrFileExecutable" 2>&1 >/dev/null
 }
 
 function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
@@ -43,13 +43,14 @@ function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
 	done
 }
 
-function GAMEFUNCwaitGameExit() { #help
+function GAMEFUNCwaitGameExit() { #help <lstrFileExecutable>
+	local lstrFileExecutable="$1"
 	while true;do
+		echoc --info "waiting lstrFileExecutable='$lstrFileExecutable' stop running..."
+		sleep 3
 		if ! GAMEFUNCcheckIfGameIsRunning "$lstrFileExecutable";then
 			break
 		fi
-		echoc --info "waiting lstrFileExecutable='$lstrFileExecutable' stop running..."
-		sleep 3
 	done
 }
 
