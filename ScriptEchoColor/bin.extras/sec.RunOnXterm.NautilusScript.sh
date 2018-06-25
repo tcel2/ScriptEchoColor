@@ -25,7 +25,8 @@
 source <(secinit --extras)
 
 function FUNCdoIt() {
-	source <(secinit --extras) #to apply aliases. TODO --fast wasnt enough at @RefLink:1, complaining about unbound SECbExecJustEcho at SECFUNCexec
+#	source <(secinit --extras) #to apply aliases. TODO --fast wasnt enough at @RefLink:1, complaining about unbound SECbExecJustEcho at SECFUNCexec
+	source <(secinit --fast) #to apply aliases.
 	
 	#sedUrlDecoder='s % \\\\x g'
 	#path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`

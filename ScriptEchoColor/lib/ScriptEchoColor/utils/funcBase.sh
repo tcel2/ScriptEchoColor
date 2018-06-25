@@ -922,6 +922,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >&2;read -n 1;
 	fi
 	
+  #: ${SECbExecJustEcho:=true} #keep here! `secinit --fast` would not 
 	if $SECbExecJustEcho;then
 		if $bJustEcho;then
 			echo "$lstrExec" #TODO this is to go to stdout, but... wouldnt be better to go to stderr?
