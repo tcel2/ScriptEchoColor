@@ -644,6 +644,7 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it wo
 
 function WINEFUNCcommonOptions {
 	echoc --info "$FUNCNAME $@"
+  declare -p SECstrRunLogFile
 	
 	if [[ "${1-}" == "autoStopContOnScreenLock" ]]; then #help
 		FUNCcheckIfThisScriptCmdIsRunning "$@"

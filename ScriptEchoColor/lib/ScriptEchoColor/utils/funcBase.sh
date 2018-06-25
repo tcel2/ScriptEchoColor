@@ -626,7 +626,7 @@ function SECFUNCsingleLetterOptions() { #help Add this at beggining of your opti
 	echo "$lstrOptions"
 }
 
-: ${SECbExecJustEcho:=true} #;export SECbExecJustEcho
+: ${SECbExecJustEcho:=true};export SECbExecJustEcho #if export is commented, explain WHY! and how to make things work then? as keeping this makes things work...
 : ${SECbExecVerboseEchoAllowed:=false}
 #: ${SECbExecDefaultOptions:=""}
 function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command params] if there is no command and params, and --log is used, it will just initialize the automatic logging for all calls to this function
