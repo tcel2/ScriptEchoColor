@@ -99,6 +99,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 strRCFileTmp="`mktemp`"
+ls -l "$strRCFileTmp"
 if ! $bAlreadyDev;then
   strPATHtmp=""
   strPATHtmp+="$strSECDEVPath/bin:"
@@ -115,6 +116,54 @@ if ! $bAlreadyDev;then
   echo "export PATH='$strPATHtmp';" >>"$strRCFileTmp"
   echo >>"$strRCFileTmp"
   echo "source <(secinit --force --extras);" >>"$strRCFileTmp"
+  
+
+  : ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
+  echo '
+  function SECFUNCbeforePromptCommand_CustomUserCommand(){
+    :
+  }
+  function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
+    # Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
+    local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
+    
+    local lstrInternetConn=""
+    if nmcli d |egrep -q "ethernet[ ]*connected";then lstrInternetConn+="Ether";fi
+    if nmcli d |egrep -q "wifi[ ]*connected";then lstrInternetConn+="Wifi";fi
+    if [[ -z "$lstrInternetConn" ]];then lstrInternetConn="OFF";fi
+
+    echo "${lstrBanner}[INET:${lstrInternetConn}]"
+  }
+  function FUNCcleanTraps(){
+    set +E #without this, causes trouble too with bash auto completion
+    trap -- ERR #trap ERR must be disabled to avoid problems while typing commands that return false...
+    
+    # good way to avoid bash completion problem, but why it happens?
+    if $SECDEVbUnboundErr;then 
+      set -u;
+    else 
+      set +u;
+    fi
+  }
+  function SECFUNCpromptCommand_CustomUserCommand(){
+    FUNCcleanTraps #put here to avoid segfaulting current bash with user commands
+  }
+  ' >>"$strRCFileTmp"
+	#~ cat >>"$strRCFileTmp" \
+#~ <<EOF
+	#~ function SECFUNCpromptCommand_CustomUserText(){ # function redefined from secFuncPromptCommand.sh
+		#~ # Result of: echoc --escapedchars "@{Bow} Script @{lk}Echo @rC@go@bl@co@yr @{Y} Development "
+		#~ local lstrBanner="\E[0m\E[37m\E[44m\E[1m Script \E[0m\E[90m\E[44m\E[1mEcho \E[0m\E[91m\E[44m\E[1mC\E[0m\E[92m\E[44m\E[1mo\E[0m\E[94m\E[44m\E[1ml\E[0m\E[96m\E[44m\E[1mo\E[0m\E[93m\E[44m\E[1mr \E[0m\E[93m\E[43m\E[1m Development \E[0m"
+		
+		#~ local lstrInternetConn=""
+		#~ if nmcli d |egrep -q "ethernet[ ]*connected";then lstrInternetConn+="Ether";fi
+		#~ if nmcli d |egrep -q "wifi[ ]*connected";then lstrInternetConn+="Wifi";fi
+		#~ if [[ -z "$lstrInternetConn" ]];then lstrInternetConn="OFF";fi
+
+		#~ echo "${lstrBanner}[INET:${lstrInternetConn}]"
+	#~ }
+#~ EOF
+  
 fi
 
 if $bCdDevPath;then
@@ -132,7 +181,6 @@ if [[ -n "${@-}" ]];then
   fi
 fi
 
-ls -l "$strRCFileTmp"
 cat "$strRCFileTmp"
 if $bAlreadyDev;then
   source "$strRCFileTmp"
