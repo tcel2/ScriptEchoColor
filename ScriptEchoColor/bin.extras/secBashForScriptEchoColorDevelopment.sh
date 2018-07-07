@@ -24,7 +24,7 @@
 
 #SECFUNCexecA -ce zenity --question&&:
 
-if ! type -P secinit >/dev/null;then
+if ! type -P secinit >/dev/null;then #this is better than `which` TODO why?
 	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >&2
 	exit 1
 fi
@@ -36,8 +36,10 @@ fi
 
 export SEC_WARN=true
 export SECbFuncArraysRestoreVerbose=true
+declare -p SEC_WARN SECbFuncArraysRestoreVerbose SECDEVbRunLog >&2
 
-source <(secinit --extras --nolog --force)
+source <(secinit --extras --nolog --force)&&:;nRetSecInit=$? #see SECbRunLog=false above
+if((nRetSecInit!=0));then echo "secinit error $nRetSecInit" >&2;exit 1;fi #TODO not working :(
 declare -p SECDEVastrCmdTmp&&: >&2 #no problem if not set, this is just a report...
 
 SECFUNCcheckActivateRunLog --report

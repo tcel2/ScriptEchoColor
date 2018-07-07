@@ -928,14 +928,20 @@ FUNCread() {
 	#read requires interactiveness.
 	if ! SECFUNCisShellInteractive;then
 		SECFUNCechoErrA "Shell is NOT interactive! ";
-		sleep 60 # this prevents bloated error logs in ex. question mode (-q) and prevents cpu load too
+		sleep 60 # this prevents bloated error logs in ex. question mode (-q) and prevents cpu load too TODO explain how
 		exit 1 # it is `exit` (and not `return`) on this function because interactivity is critical!
 	fi;
 	
 	if read "$@";then
 		return 0
 	else
-		return $? # Exit Status for `read` command: The return code is zero, unless end-of-file is encountered, read times out (in which case it's greater than 128), a variable assignment error occurs, or an invalid file descriptor is supplied as the argument to -u.
+    local lnRet=$?
+    if((lnRet<=128));then
+      SECFUNCfdReport
+      echo "SECERR: 'read' returned error $lnRet" >&2
+      exit 1
+    fi
+		return $lnRet # Exit Status for `read` command: The return code is zero, unless end-of-file is encountered, read times out (in which case it's greater than 128), a variable assignment error occurs, or an invalid file descriptor is supplied as the argument to -u.
 	fi
 }
 
@@ -1359,7 +1365,7 @@ if $bOptTest; then
 	exit 0
 fi
 
-strExtraQModeExmpl="$strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"&&:; case "`secascii $?`" in o)echo 1;; t)echo 2;; h)echo 3;; esac'
+strExtraQModeExmpl="$strSelfName "'-Q "question@O_one/_two/answer__t_hree@Dt"&&:; nRet=$?; case "`secascii $nRet`" in o)echo 1;; t)echo 2;; h)echo 3;; *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;; esac' #TODO this is too much, if pressing an F-key like F7 should not be an error, just return normally: *)if((nRet<0x20||nRet>0x7E));then SECFUNCechoErrA "invalid `secasciicode --hexa "$nRet"`";exit 1;fi;; esac' 
 if $bOptHelp; then
 		echo "$strSelfName version $g_nVersion"
 		echo "usage: $strSelfName [-<c|x|X|v|V|q|Q|S|w|p><pmORbrktulLiI>] [-enE] [\"string\""]

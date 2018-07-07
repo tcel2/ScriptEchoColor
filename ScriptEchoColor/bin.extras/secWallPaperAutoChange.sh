@@ -211,7 +211,7 @@ if $bDaemon;then
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
     bResetCounters=false;
-    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now"&&:; case "`secascii $?`" in 
+    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now"&&:; nRet=$?; case "`secascii $nRet`" in 
       c)
         bChangeImage=true
         bResetCounters=true
@@ -228,6 +228,7 @@ if $bDaemon;then
       r)
         bResetCounters=true
         ;; 
+      *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
 #		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
 

@@ -529,7 +529,7 @@ if $bCheckIfAlreadyRunning;then
 		#if echoc -q -t 60 "skip check if already running?";then
 		bKillOther=false
 		if SECFUNCisShellInteractive;then
-			if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is already running?";then
+			if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is still running?";then
 				if [[ -d "/proc/$nPidOther" ]];then
 					bKillOther=true
 				else
@@ -639,10 +639,8 @@ function FUNCrun(){
 			fi
       declare -p TERM
       cmdTerm="xterm"
-      if which rxvt >/dev/null 2>&1;then
-        cmdTerm="rxvt"
-      fi
-      SECFUNCexecA -ce $cmdTerm -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
+      #TODO rxvt does not kill child proccesses when it is closed :(, why?: if which rxvt >/dev/null 2>&1;then cmdTerm="rxvt";fi
+      SECFUNCexecA -ce $cmdTerm -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
 		else
 #			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
@@ -679,7 +677,7 @@ function FUNCrun(){
       --selectable-labels
     )
     
-    if [ $lbErr || $bAutoRetryAlways ] && ((nAutoRetryDelay>=0));then
+    if ( $lbErr || $bAutoRetryAlways ) && ((nAutoRetryDelay>=0));then
       strRetryMsg=""
       strRetryMsg+="Daemon Stopped, command:\n"
       strRetryMsg+="${astrRunParams[@]}\n"

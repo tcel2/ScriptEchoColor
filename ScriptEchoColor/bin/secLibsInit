@@ -149,7 +149,7 @@ fi
 
 if $bFast;then
 	if ${SECinstallPath+false};then
-		echo "SECWARN: SECinstallPath is not defined yet for Fast lib to work, upgrading to Core option..." >>/dev/stderr
+		#TODO make this warn optional: echo "SECWARN: SECinstallPath is not defined yet for Fast lib to work, upgrading to Core option..." >>/dev/stderr
 		bFast=false
 		bCore=true #if environment is not set, Fast option is upgraded to Core
 	else
