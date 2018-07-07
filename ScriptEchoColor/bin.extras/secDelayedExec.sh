@@ -157,7 +157,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bListIniCommands=true
 	elif [[ "$1" == "--listwaiting" ]];then #help list commands that entered (ini) the log file but havent RUN yet
 		bListWaiting=true
-	elif [[ "$1" == "-x" || "$1" == "--xterm" ]];then #help use xterm to run the command
+	elif [[ "$1" == "-x" || "$1" == "--xterm" ]];then #help use xterm (tho prefers rxvt if installed) to run the command
 		bXterm=true
 	#~ elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
 		#~ bGetGlobalLogFile=true
@@ -638,8 +638,11 @@ function FUNCrun(){
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
       declare -p TERM
-			strCmd="${astrCmdToRun[@]}"
-			SECFUNCexecA -ce xterm -title "$strTitle" ${astrXtermOpts[@]-} -e "$strCmd"
+      cmdTerm="xterm"
+      if which rxvt >/dev/null 2>&1;then
+        cmdTerm="rxvt"
+      fi
+      SECFUNCexecA -ce $cmdTerm -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
 		else
 #			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr

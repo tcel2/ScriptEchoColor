@@ -131,7 +131,8 @@ while true;do
     
     strMvToFolder="$SECstrUserScriptCfgPath/Home/${strParentFolder#$HOME}/"
     
-    strStatusNew="`ls -lR --time-style=full-iso "$strFolder"`"  #TODO needs to list the hidden files too...
+    #strStatusNew="`ls -lR --time-style=full-iso "$strFolder/"* "$strFolder/".*`"&&:  #TODO needs to list the hidden files too recusrively
+    strStatusNew="`find "$strFolder/" -exec stat -c "\"%n\" \"%y\" %Y" '{}' \;`"&&:
     strFileStatus="$strMvToFolder/${strName}.status"
     if [[ -f "$strFileStatus" ]];then
       strStatus="`cat "$strFileStatus"`"
