@@ -623,7 +623,7 @@ function FUNCrun(){
 		
 		astrCmdToRun=(bash -c)
 		if $lbDevMode;then
-			astrCmdToRun=(secBashForScriptEchoColorDevelopment.sh --exit)
+			astrCmdToRun=(secEnvDev.sh --exit)
 		fi
 		astrCmdToRun+=(FUNCrunAtom)
 		
