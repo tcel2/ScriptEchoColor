@@ -22,8 +22,6 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-source <(secinit)
-
 strBN="`basename "$0"`"
 
 strCfg="$HOME/.$strBN.cfg"
@@ -44,11 +42,15 @@ fi
 if ! $bAlreadyDev;then
   strDevExec="$strSECDEVPath/bin.extras/$strBN"
   if ! cmp $0 "$strDevExec";then
-    echo "'$0' is newer at dev path '$strDevExec', using newer" >&2
+    echo "'$strBN' is different at dev path '$strDevExec', running dev one" >&2
     "$strDevExec" "$@"
     exit 0;
   fi
 fi
+
+################################################ above can run the updated dev script ################################################
+
+source <(secinit)
 
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
@@ -59,6 +61,7 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bExitAfterCmd=false
+bCleanSECEnv=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -75,6 +78,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bCdDevPath=true
 	elif [[ "$1" == "--exit" ]];then #help exit after running user command
 		bExitAfterCmd=true
+	elif [[ "$1" == "--clean" ]];then #help clean SEC env vars b4 running
+    bCleanSECEnv=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -100,6 +105,11 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 strRCFileTmp="`mktemp`"
 ls -l "$strRCFileTmp"
+
+if $bCleanSECEnv;then
+  SECFUNCcleanEnvironment
+fi
+
 if ! $bAlreadyDev;then
   strPATHtmp=""
   strPATHtmp+="$strSECDEVPath/bin:"
@@ -107,7 +117,6 @@ if ! $bAlreadyDev;then
   strPATHtmp+="$strSECDEVPath/bin.examples:"
   strPATHtmp+="$PATH"
 
-  SECFUNCcleanEnvironment
   cat "$HOME/.bashrc" >>"$strRCFileTmp"
   echo >>"$strRCFileTmp"
   echo "########################################################" >>"$strRCFileTmp"
@@ -175,15 +184,24 @@ if [[ -n "${@-}" ]];then
   astrSECDEVCmds=("$@")
   echo >>"$strRCFileTmp"
   echo "`declare -p astrSECDEVCmds`;" >>"$strRCFileTmp"
-  echo '"${astrSECDEVCmds[@]}";' >>"$strRCFileTmp"
+  echo '"${astrSECDEVCmds[@]}"&&:' >>"$strRCFileTmp"
   if $bExitAfterCmd;then
     echo "exit $?;" >>"$strRCFileTmp"
   fi
 fi
 
 cat "$strRCFileTmp"
+#type FUNCrunAtom&&:
+#zenity --info --text "$0:$LINENO"
+SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
 if $bAlreadyDev;then
-  source "$strRCFileTmp"
+  #if SECFUNCisShellInteractive;then
+  if $bExitAfterCmd;then
+    source "$strRCFileTmp"
+  else
+    echo "already in dev mode, run this:" >&2
+    echo "source $strRCFileTmp"
+  fi
 else
   bash --rcfile "$strRCFileTmp"
 fi

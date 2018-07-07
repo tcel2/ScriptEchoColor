@@ -587,16 +587,21 @@ function FUNCrun(){
 		export strFileRetVal=$(mktemp)
     export SEC_WARN=$bEnableSECWarnMessages
 		function FUNCrunAtom(){
+      declare -p astrRunParams&&:
 			source <(secinit) #this will apply the exported arrays
+      declare -p astrRunParams&&:
+      
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
 			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
+        declare -p astrRunParams&&:
       
         evalCleanEnv=":";
         if $bCleanSECenv;then
           evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain why this is important/useful!?
         fi
         eval "$evalCleanEnv" # TODO this way prevents problems caused if being called inside the 'if' block?
+        declare -p astrRunParams&&:
         
         evalSECWarn=":"
         if ! $bCleanSECenv;then # with SEC env cleaned, SEC_WARN shouldnt be there too
@@ -608,6 +613,7 @@ function FUNCrun(){
 				declare -p PATH >&2
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
+        #zenity --info --text "$0:$LINENO"
 				"${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
         if $bStayForce;then
@@ -630,10 +636,13 @@ function FUNCrun(){
 		SECFUNCarraysExport
 		if $bXterm;then
 			astrTmp=("${astrRunParams[@]}")
+      
 			astrTmp[0]="`basename "${astrTmp[0]}"`"
+      
 			strTitle="${astrTmp[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
 			strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
+      
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
