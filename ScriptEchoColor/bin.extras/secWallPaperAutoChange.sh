@@ -98,11 +98,11 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 cd $strWallPPath;
 
 nDelayMsg=3
-
-function FUNCchkUpdateFileList() {
+nTotFiles=0
+function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#astrFileList[@]}
 	
-	if((nTotFiles==0));then
+	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
 		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex" |grep -v "$strBaseTmpFileName") &&: # re-fill
 		if [[ -z "${1-}" ]];then
 			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
@@ -133,18 +133,23 @@ if $bDaemon;then
   SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strTmpFile";
   bFlipKeep=false;
   bFlopKeep=false;
+  nSetIndex=-1
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
     if $bChangeImage;then
-      nSelect=$((RANDOM%nTotFiles));
+      if((nSetIndex>-1));then
+        nSelect=$nSetIndex
+      else
+        nSelect=$((RANDOM%nTotFiles));
+      fi
       strFile="`pwd`/${astrFileList[$nSelect]}";
       
       declare -p astrFileList nSelect nTotFiles strFile |tr '[' '\n'
       
       #TODO auto download wallpapers one new per loop
       
-      #excluding current from shuffle list
+      #excluding current from shuffle list to always have a new one
       unset astrFileList[$nSelect]
     fi
 		
@@ -211,7 +216,7 @@ if $bDaemon;then
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
     bResetCounters=false;
-    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now"&&:; nRet=$?; case "`secascii $nRet`" in 
+    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now/_set image index/toggle fl_ip/toggle fl_op"&&:; nRet=$?; case "`secascii $nRet`" in 
       c)
         bChangeImage=true
         bResetCounters=true
@@ -225,8 +230,28 @@ if $bDaemon;then
         fi
         bResetCounters=true
         ;; 
+      i)
+        SECFUNCtoggleBoolean bFlipKeep
+        bResetCounters=true
+        ;; 
+      o)
+        SECFUNCtoggleBoolean bFlopKeep
+        bResetCounters=true
+        ;; 
       r)
         bResetCounters=true
+        ;; 
+      s)
+        FUNCchkUpdateFileList --refill
+        declare -p astrFileList |tr '[' '\n'
+        nSetIndex="`echoc -S "set image index"`"
+        if SECFUNCisNumber -dn "$nSetIndex" && ((nSetIndex<nTotFiles));then
+          bChangeImage=true;
+          bResetCounters=true
+        else
+          echoc -p "invalid nSetIndex='$nSetIndex'"
+          nSetIndex=-1
+        fi
         ;; 
       *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
