@@ -29,16 +29,17 @@ declare -p strTrashFolderUser
 strTrashFolder=""
 nFSSizeAvailGoalMB=1500 #1.5GB 
 nFileCountPerStep=100
+: ${nAlertSpeechCoolDownTimeout:=3600}
+export nAlertSpeechCoolDownTimeout #help this variable will be accepted if modified by user before calling this script
+nAlertSpeechLastTime=$SECONDS
 : ${nSleepDelay:=30}
+export nSleepDelay #help .
 
 function FUNCmountedFs(){
 	df --output=target |tail -n +2 
 	#|sed 's@.*@"&"@'
 }
 
-: ${strEnvVarUserCanModify:="test"}
-export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
-export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
 astrRemainingParams=()
@@ -77,6 +78,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bDummyRun=true
 	elif [[ "$1" == "--once" ]];then #help will run once and exit
 		bRunOnce=true
+	elif [[ "$1" == "--shutup" ]];then #help say volume=0
+		export SECnSayVolume=0
 	elif [[ "$1" == "--filter" ]];then #help <strRegex> will only work on the devices matching it
 		shift
 		strFilterRegex="${1-}"
@@ -448,7 +451,12 @@ while true;do
 					echoc --info "trash is empty"
 					
 					if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
-						echoc -p --say "unable to free disk space!"&&:
+            parmSay=""
+            if(( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
+              parmSay="--say"
+              nAlertSpeechLastTime=$SECONDS
+            fi
+            echoc -p $parmSay "unable to free disk space!"&&:
 					fi
 				fi
 			fi
