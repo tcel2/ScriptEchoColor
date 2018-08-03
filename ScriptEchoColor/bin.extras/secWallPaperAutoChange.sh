@@ -46,6 +46,7 @@ nChangeFast=5
 nChangeHue=7
 bFlip=false;
 bFlop=false;
+bWriteFilename=true;
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -69,6 +70,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     shift;nRandomHueInterval="$1";
 	elif [[ "$1" == "--nohue" || "$1" == "-H" ]];then #help disable the hue mode (that is default)
     nChangeHue=0
+	elif [[ "$1" == "--nowrite" ]];then #help do not write the filename to the image
+    bWriteFilename=false;
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift;strWallPPath="$1"
 	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
@@ -182,7 +185,12 @@ if $bDaemon;then
         SECFUNCexecA -cE convert -flop "$strTmpFilePreparing" "${strTmpFilePreparing}2";
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
       fi
-        
+      
+      if $bWriteFilename;then
+        SECFUNCexecA -cE convert "$strTmpFilePreparing" -gravity South -pointsize 15 -annotate +0+10 "`basename "$strFile"`" "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+      fi
+      
       SECFUNCexecA -cE mv -f "$strTmpFilePreparing" "$strTmpFile"
       
       if $bFastMode;then
