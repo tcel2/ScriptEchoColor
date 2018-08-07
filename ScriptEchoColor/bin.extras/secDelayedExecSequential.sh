@@ -167,64 +167,19 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   
   while ! FUNCchkCanRunNext;do
     echoc -w -t 1 "wait cpu free up a bit"
-#    if echoc -q -t 5 "wait cpu free up a bit or run it now?";then
-    #~ if echoc -q -t 5 "ignore cpu load?";then
-      #~ bChkCpuLoad=false
-      #~ break;
-    #~ fi
   done # check cpu
   
   #SECFUNCexecA -cj $strCmd & echo pid=$!
   echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
   
-  #~ export strCmd
-  #~ function FUNCrun() {
-    #~ #eval "nohup $strCmd" & disown
-    #~ eval "$strCmd" & disown
-    #~ echo "cmdPid=$! #$strCmd"
-    #~ echoc -w -t 5 "do not close too fast"
-    #~ return 0
-  #~ };export -f FUNCrun
-  #~ secXtermDetached.sh --nohup FUNCrun&&:
+  bash -c "$strCmd&" >/dev/null 2>&1
+  SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: # strCmd will (expectedly) not end with '$" -B 2' :)
   
-  ######
-  ### strCmd needs eval TODO find other way?
-  ######
-#  (
-#    exec >>/dev/stderr 2>&1
-#    eval $strCmd >>/dev/stderr 2>&1 & disown # stdout must be redirected or the terminal wont let it be disowned, >&2 will NOT work either, must be to /dev/stderr
-
-
-#AlmostOK#   eval $strCmd >/dev/null 2>&1 & disown # /dev/null prevents messing this log
-
-#~ #    ps -o ppid,pid,cmd -p $$
-    #~ (eval $strCmd >/dev/null 2>&1 & disown)&disown;nSubShellPid=$! # /dev/null prevents messing this log
-#~ #    ps -o ppid,pid,cmd -p $nSubShellPid
-    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "${nSubShellPid}" -C 10&&:
-    #~ eval "strCmdDbgTmp='$strCmd'"
-    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "$strCmd" -C 10&&:
-    #~ SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |grep --color=always "$strCmdDbgTmp" -C 10&&:
-#~ #    SECFUNCexecA -ce kill $nSubShellPid
-    
-#    bash -c "$strCmd&" # >/dev/null 2>&1 & disown
-    bash -c "$strCmd&" >/dev/null 2>&1
-    SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: # strCmd will (expectedly) not end with '$" -B 2' :)
-    
-    echo " Seq -> `SECFUNCdtFmt --logmessages`;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
-#  )
-  
-  ### strCmd being secDelayedExec.sh will not need input, therefore --nohup.
-  #eval secXtermDetached.sh $strCmd
-#  eval secXtermDetached.sh --nohup $strCmd
-#  eval secXtermDetached.sh --logonly $strCmd
-  #eval secXtermDetached.sh $strCmd >>/dev/stderr & disown # strCmd needs eval TODO find other way?
-  #eval secDelayedExec.sh -x $strCmd 
-  
-  #secDelayedExec.sh -x FUNCrun&&:
-  #xterm -e "$strCmd"&disown
-  #echo "Eval: $strCmd"
-  #eval "$strCmd" 1>/dev/null 2>&1 & disown
-  #echo "cmdPid=$! #$strCmd"
+  #~ if ! strDtTm="`SECFUNCdtFmt --logmessages`";then #TODO can this problem actually ever happen?
+    #~ strDtTm="_BUG_CANT_GET_DATETIME_"
+  #~ fi
+  #~ echo " Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
+  echo " Seq -> `SECFUNCdtFmt --logmessages`;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
   
   echoc -w -t 1 #to let the app kick in
 done

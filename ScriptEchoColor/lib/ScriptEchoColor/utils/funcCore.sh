@@ -1474,14 +1474,6 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	local lnLength=0
 	local lstrLastFuncId=""
 	function SECFUNCechoDbg_updateStackVars(){
-#		SECFUNCppidList --comm "\n" >&2 2>&1
-#		echo "$$,$PPID" >&2
-#		(set |grep "^SECastr";) >&2 2>&1
-#		set |grep SECinstallPath >&2 2>&1
-#		declare -p SECastrFunctionStack >&2 2>&1
-#		if ${SECastrFunctionStack+false};then
-#			SECastrFunctionStack=()
-#		fi
 		lnLength="${#SECastrFunctionStack[@]}"
 		if((lnLength>0));then
 			lstrLastFuncId="${SECastrFunctionStack[lnLength-1]}"
@@ -1908,7 +1900,15 @@ function SECFUNCppidList() { #help [separator] between pids
 	  
 		strComm=""    
 		if $lbComm;then
-			strComm="_`cat "/proc/$lnPidCurrent/comm"`"
+      local lstrCommFile="/proc/$lnPidCurrent/comm"
+			if ! strComm="_`cat "$lstrCommFile"`";then
+        local lstrPidDied=""
+        if [[ ! -f /proc/$lnPidCurrent ]];then
+          lstrPidDied="Pid $lnPidCurrent died."
+        fi
+        SECFUNCechoErr "file does not exist lstrCommFile='$lstrCommFile'. ${lstrPidDied} Skipping it..."
+        continue
+      fi
 			strComm="`SECFUNCfixId -f "$strComm"`"
 		fi
 	  if [[ -n "$lstrPidList" ]];then # after 1st
@@ -1922,63 +1922,6 @@ function SECFUNCppidList() { #help [separator] between pids
 		fi
 	done
 		
-#	local lstrPidList=""
-#	local anPidList=()
-#	local ppid=$lnPid;
-#	local lbFirstLoopCheck=true
-#	while((ppid>=1));do 
-#	  #ppid=`ps -o ppid -p $ppid --no-heading |tail -n 1`; 
-#	  local lbGetParentPid=true
-#	  if $lbFirstLoopCheck;then
-#	  	if $lbAddSelf;then
-#	  		lbGetParentPid=false
-#	  	fi
-#	  	lbFirstLoopCheck=false
-#	  fi
-#	  if $lbGetParentPid;then
-#	  	# get parent pid
-#		  ppid="`grep PPid /proc/$ppid/status |cut -f2&&:`"
-#	 	fi
-#	  
-#	  if((lnPidCheck>0));then
-#	  	if((ppid==lnPidCheck));then
-#	  		return 0
-#	  	fi
-#	  fi
-#	  
-#	  #anPidList=(${anPidList[*]} $ppid)
-#	  anPidList+=($ppid)
-#	  
-##    if [[ -n "$lstrPidList" ]];then # after 1st
-##		  if [[ -n "$lstrSeparator" ]];then
-##		  	lstrPidList+="$lstrSeparator"
-##		  fi
-##		fi
-#		strComm=""    
-#		if $lbComm;then
-#			strComm="_`cat "/proc/$ppid/comm"`"
-#			strComm="`SECFUNCfixId -f "$strComm"`"
-#		fi
-#	  if [[ -n "$lstrPidList" ]];then # after 1st
-#			if $lbReverse;then
-#				lstrPidList="${ppid}${strComm}${lstrSeparator}${lstrPidList}"
-#			else
-#				lstrPidList="${lstrPidList}${lstrSeparator}${ppid}${strComm}"
-#			fi
-#	  else
-#	  	lstrPidList="${ppid}${strComm}"
-#		fi
-#	
-#	  #echo $ppid; 
-#	  if((ppid==1));then break; fi; 
-#	done
-  
-#  local output="${anPidList[*]}"
-#  if [[ -n "$lstrSeparator" ]];then
-#    local sedChangeSeparator='s" "'"$lstrSeparator"'"g'
-#    output=`echo "$output" |sed "$sedChangeSeparator"`
-#  fi
-  
   #echo "$output"
   if((lnPidCheck>0));then
   	return 1; # reached here because did not match any ppid

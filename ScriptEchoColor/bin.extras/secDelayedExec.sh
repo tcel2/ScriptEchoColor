@@ -539,8 +539,12 @@ if $bCheckIfAlreadyRunning;then
 		else
 			strTitle="$SECstrScriptSelfName[$$], multiple instances running."
 			SECFUNCCwindowOnTop "$strTitle"
-			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$; kill the nPidOther='$nPidOther' that is already running?";then
+			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
 				bKillOther=true
+      else
+        if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
+          exit 0
+        fi
 			fi
 		fi
 		if $bKillOther;then
