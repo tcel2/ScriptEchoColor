@@ -65,7 +65,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     shift
 		strFilter="${1-}"
     declare -p strFilter
-	elif [[ "$1" == "-l" || "$1" == "--listonly" ]];then #help do the work only if entry matches regex filter
+	elif [[ "$1" == "-l" || "$1" == "--listonly" ]];then #help cmds
 		bListOnly=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help MISSING DESCRIPTION
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
@@ -130,8 +130,16 @@ cd $HOME/.config/autostart/
 ########## autostart cfg files
 IFS=$'\n' read -d '' -r -a astrFileList < <(grep enabled=true * |cut -d: -f1)&&:
 
+echo
+echo "Enabled FILES at: '`pwd`'"
+for strFile in "${astrFileList[@]}";do  
+  echo -e " $strFile     #`egrep -h "Exec=.* --SequentialCfg " "${strFile}" |sed 's"^Exec=""'`"
+done
+#ls -1 "${astrFileList[@]}" |sed "s@.*@`pwd`/&@"
+#find "`pwd`/" -iname "*.desktop" |sort
+
 ########## autostart commands
-IFS=$'\n' read -d '' -r -a astrCmdList < <(egrep "Exec=.* --SequentialCfg " -h "${astrFileList[@]}" -h |sed 's"^Exec=""' |sort)&&:
+IFS=$'\n' read -d '' -r -a astrCmdList < <(egrep -h "Exec=.* --SequentialCfg " "${astrFileList[@]}" |sed 's"^Exec=""' |sort)&&:
 #declare -p astrCmdList |tr '[' '\n'
 
 ########## prepare list to be ordered
@@ -148,6 +156,8 @@ sedRmOrderDigits='s"^[[:digit:]]* ""'
 sedRmSeqCfgOpt='s" --SequentialCfg " "'
 astrCmdListOrdered=()
 IFS=$'\n' read -d '' -r -a astrCmdListOrdered < <(for strSCmd in "${astrCmdListToSort[@]}";do echo "$strSCmd";done |sort -n |sed -r -e "$sedRmOrderDigits" -e "$sedRmSeqCfgOpt")&&:
+echo
+echo "Sequential CMDs:"
 declare -p astrCmdListOrdered |tr '[' '\n'
 
 if $bListOnly;then exit 0;fi

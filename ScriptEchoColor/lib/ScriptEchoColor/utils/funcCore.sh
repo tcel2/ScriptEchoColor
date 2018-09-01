@@ -2084,24 +2084,15 @@ function SECFUNCfd() { #help fd
   #~ local lbUseFd0=false;if [[ "${1-}" == "--usefd0" ]];then lbUseFd0=true;fi
   
   function _SECFUNCfd_fdOk() { # <lnFdIndex> <lstrFd>
-    #~ local lnFdIndex="$1";shift
-    #~ local lstrFd="$1";shift
-    
     if [[ -t $lnFdIndex ]] || [[ -c "$lstrFd" ]] || [[ "$lstrFd" =~ ^pipe:.* ]];then return 0;fi #TODO what about "socket:.*" ?
     return 1
   }
-  
   function _SECFUNCfd_fdBkp() { # <lnFdIndex> <lstrFd> <lstrBkpId>
-    #~ local lnFdIndex="$1";shift
-    #~ local lstrFd="$1";shift
-    #~ local lstrBkpId="$1";shift
-
     if [[ -z "${!lstrBkpId-}" ]];then
       if _SECFUNCfd_fdOk;then #"$lnFdIndex" "$lstrFd";then
         declare -gx $lstrBkpId="$lstrFd"
       fi 
     fi
-    
     return 0;
   }
   
@@ -2115,7 +2106,7 @@ function SECFUNCfd() { #help fd
     done
   fi
   
-  for((i=0;i<=2;i++));do
+  for((i=0;i<=2;i++));do # stdin stdout stderr
     local lnFdIndex="$i"
     local lstrFd="`readlink /proc/$$/fd/${lnFdIndex}`"
     local lstrBkpId="SECbkpFd${lnFdIndex}"
@@ -2131,6 +2122,8 @@ function SECFUNCfd() { #help fd
         lstrFdRestore="$SECbkpTermFd"
       fi
       
+      #TODO validate if the pipe is not broken, if the other pid still exists: find /proc -maxdepth 3 -type l -lname "$lstrFdRestore" 2>/dev/null |grep -qv "$strThisProcPid"
+      #TODO test the pipe after restoring, if it REALLY works. Is it actually useful anyway?
       if [[ -n "$lstrFdRestore" ]] && [[ "$lstrFd" != "$lstrFdRestore" ]];then
         eval "exec ${lnFdIndex}>${lstrFdRestore}"
       fi

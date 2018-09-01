@@ -93,6 +93,7 @@ function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so t
 		local lbDevMode=false;if ! ${SECDEVstrProjectPath+false};then lbDevMode=true;fi
 		if $lbDevMode;then lstrEchoNL="";fi
     echo -e $lstrEchoNL "\E[0m\E[36m (\E[0m\E[32mCmdBeginAt\E[0m\E[33m=\E[0m\E[31m'\E[0m\E[36m`date +"$formatFullDateTime"`\E[0m\E[31m'\E[0m\E[36m) \E[0m" >&2
+    echo >&2
 	fi
 #	echo -n "@O" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
 }

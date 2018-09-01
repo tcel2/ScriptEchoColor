@@ -87,10 +87,11 @@ if ! nPidNautilus=`pgrep nautilus`;then
 	exit 1
 fi
 
+echoc --alert "WARNING: @{-n}This is extremely experimental code! @-n the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
 echoc --info "Optional parameters can be a tab locations to be added to a running nautilus."
+echoc --alert "WARNING: @{-n}the window typing is blind! @-n if another window pops up the typing will happen on that window and not at nautilus!"
 echoc --info "Unexpectedly it is usefull to mix all nautilus windows in a single multi-tabs window!"
-echoc --alert "WARNING: This is extremely experimental code! @-n the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
-echoc --alert "WARNING: the window typing is blind! @-n if another window pops up the typing will happen on that window and not at nautilus!"
+echoc -w --alert "WARNING: @C@{-n}THE CURRENT SELECTED TAB WILL BE IGNORED, @s@{DRly}DUPLICATE@S IT NOW@{n}!@{-n}" #TODO where can it be found?
 
 function FUNCnautilusFocus() {
 	#the last ones seems the right one, still a blind guess anyway...

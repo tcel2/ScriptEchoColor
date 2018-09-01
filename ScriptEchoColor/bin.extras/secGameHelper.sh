@@ -737,11 +737,12 @@ function WINEFUNCcommonOptions {
 	#	$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
 		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@" 
 		FUNCwaitGamePid
-	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [gameRunParams]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
+	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
 	#TODO this should be the main runner too in some way..
 		shift;strNewWinePrefix="$1"
-		shift;strLogFileHint="$1"
-		shift;nMaxMemKB="$1" #will wait til this amount in KB is reached b4 continuing
+		shift;strLogFileHint="${1-}"
+		shift;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
+    shift;nWaitSeconds="${1-}";if [[ -z "$nWaitSeconds" ]];then nWaitSeconds=0;fi
 		shift
 		#shift;nBlindWaitAfterInit="$1"
 		
@@ -753,25 +754,28 @@ function WINEFUNCcommonOptions {
 		nInstanceCount=0
 		function FUNClstInsts() {
 			strPids="`ps --no-headers -o pid,start_time --sort start_time -p $(pgrep ${strFileExecutable})`"&&:
-			declare -p strPids
+			declare -p strPids&&:
 			if [[ -n "$strPids" ]];then
 				nInstanceCount=`echo "$strPids" |wc -l`
 			fi
+      return 0
 		}
 		#~ function FUNCinstsCount() {
 			#~ echo "$strPids" |wc -l
 		#~ }
 		
+		SECFUNCuniqueLock --id runNewSimultInstanceGrabAppPid --waitbecomedaemon #b4 running the app
+    
 		FUNClstInsts
 		nInstCountB4=$nInstanceCount
-		declare -p nInstCountB4
+		declare -p nInstCountB4&&:
 		#$cmdWine "$strLoader" #
 		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@"
-		
+    
 		while true;do
 			# list all pids matching the executable name, the last one is the newest
 			FUNClstInsts
-			declare -p nInstanceCount
+			declare -p nInstanceCount&&:
 			#~ strPids="`FUNClstInsts`"&&:
 			#~ echo "$strPids"
 			#~ nInstanceCount=`FUNCinstsCount`
@@ -779,8 +783,8 @@ function WINEFUNCcommonOptions {
 				# there was nothing running, so the new is the only one
 				break;
 			else
-				# there was one running already, so the new is the 2nd one
-				if((nInstanceCount==2));then 
+				# there was one running already, so the new is the last one
+				if((nInstanceCount>nInstCountB4));then 
 					break;
 				fi
 			fi
@@ -789,7 +793,9 @@ function WINEFUNCcommonOptions {
 		
 		# the newest pid is the last one
 		nPidNI="`echo "$strPids" |tail -n 1 |awk '{print $1}'`" #awk to trim the line
-		declare -p nPidNI
+		declare -p nPidNI&&:
+    
+    SECFUNCuniqueLock --id runNewSimultInstanceGrabAppPid --release #after getting the pid
 		
 		astrCmdPs=(ps --no-headers -o ppid,pid,pcpu,pmem,etime,stat,status,state,rss,cmd -p $nPidNI)
 		
@@ -819,6 +825,8 @@ function WINEFUNCcommonOptions {
 			done
 		fi
 		
+    echoc -w -t $nWaitSeconds "waiting specified delay before stopping the app"
+    
 		kill -SIGSTOP $nPidNI
 		
 		WINEFUNCcommonOptions hookOnPidStopCont $nPidNI
