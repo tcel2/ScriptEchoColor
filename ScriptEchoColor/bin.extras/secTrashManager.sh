@@ -301,6 +301,7 @@ while true;do
                 :
               else
                 SECFUNCdrawLine " $strPHexa "
+                pwd
                 egrep "$strPHexa" ../info/*.trashinfo
                 bAllOk=false
               fi;
