@@ -25,8 +25,8 @@
 source <(secinit --extras -i)
 
 strDpkgPackage=""
-export strDevPath=""
-strChangesFile=""
+export strDevPath="`pwd`/"
+strChangesFile="./CHANGES.txt"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "This script only works properly with package 'Version-Revision' in the format 'YYYYMMDD-HHMMSS'"
@@ -84,9 +84,14 @@ if [[ ! -d "$strDevPath/.git" ]];then
 fi
 ls -ld "$strDevPath/.git"
 
-if ! dpkg -s "$strDpkgPackage";then
-	echoc -p "invalid strDpkgPackage='$strDpkgPackage'"
-	exit 1
+bIsPkg=false
+if [[ -n "$strDpkgPackage" ]];then
+  if dpkg -s "$strDpkgPackage";then
+    bIsPkg=true;
+  else
+    echoc -p "invalid strDpkgPackage='$strDpkgPackage'"
+    exit 1
+  fi
 fi
 
 cd "$strDevPath"
@@ -181,7 +186,14 @@ function FUNCshowCommits() { #param: lbShowAll
 	if $lbShowAll;then
 		lnAfter=$nNewestCommitsLimit
 	fi
-	lstrOutput="`echo "$lstrOutput" |grep "$strLastCommitBeforeInstall" -A $lnAfter -B $nNewestCommitsLimit --color=always`"
+  
+  local lstrMatchCmt="$strLastCommitBeforeInstall"
+  if [[ -z "$lstrMatchCmt" ]];then
+    lstrMatchCmt="`echo "$lstrOutput" |head -n 1`"
+  fi
+  
+  lstrOutput="`echo "$lstrOutput" |grep "$lstrMatchCmt" -A $lnAfter -B $nNewestCommitsLimit --color=always`"
+  
 	if((lnAfter==1));then
 		echo "$lstrOutput"
 	else
@@ -193,44 +205,53 @@ function FUNCshowCommits() { #param: lbShowAll
 	#|column -c $nTerminalWidth
 }
 
-SECFUNCuniqueLock --daemonwait
+strProjectMainNameAtURL="`basename "$(egrep "url = .*[.]git$" .git/config)"`"
+declare -p strProjectMainNameAtURL
+
+strLockId="`basename $0`_${strProjectMainNameAtURL}";declare -p strLockId
+SECFUNCuniqueLock --id "$strLockId" --daemonwait
+
 while true;do
 	### ASK WHAT TO DO ###
-#	echoc -Q "git@O\
-#_commitWithGitGui/\
-#_diffLastTagFromMaster/\
-#diff_installedFromMaster/\
-#diffToBeP_ushed/\
-#_pushTagsToRemote/\
-#_nautilusAtDevPath/\
-#_terminalAtDevPath/\
-#_browseWithGitk"&&:
-	echoc -Q "git helper (hit ctrl+c to exit) @O\n\
-\t_commit with 'git gui'/\n\
-\t_diff last tag from master/\n\
-\t_generate and show changes log file/\n\
-\tdiff _installed from master/\n\
-\tdiff to be p_ushed/\n\
-\tdiff d_ate from master/\n\
-\t_push tags to remote/\n\
-\t_nautilus at dev path/\n\
-\t_terminal at dev path/\n\
-\t_browse with gitk"&&:
+  #~ function FUNCopts() {
+    #~ while [[ -n "${1-}" ]];do echo "\t${1}/\n";done
+    #~ return 0
+  #~ }
+  astrOpts=()
+  astrOpts+=("_commit with 'git gui'")
+  astrOpts+=("_diff last tag from master")
+  astrOpts+=("_generate and show changes log file")
+  if $bIsPkg;then
+    astrOpts+=("diff _installed from master")
+  fi
+  astrOpts+=("diff to be p_ushed")
+  astrOpts+=("diff d_ate from master")
+  astrOpts+=("_push tags to remote")
+  astrOpts+=("_nautilus at dev path")
+  astrOpts+=("_terminal at dev path")
+  astrOpts+=("_browse with gitk")
+  strOpts="$(for strOpt in "${astrOpts[@]}";do echo -nE "\t${strOpt}/\n";done)" 
+	echoc -Q "git helper (hit ctrl+c to exit) @O\n${strOpts}"&&:
 	nRetValue=$?
 	strRetLetter="`secascii $nRetValue`"
 	
 	### UPDATE CONTROL DATA AND SHOW INFORMATION ###
 	
-	#echoc --info "Git helper (hit ctrl+c to exit)"
-	strSECInstalledVersion="`dpkg -s "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
-	strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
-	echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
-	echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}';"
-	echoc "strDevPath='@y$strDevPath';"
-
 	#|sed -r "s'.* ([[:digit:]-]* [[:digit:]:]*) .*'\1'" |tr -d ':-' |tr ' ' '-' 
 	strCommits="`git log --full-history --date=iso |grep Date |sed -r "s@.* ([[:digit:]-]*) ([[:digit:]:]*) .*@\1 \2@"`"
-	strLastCommitBeforeInstall="`(echo "$strCommits";echo "$strSECInstalledVersionFormatted") |sort -r |grep "$strSECInstalledVersionFormatted" -A 1 |tail -n 1`"
+  
+	#echoc --info "Git helper (hit ctrl+c to exit)"
+  strSECInstalledVersion=""
+  strLastCommitBeforeInstall=""
+  if $bIsPkg;then
+    strSECInstalledVersion="`dpkg -s "$strDpkgPackage" |grep Version |grep "[[:digit:]]*-[[:digit:]]*$" -o`"
+    strSECInstalledVersionFormatted="`echo "$strSECInstalledVersion" |sed -r "s'(....)(..)(..)-(..)(..)(..)'\1-\2-\3 \4:\5:\6'"`"
+    echoc "strDpkgPackage='@r$strDpkgPackage@{-a}';"
+    echoc "strSECInstalledVersion='@{c}$strSECInstalledVersion@{-a}';"
+    strLastCommitBeforeInstall="`(echo "$strCommits";echo "$strSECInstalledVersionFormatted") |sort -r |grep "$strSECInstalledVersionFormatted" -A 1 |tail -n 1`"
+    declare -p strLastCommitBeforeInstall
+  fi
+	echoc "strDevPath='@y$strDevPath';"
 	
 	FUNCshowCommits
 	
