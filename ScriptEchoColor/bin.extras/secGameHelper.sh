@@ -27,6 +27,13 @@ source <(secinit)
 : ${CFGbFakeRun:=false};export CFGbFakeRun
 : ${CFGbIsAFunction:=false};export CFGbIsAFunction
 
+function GAMEFUNCchkWinePrefix() {
+	if ${WINEPREFIX+false};then
+		echoc --alert "missing WINEPREFIX"
+		echoc -w "hit ctrl+c to stop" #TODO use the critical force exit func?
+	fi
+}
+
 function GAMEFUNCcheckIfGameIsRunning() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
 	pgrep -f "$lstrFileExecutable" 2>&1 >/dev/null
@@ -1101,6 +1108,111 @@ function FUNClimitSaveGames() {
     return 0
 };export -f FUNClimitSaveGames
 
+function GAMEFUNCautoStop() { #help OVERRIDE this one to let it auto stop for any reason you want like screensaver enabled!
+  return 1;
+}
+function GAMEFUNCstopContGame() { #help <lnPid>
+	#local lnPid="`pgrep -f "$strFileExecutable"`" #TODO may come more than one?
+	local lnPid="$1"
+	declare -p lnPid
+	declare -p WINEPREFIX #to know which instance it is!
+	
+	ps --no-headers -o pid,stat,state,status,pcpu,rss,cmd -p $lnPid &&:
+	
+	local lnSleep=10
+	
+	local lstrPidState="`ps --no-headers -o state -p $lnPid`"
+	
+  if [[ "$lstrPidState" == "T" ]];then
+    if echoc -t $lnSleep -q "continue running?";then
+      SECFUNCexecA -ce kill -SIGCONT $lnPid
+      
+      # raise window
+      IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
+      for nWID in "${anWindowIDs[@]}";do 
+        nWPID="`xdotool getwindowpid $nWID`"&&:
+        ps --no-headers -o pid,stat,cmd -p $nWPID&&:
+        if((nWPID==lnPid));then
+          xdotool windowfocus $nWID
+          break;
+        fi
+      done
+    fi
+  else
+    local lbStopNow=false
+    if ! $lbStopNow && GAMEFUNCautoStop;then lbStopNow=true;fi
+    if ! $lbStopNow && echoc -t $lnSleep -q "suspend stop?";then lbStopNow=true;fi
+    
+    if $lbStopNow;then
+      SECFUNCexecA -ce kill -SIGSTOP $lnPid
+    fi
+  fi
+};export -f GAMEFUNCstopContGame
+function WINEFUNCstopContGame() { #help DEPRECATED use GAMEFUNCstopContGame instead (kept for compatibility for now)
+  GAMEFUNCstopContGame "$@"
+};export -f WINEFUNCstopContGame
+
+function GAMEFUNCwaitGamePid() { #help
+ 	SECFUNCvarSet WINEnGamePid=""
+	SECONDS=0
+	while ! ps -p $WINEnGamePid >/dev/null 2>&1; do
+		SECFUNCvarReadDB
+		if [[ "$strLoader" == "$strFileExecutable" ]];then 
+			# the direct pid wont die 
+			if SECFUNCvarIsSet WINEnDirectGamePid;then
+				if ps -p $WINEnDirectGamePid;then
+					WINEnGamePid=$WINEnDirectGamePid
+				fi
+			fi
+		fi
+		
+		# indirect game pid
+		if [[ -z "$WINEnGamePid" ]];then
+			local lanPid=(`pgrep -f "$strFileExecutable"`)
+			
+			local nPid
+			for nPid in "${lanPid[@]-}";do
+        local strExe="$(basename $(readlink "/proc/$nPid/exe"))"&&:
+				
+				if [[ -n "$strExe" ]] && [[ "${strExe:0:4}" == "wine" ]];then
+					# When it is a loader, the loader will die, and a new pid will have the executable name.
+					# Only the newest/fresh pid with the executable name must be considered, in case of multiple instances,
+					# by ignoring the old instance TODO improve this BAD WILD GUESS WORK.
+					strETime="`ps --no-headers -o etime -p $nPid |awk '{tmp=$1;print tmp}'`";
+					if [[ "$strETime" =~ ^00:..$ ]];then 
+						nETime=${strETime:3:2};
+						if((nETime<=20));then # loaders should die fast
+							declare -p nETime
+							WINEnGamePid=$nPid
+							break
+						fi
+					fi
+				fi
+			done
+		fi
+		
+		if [[ -n "$WINEnGamePid" ]];then break;fi
+		FUNCwait 1 "waiting for game to start..." #echoc -w -t 1 "waiting for game to start"
+	done
+	SECFUNCvarSet --show WINEnGamePid=$WINEnGamePid
+};export -f GAMEFUNCwaitGamePid
+function FUNCwaitGamePid() { #help DEPRECATED kept for compat
+  GAMEFUNCwaitGamePid "$@"
+};export -f FUNCwaitGamePid
+
+function FUNCtrashSymlinksToRoot() {
+	( # subshell to not change the caller path
+		SECFUNCexecA -ce cd "$WINEPREFIX/"
+		pwd
+		find -type l -xtype d -lname "/" 2>/dev/null |while read strFolder;do trash -v "$strFolder";done
+	)
+}
+
+function FUNCchkInitPrefix() {
+	if [[ ! -f "$WINEPREFIX/system.reg" ]];then SECFUNCexecA -ce $cmdWine wineboot;fi #mkdir -v "$WINEPREFIX/";fi
+	FUNCtrashSymlinksToRoot
+}
+
 if [[ "$0" == */secGameHelper.sh ]];then
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #help
@@ -1119,5 +1231,7 @@ if [[ "$0" == */secGameHelper.sh ]];then
 		fi
 		shift
 	done
+else
+  GAMEFUNCchkWinePrefix
 fi
 

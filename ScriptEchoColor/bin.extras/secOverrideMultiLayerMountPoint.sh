@@ -277,7 +277,7 @@ strSI="`mount |grep "$strMountAt type aufs" |egrep -o "si=[^)]*" |tr "=" "_"`"
 SECFUNCexecA -ce ls -l /sys/fs/aufs/$strSI/brid*
 
 #SECFUNCexecA -ce ls -d "${strMountAt}"*
-SECFUNCexecA -ce ls -d "${astrLayerList[@]}"
+SECFUNCexecA -ce ls -d1 "${astrLayerList[@]}"
 
 #echoc -w "to umount and remove"
 #FUNCumount
