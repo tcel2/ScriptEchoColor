@@ -209,6 +209,8 @@ mkdir -vp "`dirname "${strRmLog}"`"
 #echo -n >"${strRmLog}" #just create it to make `tee -a` work
 strRmLogTmp="`mktemp`"
 while true;do
+  ps -o pid,rss,pcpu,stat,state,cmd -p `pgrep gvfsd-trash` #TODO create a checker for CPU and huge memory usage to kill (askKill?) gvfsd-trash before "whole system swapping" and the OS becoming unusable for some minutes...
+  
 	IFS=$'\n' read -d '' -r -a astrMountedFSList < <(FUNCmountedFs)&&:
 	astrMountedFSList+=("$strTrashFolderUser")
 	for strMountedFS in "${astrMountedFSList[@]}";do

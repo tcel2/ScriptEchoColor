@@ -538,7 +538,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			lbQuiet=true
 		elif [[ "$1" == "--notquiet" ]];then #SECFUNCuniqueLock_help allow output to /dev/stdout
 			lbQuiet=false
-		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <lstrId> set the lock id, if not set, the 'id' defaults to `basename $0`
+		elif [[ "$1" == "--id" ]];then #SECFUNCuniqueLock_help <lstrId> set the lock id (will be fixed if necessary), if not set, the 'id' defaults to `basename $0`
 			shift
 			lstrId="${1-}"
 		elif [[ "$1" == "--pid" ]];then #SECFUNCuniqueLock_help <l_pid> force pid to be related to the lock, mainly to acquire (default) and --release the lock

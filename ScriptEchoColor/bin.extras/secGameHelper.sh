@@ -486,7 +486,7 @@ function WINEFUNCchkSelfScript() {
 	fi
 };export -f WINEFUNCchkSelfScript
 
-function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it work
+function GAMEFUNCtimestampLoadOrder(){ #help <check|recreateCfgFromInstallation|fix> #TODO make it work
 #GAMEFUNCtimestampLoadOrder_help \t\t<check> [strPluginNameFilter] just shows plugins names with timestamps
 #GAMEFUNCtimestampLoadOrder_help \t\t<recreateCfgFromInstallation> will update the loadorder file with the currently setup files timestamps (has safety warning)
 #GAMEFUNCtimestampLoadOrder_help \t\t<fix> will use the loadorder file to update the plugins files timestamps.
@@ -498,11 +498,11 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it wo
 	fi
 	
 	bIsMultiLayer=false;if secOverrideMultiLayerMountPoint.sh --is "`pwd`";then bIsMultiLayer=true;fi
-	#ls --full-time -tr *.es* #TODO filter out files not at plugins.txt
+	#TODO filter out files not at CFGstrPluginsFile
 	
 	if $bIsMultiLayer;then echoc --info "multilayer mountpoint mode";fi
 	
-	strLoadOrderFile="`dirname "$CFGstrPluginsFile"`/.loadorder.UpdateThisToSetOnFilesByMyScript.txt"
+	strLoadOrderFile="`dirname "$CFGstrPluginsFile"`/.loadorder.sec.UpdateThisToUpdatePlugins.cfg"
 	if [[ ! -f "$strLoadOrderFile" ]];then
 		echoc -p "strLoadOrderFile='$strLoadOrderFile' missing"
 		exit 1
@@ -516,11 +516,11 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it wo
 		fi
 	fi
 	
-	function FUNCclearEndLineComment(){
+	function _GAMEFUNCtimestampLoadOrder_FUNCclearEndLineComment(){
 		echo "$1" |sed -r 's"([^#]*[.]es[mp])[[:blank:]]*#.*"\1"'
 	}
 	
-	function FUNCchk(){
+	function _GAMEFUNCtimestampLoadOrder_FUNCchk(){
 		bQuiet=false;if [[ "${1-}" == "--no-verbose" ]];then bQuiet=true;shift;fi
 		
 		strPluginNameFilter="${1-}"
@@ -563,22 +563,22 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it wo
 	if [[ -z "${astrLoadOrderEntryList[@]-}" ]];then echoc -p "empty load order list";exit 1;fi
 #	declare -p astrLoadOrderEntryList
 	for((i=0;i<${#astrLoadOrderEntryList[@]};i++));do 
-		astrLoadOrderEntryList[i]="`FUNCclearEndLineComment "${astrLoadOrderEntryList[i]}"`"
+		astrLoadOrderEntryList[i]="`_GAMEFUNCtimestampLoadOrder_FUNCclearEndLineComment "${astrLoadOrderEntryList[i]}"`"
 	done
 #	declare -p astrLoadOrderEntryList;exit 1
 	
 	echoc --info "strLoadOrderFile='$strLoadOrderFile'"
 	
 	if [[ "${1-}" == "check" ]];then
-		FUNCchk
+		_GAMEFUNCtimestampLoadOrder_FUNCchk
 	elif [[ "${1-}" == "fix" ]];then
 		echoc --alert "ATTENTION!!!"
-		echoc --info "this will also update the plugins.txt file"
+		echoc --info "this will also update the plugins file"
 		if echoc -q "this will update all plugins time based on the loadorder file, continue?";then
 			nTimeBegin=1199152920 #this value is FIXED based on the main data file as set by mod managers
 			for strLoadOrderEntry in "${astrLoadOrderEntryList[@]}";do 
 #				strLoadOrderEntry="`echo "$strLoadOrderEntry" |sed -r 's"([^#]*[.]es[mp])[[:blank:]]*#.*"\1"'`"  # remove line ending comments
-#				strLoadOrderEntry="`FUNCclearEndLineComment "$strLoadOrderEntry"`"
+#				strLoadOrderEntry="`_GAMEFUNCtimestampLoadOrder_FUNCclearEndLineComment "$strLoadOrderEntry"`"
 			
 				echo
 #				echoc --info "working with strLoadOrderEntry='$strLoadOrderEntry'"
@@ -630,7 +630,7 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|update|fix> #TODO make it wo
 			done
 			ls -l "$CFGstrPluginsFile"
 			
-			FUNCchk --no-verbose #generates the bat with loadorder
+			_GAMEFUNCtimestampLoadOrder_FUNCchk --no-verbose #generates the bat with loadorder
 			
 			sync #to grant cached writes is properly stored
 		fi
@@ -746,11 +746,11 @@ function WINEFUNCcommonOptions {
 		FUNCwaitGamePid
 	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
 	#TODO this should be the main runner too in some way..
-		shift;strNewWinePrefix="$1"
-		shift;strLogFileHint="${1-}"
-		shift;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
-    shift;nWaitSeconds="${1-}";if [[ -z "$nWaitSeconds" ]];then nWaitSeconds=0;fi
-		shift
+		shift;strNewWinePrefix="$1" #required
+		shift&&:;strLogFileHint="${1-}"
+		shift&&:;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
+    shift&&:;nWaitSeconds="${1-}";if [[ -z "$nWaitSeconds" ]];then nWaitSeconds=1;fi #will wait at least 1s
+		shift&&:
 		#shift;nBlindWaitAfterInit="$1"
 		
 	#	export WINEPREFIX="$WINEPREFIX/.WinePrefix.win64.NewInstanceForQuickRestart/"
@@ -1128,15 +1128,24 @@ function GAMEFUNCstopContGame() { #help <lnPid>
       SECFUNCexecA -ce kill -SIGCONT $lnPid
       
       # raise window
-      IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
-      for nWID in "${anWindowIDs[@]}";do 
-        nWPID="`xdotool getwindowpid $nWID`"&&:
-        ps --no-headers -o pid,stat,cmd -p $nWPID&&:
-        if((nWPID==lnPid));then
-          xdotool windowfocus $nWID
+      anWindowIDs=()
+      while true;do
+        IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
+        if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
+        if ! echoc -t 3 -q "unable to find windows for '$strFileExecutable', retry?@Dy";then
           break;
         fi
       done
+      if [[ -n "${anWindowIDs[@]-}" ]];then
+        for nWID in "${anWindowIDs[@]}";do 
+          nWPID="`xdotool getwindowpid $nWID`"&&:
+          ps --no-headers -o pid,stat,cmd -p $nWPID&&:
+          if((nWPID==lnPid));then
+            xdotool windowfocus $nWID
+            break;
+          fi
+        done
+      fi
     fi
   else
     local lbStopNow=false

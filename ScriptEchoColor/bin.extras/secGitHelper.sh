@@ -205,11 +205,11 @@ function FUNCshowCommits() { #param: lbShowAll
 	#|column -c $nTerminalWidth
 }
 
-strProjectMainNameAtURL="`basename "$(egrep "url = .*[.]git$" .git/config)"`"
+strProjectMainNameAtURL="`echo "$(egrep "url = .*" .git/config)" |sed -r 's".*url = (.*)"\1"'`"
 declare -p strProjectMainNameAtURL
 
-strLockId="`basename $0`_${strProjectMainNameAtURL}";declare -p strLockId
-SECFUNCuniqueLock --id "$strLockId" --daemonwait
+strLockRawId="`basename $0`_${strProjectMainNameAtURL}";declare -p strLockRawId
+SECFUNCuniqueLock --id "$strLockRawId" --daemonwait
 
 while true;do
 	### ASK WHAT TO DO ###
