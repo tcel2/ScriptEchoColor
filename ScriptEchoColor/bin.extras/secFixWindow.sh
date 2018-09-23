@@ -53,6 +53,7 @@ strActivateUnmappedWindowNameId=""
 bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as it will be overriden at boolean check...
 bFixPSensor=false
 bKeepNumlockOn=false
+bKeepNumlockOff=false
 CFGbFixCurrentNow=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
@@ -89,6 +90,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bFixPSensor=true
 	elif [[ "$1" == "--keepnumlockon" ]];then #help ~daemon will check if numlock is off and turn it on
 		bKeepNumlockOn=true
+	elif [[ "$1" == "--keepnumlockoff" ]];then #help ~daemon will check if numlock is on and turn it off
+    bKeepNumlockOff=true
 	elif [[ "$1" == "--fixcurrentwindownow" || "$1" == "-c" ]];then #help will set CFGbFixCurrentNow and exit. This tell the daemon to fix current window now. Suggestion, bind it to Shift+Ctrl+Meta+UpArrow.
 		SECFUNCcfgWriteVar CFGbFixCurrentNow=true
 		exit 0
@@ -216,8 +219,11 @@ elif $bFixCairoDock;then
 elif $bFixPSensor;then
 	SECFUNCexecA -ce SECFUNCCwindowCmd --maximize "Psensor - Temperature Monitor"
 	exit 0
-elif $bKeepNumlockOn;then
-	function SECFUNCkeepNumlockOn(){
+elif $bKeepNumlockOn || $bKeepNumlockOff;then
+	function SECFUNCkeepNumlock(){ #<lstrKeep> <lstrRm>
+    local lstrKeep=$1;shift
+    local lstrRm=$1;shift
+    
 		local lstrId="${FUNCNAME}${DISPLAY}"
 		if SECFUNCuniqueLock --id "$lstrId" --isdaemonrunning;then
 			SECFUNCechoWarnA "$lstrId, already running at DISPLAY='$DISPLAY'"
@@ -226,14 +232,15 @@ elif $bKeepNumlockOn;then
 		
 		SECFUNCuniqueLock --id "$lstrId" --waitbecomedaemon
 		while true;do 
-			if numlockx status |grep off;then 
-				SECFUNCexecA -ce numlockx on;
+			if numlockx status |grep $lstrRm;then 
+				SECFUNCexecA -ce numlockx $lstrKeep;
 			fi;
 			sleep 1;
 		done
-	};export -f SECFUNCkeepNumlockOn
-#		secXtermDetached.sh --daemon SECFUNCkeepNumlockOn
-	SECFUNCkeepNumlockOn
+	};export -f SECFUNCkeepNumlock
+#		secXtermDetached.sh --daemon SECFUNCkeepNumlock
+  if $bKeepNumlockOn;then SECFUNCkeepNumlock on off;fi
+  if $bKeepNumlockOff;then SECFUNCkeepNumlock off on;fi
 	exit 0
 elif $bListUnmappedWindows;then
 	anWindowIdList=(`xdotool search ".*"`);

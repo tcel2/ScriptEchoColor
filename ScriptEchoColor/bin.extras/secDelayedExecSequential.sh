@@ -48,7 +48,6 @@ nFreeCpuPercToAllow=25
 strFilter=""
 bListOnly=false
 #SECFUNCfdReport;SECFUNCrestoreDefaultOutputs;SECFUNCfdReport;strLogFile="`secDelayedExec.sh --getgloballogfile`";SECFUNCfdReport;declare -p strLogFile;exit 0
-strLogFile="`secDelayedExec.sh --getgloballogfile`"; #declare -p strLogFile;exit 0
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -162,6 +161,10 @@ declare -p astrCmdListOrdered |tr '[' '\n'
 
 if $bListOnly;then exit 0;fi
 
+strLogFile="`secDelayedExec.sh --getgloballogfile`"; #declare -p strLogFile;exit 0
+echo -n >>"$strLogFile" #grant it is created
+chmod go-rw "$strLogFile"
+
 ########## run the commands
 echoc --info "running commands sequentially as the system allows it if not encumbered"
 #SECbExecJustEcho=false
@@ -172,26 +175,32 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   
   ((iCount++))&&:
   
-  echo "Cmd: $strCmd"
+  #~ declare -p strCmd
+  #SECFUNCexecA -cj $strCmd & echo pid=$!
+  echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
   if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
   
   while ! FUNCchkCanRunNext;do
     echoc -w -t 1 "wait cpu free up a bit"
   done # check cpu
   
-  #SECFUNCexecA -cj $strCmd & echo pid=$!
-  echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
+  if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen?
+    strDtTm="_BUG_CANT_GET_DATETIME_"
+  fi
   
-  bash -c "$strCmd&" >/dev/null 2>&1
-  SECFUNCexecA -ce ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: # strCmd will (expectedly) not end with '$" -B 2' :)
+  strLogFileFull="${strLogFile}.$$.$strDtTm.`SECFUNCfixId --trunc 100 --justfix "$strCmd"`"
   
-  #~ if ! strDtTm="`SECFUNCdtFmt --logmessages`";then #TODO can this problem actually ever happen?
-    #~ strDtTm="_BUG_CANT_GET_DATETIME_"
-  #~ fi
-  #~ echo " Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
-  echo " Seq -> `SECFUNCdtFmt --logmessages`;0s;pid=?;$strCmd ; # Sequential run" >>"$strLogFile"
+  strLogTxt=" Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run"
+  echo "$strLogTxt" >>"$strLogFile"
+  echo "$strLogTxt" >>"$strLogFileFull"
   
-  echoc -w -t 1 #to let the app kick in
+  bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1  #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
+  
+  ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: |tee -a "$strLogFileFull" # strCmd will (expectedly) not end with '$" -B 2' :)
+  
+  chmod go-rw "$strLogFileFull"
+  
+  echoc -w -t 1 #to let the app kick in blindly
 done
 
 #echoc -w -t 60

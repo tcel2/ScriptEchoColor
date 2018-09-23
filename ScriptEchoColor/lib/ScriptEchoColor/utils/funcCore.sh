@@ -1783,6 +1783,7 @@ function SECFUNCvalidateId() { #help Id can only be alphanumeric or underscore e
 function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheId"`"
 	local lstrCaller=""
 	local lbJustFix=false
+  local lnIdMaxLength=0
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
 			SECFUNCshowHelp --nosort $FUNCNAME
@@ -1792,6 +1793,9 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 			lstrCaller="${1}(): "
 		elif [[ "$1" == "--justfix" || "$1" == "-f" ]];then #SECFUNCfixId_help otherwise it will also validate and inform invalid id to user
 			lbJustFix=true
+		elif [[ "$1" == "--trunc" || "$1" == "-t" ]];then #SECFUNCfixId_help <lnIdMaxLength> limit id length
+      shift
+			lnIdMaxLength="$1"
 		else
 			SECFUNCechoErrA "invalid option $1"
 			return 1
@@ -1804,9 +1808,15 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 		SECFUNCvalidateId --caller "$lstrCaller" "$1"
 	fi
 	
+  local lstrIdToFix="$1"
+  
+  if((lnIdMaxLength>0));then
+    lstrIdToFix="${lstrIdToFix:0:lnIdMaxLength}"
+  fi
+  
 	# replaces all non-alphanumeric and non underscore with underscore
 	#echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
-	echo "$1" |sed 's/[^a-zA-Z0-9_]/_/g'
+	echo "$lstrIdToFix" |sed 's/[^a-zA-Z0-9_]/_/g'
 }
 
 function SECFUNCppidList() { #help [separator] between pids
@@ -1946,47 +1956,71 @@ if [[ -z "${SECanFdList-}" ]];then SECanFdList=();fi # any better way to initial
 function SECFUNCfdUpdateList() { #help SECanFdList
   declare -gax SECanFdList
   IFS=$'\n' read -d '' -r -a SECanFdList < <(ls "/proc/$$/fd/")&&:
+  if [[ -z "${SECanFdList[@]}" ]];then
+    SECFUNCechoErr "SECanFdList is empty"
+    _SECFUNCcriticalForceExit
+  fi
   return 0
 }
 
-function SECFUNCfdGetTermOutput() { #help this outputs to stdout (fall back returned fd is current err output)
-  local loutput="`readlink /proc/$$/fd/2`" # defaults to current err output 
-	local lastrAllParams=("${@-}") # this may be useful
-	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
-		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCfdGetTermOutput_help show this help
-			SECFUNCshowHelp $FUNCNAME
-			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfdGetTermOutput_help <lstrExample> MISSING DESCRIPTION
-			shift
-			lstrExample="${1-}"
-    elif [[ "$1" == "-o" || "$1" == "--out" ]];then #SECFUNCfdGetTermOutput_help sets fall back to current default "out" output
-      loutput="`readlink /proc/$$/fd/1`"
-		elif [[ "$1" == "--" ]];then #SECFUNCfdGetTermOutput_help params after this are ignored as being these options, and stored at lastrRemainingParams
-			shift #lastrRemainingParams=("$@")
-			while ! ${1+false};do	# checks if param is set
-				lastrRemainingParams+=("$1")
-				shift #will consume all remaining params
-			done
-		else
-			SECFUNCechoErrA "invalid option '$1'"
-			$FUNCNAME --help
-			SECFUNCdbgFuncOutA;return 1
-#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-#			SECFUNCechoErrA "invalid option '$1'"
-#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
-		fi
-		shift&&:
-	done
+#~ function SECFUNCfdGetTermOutput() { #help this outputs to stdout (fall back returned fd is current err output)
+  #~ local loutput="`readlink /proc/$$/fd/2`" # defaults to current err output 
+	#~ local lastrAllParams=("${@-}") # this may be useful
+	#~ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#~ #SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		#~ if [[ "$1" == "--help" ]];then #SECFUNCfdGetTermOutput_help show this help
+			#~ SECFUNCshowHelp $FUNCNAME
+			#~ SECFUNCdbgFuncOutA;return 0
+		#~ elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCfdGetTermOutput_help <lstrExample> MISSING DESCRIPTION
+			#~ shift
+			#~ lstrExample="${1-}"
+    #~ elif [[ "$1" == "-o" || "$1" == "--out" ]];then #SECFUNCfdGetTermOutput_help sets fall back to current default "out" output
+      #~ loutput="`readlink /proc/$$/fd/1`"
+		#~ elif [[ "$1" == "--" ]];then #SECFUNCfdGetTermOutput_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			#~ shift #lastrRemainingParams=("$@")
+			#~ while ! ${1+false};do	# checks if param is set
+				#~ lastrRemainingParams+=("$1")
+				#~ shift #will consume all remaining params
+			#~ done
+		#~ else
+			#~ SECFUNCechoErrA "invalid option '$1'"
+			#~ $FUNCNAME --help
+			#~ SECFUNCdbgFuncOutA;return 1
+#~ #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#~ #			SECFUNCechoErrA "invalid option '$1'"
+#~ #			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		#~ fi
+		#~ shift&&:
+	#~ done
   
-  SECFUNCfdUpdateList
-  for lnFd in "${SECanFdList[@]}";do 
-    if [[ -t "$lnFd" ]];then
-      loutput="`readlink /proc/$$/fd/$lnFd`" # let it crash if fails here...
+  #~ if [[ -t "$lnFd" ]];then
+    
+  #~ fi
+  
+  #~ SECFUNCfdUpdateList
+  #~ for lnFd in "${SECanFdList[@]}";do 
+    #~ if [[ -t "$lnFd" ]];then
+      #~ loutput="`readlink /proc/$$/fd/$lnFd`" # let it crash if fails here...
+    #~ fi
+  #~ done
+  
+  #~ echo "$loutput"
+#~ }
+
+function SECFUNCfdGetTermOutput() { #help find the first output that is opened on a terminal
+  for((i=1;i<=255;i++));do
+    if [[ -t $i ]];then
+      readlink "/proc/$$/fd/$i"
+      return 0
     fi
   done
   
-  echo "$loutput"
+  if [[ -t 0 ]];then
+    readlink "/proc/$$/fd/0" #TODO can this cause any problem?
+    return 0
+  fi
+  
+  echo "/proc/$$/fd/1" #fallback to (probably) redirected
 }
 
 function SECFUNCfdReport(){ #help list detailed fd
@@ -2011,7 +2045,10 @@ function SECFUNCfdReport(){ #help list detailed fd
   local lnFd; 
   SECFUNCfdUpdateList
   for lnFd in "${SECanFdList[@]}";do
-    ls -l --color=always "/proc/$$/fd/$lnFd" >$loutput &&:
+    local lFd="/proc/$$/fd/$lnFd"
+    if [[ ! -a "$lFd" ]];then continue;fi
+    
+    ls -l --color=always "$lFd" >$loutput &&:
     if((lnFd<=2));then
       declare -p "SECbkpFd${lnFd}" >$loutput &&:
     fi
