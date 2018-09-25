@@ -60,8 +60,6 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 #		if [[ -z "$1" ]]; then echoc -p "missing base position [$1]."; exit 1; fi
 #		SECFUNCvarSet --show basePosX=`echo "$1" |sed -r 's"([[:digit:]]*)x.*"\1"'`
 #		SECFUNCvarSet --show basePosY=`echo "$1" |sed -r 's"[[:digit:]]*x([[:digit:]]*)"\1"'`
-	elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #help MISSING DESCRIPTION
-		echo "#your code goes here"
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options
 		shift
 		break
@@ -76,7 +74,7 @@ done
 
 function FUNCpidList() {
 	#ps -A -o pid,comm |grep "xterm\|rxvt" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
-	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|rxvt\)" |grep -v "#skipOrganize" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
+	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|mrxvt\)" |grep -v "#skipOrganize" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
 }
 
 function FUNCwindowList() {
@@ -91,7 +89,15 @@ function FUNCwindowList() {
 	if((`SECFUNCarraySize listWindowIds`>0));then
 		for windowId in ${listWindowIds[@]};do
 			local windowPid="`xdotool getwindowpid $windowId`"&&:
-			if [[ -n "$windowPid" ]] && ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
+      
+      local lbAddId=false
+      if [[ -n "$windowPid" ]];then
+        if ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
+          lbAddId=true
+        fi
+      fi
+      
+			if $lbAddId;then
 				local elapsedPidTime="`ps --no-headers -o etimes -p $windowPid`"&&:
 				if((elapsedPidTime==0));then elapsedPidTime=1;fi #rare case: dirty workaround to avoid invalid "octal number" creation problem
 				local lnWindowPidFixedSize="`printf "%0${#lnSystemPidMax}d" ${windowPid}`"
