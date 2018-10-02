@@ -427,7 +427,9 @@ while true;do
                 ### but the related file(s) will already be lost...
                 ### TODO may be, find a way to restore the removed files, using inodes?
                 ###########
-                strCriticalCheckRmLog="[\"']`realpath -ezs /$strTrashFolder/`" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
+                strTrashFolderRP="`realpath -ezs "/$strTrashFolder/"`"
+                strTrashFolderRPRegex="`echo "$strTrashFolderRP" |sed -r -e "s@[(]@\\\(@g" -e "s@[)]@\\\)@g"`"
+                strCriticalCheckRmLog="[\"']$strTrashFolderRPRegex" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
                 #echo test >>"$strRmLogTmp"
                 strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
                 if [[ -n "$strWrong" ]];then

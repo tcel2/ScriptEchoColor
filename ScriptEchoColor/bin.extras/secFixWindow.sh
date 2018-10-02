@@ -220,17 +220,24 @@ elif $bFixPSensor;then
 	SECFUNCexecA -ce SECFUNCCwindowCmd --maximize "Psensor - Temperature Monitor"
 	exit 0
 elif $bKeepNumlockOn || $bKeepNumlockOff;then
+  if $bKeepNumlockOn && $bKeepNumlockOff;then
+    SECFUNCechoErrA "incompatible options, or keep numlock on or off..."
+    exit 1
+  fi
+
 	function SECFUNCkeepNumlock(){ #<lstrKeep> <lstrRm>
     local lstrKeep=$1;shift
     local lstrRm=$1;shift
     
 		local lstrId="${FUNCNAME}${DISPLAY}"
+    declare -p lstrId
 		if SECFUNCuniqueLock --id "$lstrId" --isdaemonrunning;then
-			SECFUNCechoWarnA "$lstrId, already running at DISPLAY='$DISPLAY'"
-			return 0
+			SECFUNCechoErrA "$lstrId, already running at DISPLAY='$DISPLAY'"
+			return 1
 		fi
 		
 		SECFUNCuniqueLock --id "$lstrId" --waitbecomedaemon
+    echoc --info "keep numlock $lstrKeep"
 		while true;do 
 			if numlockx status |grep $lstrRm;then 
 				SECFUNCexecA -ce numlockx $lstrKeep;

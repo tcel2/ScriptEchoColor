@@ -24,13 +24,31 @@
 
 # this is actually just a simple/single way to use a chosen terminal in the whole project
 
+astrParms=("$@")
+strParms="${astrParms[@]}"
+
+astrCmd=()
+
 if which mrxvt >/dev/null 2>&1;then
   # mrxvt chosen because of: 
   #  low memory usage; 
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  mrxvt -aht +showmenu "$@"
+  astrCmd+=(mrxvt -aht +showmenu -title "$strParms" "${astrParms[@]}")
 else
-  xterm "$@" # fallback
+  astrCmd+=(xterm "${astrParms[@]}") # fallback
+fi
+
+declare -p astrCmd
+echo "SECTERMrun: ${astrCmd[@]}"
+
+"${astrCmd[@]}";nRet=$?
+
+if((nRet!=0));then
+  declare -p nRet
+  source <(secinit)
+  if SECFUNCisShellInteractive;then
+    echoc -p -t 60 "exit error $nRet"
+  fi
 fi
