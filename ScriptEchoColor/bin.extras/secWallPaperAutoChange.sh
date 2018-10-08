@@ -124,6 +124,7 @@ function FUNCchkUpdateFileList() { #[--refill]
 }
 
 if $bDaemon;then
+  SECFUNCuniqueLock --daemonwait
 	nTotFiles=0
 	astrFileList=()
 	bFastMode=false

@@ -170,6 +170,7 @@ echoc --info "running commands sequentially as the system allows it if not encum
 #SECbExecJustEcho=false
 export SECCFGbOverrideRunThisNow=true
 iCount=0
+SECFUNCdelay totalTime --init
 for strCmd in "${astrCmdListOrdered[@]}";do
   SECFUNCdrawLine #--left "$strCmd"
   
@@ -200,8 +201,9 @@ for strCmd in "${astrCmdListOrdered[@]}";do
   
   chmod go-rw "$strLogFileFull"
   
-  echoc -w -t 1 #to let the app kick in blindly
+  echoc -w -t 0.35 #to let the app kick in blindly
 done
+SECFUNCdelay totalTime --getpretty
 
 #echoc -w -t 60
 #while true;do echo "$$ $SECstrScriptSelfName loop sleep 1h";sleep 3600;done
