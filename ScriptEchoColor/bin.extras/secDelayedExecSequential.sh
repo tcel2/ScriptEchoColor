@@ -127,7 +127,7 @@ function FUNCchkCanRunNext() {
 cd $HOME/.config/autostart/
 
 ########## autostart cfg files
-IFS=$'\n' read -d '' -r -a astrFileList < <(grep enabled=true * |cut -d: -f1)&&:
+IFS=$'\n' read -d '' -r -a astrFileList < <(grep "enabled=true" * |cut -d: -f1)&&:
 
 echo
 echo "Enabled FILES at: '`pwd`'"
