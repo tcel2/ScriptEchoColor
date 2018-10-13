@@ -24,6 +24,8 @@
 
 #SECFUNCexecA -ce zenity --question&&:
 
+echoc --alert "DEPRECATED!!! @-n prefer secEnvDev.sh"
+
 if ! type -P secinit >/dev/null;then #this is better than `which` TODO why?
 	echo "'secinit' executable not found, install ScriptEchoColor before running this..." >&2
 	exit 1
@@ -320,6 +322,8 @@ function SECFUNCaddToRcFile() {
 		SECDEVFUNCoptions --defaults #this helps on running this script again with default options...
 	fi
 	
+  echoc --alert "DEPRECATED!!! @-n prefer secEnvDev.sh"
+  
 	#history -r
 };export -f SECFUNCaddToRcFile
 

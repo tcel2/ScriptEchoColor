@@ -827,7 +827,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		else
 			if [[ ! -f "${SEClstrLogFileSECFUNCexec-}" ]];then
 				# automatic log filename
-				local lstrLogId="$(SECFUNCfixId --justfix $(basename $0))"
+				local lstrLogId="$(SECFUNCfixId --justfix -- "$(basename $0)")"
 				lstrLogFileNew="log/SEC.$lstrLogId.$$.log"
 				if $lbLogTmp;then
 					lstrLogFileNew="$SECstrTmpFolderUserName/$lstrLogFileNew" #tmp log
@@ -1474,7 +1474,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	# if is not an "--" option, it is the indexId
 	if [[ -n "${1-}" ]] && [[ "${1:0:2}" != "--" ]];then
 		bIndexSetByUser=true
-		indexId="`SECFUNCfixIdA "$1"`"
+		indexId="`SECFUNCfixIdA -- "$1"`"
 		shift
 	fi
 	

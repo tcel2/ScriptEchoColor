@@ -1213,7 +1213,7 @@ function SECFUNCvarSetDB() { #help [pid] the variables file is automatically set
 	local l_sufix="vars.tmp"
 	local lstrCanonicalFileName="`readlink -f "$0"`"
 	local lstrId="`basename "$lstrCanonicalFileName"`"
-	lstrId="`SECFUNCfixIdA --justfix "$lstrId"`"
+	lstrId="`SECFUNCfixIdA --justfix -- "$lstrId"`"
 	local l_varFileAutomatic="$SEC_TmpFolder/$l_prefix.$lstrId.$$.$l_sufix"
 	local l_basename=""
 	

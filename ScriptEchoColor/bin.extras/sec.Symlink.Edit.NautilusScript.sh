@@ -123,7 +123,7 @@ function FUNCretargetSymlink() {
 #strTitle="${SECstrScriptSelfName}_pid$$"
 #SECFUNCCwindowOnTop --delay 1 "${strTitle}.*"
 #secXtermDetached.sh --ontop --title "${strTitle}" --skiporganize FUNCretargetSymlink "$strFile"
-secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCretargetSymlink "$strFile"
+secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix -- "${SECstrScriptSelfName}"`" --skiporganize FUNCretargetSymlink "$strFile"
 #SECFUNCCwindowOnTop --stop "${strTitle}.*"
 #secXtermDetached.sh --skiporganize --ontop FUNCretargetSymlink "$strFile"
 

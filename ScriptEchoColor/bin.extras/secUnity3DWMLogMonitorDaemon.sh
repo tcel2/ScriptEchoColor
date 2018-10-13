@@ -69,9 +69,9 @@ done
 SECFUNCcfgAutoWriteAllVars --noshow #this will also show all config vars
 
 strUnityLogDaemonId="${SECstrScriptSelfName}_UnityLog_Display${DISPLAY}"
-strUnityLogDaemonId="`SECFUNCfixIdA -f "$strUnityLogDaemonId"`"
+strUnityLogDaemonId="`SECFUNCfixIdA -f -- "$strUnityLogDaemonId"`"
 SECFUNCcfgWriteVar CFGstrUnityLogFile="$SECstrTmpFolderLog/.${strUnityLogDaemonId}.UnitySession.log"
-#SECFUNCcfgWriteVar CFGstrUnityLogFile="$SECstrTmpFolderLog/.${SECstrScriptSelfName}_Display`SECFUNCfixIdA -f $DISPLAY`.UnitySession.log"
+#SECFUNCcfgWriteVar CFGstrUnityLogFile="$SECstrTmpFolderLog/.${SECstrScriptSelfName}_Display`SECFUNCfixIdA -f -- $DISPLAY`.UnitySession.log"
 
 bWasAlreadyRunning=false
 if SECFUNCuniqueLock --id "$strUnityLogDaemonId" --isdaemonrunning;then 

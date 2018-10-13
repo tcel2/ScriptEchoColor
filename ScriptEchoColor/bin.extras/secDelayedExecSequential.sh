@@ -189,7 +189,7 @@ for strCmd in "${astrCmdListOrdered[@]}";do
     strDtTm="_BUG_CANT_GET_DATETIME_"
   fi
   
-  strLogFileFull="${strLogFile}.$$.$strDtTm.`SECFUNCfixId --trunc 100 --justfix "$strCmd"`"
+  strLogFileFull="${strLogFile}.$$.$strDtTm.`SECFUNCfixId --trunc 100 --justfix -- "$strCmd"`"
   
   strLogTxt=" Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run"
   echo "$strLogTxt" >>"$strLogFile"

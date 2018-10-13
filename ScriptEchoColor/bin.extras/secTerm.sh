@@ -24,10 +24,30 @@
 
 # this is actually just a simple/single way to use a chosen terminal in the whole project
 
-astrParms=("$@")
-strParms="${astrParms[@]}"
+source <(secinit)
+
+SECFUNCshowHelp --colorize "\tRun this like you would xterm or mrxvt, so to exec something requires -e param."
+
+# Main code
+astrParms=( "$@" )
 
 astrCmd=()
+
+#~ function FUNCrun238746478() {
+  #~ source <(secinit)
+  
+  #~ declare -p astrCmd
+  #~ echo "SECTERMrun: ${astrParms[@]}"
+  
+  #~ "${astrParms[@]}";nRet=$?
+
+  #~ if((nRet!=0));then
+    #~ declare -p nRet
+    #~ if SECFUNCisShellInteractive;then
+      #~ echoc -p -t 60 "exit error $nRet"
+    #~ fi
+  #~ fi
+#~ };export -f FUNCrun238746478
 
 if which mrxvt >/dev/null 2>&1;then
   # mrxvt chosen because of: 
@@ -35,16 +55,20 @@ if which mrxvt >/dev/null 2>&1;then
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  astrCmd+=(mrxvt -aht +showmenu -title "$strParms" "${astrParms[@]}")
+  strConcatParms="${astrParms[@]}"
+  astrCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrParms[@]}")
+  #astrCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" bash -c "FUNCrun238746478")
 else
+  #astrCmd+=(xterm -e bash -c "FUNCrun238746478") # fallback
   astrCmd+=(xterm "${astrParms[@]}") # fallback
 fi
 
+#"${astrCmd[@]}"
 declare -p astrCmd
 echo "SECTERMrun: ${astrCmd[@]}"
-
+ 
 "${astrCmd[@]}";nRet=$?
-
+ 
 if((nRet!=0));then
   declare -p nRet
   source <(secinit)
@@ -52,3 +76,5 @@ if((nRet!=0));then
     echoc -p -t 60 "exit error $nRet"
   fi
 fi
+
+exit 0 # important to have this default exit value in case some non problematic command fails before exiting

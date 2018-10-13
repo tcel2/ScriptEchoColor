@@ -29,7 +29,7 @@ strCfg="$HOME/.$strBN.cfg"
 strSECDEVPath="`cat "$strCfg"`"
 strSECDEVPath="`realpath -e "$strSECDEVPath"`"
 declare -p strSECDEVPath
-if [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
+if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
   echo "dev path not set at '$strCfg'" >&2
   exit 1
 fi
@@ -126,8 +126,11 @@ if ! $bAlreadyDev;then
   echo >>"$strRCFileTmp"
   echo "source <(secinit --force --extras);" >>"$strRCFileTmp"
   
+  echo "source \"$strSECDEVPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh\"" >>"$strRCFileTmp"
 
   : ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
+  
+  # FUNCTIONS ONLY!
   echo '
   function SECFUNCbeforePromptCommand_CustomUserCommand(){
     :

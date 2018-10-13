@@ -618,14 +618,27 @@ function FUNCrun(){
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
         #zenity --info --text "$0:$LINENO"
-				"${astrRunParams[@]}"
+				#~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
         if $bStayForce;then
-          while eval "$strEvalStayForce";do
+          strInfoSF="${astrRunParams[@]} #strEvalStayForce='$strEvalStayForce'"
+          if eval "$strEvalStayForce";then
+            echo "Already running: $strInfoSF"
+          else
+            "${astrRunParams[@]}"
+            while ! eval "$strEvalStayForce";do
+              echo "Wating it start: $strInfoSF"
+            done
+          fi
+          
+          while true;do
+            if ! eval "$strEvalStayForce";then break;fi
 #            anPGrep=(`pgrep -fx "^${astrRunParams[@]}$"`)
-            echo "Still running: ${astrRunParams[@]}"
+            echo "Still running: $strInfoSF"
             sleep 5
           done
+        else
+          "${astrRunParams[@]}"
         fi
 			)&&:;local lnRetAtom=$?
 			echo "$lnRetAtom" >"$strFileRetVal";
@@ -644,7 +657,7 @@ function FUNCrun(){
 			astrTmp[0]="`basename "${astrTmp[0]}"`"
       
 			strTitle="${astrTmp[@]}_pid$$"
-			strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+			strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
 			strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
       
 			if [[ "$TERM" != "dumb" ]];then
@@ -850,7 +863,7 @@ function FUNCrun(){
 
 #if $bXterm;then
 #	strTitle="${astrRunParams[@]}"
-#	strTitle="`SECFUNCfixIdA -f "$strTitle"`"
+#	strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
 #	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "source <(secinit):;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #else
 #	SECFUNCexecA -ce FUNCrun

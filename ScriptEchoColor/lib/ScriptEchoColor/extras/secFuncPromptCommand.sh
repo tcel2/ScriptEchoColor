@@ -22,30 +22,32 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
+if [[ "$TERM" == "xterm" ]];then #TODO xterm variants will match this?
+  SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
+fi
 : ${SECstrXtermBgBkp:="black"}
 function SECFUNCcheckIfSudoIsActive() { #help 
 	# this would update the timestamp and so the timeout, therefore it is useless...
 	#nPts=`ps --no-headers -p $$ |sed -r 's".*pts/([0-9]*).*"\1"'`; now=`date +"%s"`; echo "remaining $((now-`sudo stat -c '%Y' /var/lib/sudo/\`SECFUNCgetUserName\`/$nPts`))s"
 	
 	#if sudo -nv 2>/dev/null 1>/dev/null; then 
-	if sudo -n uptime 2>/dev/null 1>/dev/null; then 
-		#echo -ne "\E[0m\E[93m\E[41m\E[1m\E[5m SUDO \E[0m"; 
-		echo -n "\E[0m\E[93m\E[41m\E[1m\E[5m SUDO \E[0m"; 
-		echo #without newline, the terminal seems to bugout with lines that are too big... discomment this if you find any problems...
+	if sudo -n uptime 2>/dev/null 1>/dev/null; then
+    echo -ne "\E[0m\E[33m\E[41m \E[0m\E[93m\E[41mS\E[0m\E[93m\E[41m\E[1mU\E[0m\E[93m\E[41m\E[1mD\E[0m\E[93m\E[41m\E[1mO \E[0m"
+    #echo -ne "\E[0m\E[33m\E[41m\E[5m \E[0m\E[93m\E[41m\E[5mS\E[0m\E[93m\E[41m\E[1m\E[5mU\E[0m\E[93m\E[41m\E[1m\E[5mD\E[0m\E[93m\E[41m\E[1m\E[5mO \E[0m" # GENERATOR: echoc --escapedchars "@{Ry} @lS@oU@lD@oO " #blink not used as some terms like rxvt wont blink and will change bg color
+		#echo #without newline, the terminal seems to bugout with lines that are too big... discomment this if you find any problems...
 		#SECstrXtermBgBkp="`xtermcontrol --get-bg 2>/dev/null`"
-    if [[ "$TERM" == "linux" ]];then
-      setterm -background red #TODO dark red?
-    else #TODO make it sure the command will work?
+    if [[ "$TERM" == "xterm" ]];then #TODO xterm variants will match this?
       xtermcontrol --bg darkred
+    else
+      setterm -background red #TODO dark red? #TODO make it sure the command will work?
     fi
 	else
 #		if [[ -n "$SECstrXtermBgBkp" ]];then
 		#if [[ "$SECstrXtermBgBkp" != "`xtermcontrol --get-bg 2>/dev/null`" ]];then
-    if [[ "$TERM" == "linux" ]];then
-      setterm -background black #TODO how to get the default/previous console color???
-    else #TODO make it sure the command will work?
+    if [[ "$TERM" == "xterm" ]];then
       xtermcontrol --bg "$SECstrXtermBgBkp"
+    else
+      setterm -background black #TODO how to get the default/previous console color??? #TODO make it sure the command will work?
     fi
 		#fi
 #		fi

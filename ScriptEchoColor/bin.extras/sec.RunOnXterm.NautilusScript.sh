@@ -64,7 +64,7 @@ function FUNCdoIt() {
 
 #echo "NAUTILUS_SCRIPT_CURRENT_URI='$NAUTILUS_SCRIPT_CURRENT_URI'"
 #if [[ -n "$NAUTILUS_SCRIPT_CURRENT_URI" ]];then
-	SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.
+	SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix -- "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.
 #else
 #	SECFUNCexecA -ce FUNCdoIt "$@" #user at commandline
 #fi

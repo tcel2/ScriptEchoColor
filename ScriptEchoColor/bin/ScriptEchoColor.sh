@@ -1097,7 +1097,7 @@ FUNCgfxTranslateCharE294(){
 	echo -n
 }
 
-FUNCtransExtdFmt(){
+FUNCtransExtdFmt(){ #translate
 	for((n=0;n<${#fmtExtdTable[*]};n++));do
 		if [[ "$1" == "${fmtExtdTable[n]}" ]]; then
 			echo -n "${fmtCharTable[n]}"
@@ -1307,7 +1307,7 @@ if $bOptTest; then
 	fi
 	if echo -n >"$strBugReportFile"; then
 		strTestIgnore=`FUNCtestIgnore`
-		astrTests=(a b c d e f g)
+		astrTests=(a b c d e f g h)
 		echo
 		if [[ -n "$strTestIgnore" ]]; then
 			echo "TESTS (some ignored because already known/reported '$strTestIgnore'):"
@@ -1335,7 +1335,18 @@ if $bOptTest; then
 						$strSelfName "     normal @utest"
 						echo;;
 				g)  echo  " (g) TYPE bold"
-						$strSelfName "     normal @otest";;
+						$strSelfName "     normal @otest"
+            echo;;
+        h)  echo  " (h) ALL COLORS"
+            aColorList=(r g b c m y k w R G B C M Y K W);
+						$strSelfName -n "     "
+            for strColor in "${aColorList[@]}";do 
+              $strSelfName -n "@{${strColor}}$strColor";
+              $strSelfName -n "@{${strColor}o}$strColor";
+              $strSelfName -n "@{${strColor}d}$strColor";
+              $strSelfName -n "@{${strColor}lL}$strColor";
+            done
+            echo;;
 			esac
 		done
 		echo
@@ -1790,8 +1801,8 @@ fi
 if $bOptHelpListExtdFmt; then
 		$strSelfName "@gShortFormat = /LongFormat"
 		for((n=0;n<${#fmtCharTable[*]};n++));do
-	str=`printf %2s "${fmtCharTable[n]}"`
-	echo -e "$str\t= /${fmtExtdTable[n]}"
+      str=`printf %2s "${fmtCharTable[n]}"`
+      echo -e "$str\t= /${fmtExtdTable[n]}"
 		done
 		echo
 		exit 0
@@ -2414,6 +2425,7 @@ function FUNCColorCMD(){
 		local bRestorePos=false
 		local bRecognized=false
 		local bTwoChar=false
+    local strUnrecognizedWarn=""
 		for((n=0;n<${#strParam1};n++));do
 			if $bRecognized; then
 				charPrev=""
@@ -2551,13 +2563,19 @@ function FUNCColorCMD(){
 				l) bRecognized=true;strTypeFgL="light";;
 				L) bRecognized=true;strTypeBgL="light";;
 			esac
-			if $bRecognized; then
+			
+      if $bRecognized; then
 				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				continue
+      else
+        strUnrecognizedWarn+="$strTwoChar"
 			fi
-		done	
+		done
 		nAllChars=$(( ${#strParam1} ))
 		strParam1="$str"
+    if [[ -n "$strUnrecognizedWarn" ]];then
+      _hw;echo "UNRECOGNIZED(s) '$strUnrecognizedWarn'" >&2
+    fi
 
 		# position column.line SET
 		if $bRestorePos; then

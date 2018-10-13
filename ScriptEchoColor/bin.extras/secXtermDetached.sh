@@ -56,7 +56,7 @@ export SECXbLogOnly=false
 export SECXbNoHup=false
 export SECXstrXtermOpts=""
 export bOnTop=false
-: ${TERM:=xterm};export TERM #this is important in case not being called from another terminal
+: ${TERM:=xterm};export TERM #this is important in case not being called from another terminal TODO can cause any problem? tip: xtermcontrol
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	SECFUNCsingleLetterOptionsA
 	#echo "Param: $1"
@@ -82,7 +82,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECXnMaxWaitOtherDaemon="${1-}"
 	elif [[ "$1" == "--title" ]];then #help <strTitleForce> hack to set the child xterm title, must NOT contain espaces... must be exclusively alphanumeric and '_' is allowed too...
 		shift
-#		strTitleForce="`SECFUNCfixId "$1"`"
+#		strTitleForce="`SECFUNCfixId -- "$1"`"
 		strTitleForce="${1-}"
 #		if [[ -n `echo "$strTitle" |tr -d "[:alnum:]_"` ]];then
 #			echoc -p "title '$strTitle' contains invalid characters..."
@@ -139,10 +139,10 @@ fi
 
 if [[ -n "$strTitleForce" ]];then
 #	varset strTitle="$strTitleForce"
-	varset strTitle="`SECFUNCfixId "$strTitleForce"`"&&: #if user puts a title with invalid characters it will be said by not using --justfix option
+	varset strTitle="`SECFUNCfixId -- "$strTitleForce"`"&&: #if user puts a title with invalid characters it will be said by not using --justfix option
 else # strTitle is set to the command that is the first parameter
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
-	varset strTitle="`SECFUNCfixId --justfix "$1"`"
+	varset strTitle="`SECFUNCfixId --justfix -- "$1"`"
 	#shift # !!!ALERT!!! do NOT use shift here!!!
 fi
 
@@ -264,7 +264,7 @@ function FUNCexecParams() {
 	fi
 	
 	if $lbRun;then
-		local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f "$strFUNCexecMainCmd"`.$$.log"
+		local lstrFileLogCmd="$SECstrTmpFolderLog/$SECstrScriptSelfName.`SECFUNCfixIdA -f -- "$strFUNCexecMainCmd"`.$$.log"
     echo -n >>"$lstrFileLogCmd" #to just create it
 		if $SECXbLogOnly || $SECXbNoHup;then
 			echo "lstrFileLogCmd='$lstrFileLogCmd'" >&2

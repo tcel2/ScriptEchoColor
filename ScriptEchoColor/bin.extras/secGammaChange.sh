@@ -102,7 +102,7 @@ function FUNCsetGamma() { #<fR> <fG> <fB>
 		-bgamma "`FUNCchkFixGammaComponent "$3"`"
 }
 
-strCfgByDisplay="`SECFUNCfixId -f "${SECstrScriptSelfName}_Display${DISPLAY}"`"
+strCfgByDisplay="`SECFUNCfixId -f -- "${SECstrScriptSelfName}_Display${DISPLAY}"`"
 SECFUNCcfgFileName "$strCfgByDisplay"
 #echo "SECcfgFileName='$SECcfgFileName'"
 #SECFUNCcfgFileName --get

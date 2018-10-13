@@ -118,7 +118,7 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 	fi
 	
 	local lstrDaemonId="$SECstrScriptSelfName $@"
-	lstrDaemonId="`SECFUNCfixIdA --justfix "$lstrDaemonId"`"
+	lstrDaemonId="`SECFUNCfixIdA --justfix -- "$lstrDaemonId"`"
 	
 	if $lbWait;then
 		SECFUNCuniqueLock --id "$lstrDaemonId" --waitbecomedaemon

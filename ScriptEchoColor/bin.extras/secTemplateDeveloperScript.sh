@@ -83,7 +83,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
-				shift #will consume all remaining params
+				shift&&: #will consume all remaining params
 			done
 		else
 			SECFUNCechoErrA "invalid option '$1'"
@@ -134,7 +134,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
 			astrRemainingParams+=("$1")
-			shift #will consume all remaining params
+			shift&&: #will consume all remaining params
 		done
 	else
 		echoc -p "invalid option '$1'"

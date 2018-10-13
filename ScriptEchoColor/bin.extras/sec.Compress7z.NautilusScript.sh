@@ -38,7 +38,7 @@ if [[ -n "${NAUTILUS_SCRIPT_WINDOW_GEOMETRY-}" ]];then #from nautilus
 		IFS=$'\n' read -d '' -r -a astrFiles < <(echo "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")&&:
 	else
 		#xterm -e "$0 --execOnXterm $@;echoc -w -t 61"
-		secXtermDetached.sh --ontop -w 60 --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize $0 --execOnXterm "$@"
+		secXtermDetached.sh --ontop -w 60 --title "`SECFUNCfixId --justfix -- "${SECstrScriptSelfName}"`" --skiporganize $0 --execOnXterm "$@"
 		exit 0
 	fi
 else

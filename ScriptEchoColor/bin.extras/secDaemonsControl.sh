@@ -109,7 +109,7 @@ function FUNCregisterOneDaemon() {
 	#SECFUNCexec --echo grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |SECFUNCexec --echo sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$lnPidDaemon$'\1'"
 	#strPPidId=`grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)[._]sh:$lnPidDaemon$'\1'"`
 	strPPidId=`grep "$lnPidDaemon" $SEC_TmpFolder/.SEC.UniqueRun.*sh |sed -r "s'^.*/[.]SEC[.]UniqueRun[.]([[:alnum:]_-]*)([._]sh|):$lnPidDaemon$'\1'"` # may or may not: end with .sh or _sh
-	strPPidId=`SECFUNCfixId "$strPPidId"`
+	strPPidId=`SECFUNCfixId -- "$strPPidId"`
 	if [[ -z "$strPPidId" ]];then
 		strPPidId="pid$lnPidDaemon"
 	fi

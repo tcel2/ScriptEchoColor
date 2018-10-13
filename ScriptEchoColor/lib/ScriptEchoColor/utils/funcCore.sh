@@ -1766,27 +1766,45 @@ function SECFUNCisShellInteractive() { #--force shell to be interactive or exit
 
 function SECFUNCvalidateId() { #help Id can only be alphanumeric or underscore ex.: for functions and variables name.
 	local lstrCaller=""
+	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]];do
-		if [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
+		if [[ "$1" == "--help" ]];then #SECFUNCvalidateId_help
+			SECFUNCshowHelp --nosort $FUNCNAME
+      SECFUNCshowHelp --colorize "Use option -- to grant the id will not conflict with normal options."
+			return
+		elif [[ "$1" == "--caller" ]];then #SECFUNCvalidateId_help is the name of the function calling this one
 			shift
 			lstrCaller="${1}(): "
+		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift&&: #will consume all remaining params
+			done
 		fi
-		shift
+		shift&&:
 	done
 	
-	if [[ -n `echo "$1" |tr -d '[:alnum:]_'` ]];then
-		SECFUNCechoErrA "${lstrCaller}invalid id '$1', only allowed alphanumeric and underscores."
+  local lstrIdToFix="${1-}"
+  if [[ -z "$lstrIdToFix" ]];then
+    lstrIdToFix="${lastrRemainingParams[@]}"
+  fi
+  
+	if [[ -n `echo "$lstrIdToFix" |tr -d '[:alnum:]_'` ]];then
+		SECFUNCechoErrA "${lstrCaller}invalid id '$lstrIdToFix', only allowed alphanumeric and underscores."
 		return 1
 	fi
 	return 0
 }
-function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheId"`"
+function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId -- "TheId"`"
 	local lstrCaller=""
 	local lbJustFix=false
   local lnIdMaxLength=0
+	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCfixId_help
 			SECFUNCshowHelp --nosort $FUNCNAME
+      SECFUNCshowHelp --colorize "Use option -- to grant the id will not conflict with normal options."
 			return
 		elif [[ "$1" == "--caller" ]];then #SECFUNCfixId_help is the name of the function calling this one
 			shift
@@ -1796,27 +1814,43 @@ function SECFUNCfixId() { #help fix the id, use like: strId="`SECFUNCfixId "TheI
 		elif [[ "$1" == "--trunc" || "$1" == "-t" ]];then #SECFUNCfixId_help <lnIdMaxLength> limit id length
       shift
 			lnIdMaxLength="$1"
+		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift&&: #will consume all remaining params
+			done
 		else
 			SECFUNCechoErrA "invalid option $1"
 			return 1
 		fi
-		shift
+		shift&&:
 	done
 	
+  local lstrIdToFix="${1-}"
+  if [[ -z "$lstrIdToFix" ]];then
+    lstrIdToFix="${lastrRemainingParams[@]}"
+  fi
+  
 	if ! $lbJustFix;then
 		# just to inform invalid id to user be able to set it properly if wanted
-		SECFUNCvalidateId --caller "$lstrCaller" "$1"
+		SECFUNCvalidateId --caller "$lstrCaller" -- "$lstrIdToFix"
 	fi
 	
-  local lstrIdToFix="$1"
-  
   if((lnIdMaxLength>0));then
     lstrIdToFix="${lstrIdToFix:0:lnIdMaxLength}"
+  fi
+  
+  if [[ -z "$lstrIdToFix" ]];then
+    SECFUNCechoErrA "empty lstrIdToFix"
+    return 1
   fi
   
 	# replaces all non-alphanumeric and non underscore with underscore
 	#echo "$1" |tr '.-' '__' | sed 's/[^a-zA-Z0-9_]/_/g'
 	echo "$lstrIdToFix" |sed 's/[^a-zA-Z0-9_]/_/g'
+  
+  return 0
 }
 
 function SECFUNCppidList() { #help [separator] between pids
@@ -1919,7 +1953,7 @@ function SECFUNCppidList() { #help [separator] between pids
         SECFUNCechoErr "file does not exist lstrCommFile='$lstrCommFile'. ${lstrPidDied} Skipping it..."
         continue
       fi
-			strComm="`SECFUNCfixId -f "$strComm"`"
+			strComm="`SECFUNCfixId -f -- "$strComm"`"
 		fi
 	  if [[ -n "$lstrPidList" ]];then # after 1st
 			if $lbReverse;then

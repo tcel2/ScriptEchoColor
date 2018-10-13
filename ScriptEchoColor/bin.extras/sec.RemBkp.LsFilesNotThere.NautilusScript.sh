@@ -42,4 +42,4 @@ function FUNCdoIt() {
 	echoc -w -t 60
 };export -f FUNCdoIt
 
-SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.
+SECFUNCexecA -ce secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix -- "${SECstrScriptSelfName}"`" --skiporganize FUNCdoIt "$@" # it is OnTop because is a temporary xterm.

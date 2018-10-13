@@ -24,6 +24,8 @@
 
 source <(secinit)
 
+echoc -c
+
 # initializations and functions
 function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	SECFUNCdbgFuncInA;
@@ -126,17 +128,19 @@ astrCmdToRun=("$@")
   #~ astrCmdToRun=("${astrRemainingParams[@]}") #astrCmdToRun=("$@") TODO could fill with empty?
 #~ fi
 
-strFifoFl="$SEC_TmpFolder/.$(SECFUNCfixId --justfix "$(basename "$0")").FIFO"
+strFifoFl="$SEC_TmpFolder/.$(SECFUNCfixId --justfix -- "$(basename "$0")").FIFO" &&: #TODO why this returns 1 but works???
+declare -p strFifoFl
 if [[ -a "$strFifoFl" ]];then
   if [[ ! -p "$strFifoFl" ]];then
-    ls -l "$strFifoFl" >&2
+    #~ ls -l "$strFifoFl" >&2
     SECFUNCechoErrA "strFifoFl='$strFifoFl' not a pipe"
     exit 1
   fi
 else
   SECFUNCexecA -ce mkfifo "$strFifoFl"
-  ls -l "$strFifoFl" >&2
+  #~ ls -l "$strFifoFl" >&2
 fi
+ls -l "$strFifoFl" >&2
 
 #~ function FUNCdaemon() {
   #~ ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce $0 --daemon & disown )
@@ -144,12 +148,12 @@ fi
 
 if $bDaemon;then
   if SECFUNCuniqueLock --isdaemonrunning;then
-    SECFUNCechoWarnA "daemon already running"
+    SECFUNCechoWarnA "daemon already running pid = `SECFUNCuniqueLock --getdaemonpid`"
     exit 0
   else
     : ${SECNoHupDaemonDetach:=false}
     if ! $SECNoHupDaemonDetach;then
-      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce $0 --daemon & disown )
+      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
       exit 0
     fi
   fi
@@ -158,7 +162,7 @@ if $bDaemon;then
   
   echoc --info "starting $0 daemon pid $$"
   
-  strTrap=""
+  strTrap="" #TODO why ctrl+c wont fall on the SIGINT trap????
   trap 'strTrap="SIGINT"'  SIGINT
   trap 'strTrap="SIGHUP"'  SIGHUP
   trap 'strTrap="SIGQUIT"' SIGQUIT
@@ -191,25 +195,36 @@ if $bDaemon;then
     fi
     
     #IFS=$'\n' read -d '' -r -a astrCmdRequest <"$strFifoFl" &&:
-    strSrcExec="`cat <"$strFifoFl"`"
-    if [[ -n "$strSrcExec" ]];then
-    #if((`SECFUNCarraySize astrCmdRequest`>0));then
-      #TODO to control this daemon, special comments can become commands here ex.: "#SECNoHup:speakCmds"
-      #astrCmdRqList+=("$strCmdRequest")
-      #strLog="EXEC@`SECFUNCdtFmt --logmessages`: `declare -p astrCmdRequest`"
-      strLog="EXEC@`SECFUNCdtFmt --logmessages`: `declare -p strSrcExec`"
-      echo "$strLog"
-      echo "$strLog" >>"$SECstrRunLogFile"
-#      echo "$strLog" |tee -a "$SECstrRunLogFile"
-      #( "${astrCmdRequest[@]}" & ) # will reparent to init or the like
-      ( eval "$strSrcExec"; "${astrCmdToRun[@]}"& )&&: # will reparent to init or the like
+    strSrcExecAll="`cat <"$strFifoFl"`"
+    if [[ -n "$strSrcExecAll" ]];then
+      echo "$strSrcExecAll" |while read strSrcExec;do
+      #if((`SECFUNCarraySize astrCmdRequest`>0));then
+        #TODO to control this daemon, special comments can become commands here ex.: "#SECNoHup:speakCmds"
+        #astrCmdRqList+=("$strCmdRequest")
+        #strLog="EXEC@`SECFUNCdtFmt --logmessages`: `declare -p astrCmdRequest`"
+        strLog="EXEC@`SECFUNCdtFmt --logmessages`: `declare -p strSrcExec`"
+        echo "$strLog"
+        echo "$strLog" >>"$SECstrRunLogFile"
+  #      echo "$strLog" |tee -a "$SECstrRunLogFile"
+        #( "${astrCmdRequest[@]}" & ) # will reparent to init or the like
+        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"& )&&: # will reparent to init or the like
+      done
     fi
   done
+  SECFUNCechoErrA "should not have reached here!"
+  exit 1
 fi
 
 if ! SECFUNCuniqueLock --isdaemonrunning;then
   #(SECFUNCexecA -ce $0 --daemon & disown)
   SECFUNCexecA -ce $0 --daemon
+  while true;do
+    if((`SECFUNCuniqueLock --getdaemonpid&&:`!=0));then
+      break;
+    else
+      echoc -w -t 3 "waiting daemon start"
+    fi
+  done
 fi
 
 if((`SECFUNCarraySize astrCmdToRun`==0));then
@@ -218,12 +233,13 @@ if((`SECFUNCarraySize astrCmdToRun`==0));then
   exit 1
 fi
 
-#TODO why this returns 1 (error) despite works? SECFUNCuniqueLock --getdaemonpid
 nDPid="`SECFUNCuniqueLock --getdaemonpid`"&&:
-echoc --info "daemon pid = $nDPid"
+declare -p nDPid&&:
+echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --getuniquefile`'"
 
-#echo "${astrCmdToRun[@]}" >"$strFifoFl"
-declare -p astrCmdToRun >"$strFifoFl"
-echo "SENT: `declare -p astrCmdToRun`"
+#echo "${astrCmdToRun[@]}" >>"$strFifoFl"
+echo "SENDIND: `declare -p astrCmdToRun`"
+declare -p astrCmdToRun >>"$strFifoFl"
+echo SENT
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting

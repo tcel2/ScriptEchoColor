@@ -168,7 +168,7 @@ function FUNCmakeRelativeSymlink() {
 if ! $bSkipNautilus;then
 	#cd "/tmp" #NAUTILUS_SCRIPT_SELECTED_FILE_PATHS has absolute path to selected file
 	#xterm -e "bash -i -c \"FUNCloop\"" # -i required to force it work
-	secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
+	secXtermDetached.sh --ontop --title "`SECFUNCfixId --justfix -- "${SECstrScriptSelfName}"`" --skiporganize FUNCloop "$@"
 	#for strFile in "${astrFiles[@]}";do 
 	#	if ! xterm -e "bash -i -c \"FUNCmakeRelativeSymlink '$strFile'\"";then # -i required to force it work on ubuntu 12.10
 	#		break;
