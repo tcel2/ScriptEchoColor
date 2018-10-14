@@ -128,7 +128,8 @@ astrCmdToRun=("$@")
   #~ astrCmdToRun=("${astrRemainingParams[@]}") #astrCmdToRun=("$@") TODO could fill with empty?
 #~ fi
 
-strFifoFl="$SEC_TmpFolder/.$(SECFUNCfixId --justfix -- "$(basename "$0")").FIFO" &&: #TODO why this returns 1 but works???
+strScId="$(SECFUNCfixId --justfix -- "$(basename "$0")")"
+strFifoFl="$SEC_TmpFolder/.${strScId}.FIFO" &&: #TODO why this returns 1 but works???
 declare -p strFifoFl
 if [[ -a "$strFifoFl" ]];then
   if [[ ! -p "$strFifoFl" ]];then
@@ -155,7 +156,7 @@ if $bDaemon;then
     : ${SECNoHupDaemonDetach:=false}
     declare -p SECNoHupDaemonDetach
     if ! $SECNoHupDaemonDetach;then
-      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
+      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -title "Daemon:${strScId}" -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
       exit 0
     fi
   fi
