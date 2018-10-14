@@ -147,18 +147,20 @@ ls -l "$strFifoFl" >&2
 #~ }
 
 if $bDaemon;then
-  if SECFUNCuniqueLock --isdaemonrunning;then
+  declare -p bDaemon
+  if SECFUNCexecA -ce SECFUNCuniqueLock --isdaemonrunning;then
     SECFUNCechoWarnA "daemon already running pid = `SECFUNCuniqueLock --getdaemonpid`"
     exit 0
   else
     : ${SECNoHupDaemonDetach:=false}
+    declare -p SECNoHupDaemonDetach
     if ! $SECNoHupDaemonDetach;then
       ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
       exit 0
     fi
   fi
   
-  SECFUNCuniqueLock --waitbecomedaemon
+  SECFUNCexecA -ce SECFUNCuniqueLock --waitbecomedaemon
   
   echoc --info "starting $0 daemon pid $$"
   
