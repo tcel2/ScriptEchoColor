@@ -1929,7 +1929,7 @@ elif $bProblem ||
 	
 		if   $bAddYesNoQuestion || $bExtendedQuestionMode || $bStringQuestion; then
 			if $bStringQuestion && ((fWaitTime > 0)); then
-				strString="$strString" # color format will be of option -q
+				strString="$strString" # color format will be of option -q #TODO why this useless line?
 			else
 				strString="$strColorAddYesNoQuestionProblem$strString"
 			fi
@@ -2441,7 +2441,7 @@ function FUNCColorCMD(){
 				continue
 			fi
 				
-			# restore settings
+			# restore settings, but may be overriden by new settings after it
 			if [[ "$char" == 'A' || "$char" == 'S' ]]; then #-n `expr "$strParam1" : ".*\([AS]\)"` ]]; then
 				if $bSave; then #restore
 					strForeground="$strSaveFg"
@@ -2492,7 +2492,7 @@ function FUNCColorCMD(){
 				"--")bRecognized=true;bIgnore=true;; # bIgnore is at main loop: Do all @... color translations
 				"++")bRecognized=true;bIgnore=false;; 
 				"-"?|"+"?)
-					_hw;echo "unrecognized '$charPrev$char'" >&2
+					_hw;echo "unrecognized '$strTwoChar'" >&2
 					nSize=$(( ${#str} -2 ))
 					str="${str:0:nSize}"
 					continue;; #; strUnrecognizedChar="$strUnrecognizedChar-$charCC";;
@@ -2535,6 +2535,7 @@ function FUNCColorCMD(){
 				continue
 			fi
 
+      local lbSkip=false
 			case "$char" in
 				# foreground
 				r) bRecognized=true;bFgAutoSet=false;strForeground="red"    ;;
@@ -2562,20 +2563,22 @@ function FUNCColorCMD(){
 				e) bRecognized=true;strTypeE="strike" ;;
 				l) bRecognized=true;strTypeFgL="light";;
 				L) bRecognized=true;strTypeBgL="light";;
+        # skippers just to not generate the warning
+        s|S|a|A)lbSkip=true;;
 			esac
 			
       if $bRecognized; then
 				nSize=$(( ${#str} -1 ));str="${str:0:nSize}";((nRecognizedCharCount++))&&:
 				continue
-      else
-        strUnrecognizedWarn+="$strTwoChar"
-			fi
+      fi
+      
+      if $lbSkip;then continue;fi
+      
+      #(echo "all params: $@";declare -p char str strTwoChar strParam1) >&2 #DEBUGGING 
+      strUnrecognizedWarn+="$char"
 		done
 		nAllChars=$(( ${#strParam1} ))
 		strParam1="$str"
-    if [[ -n "$strUnrecognizedWarn" ]];then
-      _hw;echo "UNRECOGNIZED(s) '$strUnrecognizedWarn'" >&2
-    fi
 
 		# position column.line SET
 		if $bRestorePos; then
@@ -2689,37 +2692,38 @@ function FUNCColorCMD(){
 		fi
 		
 		# save settings
-		for((n=0;n<${#strParam1};n++));do
-			char="${strParam1:n:1}"
-			if [[ "$char" == 'a' || "$char" == 's' ]]; then #-n `expr "$strParam1" : ".*\([as]\)"` ]]; then
-				bSave=true
-			
-				strSaveFg="$strForeground"
-				strSaveBg="$strBackground"
-				strSaveTpO="$strTypeO"
-				strSaveTpU="$strTypeU"
-				strSaveTpD="$strTypeD"
-				strSaveTpN="$strTypeN"
-				strSaveTpE="$strTypeE"
-				strSaveTpFgL="$strTypeFgL"
-				strSaveTpBgL="$strTypeBgL"
-				bSaveFgAutoSet=$bFgAutoSet
-				if [[ "$char" == 'a' ]]; then # -n `expr "$strParam1" : ".*\(a\)"` ]]; then
-					strSaveGfxTm=$strGfxTputmacs
-					bSaveGfxTT=$bGfxTransTab
-					bSaveGfxE=$bGfxE294
-					nSaveLine=$nLine
-					nSaveColumn=$nColumn
-				fi
-				((nRecognizedCharCount++))&&:
-			fi
-		done
+    if [[ "$strParam1" =~ .*[s|a].* ]];then
+      bSave=true
+      
+      strSaveFg="$strForeground"
+      strSaveBg="$strBackground"
+      strSaveTpO="$strTypeO"
+      strSaveTpU="$strTypeU"
+      strSaveTpD="$strTypeD"
+      strSaveTpN="$strTypeN"
+      strSaveTpE="$strTypeE"
+      strSaveTpFgL="$strTypeFgL"
+      strSaveTpBgL="$strTypeBgL"
+      bSaveFgAutoSet=$bFgAutoSet
+      if [[ "$strParam1" =~ .*a.* ]];then
+        strSaveGfxTm=$strGfxTputmacs
+        bSaveGfxTT=$bGfxTransTab
+        bSaveGfxE=$bGfxE294
+        nSaveLine=$nLine
+        nSaveColumn=$nColumn
+      fi
+      ((nRecognizedCharCount++))&&:
+    fi
 
 		strFUNCColorCMD=${strPosition}${strFUNCColorCMD}${strFgBg}${strTypes}${strGfxTputmacs}
 	fi
 	
 	(( nUnrecognizedCharCount += nAllChars -nRecognizedCharCount ))&&:
 	
+  if [[ -n "$strUnrecognizedWarn" ]];then
+    _hw;echo "UNRECOGNIZED(s) '$strUnrecognizedWarn'" >&2
+  fi
+  
 	return 0 # means all went ok
 }
 
