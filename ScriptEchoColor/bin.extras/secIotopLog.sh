@@ -103,11 +103,13 @@ fi
 #nColumns=`stty size 2>/dev/null |cut -d" " -f2`
 read nRows nColumns < <(stty size)
 
+#TIME    TID  PRIO  USER     DISK READ  DISK WRITE  SWAPIN      IO    COMMAND
 tail -n 10000 $HOME/log/iotop.log \
 	|egrep -v "Total|Actual" \
 	|sed -r "s@(.{$nColumns}).*@\1@" \
 	|awk "\$5 >= $CFGnRMinKB || \$7 >= $CFGnWMinKB || \$9 >= $CFGnRMinPerc || \$11 >= $CFGnWMinPerc"
 #	|awk "\$5 >= $nRMinKB && \$7 >= $nWMinKB && \$9 >= $nRMinPerc && \$11 >= $nWMinPerc"
+egrep "TIME.*DISK READ.*DISK WRITE.*IO.*COMMAND" $HOME/log/iotop.log #to help knowing what columns are at the end!
 
 #TODO source <(secinit) #TODO --fast at beggining should be enough? or may be some simple function to init what is required there?
 #TODO SECFUNCcfgAutoWriteAllVars #this will also show all config vars

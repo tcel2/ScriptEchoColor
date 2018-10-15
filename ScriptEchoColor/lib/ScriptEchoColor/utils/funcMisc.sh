@@ -591,7 +591,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 	fi
 	
   # IMPORTANT!!! the lock will be validated and if necessary released here
-	local lnLockPid=`SECFUNCfileLock --islocked "$l_runUniqueFile"`
+	local lnLockPid=`SECFUNCfileLock --islocked "$l_runUniqueFile"&&:`
   
 	if $lbOnlyCheckIfDaemonIsRunning;then
 		if [[ -f "$l_runUniqueFile" ]] && ((lnLockPid>0));then
@@ -629,6 +629,7 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			fi
 		fi
 		
+    SECFUNCechoErrA "daemon is not running l_runUniqueFile='$l_runUniqueFile'"
 		SECFUNCdbgFuncOutA;return 1
 	fi
 	
@@ -760,10 +761,10 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 			fi
 			SECFUNCdbgFuncOutA;return 0
 		else
-			# this unique lock is in use, output the pid and return failure
 			if ! ${lbQuiet:?};then
 				echo "$SECnULDaemonPid"
 			fi
+      SECFUNCechoErrA "this unique lock is in use l_runUniqueFile='$l_runUniqueFile'"
 			SECFUNCdbgFuncOutA;return 1
 		fi
 	else

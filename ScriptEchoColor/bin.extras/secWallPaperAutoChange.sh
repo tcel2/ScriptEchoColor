@@ -138,6 +138,7 @@ if $bDaemon;then
   bFlipKeep=false;
   bFlopKeep=false;
   nSetIndex=-1
+  nSelect=0
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
@@ -147,9 +148,17 @@ if $bDaemon;then
       else
         nSelect=$((RANDOM%nTotFiles));
       fi
-      strFile="`pwd`/${astrFileList[$nSelect]}";
+      declare -p astrFileList nSelect nTotFiles |tr '[' '\n'
       
-      declare -p astrFileList nSelect nTotFiles strFile |tr '[' '\n'
+      strFileBase="${astrFileList[$nSelect]-}"
+      strFile="`pwd`/$strFileBase";
+      declare -p strFile
+      if [[ -z "$strFile" ]] || [[ ! -f "$strFile" ]];then
+        declare -p nSelect
+        echo "list size = ${#astrFileList[@]}" >&2 &&:
+        echoc -w -t $nSleep -p "failed selecting file"
+        continue
+      fi
       
       #TODO auto download wallpapers one new per loop
       
