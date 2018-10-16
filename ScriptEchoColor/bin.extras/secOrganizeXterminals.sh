@@ -248,6 +248,8 @@ function FUNCorganize() {
 	#for windowId in ${aWindowList[@]}; do 
 	countSkips=0
 	for((i=0;i<${#aWindowList[@]};i++));do
+    SECFUNCdrawLine
+    
 		windowId=${aWindowList[i]}
 		bDoAddY=true
 	
@@ -277,9 +279,9 @@ function FUNCorganize() {
 				bDoAddY=false
 		fi
 	
-		echo
-	
 		if ! xdotool getwindowname $windowId;then	continue;fi
+    echo
+    
 		if ! xdotool getwindowgeometry $windowId |grep "Geometry:";then continue;fi
 	
 		if ! xwininfo -all -id $windowId |grep "Maximized" -q; then
@@ -289,7 +291,7 @@ function FUNCorganize() {
 				windowHeightCurrent=\2;"'`;then continue;fi #skip on fail
 			#@@@TODO after size is set, the collected size always differ from the asked one...
 			if((windowWidthCurrent!=windowWidth)) || ((windowHeightCurrent!=windowHeight));then
-				if ! SECFUNCexecA --echo xdotool windowsize $windowId $windowWidth $windowHeight;then continue;fi #skip if fail
+				if ! SECFUNCexecA -e xdotool windowsize $windowId $windowWidth $windowHeight;then continue;fi #skip if fail
 				xdotool getwindowgeometry $windowId |grep "Geometry:"&&:
 			fi
 	
@@ -300,10 +302,15 @@ function FUNCorganize() {
 			eval `wmctrl -d |grep "[*] DG" |sed -r 's".*VP: ([[:digit:]]*),([[:digit:]]*).*"\
 				viewportX=\1;\
 				viewportY=\2;"'`
-			SECFUNCexecA --echo xdotool windowmap $windowId &&:	#why some windows get unmapped?
-			SECFUNCexecA --echo xdotool windowmove --sync $windowId \
+			SECFUNCexecA -e xdotool windowmap $windowId &&:	#why some windows get unmapped?
+      
+			astrWndMvCmd=(xdotool windowmove --sync $windowId \
 				$(( (basePosX-viewportX)+x )) \
-				$(( (basePosY-viewportY)+y )) &&: 2>/dev/null; # this can return error, but may not fail on next run...
+				$(( (basePosY-viewportY)+y ))
+      )
+#      declare -p astrWndMvCmd
+#      (nCount=0;while true;do if nXdoTPid="`pgrep -fx "${astrWndMvCmd[*]}"`";then ((nCount++))&&:;fi;if((nCount==5));then kill $nXdoTPid;break;fi;sleep 1;done)& #TODO SECFUNCexecA --timeout n
+      SECFUNCexecA --timeout 3 -e "${astrWndMvCmd[@]}" &&: 2>/dev/null; # this can return error, but may not fail on next run...
 		fi
 		
 		((x+=addX))&&: 

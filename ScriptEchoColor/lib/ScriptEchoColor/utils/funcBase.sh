@@ -662,6 +662,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbCleanEnv=false
 	local lbRestoreDefOutputs=false;
   local bVerboseEchoRequested=false;
+  local lnTimeout=0
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -729,6 +730,9 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lstrReadStatus="${1-}"
 		elif [[ "$1" == "--detach" ]];then #SECFUNCexec_help like --child but creates a detached child process that will continue running without this parent process, implies --log (only really works if outputs are redirected) unless another log type is set; overrides --child
 			lbDetach=true;
+		elif [[ "$1" == "--timeout" ]];then #SECFUNCexec_help <lnTimeout> in seconds int
+      shift
+			lnTimeout="${1}";
 		elif [[ "$1" == "--detachedlist" ]];then #SECFUNCexec_help show list of detached pids at log
 			lbDetachedList=true;
 #		elif [[ "$1" == "--childclean" ]];then #SECFUNCexec_help <pid,pid...> clean temp child files 
@@ -881,7 +885,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	
 	local lastrParamsToExec=("$@")
 	if $lbEnvVar;then
-		lastrParamsToExec=("declare" "-g" "${lastrParamsToExec[@]}")
+		lastrParamsToExec=("declare" "-g" "${lastrParamsToExec[@]}") #TODO explain this in detail
 	fi
 	
   local lstrExec="`SECFUNCparamsToEval "${lastrParamsToExec[@]}"`"
@@ -942,6 +946,19 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   	lbDoLog=false
   fi
   
+  function SECFUNCexec_tryKill() { #help <lnPid>
+    local lnPid=$1
+    if [[ -d "/proc/$lnPid" ]];then kill $lnPid;fi;sleep 1; #TODO what signal is sent?
+    if [[ -d "/proc/$lnPid" ]];then kill -SIGTERM $lnPid;fi;sleep 1;
+    if [[ -d "/proc/$lnPid" ]];then kill -SIGKILL $lnPid;fi;sleep 1;
+    if [[ -d "/proc/$lnPid" ]];then kill -SIGABRT $lnPid;fi;sleep 1; #TODO is safe? can cause trouble?
+    if [[ -d "/proc/$lnPid" ]];then 
+      SECFUNCechoErrA "unable to kill lnPid='$lnPid'"
+      return 1;
+    fi
+    return 0
+  }
+  
 	export lstrFileRetVal=$(mktemp)
 	function SECFUNCexec_runAtom(){ #help <BASHPID> (useless?)
 		#trap >&2
@@ -957,6 +974,40 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		fi
 		
 		function SECFUNCexec_runQuark(){
+      local lnKillerPid=0
+      if((lnTimeout>0));then
+        (
+          bExitTmOut=false;trap 'bExitTmOut=true' SIGUSR1
+          nCountTmOut=0;
+          nCountTmOutMax=0;
+          while true;do
+            if $bExitTmOut;then exit 0;fi
+          
+            if nKillPidTmOut="`pgrep -fx "${lastrParamsToExec[*]}"`";then 
+              ((nCountTmOut++))&&:;
+            fi;
+            if [[ -n "$nKillPidTmOut" ]];then
+              if((nCountTmOut==lnTimeout));then
+                SECFUNCexec_tryKill $nKillPidTmOut
+                break;
+              fi;
+            fi
+            
+            ((nCountTmOutMax++))&&:
+            if(( nCountTmOutMax == (lnTimeout+3) ));then
+              SECFUNCechoWarnA "nKillPidTmOut='$nKillPidTmOut' lastrParamsToExec='${lastrParamsToExec[*]}', ignoring timeout"
+              break;
+            fi
+            
+            if [[ -z "$nKillPidTmOut" ]];then
+              sleep 0.25;
+            else
+              sleep 1;
+            fi
+          done
+        )&lnKillerPid=$!
+      fi
+      
 			if $lbCleanEnv;then
 				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")
 			elif $lbRestoreDefOutputs;then
@@ -964,6 +1015,12 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			else
 				"${lastrParamsToExec[@]}"
 			fi
+      
+      if((lnKillerPid>0));then
+        if [[ -d "/proc/$lnKillerPid" ]];then
+          kill -SIGUSR1 $lnKillerPid # >/dev/null 2>&1
+        fi
+      fi
 		}
 		
 		if $lbDoLog;then
@@ -995,13 +1052,11 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			echo "pid${SECcharTab}$lnPidChild" >>"$lstrFileRetVal"
 			
 #			if ! $lbDetach;then	trap "kill -SIGABRT $lnPidChild" exit SIGHUP SIGINT SIGQUIT SIGILL SIGABRT SIGFPE SIGKILL SIGSEGV SIGPIPE SIGTERM; fi
-			function SECFUNCexec_atomKill(){ #help trapping exit signals didnt work...
+			function SECFUNCexec_atomKillChildPid(){ #help trapping exit signals didnt work...
 				# to test this: FUNCtst(){ trap 'echo oi' KILL;trap 'echo oi' TERM;sleep 1000; };SECFUNCexecA -ce --child FUNCtst;echo $SEClstrFuncExecLastChildRef
 				while [[ -d "/proc/$1" ]];do sleep 1;done;
-				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGTERM $lnPidChild;fi;sleep 1;
-				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGKILL $lnPidChild;fi;sleep 1;
-				if [[ -d "/proc/$lnPidChild" ]];then kill -SIGABRT $lnPidChild;fi;sleep 1;
-			};SECFUNCexec_atomKill $lnPPid >/dev/null 2>&1 & #echo "lnPPid='$lnPPid'" >&2
+        SECFUNCexec_tryKill $lnPidChild
+			};SECFUNCexec_atomKillChildPid $lnPPid >/dev/null 2>&1 & #echo "lnPPid='$lnPPid'" >&2
 			
 			wait $lnPidChild&&:;lnRet=$?;echo "exit${SECcharTab}${lnRet}" >>"$lstrFileRetVal";
 			echo "exitSignalInfo${SECcharTab}`SECFUNCerrCodeExplained ${lnRet}`" >>"$lstrFileRetVal";
