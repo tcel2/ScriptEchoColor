@@ -66,7 +66,8 @@ fi
 #"${astrCmd[@]}"
 declare -p astrCmd
 echo "SECTERMrun: ${astrCmd[@]}"
- 
+
+SECFUNCarraysExport #important for exported arrays before calling/reaching this script
 "${astrCmd[@]}";nRet=$?
  
 if((nRet!=0));then

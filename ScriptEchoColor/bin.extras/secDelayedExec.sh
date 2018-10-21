@@ -568,6 +568,7 @@ if $bCheckIfAlreadyRunning;then
 fi
 
 export astrRunParams=("$@")
+declare -p astrRunParams
 function FUNCrun(){
 #	source <(secinit)
 #	SECFUNCarraysRestore
@@ -615,16 +616,17 @@ function FUNCrun(){
         
 				#"$@";
 				declare -p PATH >&2
-				echo "$FUNCNAME Running Command: ${astrRunParams[@]}"
+				echo "$FUNCNAME Running Command: ${astrRunParams[@]-}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
         #zenity --info --text "$0:$LINENO"
 				#~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
         if $bStayForce;then
-          strInfoSF="${astrRunParams[@]} #strEvalStayForce='$strEvalStayForce'"
+          strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
           if eval "$strEvalStayForce";then
             echo "Already running: $strInfoSF"
           else
+            echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
             "${astrRunParams[@]}"
             while ! eval "$strEvalStayForce";do
               echo "Wating it start: $strInfoSF"
@@ -638,6 +640,7 @@ function FUNCrun(){
             sleep 5
           done
         else
+          echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
           "${astrRunParams[@]}"
         fi
 			)&&:;local lnRetAtom=$?
@@ -652,11 +655,9 @@ function FUNCrun(){
 		
 		SECFUNCarraysExport
 		if $bXterm;then
-			astrTmp=("${astrRunParams[@]}")
-      
-			astrTmp[0]="`basename "${astrTmp[0]}"`"
-      
-			strTitle="${astrTmp[@]}_pid$$"
+			astrTmpTitle=("${astrRunParams[@]}")
+			astrTmpTitle[0]="`basename "${astrTmpTitle[0]}"`"
+			strTitle="${astrTmpTitle[@]}_pid$$"
 			strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
 			strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
       
@@ -793,28 +794,34 @@ function FUNCrun(){
 						#~ --sticky \
             #~ --center \
             #~ --selectable-labels 
-				strYadOutput="`
-					SECFUNCexecA -ce yad \
-            ${astrYadBasicOpts[@]} \
-            --text "$lstrTxt" \
-						--form \
-						--field "[${astrYadFields[0]}] Use Xterm:chk" \
-						--field "[${astrYadFields[1]}] b4 run" \
-						--field "[${astrYadFields[2]}] :chk" \
-						--field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" \
-						--button="retry:0" \
-						--button="retry-DEV:2" \
-						--button="${strDumpRetryBtnTxt}:3" \
-						--button="gtk-close:1" \
-						"${!astrYadFields[0]}" \
-						"${!astrYadFields[1]}" \
-						"${!astrYadFields[2]}" \
-						"${!astrYadFields[3]}" 
-					`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
-	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" \
-	#						--button="retry(EvalCode):4" \
-	#						--button="retry-DEV(EvalCode):3" \
-	#				IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
+        astrYadExecParams=(
+          "${astrYadBasicOpts[@]}"
+          --text "$lstrTxt" 
+          
+          --button="retry:4" 
+          --button="retry-DEV:2" 
+          --button="${strDumpRetryBtnTxt}:3" 
+          --button="gtk-close:1" 
+          
+          --form 
+          --field "[${astrYadFields[0]}] Use Xterm:chk" 
+          --field "[${astrYadFields[1]}] b4 run" 
+          --field "[${astrYadFields[2]}] :chk" 
+          --field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
+          "${!astrYadFields[0]}" 
+          "${!astrYadFields[1]}" 
+          "${!astrYadFields[2]}" 
+          "${!astrYadFields[3]}" 
+        )
+        declare -p astrYadExecParams
+        #ok yad "${astrYadExecParams[@]}";echoc --info "$LINENO:RETURN=$?"
+        #ok strYadOutput="`yad "${astrYadExecParams[@]}"`";echoc --info "$LINENO:RETURN=$?"
+        #ok strYadOutput="`yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
+        #PROBLEM(fixed was runQuark at secfuncExec) strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
+        #PROBLEM(fixed was runQuark at secfuncExec) strYadOutput="`SECFUNCexec -ce yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
+        strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
+	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" 
+	#			IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
@@ -825,12 +832,17 @@ function FUNCrun(){
 					#bCleanSECenv="`echo ${astrYadReturnValues[3]} |tr "[:upper:]" "[:lower:]"`"
 	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
+        echoc --info "nRet='$nRet'"
 				case $nRet in 
-					0)lbDevMode=false;; #normal retry
 					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
+					4)lbDevMode=false;; #normal retry
 					252)break;; #do not retry, end. Closed using the "window close" title button.
+          *)
+            SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
+            _SECFUNCcriticalForceExit
+            ;;
 	#					3)lbDevMode=true;lbEvalCode=true;; #retry in development mode (path)
 	#					4)lbDevMode=false;lbEvalCode=true;; #normal retry
 				esac

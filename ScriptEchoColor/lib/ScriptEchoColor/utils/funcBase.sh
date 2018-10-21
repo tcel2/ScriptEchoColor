@@ -1008,12 +1008,13 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
         )&lnKillerPid=$!
       fi
       
+      local lnRVal=0
 			if $lbCleanEnv;then
-				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")
+				(SECFUNCcleanEnvironment;"${lastrParamsToExec[@]}")&&:;lnRVal=$?
 			elif $lbRestoreDefOutputs;then
-				(SECFUNCrestoreDefaultOutputs;"${lastrParamsToExec[@]}")
+				(SECFUNCrestoreDefaultOutputs;"${lastrParamsToExec[@]}")&&:;lnRVal=$?
 			else
-				"${lastrParamsToExec[@]}"
+				"${lastrParamsToExec[@]}"&&:;lnRVal=$?
 			fi
       
       if((lnKillerPid>0));then
@@ -1021,6 +1022,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
           kill -SIGUSR1 $lnKillerPid # >/dev/null 2>&1
         fi
       fi
+      
+      return $lnRVal
 		}
 		
 		if $lbDoLog;then
@@ -1098,43 +1101,6 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		rm "$lstrFileRetVal"
 	fi
 	
-#  if $lbDoLog || $lbDetach || $lbChild;then
-#  	if $lbDetach || $lbChild;then
-##			if $lbDetach;then #overrides simple child option
-##				SECFUNCexec_runAtom >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown #if this process ends, the child will continue running
-##			elif $lbChild;then
-##				SECFUNCexec_runAtom &
-##			else
-##				SECFUNCexec_runAtom
-##			fi
-#			
-##			if $lbDetach || $lbChild;then
-##				sleep 0.1 # to help on avoiding the warn msg
-##				while lnPidChild="`egrep "^pid${SECcharTab}" "$lstrFileRetVal" |cut -f2`"; [[ -z "$lnPidChild" ]];do
-##					SECFUNCechoWarnA "waiting for pid of child cmd: ${lastrParamsToExec[@]}"
-##					sleep 0.1 #TODO is it safe not use this delay? such loop may clog cpu?
-##				done
-##				echo -e "$lnPidChild\t$lstrFileRetVal" #so user can capture it
-##			fi
-
-##		  "${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec" 2>&1 & disown
-##		  local lnPidDetached=$!
-##		  echo "$lnPidDetached" #so user can capture it
-#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;lnPidDetached='$lnPidDetached';${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-#		else
-#		  echo "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME;${lastrParamsToExec[@]}" >>"$SEClstrLogFileSECFUNCexec"
-#		  "${lastrParamsToExec[@]}" &&: >>"$SEClstrLogFileSECFUNCexec" 2>&1;lnSECFUNCexecReturnValue=$?
-#		  #"${lastrParamsToExec[@]}" 2>&1 |tee -a "$SEClstrLogFileSECFUNCexec";lnSECFUNCexecReturnValue=$? #tee prevent return value
-#		fi
-#  else
-#  	if $lbOmitOutput;then
-#		  #"${lastrParamsToExec[@]}" 2>/dev/null 1>/dev/null;lnSECFUNCexecReturnValue=$?
-#		  "${lastrParamsToExec[@]}" &&: >/dev/null 2>&1;lnSECFUNCexecReturnValue=$?
-#  	else
-#  		"${lastrParamsToExec[@]}" &&: ; lnSECFUNCexecReturnValue=$?
-#  	fi
-#  fi
-  
 	if $bShowElapsed;then local lnDelayEndTime=`SECFUNCdtFmt`;fi
 	
 	if [[ -f "${SEClstrLogFileSECFUNCexec-}" ]];then

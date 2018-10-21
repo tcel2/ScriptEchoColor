@@ -1218,6 +1218,7 @@ function FUNCtrashSymlinksToRoot() {
 }
 
 function FUNCchkInitPrefix() {
+  #if [[ ! -d "$WINEPREFIX/" ]];then SECFUNCexecA -ce "$cmdWine" wineboot;fi #mkdir -v "$WINEPREFIX/";fi
 	if [[ ! -f "$WINEPREFIX/system.reg" ]];then SECFUNCexecA -ce $cmdWine wineboot;fi #mkdir -v "$WINEPREFIX/";fi
 	FUNCtrashSymlinksToRoot
 }
