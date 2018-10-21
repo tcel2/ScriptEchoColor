@@ -745,13 +745,17 @@ function WINEFUNCcommonOptions {
 		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@" 
 		FUNCwaitGamePid
 	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
-	#TODO this should be the main runner too in some way..
-		shift;strNewWinePrefix="$1" #required
-		shift&&:;strLogFileHint="${1-}"
-		shift&&:;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
-    shift&&:;nWaitSeconds="${1-}";if [[ -z "$nWaitSeconds" ]];then nWaitSeconds=1;fi #will wait at least 1s
-		shift&&:
+		#~ shift;strNewWinePrefix="$1" #required
+		#~ shift&&:;strLogFileHint="${1-}"
+		#~ shift&&:;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
+    #~ shift&&:;nWaitSeconds="${1-}";if [[ -z "$nWaitSeconds" ]];then nWaitSeconds=1;fi #will wait at least 1s
+		#~ shift&&:
 		#shift;nBlindWaitAfterInit="$1"
+    : ${strNewWinePrefix:=};if [[ -z "$strNewWinePrefix" ]];then echoc -p "strNewWinePrefix must be set!";exit 1;fi
+		: ${strLogFileHint:=};
+		: ${nMaxMemKB:=0} #will wait til this amount in KB is reached b4 continuing
+    : ${nWaitSeconds:=1} #will wait at least 1s
+    shift&&:;astrAppParams=("$@")
 		
 	#	export WINEPREFIX="$WINEPREFIX/.WinePrefix.win64.NewInstanceForQuickRestart/"
 		export WINEPREFIX="$strNewWinePrefix"
@@ -777,7 +781,7 @@ function WINEFUNCcommonOptions {
 		nInstCountB4=$nInstanceCount
 		declare -p nInstCountB4&&:
 		#$cmdWine "$strLoader" #
-		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@"
+		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "${astrAppParams[@]-}"
     
 		while true;do
 			# list all pids matching the executable name, the last one is the newest
