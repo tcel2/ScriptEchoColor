@@ -92,6 +92,12 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
+if $bRunAll || $bListOnly || [[ -n "$strFilter" ]];then
+  :
+else
+  exit 0
+fi
+
 nCores="`grep "core id" /proc/cpuinfo |wc -l`"
 #nMax=$((nCores==1?1:nCores-1));
 
@@ -169,7 +175,27 @@ echo -n >>"$strLogFile" #grant it is created
 chmod go-rw "$strLogFile"
 
 ########## run the commands
-if $bRunAll;then
+if [[ -n "$strFilter" ]];then
+  nFilterMatchCount=0
+  for strCmd in "${astrCmdListOrdered[@]}";do
+    if [[ "$strCmd" =~ $strFilter ]];then 
+      echo "MATCH: $strCmd"
+      ((nFilterMatchCount++))&&:
+    fi
+  done
+  
+  if((nFilterMatchCount>1));then
+    echoc -p "filter matched more than once"
+    exit 1
+  fi
+  
+  if((nFilterMatchCount==0));then
+    echoc --info "filter matches nothing..."
+    exit 0
+  fi
+fi
+
+if $bRunAll || [[ -n "$strFilter" ]];then
   echoc --info "running commands sequentially as the system allows it if not encumbered"
   #SECbExecJustEcho=false
   export SECCFGbOverrideRunThisNow=true
