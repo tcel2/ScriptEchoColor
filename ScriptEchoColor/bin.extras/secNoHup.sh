@@ -242,8 +242,8 @@ declare -p nDPid&&:
 echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --getuniquefile`'"
 
 #echo "${astrCmdToRun[@]}" >>"$strFifoFl"
-echo "SENDIND: `declare -p astrCmdToRun`"
+echo "SENDINGCOMMAND: `declare -p astrCmdToRun`"
 declare -p astrCmdToRun >>"$strFifoFl"
-echo SENT
+echo "SENT."
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
