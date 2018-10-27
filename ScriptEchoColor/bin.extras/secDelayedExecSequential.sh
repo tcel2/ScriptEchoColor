@@ -47,6 +47,7 @@ astrAllParams=("${@-}") # this may be useful
 nFreeCpuPercToAllow=25
 strFilter=""
 bListOnly=false
+bRunAll=false
 #SECFUNCfdReport;SECFUNCrestoreDefaultOutputs;SECFUNCfdReport;strLogFile="`secDelayedExec.sh --getgloballogfile`";SECFUNCfdReport;declare -p strLogFile;exit 0
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -60,6 +61,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
+	elif [[ "$1" == "-r" || "$1" == "--runall" ]];then #help use on startup
+    bRunAll=true
 	elif [[ "$1" == "-f" || "$1" == "--filter" ]];then #help <strFilter> do the work only if entry matches regex filter
     shift
 		strFilter="${1-}"
@@ -166,44 +169,46 @@ echo -n >>"$strLogFile" #grant it is created
 chmod go-rw "$strLogFile"
 
 ########## run the commands
-echoc --info "running commands sequentially as the system allows it if not encumbered"
-#SECbExecJustEcho=false
-export SECCFGbOverrideRunThisNow=true
-iCount=0
-SECFUNCdelay totalTime --init
-for strCmd in "${astrCmdListOrdered[@]}";do
-  SECFUNCdrawLine #--left "$strCmd"
-  
-  ((iCount++))&&:
-  
-  #~ declare -p strCmd
-  #SECFUNCexecA -cj $strCmd & echo pid=$!
-  echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
-  if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
-  
-  while ! FUNCchkCanRunNext;do
-    echoc -w -t 1 "wait cpu free up a bit"
-  done # check cpu
-  
-  if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen?
-    strDtTm="_BUG_CANT_GET_DATETIME_"
-  fi
-  
-  strLogFileFull="${strLogFile}.$$.$strDtTm.`SECFUNCfixId --trunc 100 --justfix -- "$strCmd"`"
-  
-  strLogTxt=" Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run"
-  echo "$strLogTxt" >>"$strLogFile"
-  echo "$strLogTxt" >>"$strLogFileFull"
-  
-  bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1  #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
-  
-  ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: |tee -a "$strLogFileFull" # strCmd will (expectedly) not end with '$" -B 2' :)
-  
-  chmod go-rw "$strLogFileFull"
-  
-  echoc -w -t 0.35 #to let the app kick in blindly
-done
-SECFUNCdelay totalTime --getpretty
+if $bRunAll;then
+  echoc --info "running commands sequentially as the system allows it if not encumbered"
+  #SECbExecJustEcho=false
+  export SECCFGbOverrideRunThisNow=true
+  iCount=0
+  SECFUNCdelay totalTime --init
+  for strCmd in "${astrCmdListOrdered[@]}";do
+    SECFUNCdrawLine #--left "$strCmd"
+    
+    ((iCount++))&&:
+    
+    #~ declare -p strCmd
+    #SECFUNCexecA -cj $strCmd & echo pid=$!
+    echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
+    if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
+    
+    while ! FUNCchkCanRunNext;do
+      echoc -w -t 1 "wait cpu free up a bit"
+    done # check cpu
+    
+    if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen?
+      strDtTm="_BUG_CANT_GET_DATETIME_"
+    fi
+    
+    strLogFileFull="${strLogFile}.$$.$strDtTm.`SECFUNCfixId --trunc 100 --justfix -- "$strCmd"`"
+    
+    strLogTxt=" Seq -> $strDtTm;0s;pid=?;$strCmd ; # Sequential run"
+    echo "$strLogTxt" >>"$strLogFile"
+    echo "$strLogTxt" >>"$strLogFileFull"
+    
+    bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1  #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
+    
+    ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: |tee -a "$strLogFileFull" # strCmd will (expectedly) not end with '$" -B 2' :)
+    
+    chmod go-rw "$strLogFileFull"
+    
+    echoc -w -t 0.35 #to let the app kick in blindly
+  done
+  SECFUNCdelay totalTime --getpretty
+fi
 
 #echoc -w -t 60
 #while true;do echo "$$ $SECstrScriptSelfName loop sleep 1h";sleep 3600;done

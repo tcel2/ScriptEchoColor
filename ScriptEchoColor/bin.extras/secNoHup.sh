@@ -198,7 +198,7 @@ if $bDaemon;then
     fi
     
     #IFS=$'\n' read -d '' -r -a astrCmdRequest <"$strFifoFl" &&:
-    strSrcExecAll="`cat <"$strFifoFl"`"
+    strSrcExecAll="`cat <"$strFifoFl"`" # this will WAIT until somthing is written to the PIPE!!!
     if [[ -n "$strSrcExecAll" ]];then
       echo "$strSrcExecAll" |while read strSrcExec;do
       #if((`SECFUNCarraySize astrCmdRequest`>0));then
@@ -210,7 +210,8 @@ if $bDaemon;then
         echo "$strLog" >>"$SECstrRunLogFile"
   #      echo "$strLog" |tee -a "$SECstrRunLogFile"
         #( "${astrCmdRequest[@]}" & ) # will reparent to init or the like
-        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"& )&&: # will reparent to init or the like
+#        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"& )&&: # this trick will reparent to init or the like
+        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"&disown )&disown &&: # this trick will reparent to init or the like and grant disown!
       done
     fi
   done
