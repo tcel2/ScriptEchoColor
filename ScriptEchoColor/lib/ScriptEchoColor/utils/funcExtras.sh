@@ -178,11 +178,13 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 	fi
   
 	if $lbWaitExit;then
-		while xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";do
+		while true;do
+      if ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then break;fi
+      
 			sleep $lnDelay;
       
 			if SECFUNCdelay lnTimeout --checkorinit $lnTimeout;then
-				SECFUNCechoErr "$lstrWarnMsg (TIMEOUT)"
+				SECFUNCechoErr "while waiting window exit: (TIMEOUT)"
 				break;
 			fi
 		done

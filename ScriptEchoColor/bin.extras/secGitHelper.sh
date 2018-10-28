@@ -293,7 +293,7 @@ while true;do
 			#SECFUNCCwindowCmd --stop "$strTitleRegex"
       #while SECFUNCCwindowCmd --wait "$strTitleRegex";do sleep 1;done
       SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
-      SECFUNCexecA -ce SECFUNCCwindowCmd --waitexit "$strTitleRegex" 
+      SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 3600 --waitexit "$strTitleRegex" 
       SECFUNCexecA -ce kill -SIGUSR1 $nChildPidGenCLFGGL&&:
 			;; 
 		d)
