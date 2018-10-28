@@ -287,7 +287,8 @@ while true;do
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
 #			SECFUNCexecA -ce  git gui&&: & wait&&:
       #xterm -e "nohup git gui&disown;sleep 1"
-      (git gui&disown)&disown;sleep 1
+      xterm -e "(nohup git gui&disown)&disown;sleep 3"
+      #(git gui&disown)&disown;sleep 1
 			#SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
       #while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
 			#SECFUNCCwindowCmd --stop "$strTitleRegex"
