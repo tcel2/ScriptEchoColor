@@ -1178,6 +1178,27 @@ function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a fil
 	echo -n "$lnSecondsDelay"
 }
 
+function SECFUNCscriptNameAsId(){
+  SECFUNCfixId --justfix -- "$(basename "$0")"
+}
+
+function SECFUNCcreateFIFO(){ #help create a temporary FIFO PIPE file
+  local lstrScId="$(SECFUNCscriptNameAsId)"
+  local lstrFifoFl="$SEC_TmpFolder/.${lstrScId}.FIFO" &&: #TODO why this returns 1 but works???
+  if [[ -a "$lstrFifoFl" ]];then
+    if [[ ! -p "$lstrFifoFl" ]];then
+      SECFUNCechoErrA "lstrFifoFl='$lstrFifoFl' not a pipe"
+      return 1
+    fi
+    SECFUNCechoWarnA "pipe already created lstrFifoFl='$lstrFifoFl'"
+  else
+    mkfifo "$lstrFifoFl"
+  fi
+  #ls -l "$lstrFifoFl" >&2
+  echo "$lstrFifoFl"
+  return 0
+}
+
 function SECFUNCtoggleBoolean(){ #help toggles a variable "boolean" value (true or false) only if it was already set as "boolean"
 	# var init here
 #	local lstrExample="DefaultValue"

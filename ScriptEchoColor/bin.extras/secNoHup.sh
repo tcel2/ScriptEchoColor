@@ -128,20 +128,20 @@ astrCmdToRun=("$@")
   #~ astrCmdToRun=("${astrRemainingParams[@]}") #astrCmdToRun=("$@") TODO could fill with empty?
 #~ fi
 
-strScId="$(SECFUNCfixId --justfix -- "$(basename "$0")")"
-strFifoFl="$SEC_TmpFolder/.${strScId}.FIFO" &&: #TODO why this returns 1 but works???
-declare -p strFifoFl
-if [[ -a "$strFifoFl" ]];then
-  if [[ ! -p "$strFifoFl" ]];then
-    #~ ls -l "$strFifoFl" >&2
-    SECFUNCechoErrA "strFifoFl='$strFifoFl' not a pipe"
-    exit 1
-  fi
-else
-  SECFUNCexecA -ce mkfifo "$strFifoFl"
-  #~ ls -l "$strFifoFl" >&2
-fi
-ls -l "$strFifoFl" >&2
+strScId="$(SECFUNCscriptNameAsId)"
+strFifoFl="`SECFUNCcreateFIFO`"
+#~ strScId="$(SECFUNCfixId --justfix -- "$(basename "$0")")"
+#~ strFifoFl="$SEC_TmpFolder/.${strScId}.FIFO" &&: #TODO why this returns 1 but works???
+#~ declare -p strFifoFl
+#~ if [[ -a "$strFifoFl" ]];then
+  #~ if [[ ! -p "$strFifoFl" ]];then
+    #~ SECFUNCechoErrA "strFifoFl='$strFifoFl' not a pipe"
+    #~ exit 1
+  #~ fi
+#~ else
+  #~ SECFUNCexecA -ce mkfifo "$strFifoFl"
+#~ fi
+#~ ls -l "$strFifoFl" >&2
 
 #~ function FUNCdaemon() {
   #~ ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce $0 --daemon & disown )
@@ -243,7 +243,7 @@ echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --getuniquefile`'"
 
 #echo "${astrCmdToRun[@]}" >>"$strFifoFl"
 echo "SENDINGCOMMAND: `declare -p astrCmdToRun`"
-declare -p astrCmdToRun >>"$strFifoFl"
+declare -p astrCmdToRun >>"$strFifoFl" # will only return after it is read!
 echo "SENT."
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
