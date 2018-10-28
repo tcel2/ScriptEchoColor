@@ -62,6 +62,7 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bExitAfterCmd=false
 bCleanSECEnv=false
+bIfNotInst=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -76,6 +77,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strExample="${1-}"
 	elif [[ "$1" == "-c" || "$1" == "--cd" ]];then #help cd to SEC dev path
 		bCdDevPath=true
+	elif [[ "$1" == "--ifnotinst" ]];then #help only use development environment if the command is not installed
+		bIfNotInst=true
 	elif [[ "$1" == "--exit" ]];then #help exit after running user command
 		bExitAfterCmd=true
 	elif [[ "$1" == "--clean" ]];then #help clean SEC env vars b4 running
@@ -103,6 +106,31 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
+if [[ -n "${@-}" ]];then
+  astrSECDEVCmds=("$@")
+fi
+
+if $bIfNotInst;then
+  if [[ -z "${astrSECDEVCmds[@]-}" ]];then
+    echoc -p "bIfNotInst requires a command"
+    exit 1
+  fi
+
+  if which "${astrSECDEVCmds[0]}";then
+    echoc --info "Command already installed, just running it."
+    SECFUNCexecA -ce "${astrSECDEVCmds[@]}"
+    exit $?
+  fi
+fi
+
+if [[ -n "${astrSECDEVCmds[@]-}" ]];then
+  if $bAlreadyDev;then
+    echoc --info "Already in dev mode."
+    SECFUNCexecA -ce "${astrSECDEVCmds[@]}"
+    exit $?
+  fi
+fi
+
 strRCFileTmp="`mktemp`"
 ls -l "$strRCFileTmp"
 
@@ -183,8 +211,7 @@ if $bCdDevPath;then
   echo "cd '$strSECDEVPath';" >>"$strRCFileTmp"
 fi
 
-if [[ -n "${@-}" ]];then
-  astrSECDEVCmds=("$@")
+if [[ -n "${astrSECDEVCmds[@]-}" ]];then
   echo >>"$strRCFileTmp"
   echo "`declare -p astrSECDEVCmds`;" >>"$strRCFileTmp"
   echo '"${astrSECDEVCmds[@]}"&&:' >>"$strRCFileTmp"
