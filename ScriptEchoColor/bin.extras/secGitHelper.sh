@@ -128,10 +128,18 @@ function FUNCgitDiffCheckShow() {
 	return 0
 }
 
-function FUNCgenerateChangesLogFileGitGuiLoop() {
+function FUNCCHILDgenerateChangesLogFileGitGuiLoop() {
+  local lbChildLoopExit=false
+  trap 'lbChildLoopExit=true' SIGUSR1
+  echoc --info "$FUNCNAME: Starting child proccess $BASHPID"
   sleep 3; # so git gui have some time to start..
 #	while pgrep -fx "git gui" >/dev/null;do #TopLoop
 	while true;do #TopLoop
+    if $lbChildLoopExit;then
+      echoc --info "$FUNCNAME: Stop requested $BASHPID"
+      break;
+    fi
+  
     local lanPid=(`ps --no-headers -o pid -p $(pgrep -fx "git gui")`);
     local lnPid
     local bFound=false;
@@ -158,7 +166,7 @@ function FUNCgenerateChangesLogFileGitGuiLoop() {
       SECFUNCexecA -ce mv -Tv "${strChangesFile}.NEW" "${strChangesFile}"
 			echoc --info "updated: '`basename "$strChangesFile"`'"
     else
-      SECFUNCexecA -ce trash -v "${strChangesFile}.NEW"
+      rm -v "${strChangesFile}.NEW"
 		fi
 		sleep 3;
 	done
@@ -275,16 +283,18 @@ while true;do
 			echoc --alert "SOURCEFORGE PassWord @{-n} may be asked...";
 			strTitleRegex="^Git Gui [(]`basename "$strDevPath"`[)] ${strDevPath}$"
 			SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
-			(sleep 3;FUNCgenerateChangesLogFileGitGuiLoop)&
+			(sleep 3;FUNCCHILDgenerateChangesLogFileGitGuiLoop)&nChildPidGenCLFGGL=$!
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
 #			SECFUNCexecA -ce  git gui&&: & wait&&:
-      xterm -e "nohup git gui&disown;sleep 1"
+      #xterm -e "nohup git gui&disown;sleep 1"
+      (git gui&disown)&disown;sleep 1
 			#SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
       #while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
 			#SECFUNCCwindowCmd --stop "$strTitleRegex"
       #while SECFUNCCwindowCmd --wait "$strTitleRegex";do sleep 1;done
-      SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
-      SECFUNCCwindowCmd --waitexit "$strTitleRegex" 
+      SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
+      SECFUNCexecA -ce SECFUNCCwindowCmd --waitexit "$strTitleRegex" 
+      SECFUNCexecA -ce kill -SIGUSR1 $nChildPidGenCLFGGL&&:
 			;; 
 		d)
 			FUNCgitDiffCheckShow "`git tag |tail -n 1`..master"&&:
