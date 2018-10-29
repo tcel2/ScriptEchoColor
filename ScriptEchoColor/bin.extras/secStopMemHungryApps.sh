@@ -104,17 +104,17 @@ while true;do
         SECFUNCexecA -ce kill -SIGSTOP $nPid
         (
           astrText=(
+            '!!! IGNORE AND CONTINUE RUNNING THIS PID ? !!!\n'
+            "\n"
             "This memory hungry app was stopped:\n"
             "Pid=$nPid\n"
             "ResKB=$nResKB\n"
             "strCmd=$strCmd\n"
-            "\n"
-            '!!! IGNORE AND CONTINUE RUNNING THIS PID ? !!!\n'
           )
           strText="${astrText[*]}"
           if yad --title="$SECstrScriptSelfName" --info \
             --button="gtk-ok:0" --button="gtk-close:1" \
-            --text="${strText:0:255}";
+            --text="${strText:0:1000}";
           then
             FUNCCHILDaddIgnorePid $nPid
 #            echo "SENDING PID TO IGNORE: $nPid"
