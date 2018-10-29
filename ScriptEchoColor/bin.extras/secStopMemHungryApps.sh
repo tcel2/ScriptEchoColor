@@ -36,7 +36,16 @@ function FUNCCHILDaddIgnorePid() { #<lnPid>
   )&
 }
 
-astrRegexIgnorePgrep=(Xorg compiz metacity xfwm4 kwin mutter)
+: ${strEnvVarUserCanModify:="test"}
+export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+export strEnvVarUserCanModify2 #help test
+strExample="DefaultValue"
+bExample=false
+CFGstrTest="Test"
+astrRemainingParams=()
+astrAllParams=("${@-}") # this may be useful
+
+CFGastrRegexIgnorePgrep=(Xorg compiz metacity xfwm4 kwin mutter) # all window managers at least
 strFifoFl="`SECFUNCcreateFIFO`"
 : ${nMemLimKB:=500000} #help
 anPidIgnore=() #TODO use cmd regex later at default config file to auto ignore pids
@@ -45,6 +54,52 @@ anPidIgnore=() #TODO use cmd regex later at default config file to auto ignore p
 : ${nLimPids:=100} #help
 bReadFIFO=false
 trap 'bReadFIFO=true' SIGUSR1
+
+SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+	SECFUNCsingleLetterOptionsA;
+	if [[ "$1" == "--help" ]];then #help show this help
+		SECFUNCshowHelp --colorize "\t#MISSING DESCRIPTION script main help text goes here"
+		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+		shift
+		strExample="${1-}"
+	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
+		bExample=true
+	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
+		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+		pSECFUNCcfgOptSet "$@";exit 0;
+  elif [[ "$1" == "--addregex" ]];then #help <strPgrepRegex> to ignore pids
+    shift
+    strPgrepRegex="$1"
+    if ! SECFUNCarrayContains CFGastrRegexIgnorePgrep "$strPgrepRegex";then
+      CFGastrRegexIgnorePgrep+=( "$strPgrepRegex" )
+    fi
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
+		shift #astrRemainingParams=("$@")
+		while ! ${1+false};do	# checks if param is set
+			astrRemainingParams+=("$1")
+			shift&&: #will consume all remaining params
+		done
+	else
+		echoc -p "invalid option '$1'"
+		#"$SECstrScriptSelfName" --help
+		$0 --help #$0 considers ./, works best anyway..
+		exit 1
+	fi
+	shift&&:
+done
+# IMPORTANT validate CFG vars here before writing them all...
+SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+
+# Main code
+SECFUNCuniqueLock --daemonwait
+
 while true;do
   nMaxCols=`tput cols` #;declare -p nMaxCols
 #  declare -p anPidIgnore
@@ -52,10 +107,11 @@ while true;do
   IFS=$'\n' read -d '' -r -a astrList < <(
     ps --no-headers -A -o rss,pid,state,cmd --sort -rss \
           |head -n $nLimPids \
+          |sed -r 's@"@\\"@g' \
           |sed -r 's@([[:digit:]]*) *([[:digit:]]*) *([[:alnum:]]) *(.*)@nResKB=\1;nPid=\2;strState="\3";strCmd="\4";@'  
   )&&:
   
-  for strRegexIgnore in "${astrRegexIgnorePgrep[@]}";do
+  for strRegexIgnore in "${CFGastrRegexIgnorePgrep[@]}";do
     if nPidRegexIgnore=`pgrep $strRegexIgnore`;then
       if ! SECFUNCarrayContains anPidIgnore $nPidRegexIgnore;then
         anPidIgnore+=($nPidRegexIgnore)
@@ -104,7 +160,7 @@ while true;do
         SECFUNCexecA -ce kill -SIGSTOP $nPid
         (
           astrText=(
-            '!!! IGNORE AND CONTINUE RUNNING THIS PID ? !!!\n'
+            '!!! IGNORE HUNGRYNESS AND CONTINUE RUNNING THIS PID ? !!!\n'
             "\n"
             "This memory hungry app was stopped:\n"
             "Pid=$nPid\n"
@@ -146,7 +202,7 @@ while true;do
       #~ --column="" --column="PID" --column="ResKB" --column="CMD" \
       #~ 0 123 321 asdf 1 124 322 asdfg
   #~ fi
-  ScriptEchoColor -t 10 -Q "question@O_add one PID to ignore list/_list ignored pids"&&:; nRet=$?; case "`secascii $nRet`" in 
+  ScriptEchoColor -t 10 -Q "question@O_add/_remove one PID or show ignore _list"&&:; nRet=$?; case "`secascii $nRet`" in 
     a)
       nPidIgnore=`echoc -S "what PID"`;
       if [[ -n "$nPidIgnore" ]];then
@@ -156,6 +212,12 @@ while true;do
     l)
       echoc --info "Ignored PIDs"
       SECFUNCexecA -ce ps -o rss,pid,state,cmd --sort -rss -p "${anPidIgnore[@]}" |sed -r "s@(.{$nMaxCols}).*@\1@" &&:
+      ;;
+    r)
+      nPidIgnore=`echoc -S "what PID"`;
+      if [[ -n "$nPidIgnore" ]];then
+        SECFUNCarrayClean anPidIgnore $nPidIgnore
+      fi
       ;;
     *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;; 
   esac

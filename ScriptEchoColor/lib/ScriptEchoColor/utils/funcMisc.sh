@@ -790,13 +790,13 @@ function pSECFUNCcfgOptSet(){ #help <"$@"> to be used at --cfg scripts option
 	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCcfgOptSet_help show this help
+		if [[ "$1" == "--help" ]];then #pSECFUNCcfgOptSet_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCcfgOptSet_help <lstrExample> MISSING DESCRIPTION
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #pSECFUNCcfgOptSet_help <lstrExample> MISSING DESCRIPTION
 #			shift
 #			lstrExample="${1-}"
-		elif [[ "$1" == "--" ]];then #SECFUNCcfgOptSet_help params after this are ignored as being these options, and stored at lastrRemainingParams
+		elif [[ "$1" == "--" ]];then #pSECFUNCcfgOptSet_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")

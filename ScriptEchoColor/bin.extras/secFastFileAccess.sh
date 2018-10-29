@@ -29,11 +29,14 @@ eval `secLibsInit`
 canonicalSelfFileName="`readlink -f "$0"`"
 selfName="`basename "$canonicalSelfFileName"`"
 cfgPath="$HOME/.ScriptEchoColor/$selfName"
-cfgManagedFiles="$cfgPath/managedFiles.cfg"
-fastMedia="$cfgPath/.fastMedia"
+cfgManagedFiles="$cfgPath/managedFiles.cfg";declare -p cfgManagedFiles >&2
+fastMedia="$cfgPath/.fastMedia";declare -p fastMedia >&2
 cfgExt="AtFastMedia"
 
 mkdir -p "$cfgPath"
+if [[ ! -f "$cfgManagedFiles" ]];then
+  echo -n >"$cfgManagedFiles"
+fi
 
 SECFUNCuniqueLock --setdbtodaemon #--daemonwait will be set after, here is just to attach the same db of the daemon
 
@@ -150,11 +153,31 @@ function FUNCprepareFileAtFastMedia() {
 		fi
 		if $lbFixMissing;then
 			secdelay delayToCopy --init
-			if ! nice -n 19 echoc -x "cp -v \"${lfileId}.$cfgExt\" \"$fastMedia/$lfileId\"";then
+      astrCpCmd=()
+      
+      if((CFGnRSyncThrottle>0));then
+        astrCpCmd+=(rsync -av --bwlimit=$CFGnRSyncThrottle --progress)
+      else
+        if [[ -n "$CFGstrCGroupThrottleIOWrite" ]];then #TODO why cgroup io throttle wont work sometimes?
+          if cgget -g "$CFGstrCGroupThrottleIOWrite" |grep blkio.throttle.write_bps_device;then
+            astrCpCmd+=(cgexec -g "$CFGstrCGroupThrottleIOWrite")
+          fi
+        else
+          astrCpCmd+=(ionice -c 3) #TODO didnt work well either, only worked fine the first 10s ...
+        fi
+        
+        astrCpCmd+=(cp -v) # this alone would be extremelly encumbering for large files!
+      fi
+      
+      astrCpCmd+=("${lfileId}.$cfgExt" "$fastMedia/$lfileId")
+      
+			#if ! nice -n 19 echoc -x "cp -v \"${lfileId}.$cfgExt\" \"$fastMedia/$lfileId\"";then
+      if ! SECFUNCexecA -ce "${astrCpCmd[@]}";then
 				echoc -p "copying failed"
 				return 1
 			fi
 			echo "Delay to copy: `secdelay delayToCopy --getpretty`"
+      echoc -w -t 60 "IO write may be too encumbering on the system, if the configured cgroup write throttle is not working properly."
 		fi
 		
 		# fix missing symlink to fast media file
@@ -231,11 +254,28 @@ function FUNCsetFastMedia() {
 	fi
 }
 
-########### MAIN
-
 bDaemon=false
-while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-	if [[ "$1" == "--daemon" ]];then #help checks if configured files exist in the setup fast media (memory/SSD/etc) and copies them there; otherwise if that midia is not available, removes all symlinks and renames the real files to their original names.
+CFGstrCGroupThrottleIOWrite=""
+CFGnRSyncThrottle=3000 #help set to 0 to disable use of rsync
+
+: ${strEnvVarUserCanModify:="test"}
+export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+export strEnvVarUserCanModify2 #help test
+strExample="DefaultValue"
+bExample=false
+CFGstrTest="Test"
+astrRemainingParams=()
+astrAllParams=("${@-}") # this may be useful
+SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
+while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+	SECFUNCsingleLetterOptionsA;
+	if [[ "$1" == "--help" ]];then #help show this help
+		SECFUNCshowHelp --colorize "Helps on copying big files to a faster media like SSD or even RamDrive (/dev/shm), to significantly improve related applications read/load speed."
+		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
+		echo
+		SECFUNCshowHelp
+		exit 0
+	elif [[ "$1" == "--daemon" ]];then #help checks if configured files exist in the setup fast media (memory/SSD/etc) and copies them there; otherwise if that midia is not available, removes all symlinks and renames the real files to their original names.
 		bDaemon=true
 	elif [[ "$1" == "--add" ]];then #help adds a file to be speed up
 		shift
@@ -260,16 +300,35 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	elif [[ "$1" == "--reenablefastmedia" ]];then #help restore fast media functionality
 		varset bForceDisableFastMedia=false
 		varset bForceValidationOnce=true
-	elif [[ "$1" == "--help" ]];then #help
-		echo "Helps on copying big files to a faster media like SSD or even RamDrive (/dev/shm), to significantly improve related applications read/load speed."
-		SECFUNCshowHelp
-		exit
+	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+		shift
+		strExample="${1-}"
+	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
+		bExample=true
+	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
+		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
+	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
+		shift
+    SECFUNCcfgAutoWriteAllVars
+		pSECFUNCcfgOptSet "$@";exit 0;
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
+		shift #astrRemainingParams=("$@")
+		while ! ${1+false};do	# checks if param is set
+			astrRemainingParams+=("$1")
+			shift&&: #will consume all remaining params
+		done
 	else
 		echoc -p "invalid option '$1'"
+		#"$SECstrScriptSelfName" --help
+		$0 --help #$0 considers ./, works best anyway..
 		exit 1
 	fi
-	shift
+	shift&&:
 done
+# IMPORTANT validate CFG vars here before writing them all...
+SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+
+########### MAIN CODE
 
 if $bDaemon;then
 #	if $SECbDaemonWasAlreadyRunning;then
@@ -339,6 +398,8 @@ if $bDaemon;then
 			if ! $bForceDisableFastMedia && $bFastMediaAvailable;then
 				if ! FUNCprepareFileAtFastMedia "$strLine";then
 					break
+        #~ else
+          #~ echoc -w -t 60 "IO write may be too encumbering on the system, if cgroup write throttle option is not working properly."
 				fi
 			else
 				FUNCrestoreFile "$strLine"
