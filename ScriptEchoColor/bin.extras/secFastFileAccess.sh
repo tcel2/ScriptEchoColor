@@ -155,8 +155,17 @@ function FUNCprepareFileAtFastMedia() {
 			secdelay delayToCopy --init
       astrCpCmd=()
       
+      bExtraCare=false
       if((CFGnRSyncThrottle>0));then
+        ###
+        # rsync will read, then write, then delay 1s, 
+        # and if CPU/IO is encumbered it will not be able to continue reading/writing 
+        # and will have to wait, what works perfectly!
+        # so no need to create a loop to check if CPU/IO is encumbered!
+        ###
         astrCpCmd+=(rsync -av --bwlimit=$CFGnRSyncThrottle --progress)
+        #TODO try `scp -l $CFGnRSyncThrottle $inFile $outFile` too later
+        #TODO ? could also use `dd` sending like 30MB per loop, and checking if CPU is free enough of IO-WAIT using `vmstat 1 2` like at ...
       else
         if [[ -n "$CFGstrCGroupThrottleIOWrite" ]];then #TODO why cgroup io throttle wont work sometimes?
           if cgget -g "$CFGstrCGroupThrottleIOWrite" |grep blkio.throttle.write_bps_device;then
@@ -164,9 +173,11 @@ function FUNCprepareFileAtFastMedia() {
           fi
         else
           astrCpCmd+=(ionice -c 3) #TODO didnt work well either, only worked fine the first 10s ...
+          #TODO later try this too `buffer -u 150 -m 16m -s 100m -p 75 -i foo -o bar`
         fi
         
         astrCpCmd+=(cp -v) # this alone would be extremelly encumbering for large files!
+        bExtraCare=true
       fi
       
       astrCpCmd+=("${lfileId}.$cfgExt" "$fastMedia/$lfileId")
@@ -177,7 +188,10 @@ function FUNCprepareFileAtFastMedia() {
 				return 1
 			fi
 			echo "Delay to copy: `secdelay delayToCopy --getpretty`"
-      echoc -w -t 60 "IO write may be too encumbering on the system, if the configured cgroup write throttle is not working properly."
+      
+      if $bExtraCare;then
+        echoc -w -t 60 "IO write may be too encumbering on the system, if the configured cgroup write throttle is not working properly."
+      fi
 		fi
 		
 		# fix missing symlink to fast media file
