@@ -74,12 +74,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
-  elif [[ "$1" == "--addregex" ]];then #help <strPgrepRegex> to ignore pids
+  elif [[ "$1" == "--addregex" ]];then #help ~single <strPgrepRegex> to ignore pids and exit
     shift
     strPgrepRegex="$1"
     if ! SECFUNCarrayContains CFGastrRegexIgnorePgrep "$strPgrepRegex";then
       CFGastrRegexIgnorePgrep+=( "$strPgrepRegex" )
+      SECFUNCcfgAutoWriteAllVars
     fi
+    declare -p CFGastrRegexIgnorePgrep
+    exit 0
 	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
