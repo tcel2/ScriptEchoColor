@@ -47,6 +47,7 @@ nChangeHue=7
 bFlip=false;
 bFlop=false;
 bWriteFilename=true;
+strResize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -74,6 +75,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWriteFilename=false;
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift;strWallPPath="$1"
+	elif [[ "$1" == "--resize" ]];then #help <strResize> prefer this size than default from primary monitor 
+    shift;strResize="$1"
 	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
 		shift;strFindRegex="$1"
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -185,23 +188,39 @@ if $bDaemon;then
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
           +channel -channel B -evaluate add ${nAddB}% \
-          +channel -set colorspace HSL -colorspace sRGB "$strTmpFilePreparing"
+          +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}"
           
       if $bFlipKeep;then 
-        SECFUNCexecA -cE convert -flip "$strTmpFilePreparing" "${strTmpFilePreparing}2";
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+        SECFUNCexecA -cE convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       if $bFlopKeep;then
-        SECFUNCexecA -cE convert -flop "$strTmpFilePreparing" "${strTmpFilePreparing}2";
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+        SECFUNCexecA -cE convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+      fi
+      
+      # grants size preventing automatic from desktop manager
+      strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
+      if [[ "$strOrigSize" != "$strResize" ]];then
+        SECFUNCexecA -cE convert "${strTmpFilePreparing}" \
+          \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 15% \) \
+          \( -clone 0 -resize $strResize \) \
+          -delete 0 -gravity center -composite "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
       if $bWriteFilename;then
-        SECFUNCexecA -cE convert "$strTmpFilePreparing" -gravity South -pointsize 15 -annotate +0+10 "`basename "$strFile"`" "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "$strTmpFilePreparing"
+        nFontSize=15
+        strTxt="`basename "$strFile"` $strOrigSize"
+        SECFUNCexecA -cE convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
+          -fill black -annotate +0+$nFontSize "$strTxt" \
+          -fill white -annotate +0+0          "$strTxt" \
+          "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
-      SECFUNCexecA -cE mv -f "$strTmpFilePreparing" "$strTmpFile"
+      # final step
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}" "$strTmpFile"
       
       if $bFastMode;then
         if((nChHueFastModeCount<nChHueFastModeTimes));then
