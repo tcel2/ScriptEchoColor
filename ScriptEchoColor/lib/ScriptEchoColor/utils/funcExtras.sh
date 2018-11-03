@@ -52,12 +52,15 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
   local lbWaitExit=false;
   local lbCheck=false
   local lstrXdotoolSearchBy="--name"
+  local lbIsWindowID=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
 			#SECFUNCshowHelp --colorize "a child process will wait to issue the action towards <lstrMatchRegex> "
 			SECFUNCshowHelp $FUNCNAME
 			return 0
+		elif [[ "$1" == "--wid" ]];then #SECFUNCCwindowCmd_help lstrMatchRegex will be considered as simple windowId (TODO for now using this will break some functionalities, test prior to code)
+			lbIsWindowID=true
 		elif [[ "$1" == "--class" || "$1" == "--classname" ]];then #SECFUNCCwindowCmd_help search window by (see `xdotool search` for details), default is --name
 			lstrXdotoolSearchBy="$1"
 		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
@@ -66,7 +69,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			lbFocus=true
 		elif [[ "$1" == "--maximize" || "$1" == "-x" ]];then #SECFUNCCwindowCmd_help maximize window
 			lbMaximize=true
-		elif [[ "$1" == "--minimize" || "$1" == "-i" ]];then #SECFUNCCwindowCmd_help maximize window
+		elif [[ "$1" == "--minimize" || "$1" == "-i" ]];then #SECFUNCCwindowCmd_help minimize window
 			lbMinimize=true
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
 			shift
@@ -205,8 +208,16 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			if $lbStop;then
 				break
 			fi
-			export lstrMatchRegex
-			local lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
+			
+      export lstrMatchRegex
+			
+      local lnWindowId=-1
+      if $lbIsWindowID;then
+        lnWindowId=$lstrMatchRegex
+      else
+        lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
+      fi
+      
 			if SECFUNCisNumber -nd "$lnWindowId";then
 				##################
 				# each option will be issued one time, so must be disabled 
@@ -214,7 +225,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				if $lbOnTop && wmctrl -i -a "$lnWindowId" -b add,above;then
 					lbOnTop=false;
 				fi
-				if $lbFocus && xdotool windowfocus "$lnWindowId" && xdotool windowactivate "$lnWindowId";then
+				if $lbFocus && xdotool windowactivate "$lnWindowId" && xdotool windowfocus "$lnWindowId";then # if minimized, must be activated before focus!
 					lbFocus=false
 				fi
 				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then

@@ -192,7 +192,7 @@ function FUNCshowCommits() { #param: lbShowAll
 	echoc --info "last commits (highlited the one previous to install):"
 #	echo "$strCommits" |sed "s@.*@'&'@" |head -n $nMaxShownCommits |column
 	nNewestCommitsLimit=1000 #just an "absurd?" number to make it easier to code...
-	nTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`"
+	nTerminalWidth="`stty size 2>/dev/null |cut -d" " -f2`" #instead of `tput cols`
 	local lstrOutput="`echo "$strCommits" |sed "s@.*@'&'@"`"
 	local lnAfter=1
 	if $lbShowAll;then
@@ -236,7 +236,7 @@ while true;do
   astrOpts+=("_diff last tag from master")
   astrOpts+=("_g show changes log file")
   if $bIsPkg;then
-    astrOpts+=("diff _installed from master")
+    astrOpts+=("diff _installed from dev folder")
   fi
   astrOpts+=("_nautilus at dev path")
   astrOpts+=("_push tags to remote")
@@ -310,7 +310,7 @@ while true;do
 			if [[ -z "$strSECInstalledVersion" ]];then
 				echoc --alert "package scriptechocolor is not installed."
 			else
-				FUNCgitDiffCheckShow "HEAD@{$strLastCommitBeforeInstall}..master"&&:
+				FUNCgitDiffCheckShow "HEAD@{$strLastCommitBeforeInstall}" -- "./"&&:
 			fi
 			;;
 		n)

@@ -26,6 +26,13 @@ source <(secinit)
 
 : ${CFGbFakeRun:=false};export CFGbFakeRun
 : ${CFGbIsAFunction:=false};export CFGbIsAFunction
+: ${CFGstrFileExecutable:="${strFileExecutable-}"};export CFGstrFileExecutable
+: ${CFGstrWindowFullName:="Default - Wine desktop"};export CFGstrWindowFullName
+
+if [[ -z "$CFGstrFileExecutable" ]];then
+  SECFUNCechoErrA "CFGstrFileExecutable='$CFGstrFileExecutable'"
+  exit 1
+fi
 
 function GAMEFUNCchkWinePrefix() {
 	if ${WINEPREFIX+false};then
@@ -34,10 +41,24 @@ function GAMEFUNCchkWinePrefix() {
 	fi
 }
 
-function GAMEFUNCcheckIfGameIsRunning() { #help <lstrFileExecutable>
-	local lstrFileExecutable="$1"
+function GAMEFUNCcheckIfGameIsRunning() { #help [lstrFileExecutable]
+	if $CFGbFakeRun;then return 0;fi
+  
+	#if pgrep "$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
+	#if pgrep -f "^${strRelativeExecutablePath-}[/]*$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
+	if [[ -n "${WINEnGamePid-}" ]] && ps -p "$WINEnGamePid";then return 0;fi
+  
+	local lstrFileExecutable="${1-}"
+  
+  if [[ -z "$lstrFileExecutable" ]];then
+    lstrFileExecutable="$CFGstrFileExecutable"
+  fi
+  
 	pgrep -f "$lstrFileExecutable" 2>&1 >/dev/null
-}
+};export -f GAMEFUNCcheckIfGameIsRunning
+function FUNCcheckIfGameIsRunning() { #help DEPRECATED use GAMEFUNCcheckIfGameIsRunning instead
+	GAMEFUNCcheckIfGameIsRunning "$@"
+};export -f FUNCcheckIfGameIsRunning
 
 function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
 	local lstrFileExecutable="$1"
@@ -449,7 +470,7 @@ function FUNCexitWhenGameExitsLoop() {
 	
 	while true;do
 		FUNCexitIfGameExits
-		WINEFUNCstopContGame $WINEnGamePid
+		GAMEFUNCstopContGame ${WINEnGamePid-}
 	done
 };export -f FUNCexitWhenGameExitsLoop
 
@@ -847,7 +868,7 @@ function WINEFUNCcommonOptions {
 		
 		while true;do
 			if ! ps -p "$nPid";then exit 0;fi
-			WINEFUNCstopContGame $nPid
+			GAMEFUNCstopContGame $nPid
 		done
 	elif [[ "${1-}" == "delOldSaves" ]];then #help <strSavesPath> <iKeepCount> <astrFilesExtensionsAndMask[]> #astrFilesExtensionsAndMask ex.: "*.sav" "*.bla", every entry means a iKeepCount multiplier (as they must be related to the same savegame), so in this ex. it would be 2
 		shift
@@ -890,16 +911,6 @@ function WINEFUNCcommonOptions {
 		fi
 	fi
 };export -f WINEFUNCcommonOptions
-
-function FUNCcheckIfGameIsRunning() {
-	if $CFGbFakeRun;then return 0;fi
-	
-	#if pgrep "$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
-	#if pgrep -f "^${strRelativeExecutablePath-}[/]*$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
-	if [[ -n "${WINEnGamePid-}" ]] && ps -p "$WINEnGamePid";then return 0;fi
-	
-	return 1;
-};export -f FUNCcheckIfGameIsRunning
 
 function FUNCelse() {
 	local lstrType="`type -t ${1-}`"
@@ -1112,12 +1123,55 @@ function FUNClimitSaveGames() {
     return 0
 };export -f FUNClimitSaveGames
 
+function GAMEFUNCgetDesktopPID() { #help
+  local lanList
+  local lnPid
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "explorer.exe /desktop")&&:
+  #declare -p lanList
+  for lnPid in "${lanList[@]}";do
+    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
+      echo "$lnPid"
+      return 0
+    fi
+  done
+  return 1
+};export -f GAMEFUNCgetDesktopPID
+
+function GAMEFUNCgetDesktopWID() { #help
+  local lnPID=0
+  if ! lnPID=`GAMEFUNCgetDesktopPID`;then return 1;fi
+  
+  local lanWindowIDs
+  local lnWID
+  IFS=$'\n' read -d '' -r -a lanWindowIDs < <(xdotool search --pid $lnPID)&&:
+  for lnWID in "${lanWindowIDs[@]-}";do
+    if [[ "`xdotool getwindowname $lnWID`" == "$CFGstrWindowFullName" ]];then
+      echo $lnWID
+      return 0
+    fi
+  done
+  return 1
+};export -f GAMEFUNCgetDesktopWID
+
 function GAMEFUNCautoStop() { #help OVERRIDE this one to let it auto stop for any reason you want like screensaver enabled!
   return 1;
-}
-function GAMEFUNCstopContGame() { #help <lnPid>
+};export -f GAMEFUNCautoStop
+function GAMEFUNCstopContGame() { #help [lnPid]
 	#local lnPid="`pgrep -f "$strFileExecutable"`" #TODO may come more than one?
-	local lnPid="$1"
+	local lnPid="${1-}"
+  
+  if [[ -z  "$lnPid" ]];then
+    lnPid="${WINEnGamePid-}";
+  fi
+  
+  if [[ -z  "$lnPid" ]];then
+    lnPid="`pgrep -f "$CFGstrFileExecutable"`" #TODO what about multiple instances?
+    if ! SECFUNCisNumber -dn "$lnPid";then
+      SECFUNCechoErrA "lnPid='$lnPid' CFGstrFileExecutable='$CFGstrFileExecutable' WINEnGamePid='${WINEnGamePid-}'"
+      exit 1
+    fi
+  fi
+  
 	declare -p lnPid
 	declare -p WINEPREFIX #to know which instance it is!
 	
@@ -1127,29 +1181,41 @@ function GAMEFUNCstopContGame() { #help <lnPid>
 	
 	local lstrPidState="`ps --no-headers -o state -p $lnPid`"
 	
+  # raise window
+  local anWindowIDs=()
+  while true;do
+    IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
+    if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
+    if ! echoc -t 3 -q "unable to find windows for '$strFileExecutable', retry?@Dy";then
+      return 1
+    fi
+  done
+  
+  local nWID=-1
+  for nWIDTemp in "${anWindowIDs[@]}";do 
+    nWPID="`xdotool getwindowpid $nWIDTemp`"&&:
+    ps --no-headers -o pid,stat,cmd -p $nWPID&&:
+    if((nWPID==lnPid));then
+      nWID=$nWIDTemp
+      break;
+    fi
+  done
+  if((nWID==-1));then 
+    SECFUNCechoErrA "unable to find window id for lnPid='$lnPid'"
+    return 1;
+  fi
+  declare -p nWID
+  local lnWIDok=0
+  if ! lnWIDok="`GAMEFUNCgetDesktopWID`";then
+    lnWIDok=$nWID
+  fi
+  
   if [[ "$lstrPidState" == "T" ]];then
-    if echoc -t $lnSleep -q "continue running?";then
+    if echoc -t $lnSleep -q "continue running?";then # has timeout as the script may exit if that pid is killed
       SECFUNCexecA -ce kill -SIGCONT $lnPid
-      
-      # raise window
-      anWindowIDs=()
-      while true;do
-        IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
-        if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
-        if ! echoc -t 3 -q "unable to find windows for '$strFileExecutable', retry?@Dy";then
-          break;
-        fi
-      done
-      if [[ -n "${anWindowIDs[@]-}" ]];then
-        for nWID in "${anWindowIDs[@]}";do 
-          nWPID="`xdotool getwindowpid $nWID`"&&:
-          ps --no-headers -o pid,stat,cmd -p $nWPID&&:
-          if((nWPID==lnPid));then
-            xdotool windowfocus $nWID
-            break;
-          fi
-        done
-      fi
+      #xdotool windowactivate $nWID #restores if minimized
+      #xdotool windowfocus $nWID #grants focus
+      SECFUNCexecA -ce SECFUNCCwindowCmd --focus --wid $lnWIDok
     fi
   else
     local lbStopNow=false
@@ -1158,12 +1224,14 @@ function GAMEFUNCstopContGame() { #help <lnPid>
     
     if $lbStopNow;then
       SECFUNCexecA -ce kill -SIGSTOP $lnPid
+      #xdotool windowminimize $nWID
+      #readlink /proc/1945584/cwd
+      SECFUNCexecA -ce SECFUNCCwindowCmd --minimize --wid $lnWIDok
     fi
   fi
+  
+  return 0
 };export -f GAMEFUNCstopContGame
-function WINEFUNCstopContGame() { #help DEPRECATED use GAMEFUNCstopContGame instead (kept for compatibility for now)
-  GAMEFUNCstopContGame "$@"
-};export -f WINEFUNCstopContGame
 
 function GAMEFUNCwaitGamePid() { #help
  	SECFUNCvarSet WINEnGamePid=""

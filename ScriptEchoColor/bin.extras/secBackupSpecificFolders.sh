@@ -124,6 +124,10 @@ while true;do
     echo "Folder: $strFolder"
     
     strParentFolder="`dirname "$strFolder"`"
+    if [[ ! -d "$strParentFolder" ]];then
+      SECFUNCechoErrA "not a valid dir strParentFolder='$strParentFolder' (not mounted?)"
+      continue
+    fi
     SECFUNCexecA -cE cd "$strParentFolder"
     SECFUNCexecA -cE${strExecQuietOpt} pwd
     
