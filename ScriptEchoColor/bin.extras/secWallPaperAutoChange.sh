@@ -183,7 +183,7 @@ if $bDaemon;then
         if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
       fi
     
-      SECFUNCexecA -cE convert "$strFile" \
+      SECFUNCexecA -cE nice -n 19 convert "$strFile" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
@@ -191,18 +191,18 @@ if $bDaemon;then
           +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}"
           
       if $bFlipKeep;then 
-        SECFUNCexecA -cE convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE nice -n 19 convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       if $bFlopKeep;then
-        SECFUNCexecA -cE convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+        SECFUNCexecA -cE nice -n 19 convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
       # grants size preventing automatic from desktop manager
       strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
       if [[ "$strOrigSize" != "$strResize" ]];then
-        SECFUNCexecA -cE convert "${strTmpFilePreparing}" \
+        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
           \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 15% \) \
           \( -clone 0 -resize $strResize \) \
           -delete 0 -gravity center -composite "${strTmpFilePreparing}2"
@@ -212,7 +212,7 @@ if $bDaemon;then
       if $bWriteFilename;then
         nFontSize=15
         strTxt="`basename "$strFile"` $strOrigSize"
-        SECFUNCexecA -cE convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
+        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
           -fill black -annotate +0+$nFontSize "$strTxt" \
           -fill white -annotate +0+0          "$strTxt" \
           "${strTmpFilePreparing}2"
