@@ -30,6 +30,9 @@ SECFUNCshowHelp --colorize "\tRun this like you would xterm or mrxvt, so to exec
 
 # Main code
 astrParms=( "$@" )
+#~ if((`SECFUNCarraySize astrParms`==0));then
+  #~ astrParms+=(bash)
+#~ fi
 
 astrCmd=()
 
@@ -55,12 +58,15 @@ if which mrxvt >/dev/null 2>&1;then
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  strConcatParms="${astrParms[@]}"
-  astrCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrParms[@]}")
+  strConcatParms="${astrParms[@]-}"
+  astrCmd+=(mrxvt -sl 1000 -aht +showmenu)
+  if [[ -n "$strConcatParms" ]];then
+    astrCmd+=(-title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrParms[@]}")
+  fi
   #astrCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" bash -c "FUNCrun238746478")
 else
   #astrCmd+=(xterm -e bash -c "FUNCrun238746478") # fallback
-  astrCmd+=(xterm "${astrParms[@]}") # fallback
+  astrCmd+=(xterm "${astrParms[@]}-") # fallback
 fi
 
 #"${astrCmd[@]}"

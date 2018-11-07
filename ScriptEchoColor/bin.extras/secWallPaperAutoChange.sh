@@ -71,7 +71,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     shift;nRandomHueInterval="$1";
 	elif [[ "$1" == "--nohue" || "$1" == "-H" ]];then #help disable the hue mode (that is default)
     nChangeHue=0
-	elif [[ "$1" == "--nowrite" ]];then #help do not write the filename to the image
+	elif [[ "$1" == "--nowrite" ]];then #help do not write the filename and other info to the image
     bWriteFilename=false;
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift;strWallPPath="$1"
@@ -109,7 +109,8 @@ function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#astrFileList[@]}
 	
 	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
-		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex" |grep -v "$strBaseTmpFileName") &&: # re-fill
+    # ignores hidden (even at hidden folders) and the tmp files
+		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex" |egrep -v "/[.]" |grep -v "$strBaseTmpFileName") &&: # re-fill
 		if [[ -z "${1-}" ]];then
 			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
 			if((nTotFiles==0));then
@@ -169,6 +170,8 @@ if $bDaemon;then
       unset astrFileList[$nSelect]
     fi
 		
+    strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
+    
     if((nChangeHue!=0));then
       nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
@@ -176,6 +179,18 @@ if $bDaemon;then
       declare -p nAddR nAddG nAddB
       
       strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
+      SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
+      
+      # grants size preventing automatic from desktop manager using a lot (?) of CPU
+      strSzOrEq="="
+      if [[ "$strOrigSize" != "$strResize" ]];then
+        strSzOrEq=""
+        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
+          \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 15% \) \
+          \( -clone 0 -resize $strResize \) \
+          -delete 0 -gravity center -composite "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+      fi
       
       if $bChangeImage;then
         bFlipKeep=false; bFlopKeep=false;
@@ -183,12 +198,13 @@ if $bDaemon;then
         if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
       fi
     
-      SECFUNCexecA -cE nice -n 19 convert "$strFile" \
+      SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
           +channel -channel B -evaluate add ${nAddB}% \
-          +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}"
+          +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}2"
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
       if $bFlipKeep;then 
         SECFUNCexecA -cE nice -n 19 convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
@@ -199,22 +215,16 @@ if $bDaemon;then
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
-      # grants size preventing automatic from desktop manager
-      strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
-      if [[ "$strOrigSize" != "$strResize" ]];then
-        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
-          \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 15% \) \
-          \( -clone 0 -resize $strResize \) \
-          -delete 0 -gravity center -composite "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-      fi
-      
       if $bWriteFilename;then
         nFontSize=15
-        strTxt="`basename "$strFile"` $strOrigSize"
+        strTxt="`basename "$strFile"` $strSzOrEq$strOrigSize RGB:$nAddR,$nAddG,$nAddB"
+        # black pseudo outline at 4 corners
         SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
-          -fill black -annotate +0+$nFontSize "$strTxt" \
-          -fill white -annotate +0+0          "$strTxt" \
+          -fill black -annotate +2+2 "$strTxt" \
+          -fill black -annotate +0+0 "$strTxt" \
+          -fill black -annotate +0+2 "$strTxt" \
+          -fill black -annotate +2+0 "$strTxt" \
+          -fill white -annotate +1+1 "$strTxt" \
           "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
