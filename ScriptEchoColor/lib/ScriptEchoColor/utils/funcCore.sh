@@ -2322,7 +2322,7 @@ function SECFUNCcheckActivateRunLog() { #help
 	
 	if $lbForceStdin;then
 		_SECFUNCcheckActivateRunLog_report before
-		exec 1>&0 2>&0
+		exec 1>&0 2>&0 #TODO if any, explain possible problems caused by this
 		_SECFUNCcheckActivateRunLog_report after
 		return 0
 	fi
@@ -2422,13 +2422,21 @@ function SECFUNCcheckActivateRunLog() { #help
           #~ eval "exec $((nFdBase+1))>&1 $((nFdBase+2))>&2" #backup
           #~ ((nFdBase+=10))
         #~ done
+#        echo $LINENO
         
-				exec > >(tee "$SECstrRunLogFile") #TODO this caused error once, WHY??? and... can it be protected in some way? while sleep?
+        local lastrLogCmd=(tail -F --pid=$$) #ctrl+c is not killing it, neither after closing term TODO trap INT prepending kill in case already set? new SECFUNCtrapAppend()? add a maintenance task to detect orphaned `tail -F` using SEC log files?
+        ##########################
+        ### using tail instead of tee to conserve memory, old command:
+        ### exec > >(tee -a "$SECstrRunLogFile")
+        #######
+        "${lastrLogCmd[@]}" "$SECstrRunLogFile"&
+        exec >"$SECstrRunLogFile"
 				exec 2>&1
+#        echo $LINENO
 				
-				# waits tee to properly start...
-				while ! SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`";do 
-					SECFUNCechoWarnA "waiting 'tee $SECstrRunLogFile'..."
+				# waits log cmd to properly start...
+				while ! SECnRunLogTeePid="`pgrep -fx "${lastrLogCmd[*]} $SECstrRunLogFile"`";do 
+					SECFUNCechoWarnA "waiting '${lastrLogCmd[*]} $SECstrRunLogFile'..."
 					sleep 0.1;
 				done #synchronization
 #				SECFUNCechoWarnA "SECnRunLogTeePid='$SECnRunLogTeePid'"
