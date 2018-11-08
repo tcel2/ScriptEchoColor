@@ -156,7 +156,7 @@ if $bDaemon;then
     : ${SECNoHupDaemonDetach:=false}
     declare -p SECNoHupDaemonDetach
     if ! $SECNoHupDaemonDetach;then
-      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -title "Daemon:${strScId}" -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
+      ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce secTerm.sh -- -title "Daemon:${strScId}" -e $0 --daemon & disown ) #TODO remove secTerm.sh when this is working well...
       exit 0
     fi
   fi

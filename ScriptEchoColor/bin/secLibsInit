@@ -121,10 +121,10 @@ done
 
 if $bHelpFast || $bHelpCore || $bHelpBase || $bHelpMisc || $bHelpVars || $bHelpExtras;then
 	function FUNChelp(){
-		echo
-		echo -e "\E[0m\E[34m\E[106m               help for \E[0m\E[31m\E[106m $1 \E[0m\E[34m\E[106m lib               \E[0m"
-		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help'
-		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help'
+		echo >&2
+		echo -e "\E[0m\E[34m\E[106m               help for \E[0m\E[31m\E[106m $1 \E[0m\E[34m\E[106m lib               \E[0m" >&2
+		echo '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help' >&2
+		eval '`secGetInstallPath.sh`/lib/ScriptEchoColor/utils/func'${1}'.sh --help' >&2
 	}
 	if $bHelpFast;then
 		FUNChelp Fast

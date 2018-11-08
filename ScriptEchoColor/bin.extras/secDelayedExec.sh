@@ -107,6 +107,8 @@ export bCleanSECenv=true;
 #~ export bGetGlobalLogFile=false;
 export nAutoRetryDelay=-1
 export bAutoRetryAlways=false
+export nForceExitDaemonReturnCode=100 #see SECFUNCerrCodeExplained() for the ones to NOT use
+export strTitle="$SECstrScriptSelfName"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
@@ -537,7 +539,7 @@ if $bCheckIfAlreadyRunning;then
 				fi
 			fi
 		else
-			strTitle="$SECstrScriptSelfName[$$], multiple instances running."
+			strTitle="$SECstrScriptSelfName pid=$$, multiple instances running."
 			SECFUNCCwindowOnTop "$strTitle"
 			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
 				bKillOther=true
@@ -597,8 +599,8 @@ function FUNCrun(){
       declare -p astrRunParams&&:
       
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
-			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
+			( # nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+        SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
         declare -p astrRunParams&&:
       
         evalCleanEnv=":";
@@ -624,12 +626,18 @@ function FUNCrun(){
         if $bStayForce;then
           strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
           if eval "$strEvalStayForce";then
-            echo "Already running: $strInfoSF"
+            if ! yad --title="$strTitle" --info \
+              --button="gtk-ok:0" --button="gtk-close:1" \
+              --text="CONTINUE WATCHING THIS PROCESS (REGEX) ?\n(Close or cancel will stop and exit this runner)\n\nAlready running:\n$strInfoSF";
+            then
+              exit $nForceExitDaemonReturnCode
+            fi
           else
             echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
             "${astrRunParams[@]}"
             while ! eval "$strEvalStayForce";do
               echo "Wating it start: $strInfoSF"
+              sleep 0.1
             done
           fi
           
@@ -668,7 +676,10 @@ function FUNCrun(){
       #aCmdTerm=(xterm)
       #if which mrxvt >/dev/null 2>&1;then aCmdTerm=(mrxvt -aht +showmenu);fi # rxvt does not kill child proccesses when it is closed but mrxvt does!
       #SECFUNCexecA -ce "${aCmdTerm[@]}" -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
-      SECFUNCexecA -ce secTerm.sh -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
+      #SECFUNCexecA -ce secTerm.sh -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
+      source <(secTerm.sh --secGetCmdOnly -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}")
+      declare -p SECastrFullTermCmd
+      "${SECastrFullTermCmd[@]}" #this is important to avoid using about 10MB of memory from calling secTerm.sh directly
 		else
 #			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
@@ -685,6 +696,11 @@ function FUNCrun(){
 			lstrTxt+="\n";
 		fi
 		
+    if((lnRet==nForceExitDaemonReturnCode));then  
+      FUNClog end "exit/stop requested/allowed/accepted by user."
+      exit 0
+    fi
+    
 		if((lnRet!=0));then
 			lbErr=true
 			
