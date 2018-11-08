@@ -24,7 +24,7 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
-astrOriginalOptions=( "$@" )
+astrOriginalOptions=( "$@" );export astrOriginalOptions
 
 ###################################################################
 ###################################################################
@@ -47,7 +47,7 @@ fi
 ###################################################################
 
 #source <(secinit --nochild --extras)
-source <(secinit)
+source <(secinit --extras)
 export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
 #####################################
 #####################################
@@ -57,16 +57,6 @@ if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help ~exclusiv
   echo "$strExecGlobalLogFile" # no echo to stderr or stdout must happen before this! if running under nohup it is worse because both fd1 and fd2 will point to the same pipe!!! :(
   exit 0
 fi
-
-#~ if [[ "${1-}" == "--disownx" ]];then #help ~exclusive if used must be before other simple options.
-  #~ ###
-  #~ # this will spawn a term and run this script as it's child conserving some memory.
-  #~ # (instead of this script calling the term and then running a bash child function inside it)
-  #~ ###
-	#~ shift #discards this option 
-  #~ secTerm.sh --disown -- -e $0 $@ #passes remaining options
-  #~ exit $?
-#~ fi
 # THIS ABOVE MUST BE JUST AFTER secinit!!!
 #####################################
 #####################################
@@ -116,6 +106,8 @@ export bListAlreadyRunningAndNew=false
 export bListIniCommands=false
 export bStay=false
 export bStayForce=false
+: ${bSimpleExit:=false};export bSimpleExit
+: ${bStayModeFakeFailOnce:=false};export bStayModeFakeFailOnce
 export strEvalStayForce=""
 export bListWaiting=false
 export bCheckPointDaemonHold=false
@@ -130,7 +122,6 @@ export nAutoRetryDelay=-1
 export bAutoRetryAlways=false
 export nForceExitDaemonReturnCode=100 #see SECFUNCerrCodeExplained() for the ones to NOT use
 : ${strTitle:="$SECstrScriptSelfName"};export strTitle
-: ${bForceDisableXtermOption:=false};export bForceDisableXtermOption
 export bDisownX=false
 : ${bAlreadyDisownX:=false}
 astrRemainingParams=()
@@ -212,9 +203,48 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift&&:
 done
-if $bForceDisableXtermOption;then
+if $bDisownX;then
   bXterm=false
 fi
+if $bStayModeFakeFailOnce;then
+  bWaitCheckPoint=false
+  nSleepFor=0
+fi
+
+astrTrapSigs=(EXIT INT KILL QUIT TERM HUP) #TODO are all these necessary/effective?
+function FUNCexitWork() {
+  trap '' "${astrTrapSigs[@]}" #clean traps as fast as possible to prevent "trap's loop"
+  
+  source <(secinit --extras);
+  
+  local lstrDbgLogFile="/tmp/`basename $0`.debug.log"
+
+  SECFUNCdrawLine " $$ `SECFUNCdtFmt --pretty` " >>"$lstrDbgLogFile"
+  declare -p bSimpleExit bStay bStayForce bStayModeFakeFailOnce astrOriginalOptions strSECFUNCtrapPrepend |sed -r "s@.*@$$ &@" 2>&1 >>"$lstrDbgLogFile" &&:
+  
+  if $bSimpleExit;then exit 0;fi
+  
+  if $bStay || $bStayForce;then 
+    # bStayModeFakeFailOnce is important to initially directly show the retry dialog
+    echo "$$ Running again..." >>"$lstrDbgLogFile"
+    astrRestart=($0 "${astrOriginalOptions[@]}");export astrRestart
+    function FUNCrestart() {
+      echo "$FUNCNAME"
+      source <(secinit) #to restore exported arrays
+      bStayModeFakeFailOnce=true "${astrRestart[@]}"
+    };export -f FUNCrestart
+    SECFUNCarraysExport
+    secTerm.sh --disown -- -e bash -c FUNCrestart
+#    secTerm.sh --disown -- -e bash -c "bStayModeFakeFailOnce=true $0 ${astrOriginalOptions[@]}"
+    echo "$$ Waiting a bit..." >>"$lstrDbgLogFile"
+    echoc -w -t 10 #wait it properly start TODO actually detect if it started correctly
+    echo "$$ Done." >>"$lstrDbgLogFile"
+  fi
+  
+  exit 0
+}
+SECFUNCtrapPrepend 'FUNCexitWork' "${astrTrapSigs[@]}"
+trap -p
 
 astrRunParams=( "$@" );export astrRunParams
 declare -p astrRunParams
@@ -236,10 +266,9 @@ if ! $bAlreadyDisownX;then
     # this will spawn a term and run this script as it's child conserving some memory.
     # (instead of this script calling the term and then running a bash child function inside it)
     ###
-    export bForceDisableXtermOption=true
     export bAlreadyDisownX=true
     secTerm.sh --disown -- "${astrTermOpts[@]}" -e $0 "${astrOriginalOptions[@]}"
-    exit $?
+    bSimpleExit=true;exit $?
   fi
 fi
 
@@ -310,7 +339,7 @@ if $bRunAllNow;then
 		sleep 1;
 	done
 	
-	exit 0
+	bSimpleExit=true;exit 0
 fi
 
 if $bListIniCommands;then
@@ -326,7 +355,7 @@ fi
 
 if ! SECFUNCisNumber -dn "$nDelayAtLoops";then
 	echoc -p "invalid nDelayAtLoops='$nDelayAtLoops'"
-	exit 1
+	bSimpleExit=true;exit 1
 elif((nDelayAtLoops<1));then
 	nDelayAtLoops=1
 fi
@@ -365,7 +394,7 @@ function FUNClog() { #params: <type with 3 letters> [comment]
 if $bListWaiting;then
 	FUNCcheckIfWaitCmdsHaveRun&&:
 	#echo "returned $?"
-	exit 0
+	bSimpleExit=true;exit 0
 fi
 
 if $bCheckPointDaemon;then
@@ -373,7 +402,7 @@ if $bCheckPointDaemon;then
 	
 	if [[ -z "$strCheckPointCustomCmd" ]];then
 		FUNClog Err "invalid empty strCheckPointCustomCmd"
-		exit 1
+		bSimpleExit=true;exit 1
 	fi
 	
 	SECFUNCuniqueLock --waitbecomedaemon
@@ -420,7 +449,7 @@ if $bCheckPointDaemon;then
 		echo "waiting for: `SECFUNCdelay "$strIdShowDelay" --get`s"
 	done
 	
-	exit 0
+	bSimpleExit=true;exit 0
 fi
 
 if $bListAlreadyRunningAndNew;then
@@ -441,12 +470,12 @@ fi
 
 if ! SECFUNCisNumber -dn $nSleepFor;then
 	FUNClog Err "invalid nSleepFor='$nSleepFor'"
-	exit 1
+	bSimpleExit=true;exit 1
 fi
 
 if [[ -z "$@" ]];then
 	FUNClog Err "invalid command '$@'"
-	exit 1
+	bSimpleExit=true;exit 1
 fi
 
 FUNClog ini
@@ -601,7 +630,7 @@ if $bCheckIfAlreadyRunning;then
 				bKillOther=true
       else
         if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
-          exit 0
+          bSimpleExit=true;exit 0
         fi
 			fi
 		fi
@@ -626,7 +655,7 @@ if $bCheckIfAlreadyRunning;then
 fi
 
 function FUNCrun(){
-#	source <(secinit)
+#	source <(secinit --extras)
 #	SECFUNCarraysRestore
 	nRunTimes=0
 	local lbDevMode=false
@@ -650,7 +679,7 @@ function FUNCrun(){
 		function FUNCrunAtom(){
       echo "$FUNCNAME"
       declare -p astrRunParams&&:
-			source <(secinit) #this will apply the exported arrays
+			source <(secinit --extras) #this will apply the exported arrays
       declare -p astrRunParams&&:
       
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
@@ -680,7 +709,7 @@ function FUNCrun(){
       #zenity --info --text "$0:$LINENO"
       #~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
-      local lnRetAtom=-1
+      local lnRetAtom=1
       if $bStayForce;then
         strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
         if eval "$strEvalStayForce";then
@@ -738,10 +767,13 @@ function FUNCrun(){
       source <( secTerm.sh --getcmd -- "${astrTermOpts[@]}" -e "${astrCmdToRun[@]}" )
       declare -p SECastrFullTermCmd
       astrCmdToRun=( "${SECastrFullTermCmd[@]}" ) #this is important to avoid using about 10MB of memory from calling secTerm.sh directly
-		fi		
-    SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
-		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
-    source <(secinit) #just in case SECFUNCcleanEnvironment have been called
+		fi
+    local lnRet=1
+    if ! $bStayModeFakeFailOnce;then
+      SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
+      lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
+    fi
+    source <(secinit --extras) #just in case SECFUNCcleanEnvironment have been called to restore everything
 		
 		# BEWARE! `yad --version` returns 252!!!!!!! bYad=false;if SECFUNCexecA -ce yad --version;then bYad=true;fi
 		bYad=false;if which yad;then bYad=true;fi
@@ -755,7 +787,7 @@ function FUNCrun(){
 		
     if((lnRet==nForceExitDaemonReturnCode));then  
       FUNClog end "exit/stop requested/allowed/accepted by user."
-      exit 0
+      bSimpleExit=true;exit 0
     fi
     
 		if((lnRet!=0));then
@@ -825,6 +857,7 @@ function FUNCrun(){
 			lstrTxt+="\tTERM=$TERM\n";
 			lstrTxt+="\tPATH='$PATH'\n";
 			lstrTxt+="\tlbDevMode='$lbDevMode'\n";
+      lstrTxt+="\tbStayModeFakeFailOnce='$bStayModeFakeFailOnce'"
 			lstrTxt+="\n";
 #			lstrTxt+="Tips:\n";
 #			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
@@ -848,25 +881,7 @@ function FUNCrun(){
           bEnableSECWarnMessages #2
           bCleanSECenv #3
 				);declare -p astrYadFields
-				#~ astrYadFullCmd=(
-					#~ yad --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt" 
-						#~ --separator="\n" 
-						#~ --sticky --center --selectable-labels 
-						#~ --form 
-						#~ --field "[${astrYadFields[0]}] Use Xterm:chk" 
-						#~ --field "[${astrYadFields[1]}]" 
-						#~ --button="retry:0" 
-						#~ --button="retry-DEV:2" 
-						#~ --button="gtk-close:1" 
-						#~ "${!astrYadFields[0]}" 
-						#~ "${!astrYadFields[1]}" 
-				#~ );declare -p astrYadFullCmd
-				#~ strYadOutput="`SECFUNCexecA -ce ${astrYadFullCmd[@]}`"&&:;nRet=$? #bXterm value will be used to set the default of the 1st available field (the checkbox)
-            #~ --title "$SECstrScriptSelfName[$$]" \
-						#~ --separator="\n" \
-						#~ --sticky \
-            #~ --center \
-            #~ --selectable-labels 
+        
         astrYadExecParams=(
           "${astrYadBasicOpts[@]}"
           --text "$lstrTxt" 
@@ -887,11 +902,6 @@ function FUNCrun(){
           "${!astrYadFields[3]}" 
         )
         declare -p astrYadExecParams
-        #ok yad "${astrYadExecParams[@]}";echoc --info "$LINENO:RETURN=$?"
-        #ok strYadOutput="`yad "${astrYadExecParams[@]}"`";echoc --info "$LINENO:RETURN=$?"
-        #ok strYadOutput="`yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
-        #PROBLEM(fixed was runQuark at secfuncExec) strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
-        #PROBLEM(fixed was runQuark at secfuncExec) strYadOutput="`SECFUNCexec -ce yad "${astrYadExecParams[@]}"`"&&:;echoc --info "$LINENO:RETURN=$?"
         strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
 	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" 
 	#			IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
@@ -907,11 +917,11 @@ function FUNCrun(){
 				fi
         echoc --info "nRet='$nRet'"
 				case $nRet in 
-					1)break;; #do not retry, end. The close button.
+					1)bSimpleExit=true;break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
 					4)lbDevMode=false;; #normal retry
-					252)break;; #do not retry, end. Closed using the "window close" title button.
+					252)bSimpleExit=true;break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
             _SECFUNCcriticalForceExit
@@ -941,6 +951,8 @@ function FUNCrun(){
 		else
 			break;
 		fi
+    
+    bStayModeFakeFailOnce=false
 	done
 	
 	return $lnRet
@@ -949,7 +961,7 @@ function FUNCrun(){
 #if $bXterm;then
 #	strTitle="${astrRunParams[@]}"
 #	strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
-#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "source <(secinit):;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
+#	SECFUNCarraysExport;SECFUNCexecA -ce xterm -title "$strTitle" -e 'bash -c "source <(secinit --extras):;FUNCrun"' >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
 #else
 #	SECFUNCexecA -ce FUNCrun
 #fi

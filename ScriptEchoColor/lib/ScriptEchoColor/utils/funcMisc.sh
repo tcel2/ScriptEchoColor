@@ -1182,9 +1182,11 @@ function SECFUNCscriptNameAsId(){
   SECFUNCfixId --justfix -- "$(basename "$0")"
 }
 
-function SECFUNCcreateFIFO(){ #help create a temporary FIFO PIPE file
+function SECFUNCcreateFIFO(){ #help [lstrName] create a temporary FIFO PIPE file
+  local lstrName="${1-}";if [[ -n "$lstrName" ]];then lstrName=".${lstrName}";fi
+  
   local lstrScId="$(SECFUNCscriptNameAsId)"
-  local lstrFifoFl="$SEC_TmpFolder/.${lstrScId}.FIFO" &&: #TODO why this returns 1 but works???
+  local lstrFifoFl="$SEC_TmpFolder/.${lstrScId}${lstrName}.FIFO" &&: #TODO why this returns 1 but works???
   if [[ -a "$lstrFifoFl" ]];then
     if [[ ! -p "$lstrFifoFl" ]];then
       SECFUNCechoErrA "lstrFifoFl='$lstrFifoFl' not a pipe"

@@ -89,11 +89,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
-		shift
-		strExample="${1-}"
-	elif [[ "$1" == "--daemon" ]];then #help ~single
-		bDaemon=true
+	#~ elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+		#~ shift
+		#~ strExample="${1-}"
+	elif [[ "$1" == "--stopdaemon" ]];then #help ~single mainly for debug, all child pids may also stop running
+    SECFUNCexecA -ce kill -SIGUSR2 `SECFUNCuniqueLock --getdaemonpid`
+    $0 : #this will the `cat` return and let the loop continue running once
+    exit 0
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -170,9 +172,9 @@ if $bDaemon;then
   trap 'strTrap="SIGHUP"'  SIGHUP
   trap 'strTrap="SIGQUIT"' SIGQUIT
   trap 'strTrap="SIGABRT"' SIGABRT #TODO this works?
-  trap 'strTrap="SIGKILL"' SIGKILL #TODO didnt work...
+  trap 'strTrap="SIGKILL"' SIGKILL #TODO didnt work, why?
   trap 'strTrap="SIGTERM"' SIGTERM
-  trap 'strTrap="SIGSTOP"' SIGSTOP
+  trap 'strTrap="SIGSTOP"' SIGSTOP # prevent suspending new requests TODO why?
   trap 'strTrap="SIGUSR1"' SIGUSR1 # may be useful
   trap 'strTrap="SIGUSR2"' SIGUSR2 # may be useful
   #TODO anything else?
@@ -183,20 +185,21 @@ if $bDaemon;then
   while true;do
     if [[ -n "$strTrap" ]];then
       if [[ "$strTrap" == "SIGUSR1" ]];then
-        #TODO something
+        SECFUNCechoWarnA "$strTrap: #TODO something useful"
         strTrap=""
       fi
       if [[ "$strTrap" == "SIGUSR2" ]];then
-        SECFUNCechoWarnA "$strTrap: force quitting, mainly to debug during development"
+        SECFUNCechoWarnA "$strTrap: force quitting, mainly to help on restarting a development version"
         exit 0
       fi
     
       if [[ -n "$strTrap" ]];then
-        SECFUNCechoWarnA "$strTrap: won't quit or some pseudo-child pid may exit..."
+        SECFUNCechoWarnA "$strTrap: won't quit or some pseudo-child pid may exit..." # pseudo-child as despite the pid is already ofphaned it may still have some relation with this pid in some way TODO how? what way it keeps that relation?
       fi
       strTrap=""
     fi
     
+    #(sleep 10;while true;do ps --ppid $$ |egrep "cat.*${strFifoFl}";sleep 1;done)&
     #IFS=$'\n' read -d '' -r -a astrCmdRequest <"$strFifoFl" &&:
     strSrcExecAll="`cat <"$strFifoFl"`" # this will WAIT until somthing is written to the PIPE!!!
     if [[ -n "$strSrcExecAll" ]];then
@@ -211,7 +214,7 @@ if $bDaemon;then
   #      echo "$strLog" |tee -a "$SECstrRunLogFile"
         #( "${astrCmdRequest[@]}" & ) # will reparent to init or the like
 #        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"& )&&: # this trick will reparent to init or the like
-        ( eval "$strSrcExec"; "${astrCmdToRun[@]}"&disown )&disown &&: # this trick will reparent to init or the like and grant disown!
+        ( eval "$strSrcExec"; "${astrCmdToRun[@]}" & disown )&disown &&: # this trick will reparent to init or the like and grant disown!
       done
     fi
   done

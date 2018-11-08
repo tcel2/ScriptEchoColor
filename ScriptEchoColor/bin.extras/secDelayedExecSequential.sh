@@ -225,7 +225,9 @@ if $bRunAll || [[ -n "$strFilter" ]];then
     echo "$strLogTxt" >>"$strLogFile"
     echo "$strLogTxt" >>"$strLogFileFull"
     
+    echo "RUNNING: $strCmd"
     bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1  #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
+    #(${strCmd} >>"$strLogFileFull" 2>&1 & disown) & disown
     
     ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: |tee -a "$strLogFileFull" # strCmd will (expectedly) not end with '$" -B 2' :)
     

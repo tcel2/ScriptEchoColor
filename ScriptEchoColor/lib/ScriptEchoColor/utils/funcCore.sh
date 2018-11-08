@@ -2475,31 +2475,34 @@ function SECFUNCrestoreAliases() { #help
 	source "$SECstrFileLibFast";
 }
 
-#~ astrSECFUNCtrapPrepend=(EXIT RETURN DEBUG)
-function SECFUNCtrapPrepend() { #help <lstrPrependCode> <lstrSig>
+function SECFUNCtrapPrepend() { #help <lstrPrependCode> <lastrSig>
   local lstrPrependCode="$1";shift
-  local lstrSig="$1";shift
+  local lastrSig=( "$@" )
   
-  #~ if SECFUNCarrayContains astrSECFUNCtrapPrepend $lstrSig;then
-    #~ : # ok
-  #~ el
-  if ! kill -l $lstrSig >/dev/null 2>&1;then #[[ "${lstrSig:0:3}" != "SIG" ]];then
-    SECFUNCechoErrA "invalid signal specification"
-    return 1
-  fi
+  local lstrSig
+  for lstrSig in "${lastrSig[@]}";do
+    if ! kill -l $lstrSig >/dev/null 2>&1;then #[[ "${lstrSig:0:3}" != "SIG" ]];then
+      SECFUNCechoErrA "invalid signal specification"
+      return 1
+    fi
+  done
   
-  # trick to prevent dups
-  local lstrNewCodeId="$(echo "$lstrPrependCode" |cksum |tr ' ' '_')"
-  
-  local lstrCode="$(trap |grep $lstrSig |sed -r "s@trap -- '(.*)' $lstrSig@\1@")";
-  
-  if echo "$lstrCode" |grep -q "$FUNCNAME=$lstrNewCodeId;";then
-    SECFUNCechoWarnA "trap code already added: $lstrPrependCode"
-    return 0
-  fi
-  
-  # prepend
-  trap "$FUNCNAME=$lstrNewCodeId;$lstrPrependCode;$lstrCode" $lstrSig
+  for lstrSig in "${lastrSig[@]}";do
+    # trick to prevent dups
+    local lstrNewCodeId="$(echo "$lstrPrependCode" |cksum |tr ' ' '_')"
+    
+    local lstrCode="$(trap |grep $lstrSig |sed -r "s@trap -- '(.*)' $lstrSig@\1@")";
+    
+    local lstrFullId="str${FUNCNAME}=\"${lstrSig}:${lstrNewCodeId}\""
+    
+    if echo "$lstrCode" |grep -q "$lstrFullId";then
+      SECFUNCechoWarnA "trap $lstrSig code already added: $lstrPrependCode"
+      continue
+    fi
+    
+    # prepend
+    trap "$lstrFullId; $lstrPrependCode; $lstrCode" $lstrSig
+  done
   
   return 0
 }
