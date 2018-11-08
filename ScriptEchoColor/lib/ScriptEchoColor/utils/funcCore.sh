@@ -2475,11 +2475,15 @@ function SECFUNCrestoreAliases() { #help
 	source "$SECstrFileLibFast";
 }
 
-function SECFUNCtrapPrepend() { #help <lstrSig> <lstrPrependCode>
-  local lstrSig="$1";shift
+#~ astrSECFUNCtrapPrepend=(EXIT RETURN DEBUG)
+function SECFUNCtrapPrepend() { #help <lstrPrependCode> <lstrSig>
   local lstrPrependCode="$1";shift
+  local lstrSig="$1";shift
   
-  if [[ "${lstrSig:0:3}" != "SIG" ]];then
+  #~ if SECFUNCarrayContains astrSECFUNCtrapPrepend $lstrSig;then
+    #~ : # ok
+  #~ el
+  if ! kill -l $lstrSig >/dev/null 2>&1;then #[[ "${lstrSig:0:3}" != "SIG" ]];then
     SECFUNCechoErrA "invalid signal specification"
     return 1
   fi
