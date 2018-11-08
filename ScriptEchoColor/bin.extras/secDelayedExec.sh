@@ -24,8 +24,12 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
+astrOriginalOptions=( "$@" )
+
+###################################################################
+###################################################################
 # THIS BELOW MUST BE BEFORE secinit!!!
-if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST option. It will grant .bashrc will be loaded previously to executing the command. Useful in case this project was installed for a single user only.
+if [[ "${1-}" == "--rc" ]];then #help ~exclusive if used, this option must be the FIRST option. It will grant .bashrc will be loaded previously to executing the command. Useful in case this project was installed for a single user only.
 	shift
 	export SECstrScriptSelfNameTmp="$0"
 	function SECFUNCrcTmp() {
@@ -33,22 +37,39 @@ if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST opt
 		$SECstrScriptSelfNameTmp "$@"
 	};export -f SECFUNCrcTmp
 #	echo "INFO: Granting .bashrc will be loaded previously to executing the command." >&2
-	astrCmd=(bash -i -c 'SECFUNCrcTmp $0 "$@"' "$@");
+	astrCmd=(bash -i -c 'SECFUNCrcTmp $0 "$@"' "$@"); #TODO shouldnt suffice this and also avoid '-i'?: bash --rcfile ~/.bashrc -c ...
 	echo "Exec: ${astrCmd[@]}" >&2
 	"${astrCmd[@]}"
 	exit $?
 fi
 # THIS ABOVE MUST BE BEFORE secinit!!!
+###################################################################
+###################################################################
 
 #source <(secinit --nochild --extras)
 source <(secinit)
 export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+#####################################
+#####################################
 # THIS BELOW MUST BE JUST AFTER secinit!!!
-if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help 
+if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help ~exclusive
   #SECFUNCfdReport
   echo "$strExecGlobalLogFile" # no echo to stderr or stdout must happen before this! if running under nohup it is worse because both fd1 and fd2 will point to the same pipe!!! :(
   exit 0
 fi
+
+#~ if [[ "${1-}" == "--disownx" ]];then #help ~exclusive if used must be before other simple options.
+  #~ ###
+  #~ # this will spawn a term and run this script as it's child conserving some memory.
+  #~ # (instead of this script calling the term and then running a bash child function inside it)
+  #~ ###
+	#~ shift #discards this option 
+  #~ secTerm.sh --disown -- -e $0 $@ #passes remaining options
+  #~ exit $?
+#~ fi
+# THIS ABOVE MUST BE JUST AFTER secinit!!!
+#####################################
+#####################################
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
 echo " \$@='$@'" >&2
@@ -108,7 +129,10 @@ export bCleanSECenv=true;
 export nAutoRetryDelay=-1
 export bAutoRetryAlways=false
 export nForceExitDaemonReturnCode=100 #see SECFUNCerrCodeExplained() for the ones to NOT use
-export strTitle="$SECstrScriptSelfName"
+: ${strTitle:="$SECstrScriptSelfName"};export strTitle
+: ${bForceDisableXtermOption:=false};export bForceDisableXtermOption
+export bDisownX=false
+: ${bAlreadyDisownX:=false}
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
@@ -163,11 +187,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bXterm=true
 	#~ elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
 		#~ bGetGlobalLogFile=true
+  elif [[ "${1-}" == "--disownx" ]];then #help like -x but will use less memory
+    bDisownX=true
 	elif [[ "$1" == "-O" || "$1" == "--order" ]];then #help <NUMBER> dummy option and dummy "required" parameter (ex.: 00023). Only used to easily sort all the commands being run by this script
 		:
 	elif [[ "$1" == "--xtermopts" ]];then #help "<astrXtermOpts>" options to xterm like background color etc.
 		shift
-		astrXtermOpts=(${1-})
+		astrXtermOpts=(${1-}) #TODO will fail for options with spaces ex.: -title " a b c ", therefore expecting such wont be used...
 	elif [[ "$1" == "--runallnow" ]];then #help <bRunAllNow> set to 'true' to skip sleep delays of all tasks, and exit.
 		shift
 		varset bRunAllNow=true;varset bRunAllNow="${1-}" #this is fake, just to easy (lazy me) validate boolean... cfg vars should use the same as vars code... onde day..
@@ -186,6 +212,36 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift&&:
 done
+if $bForceDisableXtermOption;then
+  bXterm=false
+fi
+
+astrRunParams=( "$@" );export astrRunParams
+declare -p astrRunParams
+
+function FUNCprepareTitle() {
+  local lastrTmpTitle=("${astrRunParams[@]}")
+  lastrTmpTitle[0]="`basename "${lastrTmpTitle[0]}"`"
+  strTitle="${lastrTmpTitle[@]}_pid$$"
+  strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
+  strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
+}
+FUNCprepareTitle
+astrTermOpts=(-sl 1000 -title "$strTitle" ${astrXtermOpts[@]-})
+declare -p astrTermOpts
+
+if ! $bAlreadyDisownX;then
+  if $bDisownX;then
+    ###
+    # this will spawn a term and run this script as it's child conserving some memory.
+    # (instead of this script calling the term and then running a bash child function inside it)
+    ###
+    export bForceDisableXtermOption=true
+    export bAlreadyDisownX=true
+    secTerm.sh --disown -- "${astrTermOpts[@]}" -e $0 "${astrOriginalOptions[@]}"
+    exit $?
+  fi
+fi
 
 export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
 
@@ -569,8 +625,6 @@ if $bCheckIfAlreadyRunning;then
 	done
 fi
 
-export astrRunParams=("$@")
-declare -p astrRunParams
 function FUNCrun(){
 #	source <(secinit)
 #	SECFUNCarraysRestore
@@ -594,81 +648,84 @@ function FUNCrun(){
 		export strFileRetVal=$(mktemp)
     export SEC_WARN=$bEnableSECWarnMessages
 		function FUNCrunAtom(){
+      echo "$FUNCNAME"
       declare -p astrRunParams&&:
 			source <(secinit) #this will apply the exported arrays
       declare -p astrRunParams&&:
       
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
-			( # nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-        SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
-        declare -p astrRunParams&&:
+ #     yad --text $LINENO
+			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
+      SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
+#      yad --text $LINENO
+      declare -p astrRunParams&&:
+    
+      evalCleanEnv=":";
+      if $bCleanSECenv;then
+        evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain in details why this is important/useful!
+      fi
+      eval "$evalCleanEnv" # TODO this way prevents problems (TODO specify what problems) caused if being called inside the 'if' block?
+      declare -p astrRunParams&&:
       
-        evalCleanEnv=":";
-        if $bCleanSECenv;then
-          evalCleanEnv="SECFUNCcleanEnvironment;" #all SEC environment will be cleared TODO explain why this is important/useful!?
-        fi
-        eval "$evalCleanEnv" # TODO this way prevents problems caused if being called inside the 'if' block?
-        declare -p astrRunParams&&:
-        
-        evalSECWarn=":"
-        if ! $bCleanSECenv;then # with SEC env cleaned, SEC_WARN shouldnt be there too
-          evalSECWarn="export SEC_WARN=$bEnableSECWarnMessages"
-        fi
-        eval "$evalSECWarn"
-        
-				#"$@";
-				declare -p PATH >&2
-				echo "$FUNCNAME Running Command: ${astrRunParams[@]-}"
+      evalSECWarn=":"
+      if ! $bCleanSECenv;then # with SEC env cleaned, SEC_WARN shouldnt be there too
+        evalSECWarn="export SEC_WARN=$bEnableSECWarnMessages"
+      fi
+      eval "$evalSECWarn"
+      
+      #"$@";
+      declare -p PATH >&2
+      echo "$FUNCNAME Running Command: ${astrRunParams[@]-}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
-        #zenity --info --text "$0:$LINENO"
-				#~ "${astrRunParams[@]}"
+      #zenity --info --text "$0:$LINENO"
+      #~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
-        if $bStayForce;then
-          strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
-          if eval "$strEvalStayForce";then
-            if ! yad --title="$strTitle" --info \
-              --button="gtk-ok:0" --button="gtk-close:1" \
-              --text="CONTINUE WATCHING THIS PROCESS (REGEX) ?\n(Close or cancel will stop and exit this runner)\n\nAlready running:\n$strInfoSF";
-            then
-              exit $nForceExitDaemonReturnCode
-            fi
-          else
-            echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
-            "${astrRunParams[@]}"
-            while ! eval "$strEvalStayForce";do
-              echo "Wating it start: $strInfoSF"
-              sleep 0.1
-            done
+      local lnRetAtom=-1
+      if $bStayForce;then
+        strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
+        if eval "$strEvalStayForce";then
+          if ! yad --title="$strTitle" --info \
+            --button="gtk-ok:0" --button="gtk-close:1" \
+            --text="CONTINUE WATCHING THIS PROCESS (REGEX) ?\n(Close or cancel will stop and exit this runner)\n\nAlready running:\n$strInfoSF";
+          then
+            exit $nForceExitDaemonReturnCode
           fi
           
           while true;do
             if ! eval "$strEvalStayForce";then break;fi
-#            anPGrep=(`pgrep -fx "^${astrRunParams[@]}$"`)
-            echo "Still running: $strInfoSF"
+  #            anPGrep=(`pgrep -fx "^${astrRunParams[@]}$"`)
+            echo "Still running: $strInfoSF" # still running not from this script but started elsewhere no matter where.
             sleep 5
           done
         else
           echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
-          "${astrRunParams[@]}"
+          "${astrRunParams[@]}";lnRetAtom=$?
+          #~ while ! eval "$strEvalStayForce";do
+            #~ echo "Wating it start: $strInfoSF"
+            #~ sleep 0.1
+          #~ done
         fi
-			)&&:;local lnRetAtom=$?
+      else
+        echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
+        "${astrRunParams[@]}";lnRetAtom=$?
+      fi
 			echo "$lnRetAtom" >"$strFileRetVal";
 		};export -f FUNCrunAtom
 		
-		astrCmdToRun=(bash -c)
+		astrCmdToRun=()
+    
+		if $bXterm;then
+      astrCmdToRun+=(bash -c)
+    fi
+    
 		if $lbDevMode;then
 			astrCmdToRun=(secEnvDev.sh --exit)
 		fi
+    
 		astrCmdToRun+=(FUNCrunAtom)
 		
 		SECFUNCarraysExport
 		if $bXterm;then
-			astrTmpTitle=("${astrRunParams[@]}")
-			astrTmpTitle[0]="`basename "${astrTmpTitle[0]}"`"
-			strTitle="${astrTmpTitle[@]}_pid$$"
-			strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
-			strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
-      
 			if [[ "$TERM" != "dumb" ]];then
 				echoc --info "if on a terminal, to detach this from xterm, do not hit ctrl+C, simply close this one and xterm will keep running..."&&:
 			fi
@@ -677,14 +734,14 @@ function FUNCrun(){
       #if which mrxvt >/dev/null 2>&1;then aCmdTerm=(mrxvt -aht +showmenu);fi # rxvt does not kill child proccesses when it is closed but mrxvt does!
       #SECFUNCexecA -ce "${aCmdTerm[@]}" -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
       #SECFUNCexecA -ce secTerm.sh -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
-      source <(secTerm.sh --secGetCmdOnly -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}")
+      #astrCmdTerm=(secTerm.sh --getcmd -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}")
+      source <( secTerm.sh --getcmd -- "${astrTermOpts[@]}" -e "${astrCmdToRun[@]}" )
       declare -p SECastrFullTermCmd
-      "${SECastrFullTermCmd[@]}" #this is important to avoid using about 10MB of memory from calling secTerm.sh directly
-		else
-#			declare -p astrRunParams
-			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
+      astrCmdToRun=( "${SECastrFullTermCmd[@]}" ) #this is important to avoid using about 10MB of memory from calling secTerm.sh directly
 		fi		
+    SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
 		local lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
+    source <(secinit) #just in case SECFUNCcleanEnvironment have been called
 		
 		# BEWARE! `yad --version` returns 252!!!!!!! bYad=false;if SECFUNCexecA -ce yad --version;then bYad=true;fi
 		bYad=false;if which yad;then bYad=true;fi

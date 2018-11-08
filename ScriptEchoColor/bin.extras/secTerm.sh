@@ -28,11 +28,12 @@ source <(secinit)
 
 #~ SECFUNCshowHelp --colorize "\tRun this like you would xterm or mrxvt, so to exec something requires -e param."
 #~ SECFUNCshowHelp --colorize ""
-#~ SECFUNCshowHelp --colorize "\tIf first option is --secGetCmdOnly it will just output the full command and exit."
-#~ SECFUNCshowHelp --colorize "\t\tCan be used as \`source <(secTerm.sh --secGetCmdOnly)\`"
+#~ SECFUNCshowHelp --colorize "\tIf first option is --getcmd it will just output the full command and exit."
+#~ SECFUNCshowHelp --colorize "\t\tCan be used as \`source <(secTerm.sh --getcmd)\`"
 #~ SECFUNCshowHelp --colorize "\t\t\`declare -p SECastrFullTermCmd\`"
 
 bJustOutput=false
+bDisown=false
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
@@ -50,8 +51,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-  elif [[ "$1" == "--secGetCmdOnly" ]];then #help if used as first option it will just output the full command and exit. Can be used as ex.:\n\t\tsource <(secTerm.sh --secGetCmdOnly -- -e sleep 10).\n\t\tdeclare -p SECastrFullTermCmd.\n\t\t"${SECastrFullTermCmd[@]}"
+  elif [[ "$1" == "--getcmd" ]];then #help if used as first option it will just output the full command and exit. Can be used as ex.:\n\t\tsource <(secTerm.sh --getcmd -- -e sleep 10).\n\t\tdeclare -p SECastrFullTermCmd.\n\t\t"${SECastrFullTermCmd[@]}"
     bJustOutput=true
+  elif [[ "$1" == "--disown" ]];then #help 
+    bDisown=true
 	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
@@ -127,13 +130,17 @@ if $bJustOutput;then exit 0;fi
 ########### RUNS BELOW HERE ###########
 
 SECFUNCarraysExport #important for exported arrays before calling/reaching this script
-"${SECastrFullTermCmd[@]}";nRet=$?
- 
-if((nRet!=0));then
-  declare -p nRet
-  source <(secinit)
-  if SECFUNCisShellInteractive;then
-    echoc -p -t 60 "exit error $nRet"
+if $bDisown;then
+  ( "${SECastrFullTermCmd[@]}"&disown )&disown &&:
+else
+  "${SECastrFullTermCmd[@]}";nRet=$?
+   
+  if((nRet!=0));then
+    declare -p nRet
+    source <(secinit)
+    if SECFUNCisShellInteractive;then
+      echoc -p -t 60 "exit error $nRet"
+    fi
   fi
 fi
 

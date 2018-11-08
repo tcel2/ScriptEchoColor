@@ -2424,7 +2424,7 @@ function SECFUNCcheckActivateRunLog() { #help
         #~ done
 #        echo $LINENO
         
-        local lastrLogCmd=(tail -F --pid=$$) #ctrl+c is not killing it, neither after closing term TODO trap INT prepending kill in case already set? new SECFUNCtrapAppend()? add a maintenance task to detect orphaned `tail -F` using SEC log files?
+        local lastrLogCmd=(tail -F --pid=$$)
         ##########################
         ### using tail instead of tee to conserve memory, old command:
         ### exec > >(tee -a "$SECstrRunLogFile")
@@ -2473,6 +2473,31 @@ function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this fu
 
 function SECFUNCrestoreAliases() { #help
 	source "$SECstrFileLibFast";
+}
+
+function SECFUNCtrapPrepend() { #help <lstrSig> <lstrPrependCode>
+  local lstrSig="$1";shift
+  local lstrPrependCode="$1";shift
+  
+  if [[ "${lstrSig:0:3}" != "SIG" ]];then
+    SECFUNCechoErrA "invalid signal specification"
+    return 1
+  fi
+  
+  # trick to prevent dups
+  local lstrNewCodeId="$(echo "$lstrPrependCode" |cksum |tr ' ' '_')"
+  
+  local lstrCode="$(trap |grep $lstrSig |sed -r "s@trap -- '(.*)' $lstrSig@\1@")";
+  
+  if echo "$lstrCode" |grep -q "$FUNCNAME=$lstrNewCodeId;";then
+    SECFUNCechoWarnA "trap code already added: $lstrPrependCode"
+    return 0
+  fi
+  
+  # prepend
+  trap "$FUNCNAME=$lstrNewCodeId;$lstrPrependCode;$lstrCode" $lstrSig
+  
+  return 0
 }
 
 export SECbScriptSelfNameChanged=false
