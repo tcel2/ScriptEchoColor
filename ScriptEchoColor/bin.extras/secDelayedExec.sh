@@ -217,6 +217,18 @@ if $bIgnoreSleep;then
   nSleepFor=0
 fi
 
+astrRunParams=( "$@" );export astrRunParams
+declare -p astrRunParams
+
+function FUNCprepareTitle() {
+  local lastrTmpTitle=("${astrRunParams[@]}")
+  lastrTmpTitle[0]="`basename "${lastrTmpTitle[0]}"`"
+  strTitle="${lastrTmpTitle[@]}_pid$$"
+  strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
+  strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
+}
+FUNCprepareTitle
+
 astrTrapSigs=(EXIT INT KILL QUIT TERM HUP) #TODO are all these necessary/effective?
 function FUNCexitWork() {
   trap '' "${astrTrapSigs[@]}" #clean traps as fast as possible to prevent "trap's loop"
@@ -233,7 +245,11 @@ function FUNCexitWork() {
   if $bStay || $bStayForce;then 
     # bStayModeFakeFailOnce is important to initially directly show the retry dialog
     echo "$$ Running again..." >>"$lstrDbgLogFile"
-    astrRestart=($0 "${astrOriginalOptions[@]}");export astrRestart
+    astrRestart=();export astrRestart
+    if $bRestartDevMode;then
+      astrRestart+=(secEnvDev.sh --exit)
+    fi
+    astrRestart+=($0 "${astrOriginalOptions[@]}");
     function FUNCrestart() {
       echo "$FUNCNAME"
       source <(secinit) #to restore exported arrays
@@ -259,17 +275,6 @@ function FUNCexitWork() {
 SECFUNCtrapPrepend 'FUNCexitWork' "${astrTrapSigs[@]}"
 trap -p
 
-astrRunParams=( "$@" );export astrRunParams
-declare -p astrRunParams
-
-function FUNCprepareTitle() {
-  local lastrTmpTitle=("${astrRunParams[@]}")
-  lastrTmpTitle[0]="`basename "${lastrTmpTitle[0]}"`"
-  strTitle="${lastrTmpTitle[@]}_pid$$"
-  strTitle="`SECFUNCfixIdA -f -- "$strTitle"`"
-  strTitle="`echo "$strTitle" |sed -r 's"(_)+"\1"g'`" #sed removes duplicated '_'
-}
-FUNCprepareTitle
 astrTermOpts=(-sl 1000 -title "$strTitle" ${astrXtermOpts[@]-})
 declare -p astrTermOpts
 
@@ -963,6 +968,7 @@ function FUNCrun(){
         if $bStayModeFakeFailOnce;then
           if $bStay || $bStayForce;then
             bNormalRestart=true
+            bRestartDevMode=$lbDevMode
             #~ bIgnoreWaitChkPoint=true
             #~ bIgnoreSleep=true
             exit 0 # will use the EXIT trap to do a normal restart
