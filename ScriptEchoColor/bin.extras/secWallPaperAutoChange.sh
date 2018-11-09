@@ -218,12 +218,12 @@ if $bDaemon;then
       if $bWriteFilename;then
         nFontSize=15
         strTxt="`basename "$strFile"` $strSzOrEq$strOrigSize RGB:$nAddR,$nAddG,$nAddB"
-        # black pseudo outline at 4 corners
+        # pseudo outline at 4 corners
         SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
-          -fill black -annotate +2+2 "$strTxt" \
-          -fill black -annotate +0+0 "$strTxt" \
-          -fill black -annotate +0+2 "$strTxt" \
-          -fill black -annotate +2+0 "$strTxt" \
+          -fill red    -annotate +0+2 "$strTxt" \
+          -fill green  -annotate +2+0 "$strTxt" \
+          -fill blue   -annotate +0+0 "$strTxt" \
+          -fill purple -annotate +2+2 "$strTxt" \
           -fill white -annotate +1+1 "$strTxt" \
           "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"

@@ -108,6 +108,10 @@ export bStay=false
 export bStayForce=false
 : ${bSimpleExit:=false};export bSimpleExit
 : ${bStayModeFakeFailOnce:=false};export bStayModeFakeFailOnce
+export bNormalRestart=false
+: ${bIgnoreWaitChkPoint:=false};export bIgnoreWaitChkPoint
+: ${bIgnoreSleep:=false};export bIgnoreSleep
+: ${bRestartDevMode:=false};export bRestartDevMode
 export strEvalStayForce=""
 export bListWaiting=false
 export bCheckPointDaemonHold=false
@@ -206,8 +210,10 @@ done
 if $bDisownX;then
   bXterm=false
 fi
-if $bStayModeFakeFailOnce;then
+if $bIgnoreWaitChkPoint;then
   bWaitCheckPoint=false
+fi
+if $bIgnoreSleep;then
   nSleepFor=0
 fi
 
@@ -231,13 +237,20 @@ function FUNCexitWork() {
     function FUNCrestart() {
       echo "$FUNCNAME"
       source <(secinit) #to restore exported arrays
-      bStayModeFakeFailOnce=true "${astrRestart[@]}"
+      if $bNormalRestart;then
+        bStayModeFakeFailOnce=false
+      else
+        bStayModeFakeFailOnce=true
+      fi
+      bIgnoreWaitChkPoint=true
+      bIgnoreSleep=true
+      "${astrRestart[@]}"
     };export -f FUNCrestart
     SECFUNCarraysExport
     secTerm.sh --disown -- -e bash -c FUNCrestart
 #    secTerm.sh --disown -- -e bash -c "bStayModeFakeFailOnce=true $0 ${astrOriginalOptions[@]}"
     echo "$$ Waiting a bit..." >>"$lstrDbgLogFile"
-    echoc -w -t 10 #wait it properly start TODO actually detect if it started correctly
+    echoc -w -t 2 #wait it properly start TODO actually detect if it started correctly
     echo "$$ Done." >>"$lstrDbgLogFile"
   fi
   
@@ -871,8 +884,13 @@ function FUNCrun(){
         bEnableSECWarnMessages=true #the 1st time a problem happens, set to true to help on retries debugging
         bCleanSECenv=false #the 1st time a problem happens, set to false to help on retries debugging
 				local lbEvalCode=false
-#				: ${strCodeToEval:=":"}
-				: ${strCodeToEval:="`declare -p astrRunParams`"}
+        sedClearArrayIndexes="s@\[[[:digit:]]*\]=@@g"
+        strCodeToEval=":;"
+        if $bStay || $bStayForce;then
+          strCodeToEval+="`declare -p astrOriginalOptions |sed -r "$sedClearArrayIndexes"`;"
+        else
+          strCodeToEval+="`declare -p astrRunParams       |sed -r "$sedClearArrayIndexes"`;"
+        fi
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				astrYadFields=(
@@ -916,11 +934,12 @@ function FUNCrun(){
 	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
         echoc --info "nRet='$nRet'"
+        lbDevMode=false
 				case $nRet in 
 					1)bSimpleExit=true;break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
-					4)lbDevMode=false;; #normal retry
+					4);; #normal retry
 					252)bSimpleExit=true;break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
@@ -941,6 +960,14 @@ function FUNCrun(){
 					#~ eval "$strCodeToEval"
 				#~ fi
 				eval "$strCodeToEval" # empty eval causes no trouble, TODO may help with some commands if outside 'if' block?
+        if $bStayModeFakeFailOnce;then
+          if $bStay || $bStayForce;then
+            bNormalRestart=true
+            #~ bIgnoreWaitChkPoint=true
+            #~ bIgnoreSleep=true
+            exit 0 # will use the EXIT trap to do a normal restart
+          fi
+        fi
 			else
 				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
 				lstrTxt+="\n";
@@ -951,8 +978,6 @@ function FUNCrun(){
 		else
 			break;
 		fi
-    
-    bStayModeFakeFailOnce=false
 	done
 	
 	return $lnRet
