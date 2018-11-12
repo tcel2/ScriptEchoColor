@@ -161,6 +161,8 @@ function FUNCrun() {
 }
 
 if $bDaemon;then
+  SECFUNCuniqueLock --waitbecomedaemon
+  
 	while true; do
 		FUNCrun "$@"
 		echoc -w -t $nDaemonSleep

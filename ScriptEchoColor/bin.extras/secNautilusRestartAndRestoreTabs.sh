@@ -87,6 +87,8 @@ if ! nPidNautilus=`pgrep nautilus`;then
 	exit 1
 fi
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 echoc --alert "WARNING: @{-n}This is extremely experimental code! @-n the delays are blind, if nautilus cannot attend to the commands, things may go wrong..."
 echoc --info "Optional parameters can be a tab locations to be added to a running nautilus."
 echoc --alert "WARNING: @{-n}the window typing is blind! @-n if another window pops up the typing will happen on that window and not at nautilus!"

@@ -268,6 +268,8 @@ bCleanExit=false
 windowId=
 pid=
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 while true; do
   windowIdNew=`xdotool getwindowfocus`&&:
   

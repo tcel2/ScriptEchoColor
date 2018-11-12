@@ -210,6 +210,8 @@ function _FUNCreportMatches() {
 	if SECFUNCexecA -ce colordiff <(echo "$lstrBefore") <(echo "$lstrAfter");then :;fi #TODO why &&: didnt work?
 }
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 IFS=$'\n' read -d '' -r -a astrFileList < <(find "${strWorkPath}/" -regex ".*/${strRegexFileFilter}")&&:
 #declare -p strRegexFileFilter strWorkPath
 if((`SECFUNCarraySize astrFileList`>0));then

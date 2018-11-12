@@ -104,6 +104,8 @@ strPrefixName="ladspa_"
 strSinkName="${strPrefixName}sink"
 strNormSinkName="${strPrefixName}normalized"
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 if $bEnable;then
 	if ! SECFUNCexecA -ce pacmd list-modules |grep "sink_name=${strPrefixName}";then
 		SECFUNCexecA -ce \

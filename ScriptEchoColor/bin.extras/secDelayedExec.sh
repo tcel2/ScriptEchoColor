@@ -108,10 +108,9 @@ export bStay=false
 export bStayForce=false
 : ${bSimpleExit:=false};export bSimpleExit
 : ${bStayModeFakeFailOnce:=false};export bStayModeFakeFailOnce
-export bNormalRestart=false
-: ${bIgnoreWaitChkPoint:=false};export bIgnoreWaitChkPoint
-: ${bIgnoreSleep:=false};export bIgnoreSleep
-: ${bRestartDevMode:=false};export bRestartDevMode
+: ${SECbDelayExecIgnoreWaitChkPoint:=false};export SECbDelayExecIgnoreWaitChkPoint
+: ${SECbDelayExecIgnoreSleep:=false};export SECbDelayExecIgnoreSleep
+: ${SECbDelayExecIgnoreXterm:=false};export SECbDelayExecIgnoreXterm
 export strEvalStayForce=""
 export bListWaiting=false
 export bCheckPointDaemonHold=false
@@ -126,8 +125,8 @@ export nAutoRetryDelay=-1
 export bAutoRetryAlways=false
 export nForceExitDaemonReturnCode=100 #see SECFUNCerrCodeExplained() for the ones to NOT use
 : ${strTitle:="$SECstrScriptSelfName"};export strTitle
-export bDisownX=false
-: ${bAlreadyDisownX:=false}
+bDisownX=false
+#~ : ${bAlreadyDisownX:=false}
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export astrXtermOpts=()
@@ -183,6 +182,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	#~ elif [[ "$1" == "-G" || "$1" == "--getgloballogfile" ]];then #help 
 		#~ bGetGlobalLogFile=true
   elif [[ "${1-}" == "--disownx" ]];then #help like -x but will use less memory
+    #ATTENTION do not create a simple option as this is removed using SECFUNCarrayClean
     bDisownX=true
 	elif [[ "$1" == "-O" || "$1" == "--order" ]];then #help <NUMBER> dummy option and dummy "required" parameter (ex.: 00023). Only used to easily sort all the commands being run by this script
 		:
@@ -207,13 +207,13 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift&&:
 done
-if $bDisownX;then
+if $SECbDelayExecIgnoreXterm;then
   bXterm=false
 fi
-if $bIgnoreWaitChkPoint;then
+if $SECbDelayExecIgnoreWaitChkPoint;then
   bWaitCheckPoint=false
 fi
-if $bIgnoreSleep;then
+if $SECbDelayExecIgnoreSleep;then
   nSleepFor=0
 fi
 
@@ -230,7 +230,10 @@ function FUNCprepareTitle() {
 FUNCprepareTitle
 
 astrTrapSigs=(EXIT INT KILL QUIT TERM HUP) #TODO are all these necessary/effective?
-function FUNCexitWork() {
+bRestartDevMode=false
+bRestartSequentialMode=false
+bRestartNormal=false
+function FUNCdelayedExecExitWork() {
   trap '' "${astrTrapSigs[@]}" #clean traps as fast as possible to prevent "trap's loop"
   
   source <(secinit --extras);
@@ -238,57 +241,84 @@ function FUNCexitWork() {
   local lstrDbgLogFile="/tmp/`basename $0`.debug.log"
 
   SECFUNCdrawLine " $$ `SECFUNCdtFmt --pretty` " >>"$lstrDbgLogFile"
-  declare -p bSimpleExit bStay bStayForce bStayModeFakeFailOnce astrOriginalOptions strSECFUNCtrapPrepend |sed -r "s@.*@$$ &@" 2>&1 >>"$lstrDbgLogFile" &&:
+  
+  if $bRestartNormal;then
+    bStayModeFakeFailOnce=false
+  else
+    bStayModeFakeFailOnce=true
+  fi
+  
+  declare -p \
+    bSimpleExit \
+    bStay \
+    bStayForce \
+    bStayModeFakeFailOnce \
+    astrOriginalOptions \
+    strSECFUNCtrapPrepend \
+    bRestartDevMode \
+    bRestartSequentialMode \
+    bRestartNormal \
+    |sed -r "s@.*@$$ &@" 2>&1 |tee -a "$lstrDbgLogFile" &&:
   
   if $bSimpleExit;then exit 0;fi
   
   if $bStay || $bStayForce;then 
+    SECFUNCuniqueLock --id $FUNCNAME --waitbecomedaemon #really necessary?
+    #yad --text "DEBUG:HOLD: daemon restart $FUNCNAME pid=$$" #KEEP THIS IF COMMENTED!!!
+    
     # bStayModeFakeFailOnce is important to initially directly show the retry dialog
-    echo "$$ Running again..." >>"$lstrDbgLogFile"
+    echo "$$ Running again..." |tee -a "$lstrDbgLogFile"
     astrRestart=();export astrRestart
     if $bRestartDevMode;then
       astrRestart+=(secEnvDev.sh --exit)
     fi
-    astrRestart+=($0 "${astrOriginalOptions[@]}");
+    if $bRestartSequentialMode;then
+      astrRestart+=(secDelayedExecSequential.sh --filter "${astrRunParams[0]}") #TODO why will cause to much trouble creating weird huge log file at /dev/shm?
+    else
+      astrRestart+=("$0" "${astrOriginalOptions[@]}");
+    fi
+    declare -p astrRestart |tee -a "$lstrDbgLogFile"
     function FUNCrestart() {
       echo "$FUNCNAME"
       source <(secinit) #to restore exported arrays
-      if $bNormalRestart;then
-        bStayModeFakeFailOnce=false
-      else
-        bStayModeFakeFailOnce=true
-      fi
-      bIgnoreWaitChkPoint=true
-      bIgnoreSleep=true
+      export SECbDelayExecIgnoreWaitChkPoint=true
+      export SECbDelayExecIgnoreSleep=true
+      declare -p astrRestart SECbDelayExecIgnoreSleep SECbDelayExecIgnoreWaitChkPoint |sed -r "s@.*@$$ &@" 2>&1
       "${astrRestart[@]}"
     };export -f FUNCrestart
     SECFUNCarraysExport
-    secTerm.sh --disown -- -e bash -c FUNCrestart
+    lstrWaitSeqMode=""
+    if $bRestartSequentialMode;then
+      lstrWaitSeqMode="echoc -w -t 60 'Sequential mode wait'"
+    fi
+    secTerm.sh --disown -- -title "RESTART:$strTitle" -e bash -c "FUNCrestart;$lstrWaitSeqMode"
 #    secTerm.sh --disown -- -e bash -c "bStayModeFakeFailOnce=true $0 ${astrOriginalOptions[@]}"
-    echo "$$ Waiting a bit..." >>"$lstrDbgLogFile"
-    echoc -w -t 2 #wait it properly start TODO actually detect if it started correctly
-    echo "$$ Done." >>"$lstrDbgLogFile"
+    echo "$$ Waiting a bit..." |tee -a "$lstrDbgLogFile"
+    echoc -w -t 2 "$FUNCNAME ppid=$PPID pid=$$ bp=$BASHPID" #wait it properly start TODO actually detect if it started correctly
+    echo "$$ Done." |tee -a "$lstrDbgLogFile"
   fi
   
   exit 0
 }
-SECFUNCtrapPrepend 'FUNCexitWork' "${astrTrapSigs[@]}"
+SECFUNCtrapPrepend 'FUNCdelayedExecExitWork' "${astrTrapSigs[@]}"
 trap -p
 
 astrTermOpts=(-sl 1000 -title "$strTitle" ${astrXtermOpts[@]-})
 declare -p astrTermOpts
 
-if ! $bAlreadyDisownX;then
+#~ if ! $bAlreadyDisownX;then
   if $bDisownX;then
     ###
     # this will spawn a term and run this script as it's child conserving some memory.
     # (instead of this script calling the term and then running a bash child function inside it)
     ###
-    export bAlreadyDisownX=true
+    #~ export bAlreadyDisownX=true
+    SECFUNCarrayClean astrOriginalOptions "--disownx"
+    SECbDelayExecIgnoreXterm=true
     secTerm.sh --disown -- "${astrTermOpts[@]}" -e $0 "${astrOriginalOptions[@]}"
     bSimpleExit=true;exit $?
   fi
-fi
+#~ fi
 
 export strItIsAlreadyRunning="IT IS ALREADY RUNNING"
 
@@ -677,6 +707,7 @@ function FUNCrun(){
 #	SECFUNCarraysRestore
 	nRunTimes=0
 	local lbDevMode=false
+  local lbSequentialMode=false
 	while true;do
 		((nRunTimes++))&&:
 		
@@ -696,7 +727,7 @@ function FUNCrun(){
     export SEC_WARN=$bEnableSECWarnMessages
 		function FUNCrunAtom(){
       echo "$FUNCNAME"
-      declare -p astrRunParams&&:
+      #~ declare -p astrRunParams&&:
 			source <(secinit --extras) #this will apply the exported arrays
       declare -p astrRunParams&&:
       
@@ -787,7 +818,18 @@ function FUNCrun(){
       astrCmdToRun=( "${SECastrFullTermCmd[@]}" ) #this is important to avoid using about 10MB of memory from calling secTerm.sh directly
 		fi
     local lnRet=1
-    if ! $bStayModeFakeFailOnce;then
+    local lbRun=true
+    if $bStayModeFakeFailOnce;then
+      lbRun=false
+    fi
+    if $lbRun;then
+      if $bStay || $bStayForce;then
+        #####
+        # this is just to prevent simultaneously running this script with that cmd to run specific options only!
+        # also, if the command is a daemon itself, this will provide a double daemon safety in a sense :>
+        #####
+        SECFUNCuniqueLock --id "`SECFUNCfixIdA --justfix -- "${astrCmdToRun[*]}"`" --waitbecomedaemon
+      fi
       SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
       lnRet=$(cat "$strFileRetVal");rm "$strFileRetVal"
     fi
@@ -863,8 +905,14 @@ function FUNCrun(){
     strDumpRetryBtnTxt="dump;retry"
     
 		if $bStay || $bStayForce || $lbErr;then
+			lstrTxt+="QUESTION:\n";
+			lstrTxt+="\tDo you want to try to run it again?\n";
+			lstrTxt+="\n";
 			lstrTxt+="RunCommand(astrRunParams[@]):\n"
 			lstrTxt+="\t`SECFUNCparamsToEval "${astrRunParams[@]}"`\n";
+			lstrTxt+="\n";
+			lstrTxt+="SequentialHelper:\n"
+			lstrTxt+="\tsecDelayedExecSequential.sh --filter \"${astrRunParams[0]}\"\n";
 			lstrTxt+="\n";
 			lstrTxt+="At: `SECFUNCdtFmt --pretty`\n";
 			lstrTxt+="\n";
@@ -880,9 +928,6 @@ function FUNCrun(){
 #			lstrTxt+="Tips:\n";
 #			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
 #			lstrTxt+="\n";
-			lstrTxt+="QUESTION:\n";
-			lstrTxt+="\tDo you want to try to run it again?\n";
-			lstrTxt+="\n";
 			
 			echo ">>>$LINENO"
 			if $bYad;then 
@@ -907,10 +952,10 @@ function FUNCrun(){
         
         astrYadExecParams=(
           "${astrYadBasicOpts[@]}"
-          --text "$lstrTxt" 
           
-          --button="retry:4" 
-          --button="retry-DEV:2" 
+          --button="retry:4" # ATTENTION!!! EXIT VALUES ARE NOT IN ORDER!!!!!
+          --button="retry-DEV:2"
+          --button="retry-sequential-DEV:5"
           --button="${strDumpRetryBtnTxt}:3" 
           --button="gtk-close:1" 
           
@@ -919,10 +964,12 @@ function FUNCrun(){
           --field "[${astrYadFields[1]}] b4 run" 
           --field "[${astrYadFields[2]}] :chk" 
           --field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
+          --field "info:TXT" # the editable text field is MUCH better than the --text label, it has scroll bar, fixed width in pixels to the window size, 3 click selectable line, everything is better for big texts!
           "${!astrYadFields[0]}" 
           "${!astrYadFields[1]}" 
           "${!astrYadFields[2]}" 
           "${!astrYadFields[3]}" 
+          "$lstrTxt" # options to be captured put above info text
         )
         declare -p astrYadExecParams
         strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
@@ -945,6 +992,7 @@ function FUNCrun(){
 					2)lbDevMode=true;; #retry in development mode (path)
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
 					4);; #normal retry
+					5)lbDevMode=true;lbSequentialMode=true;; #retry in development mode (path)
 					252)bSimpleExit=true;break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
@@ -967,10 +1015,11 @@ function FUNCrun(){
 				eval "$strCodeToEval" # empty eval causes no trouble, TODO may help with some commands if outside 'if' block?
         if $bStayModeFakeFailOnce;then
           if $bStay || $bStayForce;then
-            bNormalRestart=true
+            bRestartNormal=true
             bRestartDevMode=$lbDevMode
-            #~ bIgnoreWaitChkPoint=true
-            #~ bIgnoreSleep=true
+            bRestartSequentialMode=$lbSequentialMode
+            #~ SECbDelayExecIgnoreWaitChkPoint=true
+            #~ SECbDelayExecIgnoreSleep=true
             exit 0 # will use the EXIT trap to do a normal restart
           fi
         fi

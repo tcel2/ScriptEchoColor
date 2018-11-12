@@ -584,7 +584,11 @@ function SECFUNCuniqueLock() { #help Creates a unique lock that help the script 
 #		SECFUNCdbgFuncOutA;return 1
 #	fi
 	
-	local l_runUniqueFile="$SEC_TmpFolder/.SEC.UniqueRun.$lstrId"
+  local lstrFlUniq=".SEC.UniqueRun.$lstrId"
+  if((${#lstrFlUniq}>=255));then
+    lstrFlUniq=".SEC.UniqueRun.sum`echo "$lstrId" |cksum |tr -d " "`"
+  fi
+	local l_runUniqueFile="$SEC_TmpFolder/${lstrFlUniq}"
 	if $lbGetUniqueFile;then
 		echo "$l_runUniqueFile"
 		SECFUNCdbgFuncOutA;return 0
@@ -1093,7 +1097,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 		shift&&:
 	done
 	
-	local lstrAllCfgVars="`declare |egrep "^[[:alnum:]_]*=" |egrep "^$lstrPrefix" |sed -r 's"^([^=]*)=.*"\1"'`"
+	local lstrAllCfgVars="`declare |egrep "^${lstrPrefix}[[:alnum:]_]*=" |sed -r 's"^([^=]*)=.*"\1"'`"
 	#declare -p lstrAllCfgVars
 	local lastrAllCfgVars;IFS=$'\n' read -d'' -r -a lastrAllCfgVars < <(echo "$lstrAllCfgVars")&&:
 	#declare -p lastrAllCfgVars
@@ -1102,7 +1106,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
 			SECFUNCcfgWriteVar $lstrCfgVar
 			if $lbShowAll;then
-				echo "SECCFG: $lstrCfgVar='${!lstrCfgVar-}'" >&2
+				echo "$lstrCfgVar='${!lstrCfgVar-}' #SECCFG" >&2
 			fi
 		done
 	fi
@@ -1182,11 +1186,47 @@ function SECFUNCscriptNameAsId(){
   SECFUNCfixId --justfix -- "$(basename "$0")"
 }
 
-function SECFUNCcreateFIFO(){ #help [lstrName] create a temporary FIFO PIPE file
-  local lstrName="${1-}";if [[ -n "$lstrName" ]];then lstrName=".${lstrName}";fi
+function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIPE file
+	SECFUNCdbgFuncInA;
+	# var init here
+	local lstrExample="DefaultValue"
+  local lbExample=false
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
+			shift
+			lstrExample="${1-}"
+    elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
+      lbExample=true
+		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift&&: #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	#validate params here
+	
+	# code here
+  local lstrCustomName="${1-}";if [[ -n "$lstrCustomName" ]];then lstrCustomName=".${lstrCustomName}";fi
   
   local lstrScId="$(SECFUNCscriptNameAsId)"
-  local lstrFifoFl="$SEC_TmpFolder/.${lstrScId}${lstrName}.FIFO" &&: #TODO why this returns 1 but works???
+  local lstrFifoFl="$SEC_TmpFolder/.${lstrScId}${lstrCustomName}.FIFO" &&: #TODO why this returns 1 but works???
   if [[ -a "$lstrFifoFl" ]];then
     if [[ ! -p "$lstrFifoFl" ]];then
       SECFUNCechoErrA "lstrFifoFl='$lstrFifoFl' not a pipe"
@@ -1198,7 +1238,8 @@ function SECFUNCcreateFIFO(){ #help [lstrName] create a temporary FIFO PIPE file
   fi
   #ls -l "$lstrFifoFl" >&2
   echo "$lstrFifoFl"
-  return 0
+  
+	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 function SECFUNCtoggleBoolean(){ #help toggles a variable "boolean" value (true or false) only if it was already set as "boolean"

@@ -151,5 +151,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 SECFUNCexec -ce FUNCcodingGuide
 SECFUNCexec -ce FUNCexample --help
 
+# if a daemon or to prevent simultaneously running it: SECFUNCuniqueLock --waitbecomedaemon
+
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 

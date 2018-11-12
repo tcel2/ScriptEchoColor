@@ -71,6 +71,14 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 #TODO how to make this script use overall a single bash pid?
 echoc --alert "TODO: @-n This should use as little rss mem as possible see: ps -o ppid,pid,rss,cmd --forest -p \`pgrep -f secNoHup\`"
 
+strFCN=""
+if secEnvDev.sh --isdevmode;then
+  strFCN="_DEV"
+fi
+
+strDaemonId="`SECFUNCfixId --justfix "$(basename "$0")"`"
+strDaemonId+="$strFCN"
+
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
@@ -92,8 +100,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	#~ elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		#~ shift
 		#~ strExample="${1-}"
+	elif [[ "$1" == "--daemon" ]];then #help ~single
+		bDaemon=true
 	elif [[ "$1" == "--stopdaemon" ]];then #help ~single mainly for debug, all child pids may also stop running
-    SECFUNCexecA -ce kill -SIGUSR2 `SECFUNCuniqueLock --getdaemonpid`
+    SECFUNCexecA -ce kill -SIGUSR2 `SECFUNCuniqueLock --id $strDaemonId --getdaemonpid`
     $0 : #this will the `cat` return and let the loop continue running once
     exit 0
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -131,28 +141,13 @@ astrCmdToRun=("$@")
 #~ fi
 
 strScId="$(SECFUNCscriptNameAsId)"
-strFifoFl="`SECFUNCcreateFIFO`"
-#~ strScId="$(SECFUNCfixId --justfix -- "$(basename "$0")")"
-#~ strFifoFl="$SEC_TmpFolder/.${strScId}.FIFO" &&: #TODO why this returns 1 but works???
-#~ declare -p strFifoFl
-#~ if [[ -a "$strFifoFl" ]];then
-  #~ if [[ ! -p "$strFifoFl" ]];then
-    #~ SECFUNCechoErrA "strFifoFl='$strFifoFl' not a pipe"
-    #~ exit 1
-  #~ fi
-#~ else
-  #~ SECFUNCexecA -ce mkfifo "$strFifoFl"
-#~ fi
-#~ ls -l "$strFifoFl" >&2
 
-#~ function FUNCdaemon() {
-  #~ ( export SECNoHupDaemonDetach=true; SECFUNCexecA -ce $0 --daemon & disown )
-#~ }
+strFifoFl="`SECFUNCcreateFIFO $strFCN`"
 
 if $bDaemon;then
   declare -p bDaemon
-  if SECFUNCexecA -ce SECFUNCuniqueLock --isdaemonrunning;then
-    SECFUNCechoWarnA "daemon already running pid = `SECFUNCuniqueLock --getdaemonpid`"
+  if SECFUNCexecA -ce SECFUNCuniqueLock --id $strDaemonId --isdaemonrunning;then
+    SECFUNCechoWarnA "daemon already running pid = `SECFUNCuniqueLock --id $strDaemonId --getdaemonpid`"
     exit 0
   else
     : ${SECNoHupDaemonDetach:=false}
@@ -163,7 +158,7 @@ if $bDaemon;then
     fi
   fi
   
-  SECFUNCexecA -ce SECFUNCuniqueLock --waitbecomedaemon
+  SECFUNCexecA -ce SECFUNCuniqueLock --id $strDaemonId --waitbecomedaemon
   
   echoc --info "starting $0 daemon pid $$"
   
@@ -222,11 +217,11 @@ if $bDaemon;then
   exit 1
 fi
 
-if ! SECFUNCuniqueLock --isdaemonrunning;then
+if ! SECFUNCuniqueLock --id $strDaemonId --isdaemonrunning;then
   #(SECFUNCexecA -ce $0 --daemon & disown)
   SECFUNCexecA -ce $0 --daemon
   while true;do
-    if((`SECFUNCuniqueLock --getdaemonpid&&:`!=0));then
+    if((`SECFUNCuniqueLock --id $strDaemonId --getdaemonpid&&:`!=0));then
       break;
     else
       echoc -w -t 3 "waiting daemon start"
@@ -240,9 +235,9 @@ if((`SECFUNCarraySize astrCmdToRun`==0));then
   exit 1
 fi
 
-nDPid="`SECFUNCuniqueLock --getdaemonpid`"&&:
+nDPid="`SECFUNCuniqueLock --id $strDaemonId --getdaemonpid`"&&:
 declare -p nDPid&&:
-echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --getuniquefile`'"
+echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --id $strDaemonId --getuniquefile`'"
 
 #echo "${astrCmdToRun[@]}" >>"$strFifoFl"
 echo "SENDINGCOMMAND: `declare -p astrCmdToRun`"

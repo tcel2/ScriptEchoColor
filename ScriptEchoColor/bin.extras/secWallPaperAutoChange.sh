@@ -99,6 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+#yad --text "DEBUG:$0"
 
 # Main code
 cd $strWallPPath;
