@@ -36,7 +36,7 @@ trap '' HUP # this is required to --say work with terminals that close too fast 
 #  SEC_NICE
 
 # !!! THIS LINE BELOW IS COLLECTED AT CREATEPACKAGE
-g_nVersion=1.15
+g_nVersion=1.16
 
 ##set -u #enforces strong coding
 ##SECinstallPath=`FUNCgetInstallPath`
@@ -213,7 +213,7 @@ FUNCmsg(){
 	local strFunc="$2"
 	local nLine="$3"
 	local strMsg="$4"
-	local optEcho="$5"
+	local optEcho="${5-}"
 	
 	if [[ -z "$strMsg" ]]; then
 		strMsg="Debug"
