@@ -26,6 +26,8 @@ strBN="`basename "$0"`"
 
 strCfg="$HOME/.$strBN.cfg"
 
+#~ : ${SECbDevelopmentMode:=false};export SECbDevelopmentMode
+
 strSECDEVPath="`cat "$strCfg"`"
 strSECDEVPath="`realpath -e "$strSECDEVPath"`"
 declare -p strSECDEVPath
@@ -38,6 +40,10 @@ bAlreadyDev=false;
 if [[ "$(realpath -e "`secGetInstallPath`")" == "$strSECDEVPath" ]];then
   bAlreadyDev=true;
 fi
+
+#~ if $SECbDevelopmentMode && ! $bAlreadyDev;then
+  #~ SECFUNCechoErrA "should be in development mode already"
+#~ fi
 
 if ! $bAlreadyDev;then
   strDevExec="$strSECDEVPath/bin.extras/$strBN"
@@ -77,6 +83,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strExample="${1-}"
 	elif [[ "$1" == "-c" || "$1" == "--cd" ]];then #help cd to SEC dev path
 		bCdDevPath=true
+	elif [[ "$1" == "--isdevmode" ]];then #help ~single check if already in development mode
+		if $bAlreadyDev;then exit 0;else exit 1;fi
 	elif [[ "$1" == "--ifnotinst" ]];then #help only use development environment if the command is not installed
 		bIfNotInst=true
 	elif [[ "$1" == "--exit" ]];then #help exit after running user command

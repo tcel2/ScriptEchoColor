@@ -67,42 +67,42 @@ function SECFUNCpromptCommand_CustomUserText(){ #help you can redefine this func
 }
 
 function SECFUNCbeforePromptCommand(){ #help this happens many times (why?) so the uninitialized variable below will control it to happen only once
-#	echo -n "@I" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
-
 	# will initialize if it is unset, can be with Sec or Nano
 	if ${SECdtBeforeCommandSec+false};then #&& [[ -z "$SECdtBeforeCommand" ]];then
-#		echo "@K" >&2 # OK
 		SECFUNCbeforePromptCommand_CustomUserCommand;
-		
-		SECdtBeforeCommandSec="`date +"%s"`"
-		SECdtBeforeCommandNano="`date +"%N"`"
-		
-#		if ! ${SECDEVstrProjectPath+false};then
-#			# developing mode detection
-#			# TODO find a better way to make it work properly...
-#			echo >&2 #this is important because when hitting TAB to auto-complete, in development mode it bugs a bit...
-#			echo "CmdBeginAt='`date +"$formatFullDateTime"`': $BASH_COMMAND" >&2
-#			#~ if secYakuakeWork.sh --is >/dev/null;then
-#      secYakuakeWork.sh --tr $BASH_COMMAND
-#			#~ fi
-#		else
-#			echo "CmdBeginAt='`date +"$formatFullDateTime"`'" >&2
-#		fi
-		#echo -n "(CmdBeginAt='`date +"$formatFullDateTime"`')" >&2
     
-    # GENERATOR: echoc --escapedchars "@c (@gCmdBeginAt@y=@r'@c`date +"$formatFullDateTime"`@r'@c) "
-    local lstrEchoNL="-n"
-		local lbDevMode=false;if ! ${SECDEVstrProjectPath+false};then lbDevMode=true;fi
-		if $lbDevMode;then lstrEchoNL="";fi
-    echo -e $lstrEchoNL "\E[0m\E[36m (\E[0m\E[32mCmdBeginAt\E[0m\E[33m=\E[0m\E[31m'\E[0m\E[36m`date +"$formatFullDateTime"`\E[0m\E[31m'\E[0m\E[36m) \E[0m" >&2
-    echo >&2
+    eval "`date +"SECdtBeforeCommandSec=%s;SECdtBeforeCommandNano=%N;"`"
+    
+    ###
+    # DO NOT echo ANYTHING HERE (before)!!! it will just mess the output :/, better just at SECFUNCpromptCommand (AFTER)
+    ###
+    
+    #~ local lbEcho=true
+    #~ if [[ -z "$BASH_COMMAND" ]];then lbEcho=false;
+    #~ elif [[ "$BASH_COMMAND" =~ .*command-not-found.* ]];then lbEcho=false;
+    #~ elif [[ "$BASH_COMMAND" =~ ^SECFUNCpromptCommand$ ]];then lbEcho=false;
+    #~ elif [[ "$BASH_COMMAND" =~ ^return$ ]];then lbEcho=false;
+    #~ fi
+    #~ if $lbEcho;then
+      #~ #(
+      #~ #  sleep 0.25
+        #~ # GENERATOR: echoc --escapedchars "@c (@gCmdBeginAt@y=@r'@c`date +"$formatFullDateTime"`@r'@c) "
+        #~ local lstrEchoNL="-n"
+        #~ local lbDevMode=false;if ! ${SECDEVstrProjectPath+false};then lbDevMode=true;fi
+        #~ if $lbDevMode;then lstrEchoNL="";fi
+        #~ echo -e $lstrEchoNL "\E[0m\E[36m (\E[0m\E[32mCmdBeginAt\E[0m\E[33m=\E[0m\E[31m'\E[0m\E[36m`date +"$formatFullDateTime"`\E[0m\E[31m'\E[0m\E[36m) \E[0m" >&2
+        #~ echo >&2
+      #~ #) >/dev/null & 
+    #~ fi
+    #~ echo "BEFORE: `date` $BASH_COMMAND" >>/tmp/SEC_DEBUG_PROMPT_CMD.log
 	fi
-#	echo -n "@O" >&2 #TODO what is happening?? why this function is not run properly just once!??!?!?!
 }
 trap 'SECFUNCbeforePromptCommand;' DEBUG
 function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh" ]];then source "`secGetInstallPath.sh`/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh";fi
 	#TODO if time() is used with a command, the delay messes up becoming very low...
-	SECfCommandDelay="`bc <<< "\`date +"%s.%N"\`-($SECdtBeforeCommandSec.$SECdtBeforeCommandNano)"`"
+  eval "`date +"SECdtAfterCommandSec=%s;SECdtAfterCommandNano=%N;"`"
+  #~ local lstrDtEnd="`date +"%s.%N"`"
+	SECfCommandDelay="`bc <<< "($SECdtAfterCommandSec.$SECdtAfterCommandNano)-($SECdtBeforeCommandSec.$SECdtBeforeCommandNano)"`"
 	if [[ "${SECfCommandDelay:0:1}" == "." ]];then
 		SECfCommandDelay="0$SECfCommandDelay"
 	fi
@@ -110,8 +110,9 @@ function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetI
 	history -a; # append to history at each command issued!!!
 	local lnWidth=`tput cols`;
 	local lnHalf=$((lnWidth/2))
-	local lstrBegin="`date --date="@$SECdtBeforeCommandSec" +"%H:%M:%S"`"
-	local lstrEnd="`date +"%H:%M:%S"`"
+	local lstrBegin="`date --date="@$SECdtBeforeCommandSec" +"%H:%M:%S"`.$SECdtBeforeCommandNano"
+	local lstrEnd="`  date --date="@$SECdtAfterCommandSec"  +"%H:%M:%S"`.$SECdtAfterCommandNano"
+#	local lstrEnd="`date +"%H:%M:%S.%N"`"
 	local lstrText="`SECFUNCcheckIfSudoIsActive`[${lstrBegin}->${lstrEnd}](${SECfCommandDelay}s)`SECFUNCpromptCommand_CustomUserText`";
 	local lstrTextToCalcSize="`echo "$lstrText" |sed -r 's"[\]E[[][[:digit:]]*m""g'`" #remove any formatting characters
 	local lnSizeTextHalf=$((${#lstrTextToCalcSize}/2))
@@ -126,11 +127,12 @@ function SECFUNCpromptCommand () { #help at .bashrc put this: if [[ -f "`secGetI
 	#local lstrOutput="`echo "${lstrPadChars}${lstrText}${lstrPadChars}"`"
 	#echo "${lstrOutput}"
 	#echo -e "${lstrOutput}"
-	echo -e "${lstrPadChars}${lstrText}${lstrPadCharsRight}"
+  #echo "ATPCMD: `date` $BASH_COMMAND" >>/tmp/SEC_DEBUG_PROMPT_CMD.log
+	echo -e "${lstrPadChars}${lstrText}${lstrPadCharsRight}" >&2
 	
 	SECFUNCpromptCommand_CustomUserCommand
 	
-	unset SECdtBeforeCommandNano
+	unset SECdtBeforeCommandNano #TODO explain WHY this is NOT together with SECdtBeforeCommandSec ???
 	
 	##########################################
 	### IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!! ###

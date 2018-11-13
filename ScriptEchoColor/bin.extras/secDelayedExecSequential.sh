@@ -196,6 +196,8 @@ if [[ -n "$strFilter" ]];then
 fi
 
 if $bRunAll || [[ -n "$strFilter" ]];then
+  SECFUNCuniqueLock --waitbecomedaemon
+  
   echoc --info "running commands sequentially as the system allows it if not encumbered"
   #SECbExecJustEcho=false
   export SECCFGbOverrideRunThisNow=true
@@ -215,7 +217,7 @@ if $bRunAll || [[ -n "$strFilter" ]];then
       echoc -w -t 1 "wait cpu free up a bit"
     done # check cpu
     
-    if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen?
+    if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen if the OS and hardware are all OK?
       strDtTm="_BUG_CANT_GET_DATETIME_"
     fi
     
@@ -225,7 +227,14 @@ if $bRunAll || [[ -n "$strFilter" ]];then
     echo "$strLogTxt" >>"$strLogFile"
     echo "$strLogTxt" >>"$strLogFileFull"
     
-    bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1  #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
+    echo "RUNNING: $strCmd"
+    #TODO disown is not preventing some applications from closing/hangup when this terminal closes...
+    #env -i bash -c "${strCmd}&disown" >>"$strLogFileFull" 2>&1 
+    ( 
+      #TODO right? SECFUNCcleanEnvironment # this is good to grant no lucky run is happening, also `env -i` was too much preventing being run at all, right?
+      bash -c "SECbDelayExecIgnoreSleep=true SECbDelayExecIgnoreWaitChkPoint=true ${strCmd}&disown" >>"$strLogFileFull" 2>&1 
+    )
+    #(${strCmd} >>"$strLogFileFull" 2>&1 & disown) & disown
     
     ps -A --forest -o ppid,pid,cmd |egrep --color=always "${strCmd}$" -B 2&&: |tee -a "$strLogFileFull" # strCmd will (expectedly) not end with '$" -B 2' :)
     

@@ -90,6 +90,8 @@ fi
 cat $HOME/$logFile
 echo "__________________ Past Above ____________________"
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 while true; do 
   if gnome-screensaver-command --query |grep -q "The screensaver is active"; then
     if ! $active; then

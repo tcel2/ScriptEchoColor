@@ -72,6 +72,8 @@ fi
 strSaveTo="$HOME/Pictures"
 cd "$strSaveTo";echoc -x "pwd"
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 while true;do
 	echoc --info "stop moving the mouse for $nTimeLimit seconds and the screenshot will be taken"
 	SECFUNCdelay strMouseStatus --init

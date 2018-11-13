@@ -102,6 +102,8 @@ if [[ -z "$strMountAt" ]];then
 	exit 1
 fi
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 function FUNCumount(){
 	SECFUNCexecA -ce sudo -k umount "$strMountAt"
 	SECFUNCexecA -ce trash -v "$strMountAt"

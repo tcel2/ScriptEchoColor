@@ -81,10 +81,12 @@ done
 
 # Main code
 if $bDaemon;then
-	while true;do
+  SECFUNCuniqueLock --waitbecomedaemon
+	while true;do # loop to keep retrying if iotop errors out, iotop will keep running delay=1 4eva
 		if ! sudo /usr/sbin/iotop --batch --time --only --quiet --delay=1 --kilobytes 2>&1 |tee $HOME/log/iotop.log;then
 			echoc -p "iotop error"
 		fi
+		sleep 1
 	done
 	exit #should not be reached
 fi

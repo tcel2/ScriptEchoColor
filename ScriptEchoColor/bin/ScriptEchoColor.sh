@@ -142,7 +142,8 @@ if [[   -f "$strSpeedupFile" ]]; then
 #      _he;echo -e "Could not move file '$strSpeedupFile', exiting...\a" >&2
 #      exit 1
 #    fi
-		rm "$strSpeedupFile"
+    echo "WARN: $strSelfName: removing old version file." >&2
+		rm -vf "$strSpeedupFile"
 	fi
 fi
 if [[ ! -f "$strSpeedupFile" ]]; then
@@ -213,7 +214,7 @@ FUNCmsg(){
 	local strFunc="$2"
 	local nLine="$3"
 	local strMsg="$4"
-	local optEcho="$5"
+	local optEcho="${5-}"
 	
 	if [[ -z "$strMsg" ]]; then
 		strMsg="Debug"
@@ -970,7 +971,7 @@ if $bOptRecreateConfigFile; then
 		mv "$strUserCfgFile" "$strUserCfgFile.bkp"
 fi
 strUserCfgFilePreviousVersion=""
-if [[   -f "$strUserCfgFile" ]]; then
+if [[ -f "$strUserCfgFile" ]]; then
 	if [[ "`head -n 1 "$strUserCfgFile"`" != "$strCfgHeader" ]]; then
 		strUserCfgFilePreviousVersion="$SECstrUserHomeConfigPath/User-"`date +%Y%m%d-%H%M%S`".old" 
 		mv -v "$strUserCfgFile" "$strUserCfgFilePreviousVersion"
@@ -978,14 +979,15 @@ if [[   -f "$strUserCfgFile" ]]; then
 			_he;echo -e "Could not move file '$strUserCfgFile', exiting...\a" >&2
 			exit 1
 		fi
-	 
-		# Ask user to do the import
-		_hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
-		FUNCread -n 1 strResp&&:;echo >&2; #`echo` to append a new line as read wont do that after we type a key
-		if [[ "${strResp-}" != "y" ]]; then
-			_hi "Creating '$strUserCfgFile' with default values."
-			strUserCfgFilePreviousVersion=""
-		fi
+    
+    echo "WARN: $strSelfName: importing old user config file: $strUserCfgFilePreviousVersion" >&2
+		#~ # Ask user to do the import
+		#~ _hi "Version does not match, IMPORT old '$strUserCfgFilePreviousVersion' configuration file (yes/...)?" -n
+		#~ FUNCread -n 1 strResp&&:;echo >&2; #`echo` to append a new line as read wont do that after we type a key
+		#~ if [[ "${strResp-}" != "y" ]]; then
+			#~ _hi "Creating '$strUserCfgFile' with default values."
+			#~ strUserCfgFilePreviousVersion=""
+		#~ fi
 	fi
 fi
 if [[ ! -f "$strUserCfgFile" ]]; then

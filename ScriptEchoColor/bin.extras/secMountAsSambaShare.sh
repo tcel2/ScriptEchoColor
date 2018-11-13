@@ -47,6 +47,8 @@ if [[ -a "$whereToMount" ]] && [[ ! -d "$whereToMount" ]];then
 	exit 1
 fi
 
+SECFUNCuniqueLock --waitbecomedaemon
+
 if [[ "${whatToMount:0:1}" != "/" ]];then
 	whatToMountFullPath="`pwd`/$whatToMount"
 fi

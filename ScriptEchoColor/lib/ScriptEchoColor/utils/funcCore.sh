@@ -990,7 +990,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			|sed -r "$lsedColorizeTheOptiId" \
 			|sed -r "$lsedTranslateEscn" \
 			|sed -r "$lsedTranslateEsct" \
-			|cat #dummy to help coding...
+      >&2
 		SECFUNCdbgFuncOutA;return
 	fi
 	
@@ -1037,7 +1037,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			fi
 		done
 		
-		echo -e "\t\E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}"
+		echo -e "\t\E[0m\E[0m\E[94m$lstrFunctionNameToken\E[0m\E[93m()\E[0m${lstrFileNameWithMatch}" >&2
 		
 		######################### function description
 		local lstrFuncDesc="`grep -h "$lstrRegexFuncMatch" "${lastrFile[@]}" |sed -r "s;^function ${lstrFunctionNameToken}[[:blank:]]*\(\).*\{.*#help (.*);\1;"`"
@@ -1046,7 +1046,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 				|_SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues \
 				|sed -r "$lsedColorizeOptionals" \
 				|sed -r "$lsedColorizeRequireds" \
-				|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
+        >&2
 		fi
 		
 		lstrFunctionNameToken="${lstrFunctionNameToken}_"
@@ -1076,7 +1076,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 
 	#						-e "s${SECsedTk}(export)[ ]*([[:alnum:]_]*)${SECsedTk}${SECcolorYellow}\1${SECcolorCyan} \2${SECsedTk}" \
 			
-				echo "Help about external variables accepted by this script:"
+				echo "Help about external variables accepted by this script:" >&2
 				for lstrUserEnvVar in "${lastrUserEnvVarList[@]}";do
 					local lstrOutEnvVarHelp="`echo "$lstrUserEnvVarsOutput" \
 						|sed -n -r "s${SECsedTk}^export $lstrUserEnvVar (.*)${SECsedTk}\1${SECsedTk} p"`"
@@ -1086,16 +1086,16 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 						lstrCfgVarHelp=" (must be set using --cfg option)"
 					fi
 					
-					echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}${lstrOutEnvVarHelp}${lstrCfgVarHelp}${SECcolorCancel}"
+					echo "${SECcharTab}${SECcolorCyan}$lstrUserEnvVar${SECcolorYellow}=${SECcolorLightYellow}'${!lstrUserEnvVar-}' ${SECcolorGreen}${lstrOutEnvVarHelp}${lstrCfgVarHelp}${SECcolorCancel}" >&2
 				done
-				echo
+				echo >&2
 			fi
 		
 			if $lbOnlyVars;then
 				SECFUNCdbgFuncOutA;return 0
 			fi
 		
-			echo "Help options for `basename "$lstrScriptFile"`:"
+			echo "Help options for `basename "$lstrScriptFile"`:" >&2
 		fi
 	
 		######################### SCRIPT OPTIONS or FUNCTION OPTIONS are taken care here
@@ -1126,8 +1126,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	#	local lsedColorizeRequireds='s,#'${lstrFunctionNameToken}'help ([^<]*)[<]([^>]*)[>],\1'${SECcharEsc}'[0m'${SECcharEsc}'[91m<\2>'${SECcharEsc}'[0m,g'
 	#	local lsedColorizeOptionals='s,#'${lstrFunctionNameToken}'help ([^[]*)[[]([^]]*)[]],\1'${SECcharEsc}'[0m'${SECcharEsc}'[96m[\2]'${SECcharEsc}'[0m,g'
 		#local lsedAddNewLine='s".*"&\n"'
-	#		|egrep -v "$lgrepNoCommentedLines" \
-	#		|egrep -v "$lgrepNoFunctions" \
+    
 		cat "${lastrFile[@]}" \
 			|egrep -w "$lgrepMatchHelpToken" \
 			|egrep -v "$lgrepNoInvalidHelps" \
@@ -1144,7 +1143,10 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			|sed -r "$lsedTranslateEsct" \
 			|$cmdSort \
 			|sed -r "$lsedTranslateEscn" \
-			|cat #this last cat is useless, just to help coding without typing '\' at the end all the time..
+      >&2
+      
+	#		|egrep -v "$lgrepNoCommentedLines" \
+	#		|egrep -v "$lgrepNoFunctions" \
 			#|sed -r "$lsedAddNewLine"
 	fi
 	
@@ -1183,17 +1185,17 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 		return 1
 	fi
 	
-	echo "`basename "$lstrScriptFile"` Functions:"
+	echo "`basename "$lstrScriptFile"` Functions:" >&2
 	local lsedFunctionNameOnly='s".*function[[:blank:]]*([[:alnum:]_]*)[[:blank:]]*\(\).*"\1"'
 	local lastrFunctions=(`grep "^[[:blank:]]*function[[:blank:]]*[[:alnum:]_]*[[:blank:]]*()" "$lstrScriptFile" |grep "#help" |sed -r "$lsedFunctionNameOnly"`)
 	lastrFunctions=(`echo "${lastrFunctions[@]-}" |tr " " "\n" |sort`)
 	if((`SECFUNCarraySize lastrFunctions`>0));then
 		for lstrFuncId in ${lastrFunctions[@]};do
-			echo
+			echo >&2
 			if type $lstrFuncId 2>/dev/null |grep -q "\-\-help";then
 				local lstrHelp=`$lstrFuncId --help`
 				if [[ -n "$lstrHelp" ]];then
-					echo "$lstrHelp"
+					echo "$lstrHelp" >&2
 				else
 					#echo "  $lstrFuncId()"
 					SECFUNCshowHelp --file "$lstrScriptFile" $lstrFuncId #this only happens for SECFUNCechoDbg ...
@@ -2320,7 +2322,7 @@ function SECFUNCcheckActivateRunLog() { #help
 	
 	if $lbForceStdin;then
 		_SECFUNCcheckActivateRunLog_report before
-		exec 1>&0 2>&0
+		exec 1>&0 2>&0 #TODO if any, explain possible problems caused by this
 		_SECFUNCcheckActivateRunLog_report after
 		return 0
 	fi
@@ -2420,13 +2422,21 @@ function SECFUNCcheckActivateRunLog() { #help
           #~ eval "exec $((nFdBase+1))>&1 $((nFdBase+2))>&2" #backup
           #~ ((nFdBase+=10))
         #~ done
+#        echo $LINENO
         
-				exec > >(tee "$SECstrRunLogFile") #TODO this caused error once, WHY??? and... can it be protected in some way? while sleep?
+        local lastrLogCmd=(tail -F --pid=$$)
+        ##########################
+        ### using tail instead of tee to conserve memory, old command:
+        ### exec > >(tee -a "$SECstrRunLogFile")
+        #######
+        "${lastrLogCmd[@]}" "$SECstrRunLogFile"&
+        exec >"$SECstrRunLogFile"
 				exec 2>&1
+#        echo $LINENO
 				
-				# waits tee to properly start...
-				while ! SECnRunLogTeePid="`pgrep -fx "tee $SECstrRunLogFile"`";do 
-					SECFUNCechoWarnA "waiting 'tee $SECstrRunLogFile'..."
+				# waits log cmd to properly start...
+				while ! SECnRunLogTeePid="`pgrep -fx "${lastrLogCmd[*]} $SECstrRunLogFile"`";do 
+					SECFUNCechoWarnA "waiting '${lastrLogCmd[*]} $SECstrRunLogFile'..."
 					sleep 0.1;
 				done #synchronization
 #				SECFUNCechoWarnA "SECnRunLogTeePid='$SECnRunLogTeePid'"
@@ -2463,6 +2473,38 @@ function SECFUNCconsumeKeyBuffer() { #help keys that were pressed before this fu
 
 function SECFUNCrestoreAliases() { #help
 	source "$SECstrFileLibFast";
+}
+
+function SECFUNCtrapPrepend() { #help <lstrPrependCode> <lastrSig>
+  local lstrPrependCode="$1";shift
+  local lastrSig=( "$@" )
+  
+  local lstrSig
+  for lstrSig in "${lastrSig[@]}";do
+    if ! kill -l $lstrSig >/dev/null 2>&1;then #[[ "${lstrSig:0:3}" != "SIG" ]];then
+      SECFUNCechoErrA "invalid signal specification"
+      return 1
+    fi
+  done
+  
+  for lstrSig in "${lastrSig[@]}";do
+    # trick to prevent dups
+    local lstrNewCodeId="$(echo "$lstrPrependCode" |cksum |tr ' ' '_')"
+    
+    local lstrCode="$(trap |grep $lstrSig |sed -r "s@trap -- '(.*)' $lstrSig@\1@")";
+    
+    local lstrFullId="str${FUNCNAME}=\"${lstrSig}:${lstrNewCodeId}\""
+    
+    if echo "$lstrCode" |grep -q "$lstrFullId";then
+      SECFUNCechoWarnA "trap $lstrSig code already added: $lstrPrependCode"
+      continue
+    fi
+    
+    # prepend
+    trap "$lstrFullId; $lstrPrependCode; $lstrCode" $lstrSig
+  done
+  
+  return 0
 }
 
 export SECbScriptSelfNameChanged=false

@@ -268,7 +268,7 @@ function FUNCexecParams() {
     echo -n >>"$lstrFileLogCmd" #to just create it
 		if $SECXbLogOnly || $SECXbNoHup;then
 			echo "lstrFileLogCmd='$lstrFileLogCmd'" >&2
-			tail -F "$lstrFileLogCmd"&
+			tail -F "$lstrFileLogCmd" --pid=$$ &
 		fi
 	
 		echo "$FUNCNAME:Exec: ${strSudoPrefix}${strFUNCexecParams}"

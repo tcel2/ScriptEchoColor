@@ -223,7 +223,7 @@ elif $bRestartDaemon;then
 	exit 0
 elif $bLogMonitor;then
 	echo "Maintenance Daemon Pid: $nPidDaemon, log file '$strDaemonLogFile'"
-	tail -F "$strDaemonLogFile"
+	tail -F "$strDaemonLogFile" --pid=$$
 	exit 0
 elif $bLockMonitor;then
 	while true;do
