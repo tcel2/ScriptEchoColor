@@ -30,7 +30,7 @@ source <(secinit)
 : ${CFGstrWindowFullName:="Default - Wine desktop"};export CFGstrWindowFullName
 
 if [[ -z "$CFGstrFileExecutable" ]];then
-  SECFUNCechoErrA "CFGstrFileExecutable='$CFGstrFileExecutable'"
+  SECFUNCechoErrA "not set: CFGstrFileExecutable='$CFGstrFileExecutable'"
   exit 1
 fi
 
