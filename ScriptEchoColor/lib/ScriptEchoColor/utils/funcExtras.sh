@@ -222,17 +222,17 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				##################
 				# each option will be issued one time, so must be disabled 
 				##################
-				if $lbOnTop && wmctrl -i -a "$lnWindowId" -b add,above;then
+				if $lbOnTop && wmctrl -i -a $lnWindowId -b add,above;then
 					lbOnTop=false;
 				fi
-				if $lbFocus && xdotool windowactivate "$lnWindowId" && xdotool windowfocus "$lnWindowId";then # if minimized, must be activated before focus!
+				if $lbFocus && xdotool windowactivate $lnWindowId && xdotool windowfocus $lnWindowId && wmctrl -i -r $lnWindowId -b remove,below;then # if minimized, must be activated before focus!
 					lbFocus=false
 				fi
 				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
 					lbMaximize=false;
 				fi
 #				if $lbMinimize && wmctrl -i -r $lnWindowId -b add,hidden;then
-				if $lbMinimize && xdotool windowminimize $lnWindowId;then
+				if $lbMinimize && xdotool windowminimize $lnWindowId && wmctrl -i -r $lnWindowId -b add,below;then # "below" is a trick in case "window" cant be minimized properly
 					lbMinimize=false;
 				fi
 				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then #TODO xdotool doesnt work well for this? because of top systray panel?

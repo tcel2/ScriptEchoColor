@@ -44,9 +44,9 @@ function GAMEFUNCchkWinePrefix() {
 function GAMEFUNCcheckIfGameIsRunning() { #help [lstrFileExecutable]
 	if $CFGbFakeRun;then return 0;fi
   
-	#if pgrep "$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
-	#if pgrep -f "^${strRelativeExecutablePath-}[/]*$strFileExecutable" 2>&1 >/dev/null;then return 0;fi
-	if [[ -n "${WINEnGamePid-}" ]] && ps -p "$WINEnGamePid";then return 0;fi
+	#if pgrep "$CFGstrFileExecutable" 2>&1 >/dev/null;then return 0;fi
+	#if pgrep -f "^${strRelativeExecutablePath-}[/]*$CFGstrFileExecutable" 2>&1 >/dev/null;then return 0;fi
+	if [[ -n "${WINEnGamePid-}" ]] && ps -p "$WINEnGamePid" >&2;then return 0;fi
   
 	local lstrFileExecutable="${1-}"
   
@@ -154,88 +154,6 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 	return 0
 }
 
-#function _GAMEFUNCcheckIfThisScriptCmdIsRunning_old() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
-#	#TODO use instead of this work, the SECFUNCuniqueLock daemon mode... silly me..
-#	local lbWait=true
-#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
-#		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-#		if [[ "$1" == "--help" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help show this help
-#			SECFUNCshowHelp $FUNCNAME
-#			return 0
-#		elif [[ "$1" == "--nowait" || "$1" == "-n" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help will not wait other exit, will just check for it
-#			lbWait=false
-#		elif [[ "$1" == "--" ]];then #GAMEFUNCcheckIfThisScriptCmdIsRunning_help params after this are ignored as being these options
-#			shift
-#			break
-#		else
-#			SECFUNCechoErrA "invalid option '$1'"
-#			SECFUNCshowHelp $FUNCNAME
-#			return 1
-##		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-##			SECFUNCechoErrA "invalid option '$1'"
-##			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
-#		fi
-#		shift
-#	done
-#	
-#	# check if there is other pids than self tree
-#	SECFUNCdelay $FUNCNAME --init
-#	
-#	strParams=""
-#	if [[ -n "${1-}" ]];then
-#		strParams="$@"
-#	fi
-#	echoc --info "checking dup for this '$SECstrScriptSelfName${strParams}' pid=$$"
-#	ps --no-headers -o cmd -p $$
-#	
-#	while true;do
-#		echoc --info "check if this script is already running for `SECFUNCdelay $FUNCNAME --getpretty`"
-#		
-#		anPidList=(`pgrep -f "$SECstrScriptSelfName${strParams}"`) #all pids with this script command, including self
-#		SECFUNCexecA -ce declare -p anPidList
-#		
-#		anPidSkipList=(`SECFUNCppidList --addself --child --pid $$`)
-#		anPidSkipList+=(`SECFUNCppidList --pid $$`)
-#		SECFUNCexecA -ce declare -p anPidSkipList
-#		
-#		#TODO wont work with secXtermDetached.sh
-#		SECFUNCexecA -ce ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}" "${anPidSkipList[@]}"
-#		
-#		for((i1=${#anPidList[@]}-1;i1>=0;i1--));do
-#			nPid="${anPidList[i1]}"
-#			for((i2=0;i2<${#anPidSkipList[@]};i2++));do
-#				nPidSkip="${anPidSkipList[i2]}"
-#				if((nPid==nPidSkip));then
-#					unset anPidList[i1] # unset only works from last to first
-#				fi
-#			done
-#		done
-#		SECFUNCexecA -ce declare -p anPidList
-#		
-##		if [[ -n "${anPidList[@]}" ]];then
-#		if((${#anPidList[@]}>0));then
-#			if ps --forest --no-headers -o pid,ppid,cmd -p "${anPidList[@]}";then
-#				if $lbWait;then
-#					echoc -pw -t 10 "script '$SECstrScriptSelfName${strParams}' already running, waiting other exit"
-#				else
-#					return 0
-#				fi
-#				# DO NOT EXIT HERE TO NOT MESS USER SCRIPT! #exit 1 
-#			else
-#				if $lbWait;then
-#					return 1
-#				fi
-#			fi
-#		else
-#			break;
-#		fi
-#		
-#		#sleep 60
-#	done
-#	
-#	return 1 #because it was not running and reached here
-#}
-
 #function GAMEFUNCquickSaveAutoBkp() { #help <lstrPathSavegames> <lstrQuickSaveNameAndExt>
 function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	local lnKeepSaveInterval=100
@@ -318,7 +236,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	
 	SECFUNCdelay "$FUNCNAME" --init
 	while true;do
-		GAMEFUNCexitIfGameExits "$strFileExecutable"
+		GAMEFUNCexitIfGameExits "$CFGstrFileExecutable"
 		
 		local lstrSaveList="`ls -1 $strLeftMatches.$lstrQuickSaveExt |sort -nr`"
 		local lnSaveTotal="`echo "$lstrSaveList" |wc -l`"
@@ -434,7 +352,7 @@ function FUNCisGameRunning() {
 	
 	SECFUNCvarWaitValue --report --not WINEnGamePid ""
 	SECFUNCvarShow WINEnGamePid
-	if ! ps -p $WINEnGamePid -o pid,pcpu,stat,state,command >/dev/null; then
+	if ! ps -o pid,pcpu,stat,state,command -p $WINEnGamePid >&2;then
 		echo "game stopped running"
 		return 1
 	fi
@@ -463,7 +381,7 @@ function FUNCexitIfGameExits() {
 
 function FUNCexitWhenGameExitsLoop() {
 	while ! FUNCcheckIfGameIsRunning;do
-		if echoc -q -t 3 "waiting strFileExecutable='$strFileExecutable' start, exit?";then
+		if echoc -q -t 3 "waiting strFileExecutable='$CFGstrFileExecutable' start, exit?";then
 			exit 0
 		fi
 	done
@@ -677,7 +595,7 @@ function WINEFUNCcommonOptions {
 	if [[ "${1-}" == "autoStopContOnScreenLock" ]]; then #help
 		FUNCcheckIfThisScriptCmdIsRunning "$@"
 		FUNCwaitGameStartRunning
-		openNewX.sh --script autoStopContOnScreenLock "`pgrep -x $strFileExecutable`"
+		openNewX.sh --script autoStopContOnScreenLock "`pgrep -x $CFGstrFileExecutable`"
 	elif [[ "${1-}" == "cdInst" ]];then #help
 		shift
 		cd "$strPathInstalled"
@@ -716,7 +634,7 @@ function WINEFUNCcommonOptions {
 		strFileInst="`echoc -S "install which?"`"
 		WINEFUNCcommonOptions msiInstall "$strFileInst"
 	elif [[ "${1-}" == "kill" ]];then #help
-		kill -SIGKILL `pgrep $strFileExecutable`&&:
+		kill -SIGKILL `pgrep $CFGstrFileExecutable`&&:
 		$cmdWine wineserver -k&&: #this does not work (bug?)
 		if pgrep wineserver;then
 			astr=(wineserver services.exe winedevice.exe plugplay.exe explorer.exe);
@@ -785,10 +703,16 @@ function WINEFUNCcommonOptions {
 		strPids=""
 		nInstanceCount=0
 		function FUNClstInsts() {
-			strPids="`ps --no-headers -o pid,start_time --sort start_time -p $(pgrep ${strFileExecutable})`"&&:
-			declare -p strPids&&:
+      local lanPids=(`pgrep "${strFileExecutable}"`)
+      if [[ -z "${lanPids[@]-}" ]];then
+        return 0
+      fi
+			strPids="`ps --no-headers -o pid,start_time --sort start_time -p ${lanPids[@]}`"&&:
+			#declare -p strPids&&:
 			if [[ -n "$strPids" ]];then
 				nInstanceCount=`echo "$strPids" |wc -l`
+      else
+        echo "`date`: no pids yet"
 			fi
       return 0
 		}
@@ -802,7 +726,11 @@ function WINEFUNCcommonOptions {
 		nInstCountB4=$nInstanceCount
 		declare -p nInstCountB4&&:
 		#$cmdWine "$strLoader" #
-		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "${astrAppParams[@]-}"
+    astrFullCmd=($cmdWine "${strRelativeExecutablePath}/${strLoader}")
+    if [[ -n "${astrAppParams[@]-}" ]];then
+      astrFullCmd+=( "${astrAppParams[@]}" )
+    fi
+    "${astrFullCmd[@]}"
     
 		while true;do
 			# list all pids matching the executable name, the last one is the newest
@@ -835,11 +763,13 @@ function WINEFUNCcommonOptions {
 		if [[ -n "$strLogFileHint" ]];then
 			SECFUNCdelay waitInit --init
 			while ! grep "$strLogFileHint" "$SECstrRunLogFile";do
-				"${astrCmdPs[@]}"
+				"${astrCmdPs[@]}" >&2
 				echoc -w -t 3 "waiting initialization for `SECFUNCdelay waitInit --getsec`s ..."
 			done
 		fi
 		
+    SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`" && :
+    
 		# wait mem fill
 		if [[ -n "$nMaxMemKB" ]];then
 			iSleep=3
@@ -850,7 +780,7 @@ function WINEFUNCcommonOptions {
 				#~ sleep $iSleep
 			#~ done
 			while true;do
-				"${astrCmdPs[@]}" #ps -o ppid,pid,pcpu,pmem,etime,stat,status,state,rss,cmd -p $nPidNI&&:
+				"${astrCmdPs[@]}" >&2 #ps -o ppid,pid,pcpu,pmem,etime,stat,status,state,rss,cmd -p $nPidNI&&:
 				nMemCurrentKB="`ps --no-headers -o rss -p $nPidNI`"
 				if((nMemCurrentKB>=nMaxMemKB));then break;fi
 				sleep $iSleep
@@ -859,6 +789,7 @@ function WINEFUNCcommonOptions {
 		
     echoc -w -t $nWaitSeconds "waiting specified delay before stopping the app"
     
+    SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`"
 		kill -SIGSTOP $nPidNI
 		
 		WINEFUNCcommonOptions hookOnPidStopCont $nPidNI
@@ -867,7 +798,7 @@ function WINEFUNCcommonOptions {
 		nPid=$1;shift #TODO	WINEnGamePid is saved to a file, better not mess with it?
 		
 		while true;do
-			if ! ps -p "$nPid";then exit 0;fi
+			if ! ps -p "$nPid" >&2;then exit 0;fi
 			GAMEFUNCstopContGame $nPid
 		done
 	elif [[ "${1-}" == "delOldSaves" ]];then #help <strSavesPath> <iKeepCount> <astrFilesExtensionsAndMask[]> #astrFilesExtensionsAndMask ex.: "*.sav" "*.bla", every entry means a iKeepCount multiplier (as they must be related to the same savegame), so in this ex. it would be 2
@@ -1123,19 +1054,120 @@ function FUNClimitSaveGames() {
     return 0
 };export -f FUNClimitSaveGames
 
+function GAMEFUNCgetFinalWID() { #help [lnPid]
+  local lnPid="${1-}"
+  echo "$FUNCNAME lnPid=$lnPid (param)" >&2
+  
+  local lnWID="`GAMEFUNCgetExecWID ${lnPid-}`"
+  local lnWIDok=0
+  if ! lnWIDok="`GAMEFUNCgetDesktopWID`";then # if desktop mode, overrides with its WID
+    lnWIDok=$lnWID
+  fi
+  #declare -p lnWID lnWIDok
+  echo $lnWIDok
+  return 0
+};export -f GAMEFUNCgetFinalWID
+
+#function GAMEFUNCgetExecPID() { #help [lnPid]
+function GAMEFUNCgetExecPID() { #help
+  GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable"
+  return 0
+  
+	#~ local lnPid=${1-}
+  #~ echo "$FUNCNAME lnPid=$lnPid (param)" >&2
+  
+  #~ if [[ -n "$lnPid" ]];then
+    #~ if ! SECFUNCisNumber -dn "$lnPid";then
+      #~ SECFUNCechoErrA "lnPid='$lnPid' CFGstrFileExecutable='$CFGstrFileExecutable' WINEnGamePid='${WINEnGamePid-}'"
+      #~ exit 1
+    #~ fi
+  #~ fi
+  
+  #~ if [[ -z "$lnPid" ]];then
+    #~ lnPid=${WINEnGamePid-};
+    #~ echo "$FUNCNAME WINEnGamePid=$WINEnGamePid" >&2
+  #~ fi
+  
+  #~ if [[ -z "$lnPid" ]];then
+    #~ lnPid=`GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable"`
+    #~ echo "$FUNCNAME lnPid=$lnPid (from GAMEFUNCgetWPRegexPID)" >&2
+  #~ fi
+    
+  #~ if [[ -z "$lnPid" ]];then
+    #~ lnPid="`pgrep -fn "$CFGstrFileExecutable"`"
+    #~ echo "$FUNCNAME lnPid=$lnPid (newest)" >&2
+  #~ fi
+  
+  #~ echo $lnPid
+  #~ return 0
+};export -f GAMEFUNCgetExecPID
+
+#function GAMEFUNCgetExecWID() { #help [lnPid]
+function GAMEFUNCgetExecWID() { #help
+  #echo "$FUNCNAME lnPid=$lnPid (param)" >&2
+  
+  local lnPid="`GAMEFUNCgetExecPID ${lnPid-}`"
+  
+  # raise window
+  local anWindowIDs=()
+  while true;do
+    IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$CFGstrFileExecutable" |sort -u)&&:; 
+    if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
+    echo "still unable to find any windows for '$CFGstrFileExecutable'" >&2
+    sleep 3
+    #~ if ! echoc -t 3 -q "unable to find windows for '$CFGstrFileExecutable', retry?@Dy";then
+      #~ return 1
+    #~ fi
+  done
+  
+  local nWID=-1
+  for nWIDTemp in "${anWindowIDs[@]}";do 
+    local lnWPID="`xdotool getwindowpid $nWIDTemp`"&&:
+    if [[ -n "$lnWPID" ]];then
+      ps --no-headers -o pid,stat,cmd -p $lnWPID >&2 &&:
+      if((lnWPID==lnPid));then
+        nWID=$nWIDTemp
+        break;
+      fi
+    else
+      echo "no pid for nWIDTemp=$nWIDTemp" >&2
+    fi
+  done
+  if((nWID==-1));then 
+    SECFUNCechoErrA "unable to find window id for lnPid='$lnPid'"
+    return 1;
+  fi
+  
+  echo "$FUNCNAME nWID=$nWID" >&2
+  echo "$nWID"
+  return 0
+};export -f GAMEFUNCgetExecWID
+
 function GAMEFUNCgetDesktopPID() { #help
+  GAMEFUNCgetWPRegexPID "explorer.exe /desktop";
+  return $?
+};export -f GAMEFUNCgetDesktopPID
+
+function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX to filter the correct pid!
+  lstrRegex="$1"
+  echo "$FUNCNAME lstrRegex='$lstrRegex'" >&2
+  
   local lanList
   local lnPid
-  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "explorer.exe /desktop")&&:
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "$lstrRegex")&&:
   #declare -p lanList
+  local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
   for lnPid in "${lanList[@]}";do
-    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
+#    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
+    if [[ "`readlink /proc/$lnPid/cwd`" =~ $lstrRegexWINEPREFIX ]];then
+      echo "$FUNCNAME lnPid='$lnPid'" >&2
       echo "$lnPid"
       return 0
     fi
   done
+  echo "$FUNCNAME FAIL no PID for lstrRegexWINEPREFIX='$lstrRegexWINEPREFIX'" >&2
   return 1
-};export -f GAMEFUNCgetDesktopPID
+};export -f GAMEFUNCgetWPRegexPID
 
 function GAMEFUNCgetDesktopWID() { #help
   local lnPID=0
@@ -1157,74 +1189,32 @@ function GAMEFUNCautoStop() { #help OVERRIDE this one to let it auto stop for an
   return 1;
 };export -f GAMEFUNCautoStop
 function GAMEFUNCstopContGame() { #help [lnPid]
-	#local lnPid="`pgrep -f "$strFileExecutable"`" #TODO may come more than one?
-	local lnPid="${1-}"
-  
-  if [[ -z  "$lnPid" ]];then
-    lnPid="${WINEnGamePid-}";
-  fi
-  
-  if [[ -z  "$lnPid" ]];then
-    lnPid="`pgrep -f "$CFGstrFileExecutable"`" #TODO what about multiple instances?
-    if ! SECFUNCisNumber -dn "$lnPid";then
-      SECFUNCechoErrA "lnPid='$lnPid' CFGstrFileExecutable='$CFGstrFileExecutable' WINEnGamePid='${WINEnGamePid-}'"
-      exit 1
-    fi
-  fi
+	#local lnPid="`pgrep -f "$CFGstrFileExecutable"`" #TODO may come more than one?
+  local lnPid="`GAMEFUNCgetExecPID ${lnPid-}`"
   
 	declare -p lnPid
 	declare -p WINEPREFIX #to know which instance it is!
 	
-	ps --no-headers -o pid,stat,state,status,pcpu,rss,cmd -p $lnPid &&:
+	ps --no-headers -o pid,stat,state,status,pcpu,rss,cmd -p $lnPid >&2 &&:
 	
 	local lnSleep=10
 	
 	local lstrPidState="`ps --no-headers -o state -p $lnPid`"
 	
-  # raise window
-  local anWindowIDs=()
-  while true;do
-    IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$strFileExecutable" |sort -u)&&:; 
-    if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
-    if ! echoc -t 3 -q "unable to find windows for '$strFileExecutable', retry?@Dy";then
-      return 1
-    fi
-  done
-  
-  local nWID=-1
-  for nWIDTemp in "${anWindowIDs[@]}";do 
-    nWPID="`xdotool getwindowpid $nWIDTemp`"&&:
-    ps --no-headers -o pid,stat,cmd -p $nWPID&&:
-    if((nWPID==lnPid));then
-      nWID=$nWIDTemp
-      break;
-    fi
-  done
-  if((nWID==-1));then 
-    SECFUNCechoErrA "unable to find window id for lnPid='$lnPid'"
-    return 1;
-  fi
-  declare -p nWID
-  local lnWIDok=0
-  if ! lnWIDok="`GAMEFUNCgetDesktopWID`";then
-    lnWIDok=$nWID
-  fi
+  lnWIDok="`GAMEFUNCgetFinalWID $lnPid`"
   
   if [[ "$lstrPidState" == "T" ]];then
-    if echoc -t $lnSleep -q "continue running?";then # has timeout as the script may exit if that pid is killed
+    if echoc -t $lnSleep -q "continue running PID=$lnPid WID=$lnWIDok?";then # has timeout as the script may exit if that pid is killed
       SECFUNCexecA -ce kill -SIGCONT $lnPid
-      #xdotool windowactivate $nWID #restores if minimized
-      #xdotool windowfocus $nWID #grants focus
       SECFUNCexecA -ce SECFUNCCwindowCmd --focus --wid $lnWIDok
     fi
   else
     local lbStopNow=false
     if ! $lbStopNow && GAMEFUNCautoStop;then lbStopNow=true;fi
-    if ! $lbStopNow && echoc -t $lnSleep -q "suspend stop?";then lbStopNow=true;fi
+    if ! $lbStopNow && echoc -t $lnSleep -q "suspend stop PID=$lnPid WID=$lnWIDok?";then lbStopNow=true;fi
     
     if $lbStopNow;then
       SECFUNCexecA -ce kill -SIGSTOP $lnPid
-      #xdotool windowminimize $nWID
       #readlink /proc/1945584/cwd
       SECFUNCexecA -ce SECFUNCCwindowCmd --minimize --wid $lnWIDok
     fi
@@ -1238,10 +1228,10 @@ function GAMEFUNCwaitGamePid() { #help
 	SECONDS=0
 	while ! ps -p $WINEnGamePid >/dev/null 2>&1; do
 		SECFUNCvarReadDB
-		if [[ "$strLoader" == "$strFileExecutable" ]];then 
+		if [[ "$strLoader" == "$CFGstrFileExecutable" ]];then 
 			# the direct pid wont die 
 			if SECFUNCvarIsSet WINEnDirectGamePid;then
-				if ps -p $WINEnDirectGamePid;then
+				if ps -p $WINEnDirectGamePid >&2;then
 					WINEnGamePid=$WINEnDirectGamePid
 				fi
 			fi
@@ -1249,7 +1239,7 @@ function GAMEFUNCwaitGamePid() { #help
 		
 		# indirect game pid
 		if [[ -z "$WINEnGamePid" ]];then
-			local lanPid=(`pgrep -f "$strFileExecutable"`)
+			local lanPid=(`pgrep -f "$CFGstrFileExecutable"`)
 			
 			local nPid
 			for nPid in "${lanPid[@]-}";do
