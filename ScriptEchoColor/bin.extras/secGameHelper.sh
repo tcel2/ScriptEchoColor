@@ -1070,8 +1070,7 @@ function GAMEFUNCgetFinalWID() { #help [lnPid]
 
 #function GAMEFUNCgetExecPID() { #help [lnPid]
 function GAMEFUNCgetExecPID() { #help
-  GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable"
-  return 0
+  GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable";return $?
   
 	#~ local lnPid=${1-}
   #~ echo "$FUNCNAME lnPid=$lnPid (param)" >&2
@@ -1106,38 +1105,38 @@ function GAMEFUNCgetExecPID() { #help
 function GAMEFUNCgetExecWID() { #help
   #echo "$FUNCNAME lnPid=$lnPid (param)" >&2
   
-  local lnPid="`GAMEFUNCgetExecPID ${lnPid-}`"
-  
-  # raise window
-  local anWindowIDs=()
   while true;do
-    IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$CFGstrFileExecutable" |sort -u)&&:; 
-    if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
-    echo "still unable to find any windows for '$CFGstrFileExecutable'" >&2
-    sleep 3
-    #~ if ! echoc -t 3 -q "unable to find windows for '$CFGstrFileExecutable', retry?@Dy";then
-      #~ return 1
-    #~ fi
-  done
-  
-  local nWID=-1
-  for nWIDTemp in "${anWindowIDs[@]}";do 
-    local lnWPID="`xdotool getwindowpid $nWIDTemp`"&&:
-    if [[ -n "$lnWPID" ]];then
-      ps --no-headers -o pid,stat,cmd -p $lnWPID >&2 &&:
-      if((lnWPID==lnPid));then
-        nWID=$nWIDTemp
-        break;
-      fi
-    else
-      echo "no pid for nWIDTemp=$nWIDTemp" >&2
+    local lnPid
+    if ! lnPid="`GAMEFUNCgetExecPID ${lnPid-}`";then
+      echoc -w -t 3 "unable to find exec pid for '$CFGstrFileExecutable'" >&2
     fi
-  done
-  if((nWID==-1));then 
+    
+    local anWindowIDs=()
+    while true;do
+      IFS=$'\n' read -d '' -r -a anWindowIDs < <(xdotool search "$CFGstrFileExecutable" |sort -u)&&:; 
+      if [[ -n "${anWindowIDs[@]-}" ]];then break;fi
+      echoc -w -t 3 "still unable to find any window for '$CFGstrFileExecutable'" >&2
+    done
+    declare -p anWindowIDs >&2
+    
+    local nWID=-1
+    for nWIDTemp in "${anWindowIDs[@]}";do 
+      local lnWPID="`xdotool getwindowpid $nWIDTemp`"&&:
+      if [[ -n "$lnWPID" ]];then
+        ps --no-headers -o pid,stat,cmd -p $lnWPID >&2 &&:
+        if((lnWPID==lnPid));then
+          nWID=$nWIDTemp
+          break;
+        fi
+      else
+        echo "$FUNCNAME no pid for nWIDTemp=$nWIDTemp" >&2
+      fi
+    done
+    if((nWID!=-1));then break;fi
+    
     SECFUNCechoErrA "unable to find window id for lnPid='$lnPid'"
-    return 1;
-  fi
-  
+  done
+    
   echo "$FUNCNAME nWID=$nWID" >&2
   echo "$nWID"
   return 0
@@ -1154,18 +1153,30 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
   
   local lanList
   local lnPid
-  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "$lstrRegex")&&:
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}")&&:
   #declare -p lanList
   local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
   for lnPid in "${lanList[@]}";do
-#    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
-    if [[ "`readlink /proc/$lnPid/cwd`" =~ $lstrRegexWINEPREFIX ]];then
+    local bMatch=false
+    
+#~ #    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
+    #~ local strExecRealPath="`readlink /proc/$lnPid/cwd`" #will not work for WINEPREFIX in case the new instance application final path is a symlink to the real one to save HD space
+    #~ if [[ "$strExecRealPath" =~ $lstrRegexWINEPREFIX ]];then
+      #~ bMatch=true;
+    #~ fi
+    
+    local strExecWP="`strings /proc/$lnPid/environ |egrep "^WINEPREFIX"`"
+    if [[ "$strExecWP" == "WINEPREFIX=$WINEPREFIX" ]];then
+      bMatch=true;
+    fi
+    
+    if $bMatch;then
       echo "$FUNCNAME lnPid='$lnPid'" >&2
       echo "$lnPid"
       return 0
     fi
   done
-  echo "$FUNCNAME FAIL no PID for lstrRegexWINEPREFIX='$lstrRegexWINEPREFIX'" >&2
+  echo "$FUNCNAME FAIL no PID for WINEPREFIX='$WINEPREFIX'" >&2
   return 1
 };export -f GAMEFUNCgetWPRegexPID
 

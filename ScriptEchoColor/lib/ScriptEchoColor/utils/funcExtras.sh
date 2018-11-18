@@ -213,7 +213,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			
       local lnWindowId=-1
       if $lbIsWindowID;then
-        lnWindowId=$lstrMatchRegex
+        if [[ "${lstrMatchRegex:0:2}" == "0x" ]];then
+          lnWindowId="`printf %d ${lstrMatchRegex}`"
+        else
+          lnWindowId=$lstrMatchRegex
+        fi
       else
         lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
       fi

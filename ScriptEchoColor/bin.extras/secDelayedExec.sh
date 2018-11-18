@@ -668,7 +668,7 @@ function FUNCrun(){
       #aCmdTerm=(xterm)
       #if which mrxvt >/dev/null 2>&1;then aCmdTerm=(mrxvt -aht +showmenu);fi # rxvt does not kill child proccesses when it is closed but mrxvt does!
       #SECFUNCexecA -ce "${aCmdTerm[@]}" -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
-      SECFUNCexecA -ce secTerm.sh -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
+      SECFUNCexecA -ce secTerm.sh -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
 		else
 #			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
@@ -768,8 +768,9 @@ function FUNCrun(){
         bEnableSECWarnMessages=true #the 1st time a problem happens, set to true to help on retries debugging
         bCleanSECenv=false #the 1st time a problem happens, set to false to help on retries debugging
 				local lbEvalCode=false
-#				: ${strCodeToEval:=":"}
-				: ${strCodeToEval:="`declare -p astrRunParams`"}
+				sedClearArrayIndexes="s@\[[[:digit:]]*\]=\"@\"@g"
+				strCodeToEval=":;"
+				strCodeToEval+="`declare -p astrRunParams |sed -r "$sedClearArrayIndexes"`;"
 				# annoying: --on-top
 				# the first button will be the default when hitting Enter...
 				astrYadFields=(
@@ -796,7 +797,7 @@ function FUNCrun(){
           "${!astrYadFields[1]}" 
           "${!astrYadFields[2]}" 
           "${!astrYadFields[3]}" 
-          "$lstrTxt" # options to be captured put above info text
+          "$lstrTxt" # options to be captured put above info text dummy (changes are ignored) field
         )
         declare -p astrYadExecParams
         strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D

@@ -26,12 +26,21 @@ source <(secinit)
 
 # initializations and functions
 
+function FUNCratio() {
+  local lstrSz="$1"
+  local lstrCalc="$(echo "${lstrSz}" |tr "x" "/")"
+  bc <<< "scale=2;$lstrCalc"
+  return 0
+}
+
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
 strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
+strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
+strPicURI="file://$strTmpFile"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB #after default variables value setup above
@@ -48,6 +57,9 @@ bFlip=false;
 bFlop=false;
 bWriteFilename=true;
 strResize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
+fResRatio="`FUNCratio $strResize`"
+eval `echo "$strResize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
+declare -p strResize fResRatio
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -106,12 +118,19 @@ cd $strWallPPath;
 
 nDelayMsg=3
 nTotFiles=0
+strFilter=".*"
 function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#astrFileList[@]}
 	
 	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
     # ignores hidden (even at hidden folders) and the tmp files
-		IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex "$strFindRegex" |egrep -v "/[.]" |grep -v "$strBaseTmpFileName") &&: # re-fill
+		IFS=$'\n' read -d '' -r -a astrFileList < <(
+      find -iregex "$strFindRegex" \
+        |egrep -v "/[.]" \
+        |grep -v "$strBaseTmpFileName" \
+        |egrep "$strFilter" \
+        |sort \
+    ) &&: # re-fill
 		if [[ -z "${1-}" ]];then
 			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
 			if((nTotFiles==0));then
@@ -128,6 +147,10 @@ function FUNCchkUpdateFileList() { #[--refill]
 	return 0
 }
 
+function FUNCsetPicURI() {
+  SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "$strPicURI";
+}
+
 if $bDaemon;then
   SECFUNCuniqueLock --daemonwait
 	nTotFiles=0
@@ -138,8 +161,7 @@ if $bDaemon;then
   nSumSleep=0
   bChangeImage=true
   nChHueFastModeCount=0
-  strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
-  SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strTmpFile";
+  FUNCsetPicURI
   bFlipKeep=false;
   bFlopKeep=false;
   nSetIndex=-1
@@ -161,7 +183,14 @@ if $bDaemon;then
       if [[ -z "$strFile" ]] || [[ ! -f "$strFile" ]];then
         declare -p nSelect
         echo "list size = ${#astrFileList[@]}" >&2 &&:
-        echoc -w -t $nSleep -p "failed selecting file"
+        echoc -p "failed selecting file"
+        if((nSetIndex>-1));then
+          echoc --info "fixing nSetIndex='$nSetIndex'"
+          nSetIndex=-1 #reset
+        else
+          echoc --alert "unable to auto-fix!"
+        fi
+        echoc -w -t $nSleep
         continue
       fi
       
@@ -172,33 +201,75 @@ if $bDaemon;then
     fi
 		
     strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
+    fOrigRatio="`FUNCratio $strOrigSize`"
+    #nOrigW="`echo "$strOrigSize" |sed -r 's@([[:digit:]]*)x.*@\1@'`"
+    eval `echo "$strOrigSize" |sed -r 's@([0-9]*)x([0-9]*)@nOrigW=\1;nOrigH=\2;@'`
     
-    if((nChangeHue!=0));then
+    #~ if((nChangeHue!=0));then #TODO to not use hue to let everything else work... :P
+      #~ nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      #~ nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      #~ nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
+      #~ declare -p nAddR nAddG nAddB
+      
+    strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
+    SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
+    
+    # grants size preventing automatic from desktop manager using a lot (?) of CPU
+    strSzOrEq="="
+    strFixSz=""
+    strFixSzTxt=""
+    if [[ "$strOrigSize" != "$strResize" ]];then
+      strResizeFinal="$strResize"
+      astrCmdFrame=()
+      if((nOrigW<nResW && nOrigH<nResH));then
+        strResizeFinal="$strOrigSize"
+        #TODO none of the frames will work properly at all, it is like the gravity wont be centered or the image is being cut wrongly :(
+        #astrCmdFrame=( \( -clone 0 -bordercolor none -frame "10x10+3+3" \) )
+        #astrCmdFrame=( \( -clone 0 -compose Copy -frame "10x10+6+3" \) )
+        #astrCmdFrame=( \( -clone 0 -frame "10x10+6+3" -gravity center \) )
+      else
+        # This only considers too wide images
+        fMaxRatio="`SECFUNCbcPrettyCalcA "(1+(1/8)) * $fResRatio"`" #where top/bottom borders are not annoying
+        if SECFUNCbcPrettyCalcA --cmpquiet "$fOrigRatio > $fMaxRatio";then #if the image it too wide and the blurred borders will have too much height (and annoying)
+          fDiff="`SECFUNCbcPrettyCalcA "$fOrigRatio - $fMaxRatio"`"
+          fSub="`SECFUNCbcPrettyCalcA "$fDiff/4"`"
+          fFixRatio="`SECFUNCbcPrettyCalcA "1 - $fSub"`"
+          #fFixRatio=0.75
+          #fFixRatio=0.85
+          nFixW="`SECFUNCbcPrettyCalcA --scale 0 "${nOrigW}*${fFixRatio}"`"
+          SECFUNCexecA -cE declare -p nOrigW nOrigH nResW nResH nFixW fMaxRatio fOrigRatio fResRatio fDiff fFixRatio
+          strFixSz="${nFixW}x${nOrigH}"
+          SECFUNCexecA -cE nice -n 19 convert -extent "$strFixSz" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          strFixSzTxt=",fix:${strFixSz}"
+          SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+        fi
+      fi
+      
+      strSzOrEq=""
+      astrCmd=()
+      astrCmd+=( convert "${strTmpFilePreparing}" )
+      astrCmd+=( \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 25% \) )
+      if((`SECFUNCarraySize astrCmdFrame`>0));then
+        astrCmd+=( "${astrCmdFrame[@]}" )
+      fi
+      astrCmd+=( \( -clone 0 -resize $strResizeFinal \) )
+      astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
+      SECFUNCexecA -cE nice -n 19 "${astrCmd[@]}"
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+    fi
+    
+    if $bChangeImage;then
+      bFlipKeep=false; bFlopKeep=false;
+      if $bFlip && ((RANDOM%2==0));then bFlipKeep=true;fi
+      if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
+    fi
+  
+    if((nChangeHue!=0));then #TODO to not use hue to let everything else work... :P
       nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
       declare -p nAddR nAddG nAddB
       
-      strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
-      SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
-      
-      # grants size preventing automatic from desktop manager using a lot (?) of CPU
-      strSzOrEq="="
-      if [[ "$strOrigSize" != "$strResize" ]];then
-        strSzOrEq=""
-        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
-          \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 15% \) \
-          \( -clone 0 -resize $strResize \) \
-          -delete 0 -gravity center -composite "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-      fi
-      
-      if $bChangeImage;then
-        bFlipKeep=false; bFlopKeep=false;
-        if $bFlip && ((RANDOM%2==0));then bFlipKeep=true;fi
-        if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
-      fi
-    
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
@@ -206,65 +277,80 @@ if $bDaemon;then
           +channel -channel B -evaluate add ${nAddB}% \
           +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}2"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-          
-      if $bFlipKeep;then 
-        SECFUNCexecA -cE nice -n 19 convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+    fi
+    
+    strFlipTxt=""
+    if $bFlipKeep;then 
+      SECFUNCexecA -cE nice -n 19 convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      strFlipTxt=",flip"
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+    fi
+    strFlopTxt=""
+    if $bFlopKeep;then
+      SECFUNCexecA -cE nice -n 19 convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      strFlopTxt=",flop"
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+    fi
+    
+    if $bWriteFilename;then
+      nFontSize=15
+      strTxt="`basename "$strFile"`/orig:${strOrigSize}${strFixSzTxt}${strFlipTxt}${strFlopTxt}/RGB:$nAddR,$nAddG,$nAddB"
+      # pseudo outline at 4 corners
+      SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
+        -fill red    -annotate +0+2 "$strTxt" \
+        -fill green  -annotate +2+0 "$strTxt" \
+        -fill blue   -annotate +0+0 "$strTxt" \
+        -fill purple -annotate +2+2 "$strTxt" \
+        -fill white -annotate +1+1 "$strTxt" \
+        "${strTmpFilePreparing}2"
+      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+    fi
+    
+    # final step
+    SECFUNCexecA -cE mv -f "${strTmpFilePreparing}" "$strTmpFile"
+    
+    if $bFastMode;then
+      if((nChHueFastModeCount<nChHueFastModeTimes));then
+        ((nChHueFastModeCount++))&&:;
+        bChangeImage=false;declare -p bChangeImage
+      else
+        nChHueFastModeCount=0;declare -p nChHueFastModeCount
+        bChangeImage=true;declare -p bChangeImage
       fi
-      if $bFlopKeep;then
-        SECFUNCexecA -cE nice -n 19 convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-      fi
-      
-      if $bWriteFilename;then
-        nFontSize=15
-        strTxt="`basename "$strFile"` $strSzOrEq$strOrigSize RGB:$nAddR,$nAddG,$nAddB"
-        # pseudo outline at 4 corners
-        SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
-          -fill red    -annotate +0+2 "$strTxt" \
-          -fill green  -annotate +2+0 "$strTxt" \
-          -fill blue   -annotate +0+0 "$strTxt" \
-          -fill purple -annotate +2+2 "$strTxt" \
-          -fill white -annotate +1+1 "$strTxt" \
-          "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-      fi
-      
-      # final step
-      SECFUNCexecA -cE mv -f "${strTmpFilePreparing}" "$strTmpFile"
-      
-      if $bFastMode;then
-        if((nChHueFastModeCount<nChHueFastModeTimes));then
-          ((nChHueFastModeCount++))&&:;
+      declare -p nChHueFastModeCount nChHueFastModeTimes
+    else
+      if((nRandomHueInterval>0));then 
+        nSleep=$nRandomHueInterval;declare -p nSleep
+        declare -p nChangeInterval
+        declare -p nSumSleep
+        ((nSumSleep+=$nRandomHueInterval))&&:
+        if((nSumSleep<nChangeInterval));then
           bChangeImage=false;declare -p bChangeImage
         else
-          nChHueFastModeCount=0;declare -p nChHueFastModeCount
+          nSumSleep=0;declare -p nSumSleep
           bChangeImage=true;declare -p bChangeImage
         fi
-        declare -p nChHueFastModeCount nChHueFastModeTimes
       else
-        if((nRandomHueInterval>0));then 
-          nSleep=$nRandomHueInterval;declare -p nSleep
-          declare -p nChangeInterval
-          declare -p nSumSleep
-          ((nSumSleep+=$nRandomHueInterval))&&:
-          if((nSumSleep<nChangeInterval));then
-            bChangeImage=false;declare -p bChangeImage
-          else
-            nSumSleep=0;declare -p nSumSleep
-            bChangeImage=true;declare -p bChangeImage
-          fi
-        else
-          bChangeImage=true;declare -p bChangeImage
-        fi
+        bChangeImage=true;declare -p bChangeImage
       fi
-    else
-      SECFUNCexecA -cE cp -f "$strFile" "$strTmpFile"
     fi
+    #~ else
+      #~ SECFUNCexecA -cE cp -f "$strFile" "$strTmpFile"
+    #~ fi
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
     bResetCounters=false;
-    echoc -t $nSleep -Q "@Otoggle _fast mode/_reset timeout counter/_change image now/_set image index/toggle fl_ip/toggle fl_op"&&:; nRet=$?; case "`secascii $nRet`" in 
+    astrOpt=(
+      "_change image now\n"
+      "toggle _fast mode\n"
+      "fi_lter\n"
+      "toggle fl_ip\n"
+      "toggle fl_op\n"
+      "_reset timeout counter\n"
+      "_set image index\n"
+      "fi_x wallpaper pic URI\n"
+    )
+    echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
       c)
         bChangeImage=true
         bResetCounters=true
@@ -277,7 +363,28 @@ if $bDaemon;then
           nSleep=$nChangeInterval;declare -p nSleep
         fi
         bResetCounters=true
-        ;; 
+        ;;
+      F)
+        FUNCsetPicURI
+        ;;
+      l)
+        FUNCchkUpdateFileList --refill
+        declare -p astrFileList |tr '[' '\n'
+        declare -p strFilter
+        #TODO for some inexplicable (?) reason, while 's' option will collect text and work fine many times, after this option is selected nothing will output anymore on text prompts `echoc -S`... scary... 8-( ), could be cuz of the @D default option? or even the '(' ')' test more later...
+        strFilter="`echoc -S "Type a regex filter (can be a subfolder name)@D${strFilter}"`"
+        declare -p strFilter
+        FUNCchkUpdateFileList --refill
+        if((`SECFUNCarraySize astrFileList`>0));then
+          declare -p astrFileList |tr '[' '\n'
+          bChangeImage=true;
+          bResetCounters=true
+        else
+          echoc -p "invalid filter, no matches"
+          strFilter=".*"
+          FUNCchkUpdateFileList --refill
+        fi
+        ;;
       i)
         SECFUNCtoggleBoolean bFlipKeep
         bResetCounters=true
