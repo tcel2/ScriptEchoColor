@@ -242,7 +242,7 @@ if $bRunAll || [[ -n "$strFilter" ]];then
     
     echoc -w -t 0.35 #to let the app kick in blindly
   done
-  SECFUNCdelay totalTime --getpretty
+  echoc --info "totalTime='`SECFUNCdelay totalTime --getpretty`'"
 fi
 
 #echoc -w -t 60

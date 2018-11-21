@@ -205,12 +205,6 @@ if $bDaemon;then
     #nOrigW="`echo "$strOrigSize" |sed -r 's@([[:digit:]]*)x.*@\1@'`"
     eval `echo "$strOrigSize" |sed -r 's@([0-9]*)x([0-9]*)@nOrigW=\1;nOrigH=\2;@'`
     
-    #~ if((nChangeHue!=0));then #TODO to not use hue to let everything else work... :P
-      #~ nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
-      #~ nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
-      #~ nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
-      #~ declare -p nAddR nAddG nAddB
-      
     strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
     SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
     
@@ -221,12 +215,16 @@ if $bDaemon;then
     if [[ "$strOrigSize" != "$strResize" ]];then
       strResizeFinal="$strResize"
       astrCmdFrame=()
-      if((nOrigW<nResW && nOrigH<nResH));then
+      nBorder=20
+      if((nOrigW<(nResW-nBorder) && nOrigH<(nResH-nBorder)));then
         strResizeFinal="$strOrigSize"
         #TODO none of the frames will work properly at all, it is like the gravity wont be centered or the image is being cut wrongly :(
         #astrCmdFrame=( \( -clone 0 -bordercolor none -frame "10x10+3+3" \) )
         #astrCmdFrame=( \( -clone 0 -compose Copy -frame "10x10+6+3" \) )
         #astrCmdFrame=( \( -clone 0 -frame "10x10+6+3" -gravity center \) )
+        #astrCmdFrame=( \( -clone 0 -resize "$((nOrigW+nBorder))x$((nOrigH+nBorder))" -fill white -colorize 25% \) )
+        SECFUNCexecA -cE nice -n 19 convert -mattecolor black -compose Copy -frame "10x10+6+3" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       else
         # This only considers too wide images
         fMaxRatio="`SECFUNCbcPrettyCalcA "(1+(1/8)) * $fResRatio"`" #where top/bottom borders are not annoying
@@ -249,10 +247,11 @@ if $bDaemon;then
       astrCmd=()
       astrCmd+=( convert "${strTmpFilePreparing}" )
       astrCmd+=( \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 25% \) )
-      if((`SECFUNCarraySize astrCmdFrame`>0));then
-        astrCmd+=( "${astrCmdFrame[@]}" )
-      fi
+      #~ if((`SECFUNCarraySize astrCmdFrame`>0));then
+        #~ astrCmd+=( "${astrCmdFrame[@]}" )
+      #~ fi
       astrCmd+=( \( -clone 0 -resize $strResizeFinal \) )
+      #astrCmd+=( -crop  ${strResize}+10+10 )
       astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
       SECFUNCexecA -cE nice -n 19 "${astrCmd[@]}"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"

@@ -24,8 +24,12 @@
 
 #TODO check at `info at` if the `at` command can replace this script?
 
+astrOriginalOptions=( "$@" );export astrOriginalOptions
+
+###################################################################
+###################################################################
 # THIS BELOW MUST BE BEFORE secinit!!!
-if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST option. It will grant .bashrc will be loaded previously to executing the command. Useful in case this project was installed for a single user only.
+if [[ "${1-}" == "--rc" ]];then #help ~exclusive if used, this option must be the FIRST option. It will grant .bashrc will be loaded previously to executing the command. Useful in case this project was installed for a single user only.
 	shift
 	export SECstrScriptSelfNameTmp="$0"
 	function SECFUNCrcTmp() {
@@ -33,22 +37,29 @@ if [[ "${1-}" == "--rc" ]];then #help if used, this option must be the FIRST opt
 		$SECstrScriptSelfNameTmp "$@"
 	};export -f SECFUNCrcTmp
 #	echo "INFO: Granting .bashrc will be loaded previously to executing the command." >&2
-	astrCmd=(bash -i -c 'SECFUNCrcTmp $0 "$@"' "$@");
+	astrCmd=(bash -i -c 'SECFUNCrcTmp $0 "$@"' "$@"); #TODO shouldnt suffice this and also avoid '-i'?: bash --rcfile ~/.bashrc -c ...
 	echo "Exec: ${astrCmd[@]}" >&2
 	"${astrCmd[@]}"
 	exit $?
 fi
 # THIS ABOVE MUST BE BEFORE secinit!!!
+###################################################################
+###################################################################
 
 #source <(secinit --nochild --extras)
-source <(secinit)
+source <(secinit --extras)
 export strExecGlobalLogFile="/tmp/.$SECstrScriptSelfName.`id -un`.log" #to be only used at FUNClog
+#####################################
+#####################################
 # THIS BELOW MUST BE JUST AFTER secinit!!!
-if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help 
+if [[ "${1-}" == "-G" || "${1-}" == "--getgloballogfile" ]];then #help ~exclusive
   #SECFUNCfdReport
   echo "$strExecGlobalLogFile" # no echo to stderr or stdout must happen before this! if running under nohup it is worse because both fd1 and fd2 will point to the same pipe!!! :(
   exit 0
 fi
+# THIS ABOVE MUST BE JUST AFTER secinit!!!
+#####################################
+#####################################
 
 echo " SECstrRunLogFile='$SECstrRunLogFile'" >&2
 echo " \$@='$@'" >&2
@@ -393,41 +404,13 @@ fi
 
 FUNClog ini
 
-#if $bWaitCheckPoint;then
-#	SECONDS=0
-#	while ! SECFUNCuniqueLock --isdaemonrunning;do
-#		echo -ne "$SECstrScriptSelfName: waiting daemon (${SECONDS}s)...\r"
-#		sleep $nDelayAtLoops
-#	done
-#	
-#	SECFUNCuniqueLock --setdbtodaemon
-#	
-#	SECONDS=0
-#	while true;do
-#		SECFUNCvarReadDB
-#		if $bCheckPointConditionsMet;then
-#			break
-#		fi
-#		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (${SECONDS}s)...\r"
-#		sleep $nDelayAtLoops
-#	done
-#	
-#	echo
-#fi
 if $bWaitCheckPoint && ! $SECCFGbOverrideRunThisNow;then
 	SECFUNCdelay bWaitCheckPoint --init
 	nPidDaemon=-1
 	strFileUnique="`SECFUNCuniqueLock --getuniquefile`"
 	while true;do
-		echo -ne "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)...\r"
+		echo -e "$SECstrScriptSelfName: waiting checkpoint be activated at daemon (`SECFUNCdelay bWaitCheckPoint --getsec`s)..."
 
-#		if SECFUNCuniqueLock --isdaemonrunning;then
-#			SECFUNCuniqueLock --setdbtodaemon	#SECFUNCvarReadDB
-#			if $bCheckPointConditionsMet;then
-#				break
-#			fi
-#		fi
-		
 		if [[ ! -f "$strFileUnique" ]];then #TODO after the daemon exited, another script pid (not daemon one) was considered as being daemon, but how?
 			nPidDaemon=-1 
 		fi
@@ -442,12 +425,6 @@ if $bWaitCheckPoint && ! $SECCFGbOverrideRunThisNow;then
 		else
 			nPidDaemon=-1 # this helps (but is not 100% garanteed) on preventing other process that could have get the same pid
 			if SECFUNCuniqueLock --isdaemonrunning;then
-#				SECFUNCuniqueLock --setdbtodaemon # if daemon was NOT running, this would become the daemon
-#				if $SECbDaemonWasAlreadyRunning;then
-#					nPidDaemon="$SECnDaemonPid"
-#				else
-#					nPidDaemon=-1
-#				fi
 				if SECFUNCuniqueLock --setdbtodaemononly;then
 					nPidDaemon="$SECnDaemonPid"
 				fi
@@ -574,6 +551,15 @@ function FUNCrun(){
 #	SECFUNCarraysRestore
 	nRunTimes=0
 	local lbDevMode=false
+ 	local lbRestartSelfFullDev=false
+  
+  local lastrRestart=()
+  lastrRestart+=(secTerm.sh -- -e)
+  lastrRestart+=(secEnvDev.sh)
+  lastrRestart+=(secNoHup.sh)
+  lastrRestart+=(eval "export SECCFGbOverrideRunThisNow=true" "&&") # only works with eval, otherwise could try appending --cfg to this script options
+  lastrRestart+=("`basename "$0"`" "${astrOriginalOptions[@]}") #astrRestart+=(secDelayedExecSequential.sh --filter "${astrRunParams[0]}")
+  
 	while true;do
 		((nRunTimes++))&&:
 		
@@ -739,6 +725,7 @@ function FUNCrun(){
 		
     strDumpRetryBtnTxt="dump;retry"
     
+    strRetryFull="RetrySelfFull-DEV"
 		if $bStay || $bStayForce || $lbErr;then
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
@@ -748,6 +735,9 @@ function FUNCrun(){
 			lstrTxt+="\n";
 			lstrTxt+="SequentialHelper:\n"
 			lstrTxt+="\tsecDelayedExecSequential.sh --filter \"${astrRunParams[0]}\"\n";
+			lstrTxt+="\n";
+			lstrTxt+="${strRetryFull}(lastrRestart[@]):\n"
+			lstrTxt+="\t`SECFUNCparamsToEval "${lastrRestart[@]}"`\n";
 			lstrTxt+="\n";
 			lstrTxt+="At: `SECFUNCdtFmt --pretty`\n";
 			lstrTxt+="\n";
@@ -782,8 +772,9 @@ function FUNCrun(){
         astrYadExecParams=(
           "${astrYadBasicOpts[@]}"
           
-          --button="retry:4" 
-          --button="retry-DEV:2" 
+          --button="Retry:4" # ATTENTION!!! exit VALUES are NOT in order!!!!!
+          --button="Retry-DEV:2"
+          --button="${strRetryFull}:5"
           --button="${strDumpRetryBtnTxt}:3" 
           --button="gtk-close:1" 
           
@@ -819,6 +810,7 @@ function FUNCrun(){
 					2)lbDevMode=true;; #retry in development mode (path)
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
 					4)lbDevMode=false;; #normal retry
+					5)lbRestartSelfFullDev=true;break;; #retry in development mode (path)
 					252)break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
@@ -850,6 +842,10 @@ function FUNCrun(){
 			break;
 		fi
 	done
+  
+  if $lbRestartSelfFullDev;then
+    SECFUNCexecA -ce "${lastrRestart[@]}"
+  fi
 	
 	return $lnRet
 };export -f FUNCrun
