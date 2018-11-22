@@ -200,33 +200,45 @@ if $bDaemon;then
       unset astrFileList[$nSelect]
     fi
 		
-    strOrigSize="`identify "$strFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
-    fOrigRatio="`FUNCratio $strOrigSize`"
-    #nOrigW="`echo "$strOrigSize" |sed -r 's@([[:digit:]]*)x.*@\1@'`"
-    eval `echo "$strOrigSize" |sed -r 's@([0-9]*)x([0-9]*)@nOrigW=\1;nOrigH=\2;@'`
-    
     strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
     SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
+    
+    function FUNCprepGeomInfo() { # <lstrFile>
+      local lstrFile="$1"
+      strOrigSize="`identify "$lstrFile" |sed -r 's".* ([[:digit:]]*x[[:digit:]]*) .*"\1"'`"
+      fOrigRatio="`FUNCratio $strOrigSize`"
+      #nOrigW="`echo "$strOrigSize" |sed -r 's@([[:digit:]]*)x.*@\1@'`"
+      eval `echo "$strOrigSize" |sed -r 's@([0-9]*)x([0-9]*)@nOrigW=\1;nOrigH=\2;@'`
+    }
+    FUNCprepGeomInfo "$strFile"
     
     # grants size preventing automatic from desktop manager using a lot (?) of CPU
     strSzOrEq="="
     strFixSz=""
     strFixSzTxt=""
     if [[ "$strOrigSize" != "$strResize" ]];then
+      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
+        SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        #~ SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}.png"
+        #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+        
+        #######################################
+        ### WATCHOUT CHANGES ORIG INFO ############################################################
+        ###################################
+        FUNCprepGeomInfo "${strTmpFilePreparing}"
+      fi
+      
       strResizeFinal="$strResize"
       astrCmdFrame=()
       nBorder=20
       if((nOrigW<(nResW-nBorder) && nOrigH<(nResH-nBorder)));then
+        # creates a frame border on the small image
         strResizeFinal="$strOrigSize"
-        #TODO none of the frames will work properly at all, it is like the gravity wont be centered or the image is being cut wrongly :(
-        #astrCmdFrame=( \( -clone 0 -bordercolor none -frame "10x10+3+3" \) )
-        #astrCmdFrame=( \( -clone 0 -compose Copy -frame "10x10+6+3" \) )
-        #astrCmdFrame=( \( -clone 0 -frame "10x10+6+3" -gravity center \) )
-        #astrCmdFrame=( \( -clone 0 -resize "$((nOrigW+nBorder))x$((nOrigH+nBorder))" -fill white -colorize 25% \) )
         SECFUNCexecA -cE nice -n 19 convert -mattecolor black -compose Copy -frame "10x10+6+3" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       else
-        # This only considers too wide images
+        # This only considers too wide images and will cut out left and right edges
         fMaxRatio="`SECFUNCbcPrettyCalcA "(1+(1/8)) * $fResRatio"`" #where top/bottom borders are not annoying
         if SECFUNCbcPrettyCalcA --cmpquiet "$fOrigRatio > $fMaxRatio";then #if the image it too wide and the blurred borders will have too much height (and annoying)
           fDiff="`SECFUNCbcPrettyCalcA "$fOrigRatio - $fMaxRatio"`"
