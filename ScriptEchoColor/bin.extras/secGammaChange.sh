@@ -427,20 +427,15 @@ elif $bRandom;then
 	nMinLimit=10
 
 	FUNCto() {
-		n=$1
-		nTo=$2
+		local n=$1;n=$((10#$n))
+		local nTo=$2;nTo=$((10#$nTo))
 		#if((n==nTo));then
 		if(( n>=(nTo-nRgfStep) && n<=(nTo+nRgfStep) ));then
 		  ((nDelta=nRgfMax-nRgfMin))
 		  nRandom=$RANDOM
 		  nRandom=`echo "$nRandom%$nDelta" |bc`
-	#@@@r    nAdjust=`echo "$nRandom%$nRgfStep"  |bc` #this grants nTo will always be reachable thru nRgfStep stepping!
-	#@@@r    nRandom=$((nRandom-nAdjust))
-	#@@@!!!bash-bug:    ((nRandon+=nRgfMin))
-	#@@@!!!bash-bug:    ((nRandon=nRandom+nRgfMin))
 		  nRandom=$((nRandom+nRgfMin))
 		  if((nRandom<nRgfMin||nRandom>nRgfMax));then echo "BUG: out of min/max range $nRandom" >&2; fi
-	#@@@r    if((nRandom<nRgfMin)); then nRandom=$nRgfMin; fi 
 		  nTo=$nRandom
 		  if((nTo<nMinLimit));then
 		    nTo=$nMinLimit
@@ -450,8 +445,8 @@ elif $bRandom;then
 	}
 
 	FUNCwalk() {
-		n=$1
-		nTo=$2
+		local n=$1;n=$((10#$n))
+		local nTo=$2;nTo=$((10#$nTo))
 		if((n<nTo));then
 		  n=$((n+nRgfStep))
 		elif((n>nTo));then
@@ -461,14 +456,15 @@ elif $bRandom;then
 	}
 
 	FUNCtoFloat() {
-		n=$1
-		if((n<nMinLimit||n>1000));then echo "BUG: out of xgamma range $n" >&2; fi
+		local n=$1;n=$((10#$n))
+		if((n<nMinLimit||n>1000));then SECFUNCechoErrA "BUG: out of xgamma range $n" >&2; fi
 		echo "scale=2;$1/100" |bc
+    # BAD, from 1 to 9 at % will become .10 to .90 :( #echo "$(( 10#${n} / 100 )).$(( 10#${n} % 100 ))"
 	}
 
 	FUNCupDown() {
-		n=$1
-		nTo=$2
+		local n=$1;n=$((10#$n))
+		local nTo=$2;nTo=$((10#$nTo))
 		if((n<nTo));then
 		  echo "^"
 		else
@@ -476,6 +472,8 @@ elif $bRandom;then
 		fi
 	}
 
+  #tabs 2
+  declare -p nMinLimit nRgfStep nRgfDelay nRgfMin nRgfMax
 	while true; do
 		nRto=`FUNCto $nR $nRto`
 		nGto=`FUNCto $nG $nGto`
@@ -485,23 +483,26 @@ elif $bRandom;then
 		nG=`FUNCwalk $nG $nGto`
 		nB=`FUNCwalk $nB $nBto`
 		
+    fR="`FUNCtoFloat $nR`"
+    fG="`FUNCtoFloat $nG`"
+    fB="`FUNCtoFloat $nB`"
+    strFRGB="$fR:$fG:$fB"
     if [[ "$strMonitor" == "ALL" ]];then
-      xgamma -quiet -rgamma `FUNCtoFloat $nR` -ggamma `FUNCtoFloat $nG` -bgamma `FUNCtoFloat $nB`
-      #~ xgamma -quiet -rgamma `FUNCtoFloat $nR`
-      #~ xgamma -quiet -ggamma `FUNCtoFloat $nG`
-      #~ xgamma -quiet -bgamma `FUNCtoFloat $nB`
+      xgamma -quiet -rgamma $fR -ggamma $fG -bgamma $fB
     else
-      xrandr --output "$strMonitor" --gamma `FUNCtoFloat $nR`:`FUNCtoFloat $nG`:`FUNCtoFloat $nB`
+      xrandr --output "$strMonitor" --gamma "$strFRGB"
     fi
     
 		sleep $nRgfDelay
 		
 		#report
-		printf "RGB; current:`FUNCupDown $nR $nRto`%03d,\
-	`FUNCupDown $nG $nGto`%03d,\
-	`FUNCupDown $nB $nBto`%03d;\
-	 to:%03d,%03d,%03d\r" $nR $nG $nB $nRto $nGto $nBto
-
+    strTo="`printf "%03d,%03d,%03d" $nRto $nGto $nBto`"
+    if $SEC_DEBUG;then
+      echo "$strFRGB `printf "%03d,%03d,%03d" $nR $nG $nB` to $strTo" >&2
+    else
+      printf "RGB `FUNCupDown $nR $nRto`%03d,`FUNCupDown $nG $nGto`%03d,`FUNCupDown $nB $nBto`%03d to $strTo\r" $nR $nG $nB
+    fi
+    strToPrev="$strTo"
 	done	
 	
 	exit 0

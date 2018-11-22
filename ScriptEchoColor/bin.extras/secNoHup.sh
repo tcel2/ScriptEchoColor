@@ -243,5 +243,6 @@ echoc --info "daemon pid = $nDPid, file '`SECFUNCuniqueLock --id $strDaemonId --
 echo "SENDINGCOMMAND: `declare -p astrCmdToRun`"
 declare -p astrCmdToRun >>"$strFifoFl" # will only return after it is read!
 echo "SENT."
+#echoc -w -t 60
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
