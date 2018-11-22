@@ -96,10 +96,14 @@ function FUNCchkFixGammaComponent() {
 }
 
 function FUNCsetGamma() { #<fR> <fG> <fB>
-	SECFUNCexecA -ce xgamma \
-		-rgamma "`FUNCchkFixGammaComponent "$1"`" \
-		-ggamma "`FUNCchkFixGammaComponent "$2"`"	\
-		-bgamma "`FUNCchkFixGammaComponent "$3"`"
+  if [[ "$strMonitor" == "ALL" ]];then
+    SECFUNCexecA -ce xgamma \
+      -rgamma "`FUNCchkFixGammaComponent "$1"`" \
+      -ggamma "`FUNCchkFixGammaComponent "$2"`"	\
+      -bgamma "`FUNCchkFixGammaComponent "$3"`"
+  else
+    SECFUNCexecA -ce xrandr --output "$strMonitor" --gamma `FUNCchkFixGammaComponent "$1"`:`FUNCchkFixGammaComponent "$2"`:`FUNCchkFixGammaComponent "$3"`
+  fi
 }
 
 strCfgByDisplay="`SECFUNCfixId -f -- "${SECstrScriptSelfName}_Display${DISPLAY}"`"
@@ -139,6 +143,9 @@ SECFUNCcfgFileName --get
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
 afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
+astrConnectedMonitors=(`xrandr |grep connected -w |awk '{print $1}'`);declare -p astrConnectedMonitors
+#strMonitor="${astrConnectedMonitors[0]}"
+strMonitor="ALL"
 echoc --info "TypeHelper: xgamma -rgamma ${afCurrentGamma[0]} -ggamma ${afCurrentGamma[1]} -bgamma ${afCurrentGamma[2]};secGammaChange.sh --setc;secGammaChange.sh --setbase"
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help
@@ -198,6 +205,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#help useful in case some application changes it when you do not want.
 		#help incompatible with --random.
 		bKeepNVidia=true
+	elif [[ "$1" == "--monitor" ]];then #help [strMonitor] to change gamma at, see astrConnectedMonitors options
+    shift&&:
+    strMonitor="$1"
+    if ! SECFUNCarrayContains astrConnectedMonitors "$strMonitor";then
+      echoc -p "invalid monitor strMonitor='$strMonitor'"
+    fi
 	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
 		#help ~daemon a loop that does random gamma fade, fun effect.
 		#help will not modify configuration file.
@@ -472,10 +485,15 @@ elif $bRandom;then
 		nG=`FUNCwalk $nG $nGto`
 		nB=`FUNCwalk $nB $nBto`
 		
-		xgamma -quiet -rgamma `FUNCtoFloat $nR`
-		xgamma -quiet -ggamma `FUNCtoFloat $nG`
-		xgamma -quiet -bgamma `FUNCtoFloat $nB`
-		
+    if [[ "$strMonitor" == "ALL" ]];then
+      xgamma -quiet -rgamma `FUNCtoFloat $nR` -ggamma `FUNCtoFloat $nG` -bgamma `FUNCtoFloat $nB`
+      #~ xgamma -quiet -rgamma `FUNCtoFloat $nR`
+      #~ xgamma -quiet -ggamma `FUNCtoFloat $nG`
+      #~ xgamma -quiet -bgamma `FUNCtoFloat $nB`
+    else
+      xrandr --output "$strMonitor" --gamma `FUNCtoFloat $nR`:`FUNCtoFloat $nG`:`FUNCtoFloat $nB`
+    fi
+    
 		sleep $nRgfDelay
 		
 		#report

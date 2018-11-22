@@ -173,7 +173,10 @@ while true;do
           strText="${astrText[*]}"
           if yad --title="$SECstrScriptSelfName" --info \
             --button="gtk-ok:0" --button="gtk-close:1" \
-            --text="${strText:0:1000}";
+            --form \
+            --field "INFO:TXT" \
+            "$strText" # fills the TXT field
+            #--text="${strText:0:1000}";
           then
             FUNCCHILDaddIgnorePid $nPid
 #            echo "SENDING PID TO IGNORE: $nPid"

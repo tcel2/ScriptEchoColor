@@ -784,7 +784,7 @@ function FUNCrun(){
           --field "[${astrYadFields[2]}] :chk" 
           --field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
           --field "info:TXT" # the editable text field is MUCH better than the --text label, it has scroll bar, fixed width in pixels to the window size, 3 click selectable line, everything is better for big texts!
-          "${!astrYadFields[0]}" 
+          "${!astrYadFields[0]}" # redirected values
           "${!astrYadFields[1]}" 
           "${!astrYadFields[2]}" 
           "${!astrYadFields[3]}" 
