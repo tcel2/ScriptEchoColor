@@ -59,7 +59,8 @@ fi
 nStartTime=`date +"%s%N"`
 
 # Must be alias because of LINENO
-stdout=" >>/dev/stdout"
+#stdout=" >>/dev/stdout"
+stdout=" >&1"
 stderr=" >&2"
 eval 'tput sc' $stderr # Save current cursor position in case there is line repositioning. It will be restored in the end.
 strRestorePos=""
@@ -293,6 +294,7 @@ function FUNCifBC () {
 	return $((l_ret==0?1:0));
 }
 optAlert="--alert"
+optDebug="--debug"
 optEscapedChars="--escapedchars"
 optExecuteRetry="--retry"
 optGfxE294char="--gfx-E294char"
@@ -331,6 +333,7 @@ strOptPrecedence="cpqQSwxXvV"
 strGfxMode=$optGfxMostreliable
 
 bOptAlert=false
+bOptDebug=false
 bOptEscapedChars=false
 bOptGuessTermEmulator=false
 bOptHelp=false
@@ -496,6 +499,9 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
 					;;
 			"${optAlert:2}") 
 					bOptAlert=true
+					;;
+			"${optDebug:2}") 
+					bOptDebug=true
 					;;
 			"${optHelpLibs:2}") 
 					bOptHelpLibs=true
@@ -3126,13 +3132,6 @@ else
 			str="$strCommandAppendExitTest"
 		fi
 		strCmd="`echo $strEchoNormalOption '$strCommandLine'`" #this way execution will also be formatted
-##    strCmd=`FUNCcmdEscapedChars "$strCmd"`
-##    strCmd=`FUNCcmdEscapedChars "$strCmd"`
-##    eval echo $strEchoNormalOption "\"$strCommandLine$str\"" $stdout
-##    echo "'$strCmd$str'" >/dev/stdout
-##    echo "eval echo \"$strCmd$str\"" >/dev/stdout
-##    eval echo "\"SEC_Cmd='$strCmd';\$SEC_Cmd$str\"" $stdout
-##    echo "$strCommandLine$str" >/dev/stdout
 		eval echo "\"$strCmd$str\"" $stdout
 	fi
 
