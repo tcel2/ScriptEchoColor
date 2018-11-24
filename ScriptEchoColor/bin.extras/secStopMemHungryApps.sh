@@ -108,11 +108,13 @@ while true;do
 #  declare -p anPidIgnore
   
   IFS=$'\n' read -d '' -r -a astrList < <(
+    # the 2nd sed line is to fix invalid chars during eval later
     ps --no-headers -A -o rss,pid,state,cmd --sort -rss \
           |head -n $nLimPids \
-          |sed -r 's@"@\\"@g' \
+          |sed -r -e 's@["]@\\"@g' -e 's@[$]@\\$@g' \
           |sed -r 's@([[:digit:]]*) *([[:digit:]]*) *([[:alnum:]]) *(.*)@nResKB=\1;nPid=\2;strState="\3";strCmd="\4";@'  
   )&&:
+  #declare -p astrList
   
   for strRegexIgnore in "${CFGastrRegexIgnorePgrep[@]}";do
     if nPidRegexIgnore=`pgrep $strRegexIgnore`;then
@@ -124,6 +126,7 @@ while true;do
   
   bShowHeader=true
   for strLine in "${astrList[@]}";do 
+    #echo "EVAL: \"$strLine\""
     eval "$strLine";
     
     if $bReadFIFO;then
