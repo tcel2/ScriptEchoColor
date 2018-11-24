@@ -216,6 +216,7 @@ if $bDaemon;then
     strSzOrEq="="
     strFixSz=""
     strFixSzTxt=""
+    strXbrz=""
     if [[ "$strOrigSize" != "$strResize" ]];then
       if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
         SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
@@ -223,10 +224,14 @@ if $bDaemon;then
         #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
         
-        #######################################
-        ### WATCHOUT CHANGES ORIG INFO ############################################################
-        ###################################
+        SECFUNCexecA -cE nice -n 19 convert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+        
+        ################################################
+        ### WATCHOUT CHANGES ORIG VARS! ###########
+        ######################################
         FUNCprepGeomInfo "${strTmpFilePreparing}"
+        strXbrz=",xBRZ"
       fi
       
       strResizeFinal="$strResize"
@@ -266,6 +271,7 @@ if $bDaemon;then
       #astrCmd+=( -crop  ${strResize}+10+10 )
       astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
       SECFUNCexecA -cE nice -n 19 "${astrCmd[@]}"
+      declare -p strOrigSize strResize strResizeFinal
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     
@@ -305,7 +311,7 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="`basename "$strFile"`/orig:${strOrigSize}${strFixSzTxt}${strFlipTxt}${strFlopTxt}/RGB:$nAddR,$nAddG,$nAddB"
+      strTxt="`basename "$strFile"`/orig:${strOrigSize}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}/RGB:$nAddR,$nAddG,$nAddB"
       # pseudo outline at 4 corners
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
