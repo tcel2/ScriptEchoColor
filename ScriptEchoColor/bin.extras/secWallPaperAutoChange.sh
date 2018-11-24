@@ -217,12 +217,14 @@ if $bDaemon;then
     strFixSz=""
     strFixSzTxt=""
     strXbrz=""
+    strOrigSzTxt="$strOrigSize"
     if [[ "$strOrigSize" != "$strResize" ]];then
       if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
         SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
         #~ SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}.png"
         #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+        strXbrz=",xBRZ"
         
         SECFUNCexecA -cE nice -n 19 convert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
@@ -231,7 +233,7 @@ if $bDaemon;then
         ### WATCHOUT CHANGES ORIG VARS! ###########
         ######################################
         FUNCprepGeomInfo "${strTmpFilePreparing}"
-        strXbrz=",xBRZ"
+        strOrigSzTxt+="($strOrigSize)"
       fi
       
       strResizeFinal="$strResize"
@@ -311,14 +313,14 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="`basename "$strFile"`/orig:${strOrigSize}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}/RGB:$nAddR,$nAddG,$nAddB"
+      strTxt="`basename "$strFile"`/orig:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}/RGB:$nAddR,$nAddG,$nAddB"
       # pseudo outline at 4 corners
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
         -fill green  -annotate +2+0 "$strTxt" \
         -fill blue   -annotate +0+0 "$strTxt" \
         -fill purple -annotate +2+2 "$strTxt" \
-        -fill white -annotate +1+1 "$strTxt" \
+        -fill white  -annotate +1+1 "$strTxt" \
         "${strTmpFilePreparing}2"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi

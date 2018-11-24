@@ -381,7 +381,7 @@ function FUNCexitIfGameExits() {
 
 function FUNCexitWhenGameExitsLoop() {
 	while ! FUNCcheckIfGameIsRunning;do
-		if echoc -q -t 3 "waiting strFileExecutable='$CFGstrFileExecutable' start, exit?";then
+		if echoc -q -t 3 "waiting CFGstrFileExecutable='$CFGstrFileExecutable' start, exit?";then
 			exit 0
 		fi
 	done
@@ -703,7 +703,7 @@ function WINEFUNCcommonOptions {
 		strPids=""
 		nInstanceCount=0
 		function FUNClstInsts() {
-      local lanPids=(`pgrep "${strFileExecutable}"`)
+      local lanPids=(`pgrep "${CFGstrFileExecutable}"`)
       if [[ -z "${lanPids[@]-}" ]];then
         return 0
       fi
@@ -1154,28 +1154,30 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
   local lanList
   local lnPid
   IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}")&&:
-  #declare -p lanList
-  local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
-  for lnPid in "${lanList[@]}";do
-    local bMatch=false
-    
-#~ #    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
-    #~ local strExecRealPath="`readlink /proc/$lnPid/cwd`" #will not work for WINEPREFIX in case the new instance application final path is a symlink to the real one to save HD space
-    #~ if [[ "$strExecRealPath" =~ $lstrRegexWINEPREFIX ]];then
-      #~ bMatch=true;
-    #~ fi
-    
-    local strExecWP="`strings /proc/$lnPid/environ |egrep "^WINEPREFIX"`"
-    if [[ "$strExecWP" == "WINEPREFIX=$WINEPREFIX" ]];then
-      bMatch=true;
-    fi
-    
-    if $bMatch;then
-      echo "$FUNCNAME lnPid='$lnPid'" >&2
-      echo "$lnPid"
-      return 0
-    fi
-  done
+  if((`SECFUNCarraySize lanList`>0));then
+    #declare -p lanList
+    local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
+    for lnPid in "${lanList[@]}";do
+      local bMatch=false
+      
+  #~ #    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
+      #~ local strExecRealPath="`readlink /proc/$lnPid/cwd`" #will not work for WINEPREFIX in case the new instance application final path is a symlink to the real one to save HD space
+      #~ if [[ "$strExecRealPath" =~ $lstrRegexWINEPREFIX ]];then
+        #~ bMatch=true;
+      #~ fi
+      
+      local strExecWP="`strings /proc/$lnPid/environ |egrep "^WINEPREFIX"`"
+      if [[ "$strExecWP" == "WINEPREFIX=$WINEPREFIX" ]];then
+        bMatch=true;
+      fi
+      
+      if $bMatch;then
+        echo "$FUNCNAME lnPid='$lnPid'" >&2
+        echo "$lnPid"
+        return 0
+      fi
+    done
+  fi
   echo "$FUNCNAME FAIL no PID for WINEPREFIX='$WINEPREFIX'" >&2
   return 1
 };export -f GAMEFUNCgetWPRegexPID
