@@ -365,6 +365,7 @@ if $bDaemon;then
       "toggle fl_op\n"
       "_reset timeout counter\n"
       "_set image index\n"
+      "_verbose commands (to debug)\n"
       "fi_x wallpaper pic URI\n"
     )
     echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
@@ -380,9 +381,6 @@ if $bDaemon;then
           nSleep=$nChangeInterval;declare -p nSleep
         fi
         bResetCounters=true
-        ;;
-      F)
-        FUNCsetPicURI
         ;;
       l)
         FUNCchkUpdateFileList --refill
@@ -425,6 +423,12 @@ if $bDaemon;then
           nSetIndex=-1
         fi
         ;; 
+      v)
+        SECFUNCtoggleBoolean SECbExecVerboseEchoAllowed
+        ;;
+      x)
+        FUNCsetPicURI
+        ;;
       *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
 #		if echoc -q -t $nSleep "bFastMode='$bFastMode', toggle?";then
