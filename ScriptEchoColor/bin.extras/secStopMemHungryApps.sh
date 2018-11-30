@@ -45,7 +45,8 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 
-CFGastrRegexIgnorePgrep=(Xorg compiz metacity xfwm4 kwin mutter) # all window managers at least
+astrRegexIgnorePgrepBase=(Xorg compiz metacity xfwm4 kwin mutter dbus-daemon) # all window managers at least and a few other important things
+CFGastrRegexIgnorePgrep=()
 strFifoFl="`SECFUNCcreateFIFO`"
 : ${nMemLimKB:=500000} #help
 anPidIgnore=() #TODO use cmd regex later at default config file to auto ignore pids
@@ -98,6 +99,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
+for strChk in "${astrRegexIgnorePgrepBase[@]}";do
+  if ! SECFUNCarrayContains CFGastrRegexIgnorePgrep "$strChk";then
+    CFGastrRegexIgnorePgrep+=( "$strChk" )
+  fi
+done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
@@ -163,39 +169,43 @@ while true;do
     
     if((nResKB>nMemLimKB));then
       if ! SECFUNCarrayContains anPidIgnore $nPid;then
-        SECFUNCexecA -ce kill -SIGSTOP $nPid
-        (
-          astrText=(
-            '!!! IGNORE HUNGRYNESS AND CONTINUE RUNNING THIS PID ? !!!\n'
-            "\n"
-            "This memory hungry app was stopped:\n"
-            "Pid=$nPid\n"
-            "ResKB=$nResKB\n"
-            "strCmd=$strCmd\n"
-          )
-          strText="${astrText[*]}"
-          if yad --title="$SECstrScriptSelfName" --info \
-            --button="gtk-ok:0" --button="gtk-close:1" \
-            --form \
-            --field "INFO:TXT" \
-            "$strText" # fills the TXT field
-            #--text="${strText:0:1000}";
-          then
-            FUNCCHILDaddIgnorePid $nPid
-#            echo "SENDING PID TO IGNORE: $nPid"
-            #~ SEC_WARN=true
- #           SECFUNCexecA -ce kill -SIGUSR1 $$ # will make it wait pipe be filled up
-  #          echo "$nPid" >>"$strFifoFl" # will only return after it is read!
-            #~ echo "anPidIgnore+=($nPid);" >>"$strFifoFl" # will only return after it is read!
-            #~ SECFUNCexecA -ce kill -SIGCONT $nPid
-            #~ while ! echo "anPidIgnore+=($nPid)" >>"$strFifoFl";do
-              #~ ls -l "$strFifoFl" &&:
-              #~ SECFUNCechoWarnA "Failed SENDING PID TO IGNORE, retrying."
-              #~ sleep 1
-            #~ done
-   #         echo "SENT."
-          fi
-        )&
+        if SECFUNCexecA -ce kill -SIGSTOP $nPid;then
+          (
+            astrText=(
+              '!!! IGNORE HUNGRYNESS AND CONTINUE RUNNING THIS PID ? !!!\n'
+              "\n"
+              "This memory hungry app was stopped:\n"
+              "Pid=$nPid\n"
+              "ResKB=$nResKB\n"
+              "strCmd=$strCmd\n"
+            )
+            strText="${astrText[*]}"
+            if yad --title="$SECstrScriptSelfName" --info \
+              --button="gtk-ok:0" --button="gtk-close:1" \
+              --form \
+              --field "INFO:TXT" \
+              "$strText" # fills the TXT field
+              #--text="${strText:0:1000}";
+            then
+              FUNCCHILDaddIgnorePid $nPid
+  #            echo "SENDING PID TO IGNORE: $nPid"
+              #~ SEC_WARN=true
+   #           SECFUNCexecA -ce kill -SIGUSR1 $$ # will make it wait pipe be filled up
+    #          echo "$nPid" >>"$strFifoFl" # will only return after it is read!
+              #~ echo "anPidIgnore+=($nPid);" >>"$strFifoFl" # will only return after it is read!
+              #~ SECFUNCexecA -ce kill -SIGCONT $nPid
+              #~ while ! echo "anPidIgnore+=($nPid)" >>"$strFifoFl";do
+                #~ ls -l "$strFifoFl" &&:
+                #~ SECFUNCechoWarnA "Failed SENDING PID TO IGNORE, retrying."
+                #~ sleep 1
+              #~ done
+     #         echo "SENT."
+            fi
+          )&
+        else
+          echoc --alert "unable to stop @{-n}nPid='$nPid'"
+          ps -o ppid,pid,rss,user,stat,state,cmd -p $nPid&&:
+        fi
       fi
       
       #~ if yad --title="$SECstrScriptSelfName" --button="gtk-ok:0" --button="gtk-close:1" --text "Memory hungry app:\nPID=$nPid\nIGNORE IT?";then

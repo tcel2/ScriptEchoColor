@@ -920,19 +920,23 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 	##########################
 	# Colors: light blue=94, light yellow=93, light green=92, light cyan=96, light red=91
 	#local le=$(printf '\033') # Escape char to provide colors on sed on terminal
-	local lsedMatchRequireds='(.)([<])([^>]*)([>])'
+	local lsedMatchRequireds="(.)([<])([a-zA-Z_]*)([>])"
+	local lsedMatchRequiredsC="(.)([<])([^>]*)([>])"
 #	local lsedMatchOptionals='([[])([^]]*)([]])'
 #	local lsedMatchOptionals='([[])([^0-9]{0,1}+[^]]*)([]])' #color codes are `SECcharEsc + '[' + digit... + m`. Variables always begin with alpha char. So deny 0-9 matches that mean colors.
 #	local lsedMatchOptionals="([^${SECcharEsc}][[])([a-zA-Z][^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
-	local lsedMatchOptionals="([^${SECcharEsc}])([[])([a-zA-Z][^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+#	local lsedMatchOptionals="([^${SECcharEsc}])([[])([a-zA-Z][^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+#	local lsedMatchOptionals="([^${SECcharEsc}])([[])([a-zA-Z_]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+	local lsedMatchOptionals="([^${SECcharEsc}])([[])([a-zA-Z_]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
+	local lsedMatchOptionalsC="([^${SECcharEsc}])([[])([^]]*)([]])" #color codes are `SECcharEsc + '[' + digit... + m`, so deny SECcharEsc before '['. Variables always begin with alpha char, so require alpha after '['.
 #	local lsedMatchOptionals="[^${SECcharEsc}].([[])([^]]*)([]])"
 #	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcharEsc}[96m[\2]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
-	local lsedColorizeOptionals="s,$lsedMatchOptionals,${SECcolorCancel}${SECcolorLightCyan}\1[\3${SECcolorLightCyan}]${SECcolorCancel},g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
-	local lsedColorizeRequireds="s,$lsedMatchRequireds,${SECcolorCancel}${SECcolorLightRed}\1<\3${SECcolorLightRed}>${SECcolorCancel},g"
+	local lsedColorizeOptionals="s${SECsedTk}${lsedMatchOptionalsC}${SECsedTk}${SECcolorCancel}${SECcolorLightCyan}\1[\3${SECcolorLightCyan}]${SECcolorCancel}${SECsedTk}g" #!!!ATTENTION!!! this will match the '[' of color formatting and will mess things up if it is not the 1st to be used!!!
+	local lsedColorizeRequireds="s${SECsedTk}${lsedMatchRequiredsC}${SECsedTk}${SECcolorCancel}${SECcolorLightRed}\1<\3${SECcolorLightRed}>${SECcolorCancel}${SECsedTk}g"
 	local lsedMatchOptiId="([[:blank:]])(-?-[^[:blank:]]*)([[:blank:]])"
-	local lsedColorizeTheOptiId="s,${lsedMatchOptiId},${SECcolorCancel}${SECcolorLightGreen}\1\2\3${SECcolorCancel},g"
-	local lsedTranslateEscn='s,\\n,\n,g'
-	local lsedTranslateEsct='s,\\t,\t,g'
+	local lsedColorizeTheOptiId="s${SECsedTk}${lsedMatchOptiId}${SECsedTk}${SECcolorCancel}${SECcolorLightGreen}\1\2\3${SECcolorCancel}${SECsedTk}g"
+	local lsedTranslateEscn="s${SECsedTk}\\n${SECsedTk}\n${SECsedTk}g"
+	local lsedTranslateEsct="s${SECsedTk}\\t${SECsedTk}\t${SECsedTk}g"
 
 	function _SECFUNCshowHelp_SECFUNCmatch(){
 		#read lstrLine
@@ -947,7 +951,8 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 			lstrColorClosing="${SECcolorLightCyan}"
 		fi
 		
-		local lstrVarId="`echo "$lstrLine" |sed -r "s,.*$lstrMatch.*,\3,"`"
+    #TODO the varId, if more than one on the line, is matching only the last one!!!
+		local lstrVarId="`echo "$lstrLine" |sed -r "s${SECsedTk}.*$lstrMatch.*${SECsedTk}\3${SECsedTk}"`";#declare -p lstrVarId >&2
 		local lbShowValue=true
 		if [[ "$lstrVarId" == "FUNCNAME" ]];then
 			lbShowValue=false
@@ -961,12 +966,14 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 #			echo "$lstrLine">&2
 #			echo "s,$lstrMatch,\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3," >&2
 #			echo "$lstrLine" |sed -r "s${SECsedTk}$lstrMatch${SECsedTk}\1\2='${SECcolorLightYellow}${!lstrVarId-}${SECcolorLightRed}'\3${SECsedTk}"
-			local lsedExtractValue='s@[^=]*="(.*)"@\1@'
-			local lstrVarIdValue="$(declare -p $lstrVarId |sed -r "$lsedExtractValue")"
-			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2\3='${SECcolorLightYellow}${lstrVarIdValue}${lstrColorClosing}'\4${SECcolorCancel}${SECsedTk}"
-#			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2='${SECcolorCancel}${lstrVarIdValue}${SECcolorLightRed}'\3${SECsedTk}"
+			local lsedExtractValue="s${SECsedTk}[^=]*=\"(.*)\"${SECsedTk}\1${SECsedTk}"
+			local lstrValue="$(declare -p $lstrVarId |sed -r "$lsedExtractValue")"
+			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2\3='${SECcolorLightYellow}${lstrValue}${lstrColorClosing}'\4${SECcolorCancel}${SECsedTk}"
+#			echo "$lstrLine" |sed -r "s${SECsedTk}${lstrMatch}${SECsedTk}\1\2='${SECcolorCancel}${lstrValue}${SECcolorLightRed}'\3${SECsedTk}"
+      return 0
 		else
 			echo "$lstrLine"
+      return 1
 		fi
 	}
 	function _SECFUNCshowHelp_SECFUNCsedWithDefaultVarValues(){
@@ -975,9 +982,13 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		while	IFS= read -r lstrLineMain;do #IFS= required to prevent skipping /t
 		#while	IFS=$'\n' read lstrLineMain;do
 			#echo "lstrLine='$lstrLine'" >&2
-			echo "$lstrLineMain" \
-				|_SECFUNCshowHelp_SECFUNCmatch opt "$lsedMatchOptionals" \
-				|_SECFUNCshowHelp_SECFUNCmatch req "$lsedMatchRequireds" 
+      local lstrOut="$lstrLineMain"
+      while lstrOut="`echo "$lstrOut" |_SECFUNCshowHelp_SECFUNCmatch opt "$lsedMatchOptionals"`";do :;done #echo "opt:$lstrOut" >&2;
+      while lstrOut="`echo "$lstrOut" |_SECFUNCshowHelp_SECFUNCmatch req "$lsedMatchRequireds"`";do :;done
+			#~ echo "$lstrLineMain" \
+				#~ |_SECFUNCshowHelp_SECFUNCmatch opt "$lsedMatchOptionals" \
+				#~ |_SECFUNCshowHelp_SECFUNCmatch req "$lsedMatchRequireds" 
+      echo "$lstrOut"
 		done
 	}
 	

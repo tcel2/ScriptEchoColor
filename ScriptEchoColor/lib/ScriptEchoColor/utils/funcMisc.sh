@@ -1051,7 +1051,11 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 		echo -n >"$SECcfgFileName"
 	fi
 	
-	SECFUNCfileLock "$SECcfgFileName"
+#  if ! $lbKeepLocked;then 
+    if ! SECFUNCfileLock --islocked >/dev/null;then
+      SECFUNCfileLock "$SECcfgFileName";
+    fi
+#  fi
 	######
 	# this will remove the variable declaration
 	######
@@ -1103,12 +1107,14 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	#declare -p lastrAllCfgVars
 	
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
+    SECFUNCfileLock "$SECcfgFileName"
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
-			SECFUNCcfgWriteVar $lstrCfgVar
+			SECFUNCcfgWriteVar --keeplock $lstrCfgVar
 			if $lbShowAll;then
 				echo "$lstrCfgVar='${!lstrCfgVar-}' #SECCFG" >&2
 			fi
 		done
+    SECFUNCfileLock --unlock "$SECcfgFileName"
 	fi
 	
 #	if $lbShowAll;then

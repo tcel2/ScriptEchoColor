@@ -113,7 +113,7 @@ if which mrxvt >/dev/null 2>&1;then
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
   strConcatParms="${astrParms[@]-}"
-  SECastrFullTermCmd+=(mrxvt -sl 1000 -aht +showmenu)
+  SECastrFullTermCmd+=(mrxvt -sl 1000 -aht +showmenu) #max -sl is 65535
   if [[ -n "$strConcatParms" ]];then
     SECastrFullTermCmd+=(-title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrParms[@]}")
   fi

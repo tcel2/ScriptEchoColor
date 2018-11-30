@@ -166,6 +166,7 @@ if $bDaemon;then
   bFlopKeep=false;
   nSetIndex=-1
   nSelect=0
+  bPlay=true
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
@@ -220,14 +221,26 @@ if $bDaemon;then
     strOrigSzTxt="$strOrigSize"
     if [[ "$strOrigSize" != "$strResize" ]];then
       if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
-        SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
-        #~ SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}.png"
-        #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-        strXbrz=",xBRZ"
-        
-        SECFUNCexecA -cE nice -n 19 convert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+        nXBRZ=2 # more than 2 is not good for most pics
+  #      if [[ -f "$HOME/.cache/${SECstrScriptSelfName}/${strFile}.resizeTo${nResW}x${nResH}" ]];then
+        strXBRZcache="$HOME/.cache/${SECstrScriptSelfName}/`basename "${strFile}"`-${nXBRZ}xBRZ.webp"
+        strXbrz=",${nXBRZ}xBRZ"
+        if [[ -f "$strXBRZcache" ]];then
+          #SECFUNCexecA -cE cp -vf "${strXBRZcache}" "${strTmpFilePreparing}"
+          SECFUNCexecA -cE dwebp "${strXBRZcache}" -o "${strTmpFilePreparing}"
+        else
+          SECFUNCexecA -cE nice -n 19 xbrzscale $nXBRZ "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          #~ SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}.png"
+          #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
+          SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+          
+          SECFUNCexecA -cE nice -n 19 convert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          SECFUNCexecA -cE mv -vf "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+          
+          mkdir -p "`dirname "$strXBRZcache"`/"
+          #SECFUNCexecA -cE cp -vf "${strTmpFilePreparing}" "${strXBRZcache}"
+          SECFUNCexecA -cE cwebp -q 90 "${strTmpFilePreparing}" -o "${strXBRZcache}"
+        fi
         
         ################################################
         ### WATCHOUT CHANGES ORIG VARS! ###########
@@ -359,7 +372,10 @@ if $bDaemon;then
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
     bResetCounters=false;
+    nWeek=$((3600*24*7))
+    if ! $bPlay;then nSleep=$nWeek;fi #a week trick
     astrOpt=(
+      "toggle _auto play mode to conserve CPU\n"
       "_change image now\n"
       "toggle _fast mode\n"
       "fi_lter\n"
@@ -371,6 +387,9 @@ if $bDaemon;then
       "fi_x wallpaper pic URI\n"
     )
     echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
+      a)
+        SECFUNCtoggleBoolean bPlay
+        ;;
       c)
         bChangeImage=true
         bResetCounters=true
