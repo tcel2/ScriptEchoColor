@@ -936,6 +936,10 @@ function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars
 	if [[ -z "$SECcfgFileName" ]];then
 		SECFUNCcfgFileName
 	fi
+	if [[ "$SECcfgFileName" == "bash.cfg" ]];then # bash is not a script itself, and this specific case will prevent a lot of trouble.
+    SECFUNCechoWarnA "SECcfgFileName='$SECcfgFileName'" #TODO should check if the script file exists, ends with .sh and is a text file.
+    SECFUNCdbgFuncOutA;return 0
+  fi
 	
 	# var init here
 	local lstrExample="DefaultValue"

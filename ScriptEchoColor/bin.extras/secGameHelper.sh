@@ -1151,9 +1151,16 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
   lstrRegex="$1"
   echo "$FUNCNAME lstrRegex='$lstrRegex'" >&2
   
-  local lanList
+  local lanList=()
   local lnPid
-  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}")&&:
+  #~ IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}")&&:
+  #~ if((`SECFUNCarraySize lanList`==0));then
+  #~ if ! IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}");then
+    #~ if ! IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*//${lstrRegex}");then # was a relative path
+      #~ :
+    #~ fi
+  #~ fi
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*//${lstrRegex}"&&:)&&: # this works also with relative paths
   if((`SECFUNCarraySize lanList`>0));then
     #declare -p lanList
     local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
@@ -1178,7 +1185,7 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
       fi
     done
   fi
-  echo "$FUNCNAME FAIL no PID for WINEPREFIX='$WINEPREFIX'" >&2
+  echo "$FUNCNAME FAIL no PID for environ with 'WINEPREFIX=$WINEPREFIX'" >&2
   return 1
 };export -f GAMEFUNCgetWPRegexPID
 
