@@ -140,6 +140,7 @@ if [[ -n "${astrSECDEVCmds[@]-}" ]];then
 fi
 
 strRCFileTmp="`mktemp`"
+declare -p strRCFileTmp
 ls -l "$strRCFileTmp"
 
 if $bCleanSECEnv;then

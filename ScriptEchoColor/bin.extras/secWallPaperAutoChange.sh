@@ -355,7 +355,7 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="`basename "$strFile"`/orig:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}/RGB:$nAddR,$nAddG,$nAddB"
+      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}(RGB:$nAddR,$nAddG,$nAddB),`basename "$strFile"`"
       # pseudo outline at 4 corners
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
@@ -407,7 +407,7 @@ if $bDaemon;then
       "toggle _auto play mode to conserve CPU\n"
       "_change image now\n"
       "toggle _fast mode\n"
-      "fi_lter\n"
+      "fi_lter(@s@y$strFilter@S)\n"
       "toggle fl_ip\n"
       "toggle fl_op\n"
       "_reset timeout counter\n"

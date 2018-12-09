@@ -1009,6 +1009,7 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	local lbRemoveVar=false
 	local lbReport=false;
 	local lbKeepLocked=false
+  local lbChkLock=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--remove" ]];then #SECFUNCcfgWriteVar_help remove the variable from config file
 			lbRemoveVar=true
@@ -1016,6 +1017,8 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 			lbReport=true
 		elif [[ "$1" == "--keeplock" || "$1" == "-k" ]];then #SECFUNCcfgWriteVar_help will not unlock the db after returning
 			lbKeepLocked=true
+		elif [[ "$1" == "--dontchecklock" ]];then #SECFUNCcfgWriteVar_help UNSAFE but will speed up
+      lbChkLock=false
 		elif [[ "${1-}" == "--help" ]];then
 			SECFUNCshowHelp ${FUNCNAME}
 			return 0
@@ -1055,11 +1058,11 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 		echo -n >"$SECcfgFileName"
 	fi
 	
-#  if ! $lbKeepLocked;then 
+  if $lbChkLock;then 
     if ! SECFUNCfileLock --islocked >/dev/null;then
       SECFUNCfileLock "$SECcfgFileName";
     fi
-#  fi
+  fi
 	######
 	# this will remove the variable declaration
 	######
@@ -1113,7 +1116,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
     SECFUNCfileLock "$SECcfgFileName"
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
-			SECFUNCcfgWriteVar --keeplock $lstrCfgVar
+			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVar
 			if $lbShowAll;then
 				echo "$lstrCfgVar='${!lstrCfgVar-}' #SECCFG" >&2
 			fi

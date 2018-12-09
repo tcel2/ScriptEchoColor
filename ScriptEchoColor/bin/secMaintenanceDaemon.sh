@@ -329,6 +329,8 @@ elif $bPidDump;then
 	
 	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "*.${nPidToDump}.log" -exec ls --color -ld '{}' \;
 	SECFUNCexecA -ce find "/run/shm/.SEC.$USER/log/" -iname "${nPidToDump}_*" -exec tree -asC --noreport --timefmt "%Y%m%d-%H%M%S" '{}' \;
+  echoc --info "Newest:"
+  find "/run/shm/.SEC.$USER/log/" -type d -iname "${nPidToDump}_*" |while read strPath;do find "$strPath/" -iname "*.log" -exec stat -c "%Y %y %N" '{}' ';';done |sort |tail -n 1
 	
 	if [[ -d "/proc/$nPidToDump" ]];then
 		SECFUNCexecA -ce ps --forest -p `SECFUNCppidList -a --pid $nPidToDump`

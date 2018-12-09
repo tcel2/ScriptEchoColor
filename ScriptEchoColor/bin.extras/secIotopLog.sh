@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-source <(secinit --fast) #TODO --fast breaks SECFUNCcfgReadDB
+source <(secinit) # --fast would break SECFUNCcfgReadDB
 
 #TODO : ${strEnvVarUserCanModify:="test"}
 #TODO export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
@@ -81,9 +81,15 @@ done
 
 # Main code
 if $bDaemon;then
-  SECFUNCuniqueLock --waitbecomedaemon
+  #~ declare |grep SECFUNCuniqueLock >>"/1/${SECstrScriptSelfName}.log"
+  #~ declare |grep SECFUNCuniqueLock >>"$SECstrRunLogFile"
+  declare |egrep "^SECFUNC" |sort -u
+  SECFUNCuniqueLock --waitbecomedaemon #TODO how can this error happen at first run only?!?!?!? "/usr/bin/secIotopLog.sh: line 84: SECFUNCuniqueLock: command not found"
+  strFlLog="$HOME/log/iotop.log"
 	while true;do # loop to keep retrying if iotop errors out, iotop will keep running delay=1 4eva
-		if ! sudo /usr/sbin/iotop --batch --time --only --quiet --delay=1 --kilobytes 2>&1 |tee $HOME/log/iotop.log;then
+    SECFUNCexecA -ce trash "$strFlLog."*".7z"&&:
+    SECFUNCexecA -ce 7z a "$strFlLog.`SECFUNCdtFmt --filename`.7z" "$strFlLog"&&:
+		if ! sudo /usr/sbin/iotop --batch --time --only --quiet --delay=1 --kilobytes 2>&1 |tee "$strFlLog";then
 			echoc -p "iotop error"
 		fi
 		sleep 1

@@ -1070,6 +1070,7 @@ function GAMEFUNCgetFinalWID() { #help [lnPid]
 
 #function GAMEFUNCgetExecPID() { #help [lnPid]
 function GAMEFUNCgetExecPID() { #help
+  echo "$FUNCNAME CFGstrFileExecutable='$CFGstrFileExecutable'" >&2
   GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable";return $?
   
 	#~ local lnPid=${1-}
@@ -1160,7 +1161,7 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
       #~ :
     #~ fi
   #~ fi
-  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*//${lstrRegex}"&&:)&&: # this works also with relative paths
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*\\${lstrRegex}"&&:)&&: # this works also with relative paths
   if((`SECFUNCarraySize lanList`>0));then
     #declare -p lanList
     local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
