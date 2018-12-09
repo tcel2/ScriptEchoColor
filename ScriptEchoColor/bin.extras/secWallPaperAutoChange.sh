@@ -58,7 +58,6 @@ bFlop=false;
 bWriteFilename=true;
 strResize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
 fResRatio="`FUNCratio $strResize`"
-eval `echo "$strResize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
 declare -p strResize fResRatio
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -115,6 +114,12 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 cd $strWallPPath;
+
+fResRatio="`FUNCratio $strResize`"
+eval `echo "$strResize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
+declare -p strResize fResRatio
+nResW5p6=$((nResW-`SECFUNCbcPrettyCalcA --scale 0 "${nResW}/12"`)) # /12 is for 16:9 monitor #TODO other monitor's ratios
+nResH5p6=$((nResH-`SECFUNCbcPrettyCalcA --scale 0 "${nResH}/6"`)) # good top/bottom blurred margin is 1/12 each (sum = 1/6) of the total requested height
 
 nDelayMsg=3
 nTotFiles=0
@@ -199,6 +204,7 @@ if $bDaemon;then
       
       #excluding current from shuffle list to always have a new one
       unset astrFileList[$nSelect]
+      nSetIndex=-1 # because as it was already changed, strFile will remain the same, and this grants the next auto-change will be random/suffle again!
     fi
 		
     strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
@@ -220,7 +226,12 @@ if $bDaemon;then
     strXbrz=""
     strOrigSzTxt="$strOrigSize"
     if [[ "$strOrigSize" != "$strResize" ]];then
-      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
+      #######
+      ## xBRZ
+      #######
+      if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH;fi
+#      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
+      if((nOrigW<nResW5p6 || nOrigH<nResH5p6)) && which xbrzscale >/dev/null;then
         nXBRZ=2 # more than 2 is not good for most pics
   #      if [[ -f "$HOME/.cache/${SECstrScriptSelfName}/${strFile}.resizeTo${nResW}x${nResH}" ]];then
         strXBRZcache="$HOME/.cache/${SECstrScriptSelfName}/`basename "${strFile}"`-${nXBRZ}xBRZ.webp"
@@ -242,37 +253,55 @@ if $bDaemon;then
           SECFUNCexecA -cE cwebp -q 90 "${strTmpFilePreparing}" -o "${strXBRZcache}"
         fi
         
-        ################################################
-        ### WATCHOUT CHANGES ORIG VARS! ###########
-        ######################################
-        FUNCprepGeomInfo "${strTmpFilePreparing}"
+        FUNCprepGeomInfo "${strTmpFilePreparing}" # !!!!!!! WATCHOUT CHANGES ORIG VARS !!!!!!!!!!!!!!!!!!!!!
         strOrigSzTxt+="($strOrigSize)"
-      fi
+      fi # xBRZ
       
-      strResizeFinal="$strResize"
-      astrCmdFrame=()
-      nBorder=20
-      if((nOrigW<(nResW-nBorder) && nOrigH<(nResH-nBorder)));then
-        # creates a frame border on the small image
-        strResizeFinal="$strOrigSize"
-        SECFUNCexecA -cE nice -n 19 convert -mattecolor black -compose Copy -frame "10x10+6+3" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
-        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-      else
+      if((nOrigW>nResW));then
         # This only considers too wide images and will cut out left and right edges
         fMaxRatio="`SECFUNCbcPrettyCalcA "(1+(1/8)) * $fResRatio"`" #where top/bottom borders are not annoying
-        if SECFUNCbcPrettyCalcA --cmpquiet "$fOrigRatio > $fMaxRatio";then #if the image it too wide and the blurred borders will have too much height (and annoying)
-          fDiff="`SECFUNCbcPrettyCalcA "$fOrigRatio - $fMaxRatio"`"
-          fSub="`SECFUNCbcPrettyCalcA "$fDiff/4"`"
-          fFixRatio="`SECFUNCbcPrettyCalcA "1 - $fSub"`"
-          #fFixRatio=0.75
-          #fFixRatio=0.85
-          nFixW="`SECFUNCbcPrettyCalcA --scale 0 "${nOrigW}*${fFixRatio}"`"
-          SECFUNCexecA -cE declare -p nOrigW nOrigH nResW nResH nFixW fMaxRatio fOrigRatio fResRatio fDiff fFixRatio
+        if SECFUNCbcPrettyCalcA --cmpquiet "$fOrigRatio > $fMaxRatio";then 
+          # if the image is too wide and the blurred borders will have too much height (and be annoying)
+          if((nOrigH>=nResH5p6));then
+            # this will cut more from the left/right edges
+            nFixW=$nResW
+          else
+            # this will cut less from the left/right edges, and the image will be shrinked a bit
+            fDiff="`SECFUNCbcPrettyCalcA "$fOrigRatio - $fMaxRatio"`"
+            fSub="`SECFUNCbcPrettyCalcA "$fDiff/4"`"
+            fFixRatio="`SECFUNCbcPrettyCalcA "1 - $fSub"`"
+            #fFixRatio=0.75
+            #fFixRatio=0.85
+            nFixW="`SECFUNCbcPrettyCalcA --scale 0 "${nOrigW}*${fFixRatio}"`"
+            if $SECbExecVerboseEchoAllowed;then declare -p LINENO fDiff fSub fFixRatio;fi
+          fi
           strFixSz="${nFixW}x${nOrigH}"
-          SECFUNCexecA -cE nice -n 19 convert -extent "$strFixSz" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
-          strFixSzTxt=",fix:${strFixSz}"
+          nLeftMargin=$(( (nOrigW-nFixW)/2 ))
+          if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH nFixW fMaxRatio fOrigRatio fResRatio nLeftMargin;fi
+          SECFUNCexecA -cE nice -n 19 convert -extent "${strFixSz}+${nLeftMargin}+0" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          strFixSzTxt=",fixE:${strFixSz}"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+          
+          FUNCprepGeomInfo "${strTmpFilePreparing}" # !!!!!!! WATCHOUT CHANGES ORIG VARS !!!!!!!!!!!!!!!!!!!!!
         fi
+      fi
+
+      strResizeFinal="$strResize"
+      astrCmdFrame=()
+      nBorder=10
+      nBorderX2=$((nBorder*2))
+      #~ sedIntegerPart='s"^([[:digit:]]*).*"\1"'
+      #~ nBorderIn="` bc <<< "${nBorder}*0.3" |sed -r "${sedIntegerPart}"`"
+      #~ nBorderOut="`bc <<< "${nBorder}*0.6" |sed -r "${sedIntegerPart}"`"
+      nBorderIn="` SECFUNCbcPrettyCalcA --scale 0 "${nBorder}*0.3"`"
+      nBorderOut="`SECFUNCbcPrettyCalcA --scale 0 "${nBorder}*0.6"`"
+      if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH nBorder nBorderX2 nBorderIn nBorderOut;fi
+      #if((nOrigW<(nResW-nBorderX2) && nOrigH<(nResH-nBorderX2)));then
+      if((nOrigW<(nResW-nBorderX2) || nOrigH<(nResH-nBorderX2)));then
+        # creates a frame border on the small image
+        strResizeFinal="$strOrigSize"
+        SECFUNCexecA -cE nice -n 19 convert -mattecolor black -compose Copy -frame "${nBorder}x${nBorder}+${nBorderOut}+${nBorderIn}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
       strSzOrEq=""
@@ -286,7 +315,7 @@ if $bDaemon;then
       #astrCmd+=( -crop  ${strResize}+10+10 )
       astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
       SECFUNCexecA -cE nice -n 19 "${astrCmd[@]}"
-      declare -p strOrigSize strResize strResizeFinal
+      if $SECbExecVerboseEchoAllowed;then declare -p LINENO strOrigSize strResize strResizeFinal;fi
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     
@@ -300,7 +329,7 @@ if $bDaemon;then
       nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
-      declare -p nAddR nAddG nAddB
+      if $SECbExecVerboseEchoAllowed;then declare -p nAddR nAddG nAddB;fi
       
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
         -colorspace HSL \

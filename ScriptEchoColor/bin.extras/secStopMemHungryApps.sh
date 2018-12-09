@@ -114,11 +114,13 @@ while true;do
 #  declare -p anPidIgnore
   
   IFS=$'\n' read -d '' -r -a astrList < <(
-    # the 2nd sed line is to fix invalid chars during eval later
-    ps --no-headers -A -o rss,pid,state,cmd --sort -rss \
+#    # the 2nd sed line is to fix invalid chars during eval later
+#    ps --no-headers -A -o rss,pid,state,cmd --sort -rss \
+#          |sed -r -e 's@["]@\\"@g' -e 's@[$]@\\$@g' \
+#          |sed -r 's@([[:digit:]]*) *([[:digit:]]*) *([[:alnum:]]) *(.*)@nResKB=\1;nPid=\2;strState="\3";strCmd="\4";@'  
+    ps --no-headers -A -o rss,pid,state --sort -rss \
           |head -n $nLimPids \
-          |sed -r -e 's@["]@\\"@g' -e 's@[$]@\\$@g' \
-          |sed -r 's@([[:digit:]]*) *([[:digit:]]*) *([[:alnum:]]) *(.*)@nResKB=\1;nPid=\2;strState="\3";strCmd="\4";@'  
+          |sed -r 's@ *([[:digit:]]*) *([[:digit:]]*) *([[:alnum:]]).*@nResKB=\1;nPid=\2;strState="\3";@'  
   )&&:
   #declare -p astrList
   
@@ -134,6 +136,11 @@ while true;do
   for strLine in "${astrList[@]}";do 
     #echo "EVAL: \"$strLine\""
     eval "$strLine";
+    
+    if [[ ! -d "/proc/$nPid/" ]];then continue;fi
+
+    if ! strCmd="`cat /proc/$nPid/cmdline |tr "\0" " "`";then continue;fi
+    if ! strComm="`cat /proc/$nPid/comm`";then continue;fi
     
     if $bReadFIFO;then
       strFIFOdata="`cat <"$strFifoFl"`" # this will WAIT until somthing is written to the PIPE!!!
@@ -172,18 +179,20 @@ while true;do
         if SECFUNCexecA -ce kill -SIGSTOP $nPid;then
           (
             astrText=(
-              '!!! IGNORE HUNGRYNESS AND CONTINUE RUNNING THIS PID ? !!!\n'
+              "BaseCmd: $strComm"
+              '!!! CONTINUE RUNNING THIS PID ? and ignore memory hungryness... !!!\n'
               "\n"
               "This memory hungry app was stopped:\n"
               "Pid=$nPid\n"
               "ResKB=$nResKB\n"
-              "strCmd=$strCmd\n"
+              "strCmd='$strCmd'\n"
             )
             strText="${astrText[*]}"
-            if yad --title="$SECstrScriptSelfName" --info \
+            SECFUNCexecA -ce SECFUNCCwindowCmd --ontop "${strComm}.*$SECstrScriptSelfName"
+            if yad --title="($strComm)$SECstrScriptSelfName" --info \
               --button="gtk-ok:0" --button="gtk-close:1" \
               --form \
-              --field "INFO:TXT" \
+              --field "INFO($strComm):TXT" \
               "$strText" # fills the TXT field
               #--text="${strText:0:1000}";
             then
