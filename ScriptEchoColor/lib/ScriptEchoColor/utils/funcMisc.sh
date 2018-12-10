@@ -1255,6 +1255,42 @@ function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIP
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the commands can be many params
+  #TODO allow many params to be cmdTrue ending it with ';' or \; like `find -exec` works :)
+  local lboolValue=$1
+  if [[ "$lboolValue" != "true" && "$lboolValue" != "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
+    SECFUNCechoErrA "lboolValue must be 'true' or 'false'"
+    return 1
+  fi
+  shift
+  
+  if [[ "$1" != "?" ]];then
+    SECFUNCechoErrA "missing '?'"
+    return 1
+  fi
+  shift
+  
+  local lacmdTrue=()
+  while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done
+  shift
+  
+  local lacmdFalse=()
+  while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done
+  
+  if((`SECFUNCarraySize lacmdTrue`==0));then SECFUNCechoErrA "empty lacmdTrue";fi
+  if((`SECFUNCarraySize lacmdFalse`==0));then SECFUNCechoErrA "empty lacmdFalse";fi
+  
+  if $lboolValue;then
+    "${lacmdTrue[@]}"
+  else
+    "${lacmdFalse[@]}"
+  fi
+  
+  #~ declare -p lboolValue lacmdTrue lacmdFalse
+  
+  return 0
+}
+
 function SECFUNCtoggleBoolean(){ #help toggles a variable "boolean" value (true or false) only if it was already set as "boolean"
 	# var init here
 #	local lstrExample="DefaultValue"

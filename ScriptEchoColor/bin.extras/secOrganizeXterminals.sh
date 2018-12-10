@@ -317,7 +317,8 @@ function FUNCorganize() {
 		if $bDoAddY; then
 			((y+=addY))&&: 
 		fi
-	
+    
+    echo "SUCCESS!!!"
 		#if ! sleep 3;then exit 1;fi
 	done
 }

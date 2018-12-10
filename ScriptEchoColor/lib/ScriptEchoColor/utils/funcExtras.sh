@@ -166,8 +166,18 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 	fi
 	export lstrMatchRegex
 	
-	local lstrWarnMsg="still no window found matching regex '$lstrMatchRegex'"
-	if $lbWait;then
+  local lnWindowId=-1
+  if $lbIsWindowID;then
+    if [[ "${lstrMatchRegex:0:2}" == "0x" ]];then
+      lnWindowId="`printf %d ${lstrMatchRegex}`"
+    else
+      lnWindowId=$lstrMatchRegex
+    fi
+  fi
+  declare -p lnWindowId >&2
+
+	local lstrWarnMsg="still no window found matching `SECFUNCternary $lbIsWindowID ? echo windowId : echo regex` '$lstrMatchRegex'"
+	if $lbWait && ! $lbIsWindowID;then
 		while ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";do
 			SEC_WARN=true SECFUNCechoWarnA "$lstrWarnMsg"
 			sleep $lnDelay;
@@ -182,7 +192,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
   
 	if $lbWaitExit;then
 		while true;do
-      if ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then break;fi
+      if $lbIsWindowID;then
+        if ! xdotool getwindowname $lnWindowId;then break;fi
+      else
+        if ! xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then break;fi
+      fi
       
 			sleep $lnDelay;
       
@@ -195,7 +209,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 	fi
   
 	if $lbCheck;then
-		if xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then return 0;fi
+    if $lbIsWindowID;then
+      if xdotool getwindowname $lnWindowId;then return 0;fi
+    else
+      if xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex";then return 0;fi
+    fi
 		return 1
 	fi
 	
@@ -211,14 +229,8 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			
       export lstrMatchRegex
 			
-      local lnWindowId=-1
-      if $lbIsWindowID;then
-        if [[ "${lstrMatchRegex:0:2}" == "0x" ]];then
-          lnWindowId="`printf %d ${lstrMatchRegex}`"
-        else
-          lnWindowId=$lstrMatchRegex
-        fi
-      else
+      declare -p lnWindowId >&2
+      if((lnWindowId==-1));then
         lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
       fi
       
@@ -248,11 +260,14 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				# only end when all is done
 				#############
+				declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom 
 				if	! $lbOnTop && 
 						! $lbFocus && 
-						! $lbMoveGeom && 
 						! $lbMaximize && 
-						! $lbMinimize;then
+						! $lbMinimize &&
+						! $lbMoveGeom && 
+            true;
+        then
 					break;
 				fi
 			fi

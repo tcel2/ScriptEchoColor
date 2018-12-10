@@ -141,13 +141,16 @@ fi
 
 strRCFileTmp="`mktemp`"
 declare -p strRCFileTmp
-ls -l "$strRCFileTmp"
+echo "# temp bash rc file from $0" >>"$strRCFileTmp"
 
 if $bCleanSECEnv;then
   SECFUNCcleanEnvironment
 fi
 
-if ! $bAlreadyDev;then
+cmdSecInit="source <(secinit --force --extras);"
+if $bAlreadyDev;then
+  echo "${cmdSecInit}" >>"$strRCFileTmp"
+else
   strPATHtmp=""
   strPATHtmp+="$strSECDEVPath/bin:"
   strPATHtmp+="$strSECDEVPath/bin.extras:"
@@ -161,7 +164,7 @@ if ! $bAlreadyDev;then
   echo >>"$strRCFileTmp"
   echo "export PATH='$strPATHtmp';" >>"$strRCFileTmp"
   echo >>"$strRCFileTmp"
-  echo "source <(secinit --force --extras);" >>"$strRCFileTmp"
+  echo "${cmdSecInit}" >>"$strRCFileTmp"
   
   echo "source \"$strSECDEVPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh\"" >>"$strRCFileTmp"
 
@@ -225,11 +228,12 @@ if [[ -n "${astrSECDEVCmds[@]-}" ]];then
   echo "`declare -p astrSECDEVCmds`;" >>"$strRCFileTmp"
   echo '"${astrSECDEVCmds[@]}"&&:' >>"$strRCFileTmp"
   if $bExitAfterCmd;then
-    echo "exit $?;" >>"$strRCFileTmp"
+    echo 'exit $?;' >>"$strRCFileTmp"
   fi
 fi
 
-cat "$strRCFileTmp"
+SECFUNCexecA -ce ls -l "$strRCFileTmp"
+SECFUNCexecA -ce cat "$strRCFileTmp"
 #type FUNCrunAtom&&:
 #zenity --info --text "$0:$LINENO"
 SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
@@ -238,7 +242,7 @@ if $bAlreadyDev;then
   if $bExitAfterCmd;then
     source "$strRCFileTmp"
   else
-    echo "already in dev mode, run this:" >&2
+    echoc --info "already in dev mode, run this:" >&2
     echo "source $strRCFileTmp"
   fi
 else

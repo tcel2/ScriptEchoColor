@@ -54,6 +54,7 @@ bActivateUnmappedAskAndWait=false #TODO find a better way to set this default as
 bFixPSensor=false
 bKeepNumlockOn=false
 bKeepNumlockOff=false
+strRemapRegex=""
 CFGbFixCurrentNow=false
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help this help
@@ -99,6 +100,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bUseXterm=false
 	elif [[ "$1" == "--listunmapped" ]];then #help list all unmapped windows and exit.
 		bListUnmappedWindows=true
+  elif [[ "$1" == "--remap" ]];then #help <strRemapRegex> will search for the main window matching the regex and remap it
+    shift
+    strRemapRegex="$1"
 	elif [[ "$1" == "--activateunmapped" ]];then #help ~daemon <bActivateUnmappedAskAndWait> <strActivateUnmappedWindowNameId> some windows may not be listed, so when you select the terminal running this, that application window will be activated. Uses --delay value on loop.
 		shift&&:
 		bActivateUnmappedAskAndWait="${1-}"
@@ -142,7 +146,14 @@ function FUNCxterm(){
 }
 
 # run these and exit
-if $bFixCompiz;then
+if [[ -n "$strRemapRegex" ]];then
+  xdotool search "$strRemapRegex" |while read nWID;do
+    if xprop -id $nWID |egrep "WM_WINDOW_ROLE\(STRING\) = \"MainWindow#1\"";then
+      SECFUNCexecA -ce xdotool windowmap $nWID
+    fi
+  done
+  exit 0
+elif $bFixCompiz;then
 	if secAutoScreenLock.sh --islocked;then
 		echoc -p --say "cant fix compiz, screen is locked..."
 		SEC_WARN=true SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
