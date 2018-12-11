@@ -70,6 +70,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 			shift
 		done
 		varset --show aWindowListToSkip
+  elif [[ "$1" == "--activate" ]];then #help ~single <strActivateRegex> simple map and activate
+    shift
+    strActivateRegex="$1"
+    xdotool search "$strActivateRegex" |while read nWID;do
+      declare -p nWID
+      SECFUNCexecA -ce xdotool getwindowname $nWID
+      SECFUNCexecA -ce xdotool windowmap $nWID
+      SECFUNCexecA -ce xdotool windowactivate $nWID
+    done
+    exit 0
 	elif [[ "$1" == "--reactivate" ]];then #help <strReactWindNamesRegex> re-activates only windows that match this regex ex.: "^windowA.*|^windowB.*". A window may be active, but have no keyboard input focus, this will fix that.
 		shift
 		strReactWindNamesRegex="${1-}"

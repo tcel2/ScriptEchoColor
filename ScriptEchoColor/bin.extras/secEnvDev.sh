@@ -22,6 +22,8 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
+echoc -c
+
 strBN="`basename "$0"`"
 
 strCfg="$HOME/.$strBN.cfg"
@@ -231,6 +233,8 @@ if [[ -n "${astrSECDEVCmds[@]-}" ]];then
     echo 'exit $?;' >>"$strRCFileTmp"
   fi
 fi
+
+echo "################ END OF $0 auto rc file ################" >>"$strRCFileTmp"
 
 SECFUNCexecA -ce ls -l "$strRCFileTmp"
 SECFUNCexecA -ce cat "$strRCFileTmp"

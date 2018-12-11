@@ -555,7 +555,7 @@ function FUNCrun(){
   
   local lastrRestart=()
   lastrRestart+=(secTerm.sh -- -e)
-  lastrRestart+=(secEnvDev.sh)
+  lastrRestart+=(secEnvDev.sh --exit)
   lastrRestart+=(secNoHup.sh)
   lastrRestart+=(eval "export SECCFGbOverrideRunThisNow=true" "&&") # only works with eval, otherwise could try appending --cfg to this script options
   lastrRestart+=("`basename "$0"`" "${astrOriginalOptions[@]}") #astrRestart+=(secDelayedExecSequential.sh --filter "${astrRunParams[0]}")
@@ -684,7 +684,7 @@ function FUNCrun(){
 		fi
 		
     astrYadBasicOpts=(
-      --title "$SECstrScriptSelfName[$$]" 
+      --title "SDE(${astrRunParams[0]}) - $SECstrScriptSelfName[$$]" 
       --separator="\n"
       --sticky
       --center
