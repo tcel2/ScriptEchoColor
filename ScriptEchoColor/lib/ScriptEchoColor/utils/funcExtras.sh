@@ -231,7 +231,9 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			
       declare -p lnWindowId >&2
       if((lnWindowId==-1));then
-        lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`"
+        if ! lnWindowId="`xdotool search $lstrXdotoolSearchBy "$lstrMatchRegex"`";then
+          lnWindowId=-1
+        fi
       fi
       
 			if SECFUNCisNumber -nd "$lnWindowId";then
