@@ -239,7 +239,7 @@ echo "################ END OF $0 auto rc file ################" >>"$strRCFileTmp
 SECFUNCexecA -ce ls -l "$strRCFileTmp"
 SECFUNCexecA -ce cat "$strRCFileTmp"
 #type FUNCrunAtom&&:
-#zenity --info --text "$0:$LINENO"
+#yad --info --text "$0:$LINENO"
 SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
 if $bAlreadyDev;then
   #if SECFUNCisShellInteractive;then

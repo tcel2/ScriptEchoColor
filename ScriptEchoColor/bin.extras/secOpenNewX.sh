@@ -538,13 +538,13 @@ function FUNCshowHelp() {
     
   echo -e "Custom Commands:\n${strCustomCmdHelp}\n\nCommands:\n${strJwmrcKeys}\n" >"$helpFile";
   
-  #zenity --display=$1 $timeout --info --title "OpenNewX: your Custom Commands!" --text="$strCustomCmdHelp"&
-#  zenity --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
+  #yad --display=$1 $timeout --info --title "OpenNewX: your Custom Commands!" --text="$strCustomCmdHelp"&
+#  yad --display=$1 $timeout --title "OpenNewX: your Custom Commands!" --text-info --filename="$helpFile"&
 	strTitleRegex="OpenNewX: your Custom Commands! ppid$$"
 	SECFUNCCwindowCmd --ontop --maximize "$strTitleRegex"
 #	SECFUNCCwindowCmd --maximize "$strTitleRegex"
-  SECFUNCexec --echo -c zenity --display=$1 $timeout --title "$strTitleRegex" --text-info --filename="$helpFile"
-	# will wait zenity exit
+  SECFUNCexec --echo -c yad --display=$1 $timeout --title "$strTitleRegex" --text-info --filename="$helpFile"
+	# will wait yad exit
   SECFUNCCwindowCmd --stop "$strTitleRegex"
 #  local pidZenity=$!
 #  
@@ -554,7 +554,7 @@ function FUNCshowHelp() {
 #  done
   
 #  while ps -p $pidZenity 2>&1 >/dev/null;do
-#    echo "wait zenity exit..."
+#    echo "wait yad exit..."
 #    if ! sleep 1;then break;fi
 #  done
   
@@ -611,7 +611,7 @@ while ! ${1+false} && [[ ${1:0:2} == "--" ]]; do
   	bReturnToX0=true
   elif [[ "$1" == "--bFixPulseaudioAtX1" ]]; then #help <bFixPulseaudioAtX1> plays sound thru TCP
   	bFixPulseaudioAtX1=true
-  elif [[ "$1" == "--customcmd" ]]; then #help custom commands, up to 10 (repeat the option) ex.: --customcmd "zenity --info" --customcmd "xterm" --customcmd "someScript.sh"
+  elif [[ "$1" == "--customcmd" ]]; then #help custom commands, up to 10 (repeat the option) ex.: --customcmd "yad --info" --customcmd "xterm" --customcmd "someScript.sh"
   	shift
   	#customCmd=("${customCmd[@]-}" "$1")
   	customCmd+=("$1")
@@ -1038,7 +1038,7 @@ varset --show pidX1=`FUNCisX1running`
 echoc --say "X at `ps -A -o tty,comm |grep Xorg |grep -v tty7 |grep -o "tty." |sed 's"."& "g'`"
 
 if [[ -n "$strGeometry" ]];then
-#	zenity --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
+#	yad --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
 #		--text "This is a dummy window to let Xorg initialize\nproperly before changing resolution..."
 	
 	nBlindDelay=5
@@ -1048,9 +1048,9 @@ if [[ -n "$strGeometry" ]];then
 	strMsg+=" properly while changing resolution.\n"
 	#strMsg+="Click here to continue...\n"
 	#strMsg+="(this window must receive focus for this workaround to work...)\n"
-	zenity --timeout=60 --display=:1 --info --title "$SECstrScriptSelfName" --text "$strMsg"&
+	yad --timeout=60 --display=:1 --info --title "$SECstrScriptSelfName" --text "$strMsg"&
 	
-	zenity --timeout=$nBlindDelay --display=:1 --info --title "$SECstrScriptSelfName" \
+	yad --timeout=$nBlindDelay --display=:1 --info --title "$SECstrScriptSelfName" \
 		--text "Holding ${nBlindDelay}s\n$strMsg"&&: # to try to let Xorg stabilize b4 xrandr
 	
 #	echoc -w -t $nBlindDelay	"sleep ${nBlindDelay}s safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry...
@@ -1061,13 +1061,13 @@ if [[ -n "$strGeometry" ]];then
 	SECFUNCexecA -ce xrandr -display :1 -s "$strGeometry"
 #	echoc -w -t $nBlindDelay "sleep ${nBlindDelay}s safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry...
 	
-	#zenity --display=:1 --info --title "$SECstrScriptSelfName" --text "One more time...\n$strMsg"&
+	#yad --display=:1 --info --title "$SECstrScriptSelfName" --text "One more time...\n$strMsg"&
 	
 #	echoc -w -t 5
 	
 #	echoc -w -t 5 "sleep safety" #TODO this is a blind sleep to help on avoiding issues... find a way to let Xorg initialize properly with specified geometry
 	
-#	zenity --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
+#	yad --timeout=5 --display=:1 --info --title "$SECstrScriptSelfName" \
 #		--text "This is a dummy window to let Xorg initialize\nproperly after changing resolution..."
 	
 	# if the resolution is not set properly, the desktop will be bigger and scrolling and xgamma will not work either.

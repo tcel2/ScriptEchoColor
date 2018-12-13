@@ -49,7 +49,7 @@ function FUNCretargetSymlink() {
 	cd "$lstrFilePath"
 	echoc -x pwd
 	if [[ ! -L "$lstrFile" ]];then
-		zenity --info --text "File is not a symlink: '$lstrFile'"
+		yad --info --text "File is not a symlink: '$lstrFile'"
 	else
 		local lstrTarget="`readlink -f "$lstrFile"`"
 		echo "lstrTarget='$lstrTarget'"
@@ -81,7 +81,7 @@ function FUNCretargetSymlink() {
 		fi
 		
 		if $bTextFieldEditMode;then
-			local lstrNewSymlink="`zenity \
+			local lstrNewSymlink="`yad \
 				--title "$SECstrScriptSelfName" \
 				--entry \
 				--width=750 \
@@ -89,7 +89,7 @@ function FUNCretargetSymlink() {
 		else
 			local lstrTargetFolder="${lstrFilePath}/./"
 			echo "lstrTargetFolder='$lstrTargetFolder'"
-			local lstrNewSymlink="`zenity \
+			local lstrNewSymlink="`yad \
 				--title "$SECstrScriptSelfName" \
 				--file-selection \
 				$strOptDirectory \

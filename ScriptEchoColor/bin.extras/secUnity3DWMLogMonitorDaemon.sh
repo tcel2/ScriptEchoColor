@@ -111,7 +111,7 @@ else
 				echoc --info --say "$strSayLogStarted"
 
 				SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
-				SECFUNCexecA -c --echo zenity --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
+				SECFUNCexecA -c --echo yad --timeout 10 --info --title "$SECstrScriptSelfName" --text "$strSayLogStarted"&
 			fi
 
 #			"${astrCmd[@]}"&&: >"$CFGstrUnityLogFile"

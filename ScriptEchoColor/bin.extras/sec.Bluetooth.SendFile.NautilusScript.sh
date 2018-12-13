@@ -132,7 +132,7 @@ if $bReUseLast;then
 else
 	if [[ -n "$strDeviceIdLastChosen" ]];then
 		if $bInteractive;then
-			if zenity --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
+			if yad --title "$SECstrScriptSelfName" --question --text="Use the last chosen device?\n\tstrDeviceIdLastChosen='$strDeviceIdLastChosen'\n\tDevice Name='${astrDeviceList[$strDeviceIdLastChosen]-}'";then
 				bUseLastChosenDevice=true
 			fi
 		fi
@@ -171,7 +171,7 @@ if $bInteractive;then
 				astrZenityValues+=( "${astrDeviceList[$strDeviceId]}" )
 			done
 		
-			strDeviceId=$(zenity --title "$SECstrScriptSelfName" --list --radiolist \
+			strDeviceId=$(yad --title "$SECstrScriptSelfName" --list --radiolist \
 				--text="Select one Bluetooth device." \
 				--column="Index" --column="ID" --column="Name" \
 				"${astrZenityValues[@]}")&&:

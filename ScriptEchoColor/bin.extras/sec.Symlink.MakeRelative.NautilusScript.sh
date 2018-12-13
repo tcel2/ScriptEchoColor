@@ -107,7 +107,7 @@ function FUNCloop() {
 function FUNCmakeRelativeSymlink() {
 	local lstrFile="${1-}"
 	if [[ ! -L "$lstrFile" ]];then
-		zenity --info --text "File is not a symlink: '$lstrFile'"
+		yad --info --text "File is not a symlink: '$lstrFile'"
 	else
 		local lstrFilePath="`dirname "$lstrFile"`"
 		if [[ "$lstrFilePath" == "." ]];then #is current path
@@ -155,7 +155,7 @@ function FUNCmakeRelativeSymlink() {
 					return 1
 				fi
 			else
-	#			zenity --info --text "Symlink '$lstrFile' points to missing file '$lstrNewSymlinkTarget'"
+	#			yad --info --text "Symlink '$lstrFile' points to missing file '$lstrNewSymlinkTarget'"
 				echoc -p "unable to make symlink '$lstrFile' point to missing '$lstrNewSymlinkTarget'"
 				return 1
 			fi

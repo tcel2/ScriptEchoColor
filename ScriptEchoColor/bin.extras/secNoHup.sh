@@ -27,46 +27,6 @@ source <(secinit)
 echoc -c
 
 # initializations and functions
-function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
-	SECFUNCdbgFuncInA;
-	# var init here
-	local lstrExample="DefaultValue"
-  local lbExample=false
-	local lastrRemainingParams=()
-	local lastrAllParams=("${@-}") # this may be useful
-	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
-		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
-			SECFUNCshowHelp $FUNCNAME
-			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
-			shift
-			lstrExample="${1-}"
-    elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
-      lbExample=true
-		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
-			shift #lastrRemainingParams=("$@")
-			while ! ${1+false};do	# checks if param is set
-				lastrRemainingParams+=("$1")
-				shift #will consume all remaining params
-			done
-		else
-			SECFUNCechoErrA "invalid option '$1'"
-			$FUNCNAME --help
-			SECFUNCdbgFuncOutA;return 1
-#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-#			SECFUNCechoErrA "invalid option '$1'"
-#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
-		fi
-		shift&&:
-	done
-	
-	#validate params here
-	
-	# code here
-	
-	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
-}
 
 #TODO how to make this script use overall a single bash pid?
 echoc --alert "TODO: @-n This should use as little rss mem as possible see: ps -o ppid,pid,rss,cmd --forest -p \`pgrep -f secNoHup\`"

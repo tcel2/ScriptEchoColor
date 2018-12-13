@@ -22,7 +22,7 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-#SECFUNCexecA -ce zenity --question&&:
+#SECFUNCexecA -ce yad --question&&:
 
 echoc --alert "DEPRECATED!!! @-n prefer secEnvDev.sh"
 

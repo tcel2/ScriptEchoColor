@@ -413,7 +413,7 @@ function FUNCzenitySelectFiles() {
 	local lstrTitle="$1"
 	shift
 	
-	local listSelected=`zenity --list --checklist --column="" --column="$lstrTitle" "$@"`&&:
+	local listSelected=`yad --list --checklist --column="" --column="$lstrTitle" "$@"`&&:
 	
 	if [[ -n "$listSelected" ]];then
 		echoc --info "Selected files list:" >&2
@@ -515,7 +515,7 @@ function FUNClsNot() { #synchronize like
 		
 		if $bAddFilesMode;then
       IFS=$'\n' read -d '' -r -a astrFileList < <(for strFile in "${astrFileList[@]}";do echo "$strFile" |sed -r "$sedEscapeQuotes";done)&&: #escape quotes
-      IFS=$'\n' read -d '' -r -a astrFileList < <(for strFile in "${astrFileList[@]}";do echo false; echo "$strFile";done)&&: #prepare to be used by zenity ex.: false "filename" (that is per entry, false is the checkbox state)
+      IFS=$'\n' read -d '' -r -a astrFileList < <(for strFile in "${astrFileList[@]}";do echo false; echo "$strFile";done)&&: #prepare to be used by yad ex.: false "filename" (that is per entry, false is the checkbox state)
 			#eval alistOfFiles=(`echo "$listOfFiles" |sed -r "$sedEscapeQuotes" |sed -r  "$sedQuoteLinesForZenitySelection"`)
 			#FUNCzenitySelectAndAddFiles "${alistOfFiles[@]}"
       FUNCzenitySelectAndAddFiles "${astrFileList[@]}"
@@ -717,11 +717,11 @@ elif $bLsMissHist; then
 		if $bMissingReal || $bMissingRBF;then
 			echo "$prefix $fileReal";
 			if ! $bMissingReal && $bMissingRBF;then
-				aMissingFilesAtRBFonly+=("false") #zenity checkbox initial state
+				aMissingFilesAtRBFonly+=("false") #yad checkbox initial state
 				aMissingFilesAtRBFonly+=(`echo "$fileReal"`)
 			fi
 			if $bMissingReal && ! $bMissingRBF;then
-				aFileOnRBFbutNotOnReal+=("false") #zenity checkbox initial state
+				aFileOnRBFbutNotOnReal+=("false") #yad checkbox initial state
 				aFileOnRBFbutNotOnReal+=(`echo "$fileAtRBF"`)
 			fi
 		fi;

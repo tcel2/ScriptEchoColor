@@ -111,7 +111,7 @@ function FUNCproblem {
   
   strTitle="Dmesg check: $strTitle"
   
-  zenity --info --title="$strTitle" --no-wrap --text="$strDiagnostic\n\ndmesg:\n$strDmesgTail"
+  yad --info --title="$strTitle" --no-wrap --text="$strDiagnostic\n\ndmesg:\n$strDmesgTail"
 }
 
 function FUNCcheck { #help <regexToMatch> <problemReportMessage> [customTitle]

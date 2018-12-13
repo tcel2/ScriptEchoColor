@@ -469,7 +469,7 @@ if $bCheckPointDaemon;then
 					strTitle="$SECstrScriptSelfName[$$], hold waiting instances."
 					while true;do
 						SECFUNCCwindowOnTop "$strTitle"
-						if zenity --question --title "$strTitle" --text "allow waiting instances to be run?";then
+						if yad --question --title "$strTitle" --text "allow waiting instances to be run?";then
 							break;
 						fi
 					done
@@ -674,10 +674,10 @@ if $bCheckIfAlreadyRunning;then
 		else
 			strTitle="$SECstrScriptSelfName pid=$$, multiple instances running."
 			SECFUNCCwindowOnTop "$strTitle"
-			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
+			if yad --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
 				bKillOther=true
       else
-        if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
+        if yad --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
           bSimpleExit=true;exit 0
         fi
 			fi
@@ -755,7 +755,7 @@ function FUNCrun(){
       declare -p PATH >&2
       echo "$FUNCNAME Running Command: ${astrRunParams[@]-}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
-      #zenity --info --text "$0:$LINENO"
+      #yad --info --text "$0:$LINENO"
       #~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
       local lnRetAtom=1
@@ -1003,7 +1003,7 @@ function FUNCrun(){
 				esac
 				
 	#				if $lbEvalCode;then
-	#					local lstrCodeToEval="`zenity --entry \
+	#					local lstrCodeToEval="`yad --entry \
 	#						--title "$SECstrScriptSelfName[$$]" \
 	#						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
 	#					echo "eval: $lstrCodeToEval" >&2
@@ -1026,7 +1026,7 @@ function FUNCrun(){
 			else
 				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
 				lstrTxt+="\n";
-				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
+				if ! yad --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 					break;
 				fi
 			fi

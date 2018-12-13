@@ -92,13 +92,13 @@ if [[ -n "$strExtension" ]];then
 	SECFUNCexecA -ce SECFUNCcfgFileName --show
 	exit 0
 fi
-#zenity --info --text=$LINENO
+#yad --info --text=$LINENO
 SECFUNCarraysExport
 declare -p astrRemainingParams
 declare -p SECcmdExportedAssociativeArrays
 #declare |grep SEC_EXPORTED_ARRAY_
 declare -p SEC_EXPORTED_ARRAY_astrRemainingParams
-#zenity --info --text=$LINENO
+#yad --info --text=$LINENO
 function FUNCopen() {
 	#declare |grep SEC_EXPORTED_ARRAY_
 	SECFUNCarraysRestore
@@ -133,7 +133,7 @@ function FUNCopen() {
 		done
 	fi
 };export -f FUNCopen
-#zenity --info --text=$LINENO
+#yad --info --text=$LINENO
 #TODO this is not accepting the exported arrays: secXtermDetached.sh --waitonexit 60 bash -c FUNCopen
 xterm -e "bash -c FUNCopen;echoc -w -t 60"
 

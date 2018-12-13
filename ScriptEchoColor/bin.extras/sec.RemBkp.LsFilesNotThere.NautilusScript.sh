@@ -35,7 +35,7 @@ function FUNCdoIt() {
 	sedUrlDecoder='s % \\\\x g'
 	path=`echo "$NAUTILUS_SCRIPT_CURRENT_URI" |sed -r 's"^file://(.*)"\1"' |sed "$sedUrlDecoder" |xargs printf`
 
-	#zenity --info --text "`pwd`;$path"
+	#yad --info --text "`pwd`;$path"
 	cd "$path";
 	#export bSkipNautilusCheckNow=true;
 	secUpdateRemoteBackupFiles.sh --skipnautilus --lsnot --addfiles;

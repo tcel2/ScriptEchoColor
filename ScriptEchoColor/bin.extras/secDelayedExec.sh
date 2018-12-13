@@ -345,7 +345,7 @@ if $bCheckPointDaemon;then
 					strTitle="$SECstrScriptSelfName[$$], hold waiting instances."
 					while true;do
 						SECFUNCCwindowOnTop "$strTitle"
-						if zenity --question --title "$strTitle" --text "allow waiting instances to be run?";then
+						if yad --question --title "$strTitle" --text "allow waiting instances to be run?";then
 							break;
 						fi
 					done
@@ -506,7 +506,7 @@ if $bCheckIfAlreadyRunning;then
 		#if echoc -q -t 60 "skip check if already running?";then
 		bKillOther=false
 		if SECFUNCisShellInteractive;then
-			if echoc -q -t 60 "kill the nPidOther='$nPidOther' that is still running?";then
+			if echoc -q -t 10 "kill the nPidOther='$nPidOther' that is still running?";then
 				if [[ -d "/proc/$nPidOther" ]];then
 					bKillOther=true
 				else
@@ -516,10 +516,39 @@ if $bCheckIfAlreadyRunning;then
 		else
 			strTitle="$SECstrScriptSelfName[$$], multiple instances running."
 			SECFUNCCwindowOnTop "$strTitle"
-			if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
-				bKillOther=true
-      else
-        if zenity --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
+      bKillOther=false
+      bOtherExited=false
+      while true;do
+        nTot=10;for((i=0;i<nTot;i++));do echo $((i*(100/nTot)));sleep 1;done \
+          |yad --auto-close --progress ----percentage=0 --question --title "$strTitle" \
+            --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?" \
+            --button="OK:2" \
+            --button="Cancel:1" &&:;nRet=$?
+        case $nRet in
+          2)bKillOther=true;break;;
+          1)break;;
+          0)
+            if [[ ! -d "/proc/$nPidOther" ]];then
+              bOtherExited=true
+            fi
+            ;; # timed out
+        esac
+        #~ yad --timeout 10 --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?"&&:;nRet=$?
+        #~ case $nRet in
+          #~ 0)bKillOther=true;break;;
+          #~ 1)break;;
+          #~ 70)
+            #~ if [[ ! -d "/proc/$nPidOther" ]];then
+              #~ bOtherExited=true
+            #~ fi
+            #~ ;; # timed out
+        #~ esac
+      done
+			#~ if yad --timeout 10 --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?";then
+				#~ bKillOther=true
+      #~ else
+      if ! $bOtherExited && ! $bKillOther;then
+        if yad --question --title "$strTitle" --text "$strFullSelfCmd\n\nnPidSelf=$$;\nThe other pid will continue running nPidOther='$nPidOther'.\n DO EXIT THIS ONE?";then
           exit 0
         fi
 			fi
@@ -604,7 +633,7 @@ function FUNCrun(){
 				declare -p PATH >&2
 				echo "$FUNCNAME Running Command: ${astrRunParams[@]-}"
 #        anSPidB4=(`ps --no-headers -o pid --sid $$`)
-        #zenity --info --text "$0:$LINENO"
+        #yad --info --text "$0:$LINENO"
 				#~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
         if $bStayForce;then
@@ -821,7 +850,7 @@ function FUNCrun(){
 				esac
 				
 	#				if $lbEvalCode;then
-	#					local lstrCodeToEval="`zenity --entry \
+	#					local lstrCodeToEval="`yad --entry \
 	#						--title "$SECstrScriptSelfName[$$]" \
 	#						--text "type code to eval b4 retry:\n$(SECFUNCparamsToEval "${astrRunParams[@]}")"`"&&:
 	#					echo "eval: $lstrCodeToEval" >&2
@@ -834,7 +863,7 @@ function FUNCrun(){
 			else
 				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
 				lstrTxt+="\n";
-				if ! zenity --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
+				if ! yad --question --title "$SECstrScriptSelfName[$$]" --text "$lstrTxt";then
 					break;
 				fi
 			fi

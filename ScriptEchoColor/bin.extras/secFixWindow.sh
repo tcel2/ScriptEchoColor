@@ -169,7 +169,7 @@ elif $bFixCompiz;then
 		SEC_WARN=true SECFUNCechoWarnA "screen must NOT be locked to fix compiz!"
 		
 		SECFUNCCwindowCmd --ontop "^$SECstrScriptSelfName$"
-		if ! zenity --question --title "$SECstrScriptSelfName" --text="screen was locked, fix compiz now?";then
+		if ! yad --question --title "$SECstrScriptSelfName" --text="screen was locked, fix compiz now?";then
 			echoc -w -t 3
 			exit 1
 		fi
@@ -729,7 +729,7 @@ while true; do
 		echoc --say "$strMsgFixEnd"
 		
 		SECFUNCCwindowCmd --ontop --delay 1 "^$SECstrScriptSelfName$"
-		SECFUNCexecA -c --echo zenity --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strMsgFixEnd"&&:
+		SECFUNCexecA -c --echo yad --timeout 3 --info --title "$SECstrScriptSelfName" --text "$strMsgFixEnd"&&:
 	fi
 	
 done

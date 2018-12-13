@@ -142,9 +142,9 @@ function FUNCsetEnable(){ #help <true|false>
 				echoc --info "$lstrTitle: $lstrText"
 				
 				SECFUNCCwindowOnTop -d 1 "^$lstrTitle$"
-				#SECFUNCexecA -ce zenity --timeout $lnRemaining --info --title "$lstrTitle" --text "$lstrText"
+				#SECFUNCexecA -ce yad --timeout $lnRemaining --info --title "$lstrTitle" --text "$lstrText"
 				( for((iProgress=0;iProgress<lnRemaining;iProgress++));do echo $((iProgress*100/lnRemaining));sleep 1;done) \
-					| SECFUNCexecA -ce zenity --progress --percentage=0 --auto-close --no-cancel --title "$lstrTitle" --text "$lstrText"
+					| SECFUNCexecA -ce yad --progress --percentage=0 --auto-close --no-cancel --title "$lstrTitle" --text "$lstrText"
 #				continue
 			fi
 #			break;
@@ -225,7 +225,7 @@ function FUNCdialogConnStateProgress(){
 		fi;
 		echo $i;
 		sleep 1;
-	done |zenity --progress --auto-close --title "$lstrTitle" --text "$lstrText"
+	done |yad --progress --auto-close --title "$lstrTitle" --text "$lstrText"
 	echoc --say --info "$lstrTextEnd"
 }
 
