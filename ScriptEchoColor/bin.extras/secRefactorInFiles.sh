@@ -102,8 +102,8 @@ strBkpKey="`SECFUNCdtFmt --filename`"
 
 strRegexMatchBkpFiles="[.]${strRegexFileFilter}.*[.]${strBkpSuffix}"
 declare -p strRegexMatchBkpFiles
-function FUNCfindBkpWork(){
-	local astrParams=(find "$strWorkPath" -type f -regex ".*/$strRegexMatchBkpFiles")
+function FUNCfindAllPossibleBkpWork(){
+	local astrParams=(find "$strWorkPath" -type f -regex ".*[.]${strBkpSuffix}")
 	
 	if [[ "$1" == "--report" ]];then
 		echoc --info "bkp files size: @r`"${astrParams[@]}" -print0 | du -ch --files0-from=- |tail -n 1 |tr '\t' ' '` "
@@ -123,12 +123,12 @@ function FUNCfindBkpWork(){
 }
 
 if $bBkpTrash;then
-	strOutput="`FUNCfindBkpWork -exec ls -l '{}'`"&&:
+	strOutput="`FUNCfindAllPossibleBkpWork -exec ls -l '{}'`"&&:
 	if [[ -n "$strOutput" ]];then
 		echo "$strOutput"
-		FUNCfindBkpWork --report
+		FUNCfindAllPossibleBkpWork --report
 		if echoc -q "trash all backup files?";then
-			FUNCfindBkpWork -exec trash -v '{}'
+			FUNCfindAllPossibleBkpWork -exec trash -v '{}'
 		fi
 	else
 		echoc --info "no bkp files"
@@ -271,7 +271,7 @@ fi
 #echoc --info ""
 #SECFUNCexecA -ce du --exclude "$strRegexFileFilter" -hs "`readlink -f "$strWorkPath"`"&&:
 echoc --info "Backup files size (see --trashbkp help): "
-FUNCfindBkpWork --report
+FUNCfindAllPossibleBkpWork --report
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
 
