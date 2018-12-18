@@ -137,7 +137,10 @@ while true;do
     #echo "EVAL: \"$strLine\""
     eval "$strLine";
     
-    if [[ ! -d "/proc/$nPid/" ]];then continue;fi
+    if [[ ! -d "/proc/$nPid/" ]];then 
+      SECFUNCarrayClean anPidIgnore $nPid
+      continue;
+    fi
 
     if ! strCmd="`cat /proc/$nPid/cmdline |tr "\0" " "`";then continue;fi
     if ! strComm="`cat /proc/$nPid/comm`";then continue;fi
