@@ -22,17 +22,16 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-echoc -c
+echoc -Rc 
 
 strBN="`basename "$0"`"
 
 strCfg="$HOME/.$strBN.cfg"
 
 #~ : ${SECbDevelopmentMode:=false};export SECbDevelopmentMode
-
 strSECDEVPath="`cat "$strCfg"`"
 strSECDEVPath="`realpath -e "$strSECDEVPath"`"
-declare -p strSECDEVPath
+declare -p strSECDEVPath >&2
 if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
   echo "dev path not set at '$strCfg'" >&2
   exit 1
@@ -135,14 +134,14 @@ fi
 
 if [[ -n "${astrSECDEVCmds[@]-}" ]];then
   if $bAlreadyDev;then
-    echoc --info "Already in dev mode."
+    echoc --info "Already in dev mode." >&2
     SECFUNCexecA -ce "${astrSECDEVCmds[@]}"
     exit $?
   fi
 fi
 
 strRCFileTmp="`mktemp`"
-declare -p strRCFileTmp
+declare -p strRCFileTmp >&2
 echo "# temp bash rc file from $0" >>"$strRCFileTmp"
 
 if $bCleanSECEnv;then
@@ -159,7 +158,9 @@ else
   strPATHtmp+="$strSECDEVPath/bin.examples:"
   strPATHtmp+="$PATH"
 
+  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
   cat "$HOME/.bashrc" >>"$strRCFileTmp"
+  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
   echo >>"$strRCFileTmp"
   echo "########################################################" >>"$strRCFileTmp"
   echo "#ScriptEchoColor development specifics" >>"$strRCFileTmp"
@@ -236,20 +237,22 @@ fi
 
 echo "################ END OF $0 auto rc file ################" >>"$strRCFileTmp"
 
-SECFUNCexecA -ce ls -l "$strRCFileTmp"
-SECFUNCexecA -ce cat "$strRCFileTmp"
+SECFUNCexecA -ce ls -l "$strRCFileTmp" >&2
+SECFUNCexecA -ce cat "$strRCFileTmp" >&2
 #type FUNCrunAtom&&:
 #yad --info --text "$0:$LINENO"
 SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
+#echo -n "LINENO=$LINENO."
 if $bAlreadyDev;then
   #if SECFUNCisShellInteractive;then
   if $bExitAfterCmd;then
     source "$strRCFileTmp"
   else
     echoc --info "already in dev mode, run this:" >&2
-    echo "source $strRCFileTmp"
+    echo "source $strRCFileTmp" >&2
   fi
 else
+  #echo -n "LINENO=$LINENO."
   bash --rcfile "$strRCFileTmp"
 fi
 

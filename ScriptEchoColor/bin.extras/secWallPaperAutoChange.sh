@@ -43,7 +43,7 @@ strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
 strPicURI="file://$strTmpFile"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
-SECFUNCcfgReadDB #after default variables value setup above
+export CFGastrFileList=()
 bDaemon=false
 nChangeInterval=3600
 nChHueFastModeTimes=10
@@ -59,6 +59,7 @@ bWriteFilename=true;
 strResize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
 fResRatio="`FUNCratio $strResize`"
 declare -p strResize fResRatio
+SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
@@ -125,11 +126,11 @@ nDelayMsg=3
 nTotFiles=0
 strFilter=".*"
 function FUNCchkUpdateFileList() { #[--refill]
-	nTotFiles=${#astrFileList[@]}
+	nTotFiles=${#CFGastrFileList[@]}
 	
 	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
     # ignores hidden (even at hidden folders) and the tmp files
-		IFS=$'\n' read -d '' -r -a astrFileList < <(
+		IFS=$'\n' read -d '' -r -a CFGastrFileList < <(
       find -iregex "$strFindRegex" \
         |egrep -v "/[.]" \
         |grep -v "$strBaseTmpFileName" \
@@ -146,7 +147,7 @@ function FUNCchkUpdateFileList() { #[--refill]
 			fi
 		fi
 	else
-		astrFileList=("${astrFileList[@]}") # this will update the indexes
+		CFGastrFileList=("${CFGastrFileList[@]}") # this will update the indexes
 	fi
 	
 	return 0
@@ -159,7 +160,6 @@ function FUNCsetPicURI() {
 if $bDaemon;then
   SECFUNCuniqueLock --daemonwait
 	nTotFiles=0
-	astrFileList=()
 	bFastMode=false
 	nSleep=$nChangeInterval
   nCurrChIntvl=$nChangeInterval
@@ -170,31 +170,45 @@ if $bDaemon;then
   bFlipKeep=false;
   bFlopKeep=false;
   nSetIndex=-1
-  nSelect=0
+  nChosen=0
   bPlay=true
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
+    if [[ ! -f "$strFile" ]];then
+      bChangeImage=true;
+    fi
+    
     if $bChangeImage;then
       if((nSetIndex>-1));then
-        nSelect=$nSetIndex
+        nChosen=$nSetIndex
       else
-        nSelect=$((RANDOM%nTotFiles));
+        nChosen=$((RANDOM%nTotFiles));
       fi
-      declare -p astrFileList nSelect nTotFiles |tr '[' '\n'
+      declare -p CFGastrFileList nChosen nTotFiles |tr '[' '\n'
       
-      strFileBase="${astrFileList[$nSelect]-}"
+      strFileBase="${CFGastrFileList[$nChosen]-}"
       strFile="`pwd`/$strFileBase";
       declare -p strFile
-      if [[ -z "$strFile" ]] || [[ ! -f "$strFile" ]];then
-        declare -p nSelect
-        echo "list size = ${#astrFileList[@]}" >&2 &&:
-        echoc -p "failed selecting file"
+      bInvalidFile=false
+      strMsgWarn=""
+      if [[ -z "$strFile" ]];then
+        strMsgWarn="empty"
+        bInvalidFile=true
+      fi
+      if [[ ! -f "$strFile" ]];then
+        strMsgWarn="missing"
+        bInvalidFile=true
+      fi
+      if $bInvalidFile;then
+        declare -p nChosen
+        echo "list size = ${#CFGastrFileList[@]}" >&2 &&:
+        echoc -p "failed selecting $strMsgWarn strFile='$strFile'"
         if((nSetIndex>-1));then
-          echoc --info "fixing nSetIndex='$nSetIndex'"
+          echoc --info "fixing invalid nSetIndex='$nSetIndex'"
           nSetIndex=-1 #reset
         else
-          echoc --alert "unable to auto-fix!"
+          echoc --alert "unable to auto-fix!@-n #TODO Developer!"
         fi
         echoc -w -t $nSleep
         continue
@@ -203,7 +217,8 @@ if $bDaemon;then
       #TODO auto download wallpapers one new per loop
       
       #excluding current from shuffle list to always have a new one
-      unset astrFileList[$nSelect]
+      unset CFGastrFileList[$nChosen]
+      SECFUNCcfgWriteVar CFGastrFileList
       nSetIndex=-1 # because as it was already changed, strFile will remain the same, and this grants the next auto-change will be random/suffle again!
     fi
 		
@@ -434,14 +449,14 @@ if $bDaemon;then
         ;;
       l)
         FUNCchkUpdateFileList --refill
-        declare -p astrFileList |tr '[' '\n'
+        declare -p CFGastrFileList |tr '[' '\n'
         declare -p strFilter
         #TODO for some inexplicable (?) reason, while 's' option will collect text and work fine many times, after this option is selected nothing will output anymore on text prompts `echoc -S`... scary... 8-( ), could be cuz of the @D default option? or even the '(' ')' test more later...
         strFilter="`echoc -S "Type a regex filter (can be a subfolder name)@D${strFilter}"`"
         declare -p strFilter
         FUNCchkUpdateFileList --refill
-        if((`SECFUNCarraySize astrFileList`>0));then
-          declare -p astrFileList |tr '[' '\n'
+        if((`SECFUNCarraySize CFGastrFileList`>0));then
+          declare -p CFGastrFileList |tr '[' '\n'
           bChangeImage=true;
           bResetCounters=true
         else
@@ -463,7 +478,7 @@ if $bDaemon;then
         ;; 
       s)
         FUNCchkUpdateFileList --refill
-        declare -p astrFileList |tr '[' '\n'
+        declare -p CFGastrFileList |tr '[' '\n'
         nSetIndex="`echoc -S "set image index"`"
         if SECFUNCisNumber -dn "$nSetIndex" && ((nSetIndex<nTotFiles));then
           bChangeImage=true;

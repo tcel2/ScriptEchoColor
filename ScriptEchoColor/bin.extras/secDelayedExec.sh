@@ -756,6 +756,9 @@ function FUNCrun(){
     
     strRetryFull="RetrySelfFull-DEV"
 		if $bStay || $bStayForce || $lbErr;then
+      astrEditDevSrcFileCmd=(secEnvDev.sh --exit which "${astrRunParams[0]}");declare -p astrEditCmd >&2;
+      strDevSrcFile="`${astrEditDevSrcFileCmd[@]}`";declare -p strDevSrcFile >&2;
+      
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
 			lstrTxt+="\n";
@@ -774,9 +777,10 @@ function FUNCrun(){
 			lstrTxt+="\tsecMaintenanceDaemon.sh --dump $$\n";
 			lstrTxt+="\n";
 			lstrTxt+="DbgInfo:\n";
-			lstrTxt+="\tTERM=$TERM\n";
-			lstrTxt+="\tPATH='$PATH'\n";
-			lstrTxt+="\tlbDevMode='$lbDevMode'\n";
+			lstrTxt+="\t TERM=$TERM\n";
+			lstrTxt+="\t PATH='$PATH'\n";
+			lstrTxt+="\t lbDevMode='$lbDevMode'\n";
+      lstrTxt+="\t strDevSrcFile='$strDevSrcFile'\n";
 			lstrTxt+="\n";
 #			lstrTxt+="Tips:\n";
 #			lstrTxt+="\tif TERM is dumb, put this on eval 'bXterm=true'\n";
@@ -798,6 +802,10 @@ function FUNCrun(){
           bEnableSECWarnMessages #2
           bCleanSECenv #3
 				);declare -p astrYadFields
+        strBtnEdSrc=""
+        if [[ "${astrRunParams[0]}" =~ .*[.]sh ]];then
+          strBtnEdSrc='--button=EditSource-DEV:6'
+        fi
         astrYadExecParams=(
           "${astrYadBasicOpts[@]}"
           
@@ -805,6 +813,7 @@ function FUNCrun(){
           --button="Retry-DEV:2"
           --button="${strRetryFull}:5"
           --button="${strDumpRetryBtnTxt}:3" 
+          $strBtnEdSrc
           --button="gtk-close:1" 
           
           --form 
@@ -840,6 +849,9 @@ function FUNCrun(){
 					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
 					4)lbDevMode=false;; #normal retry
 					5)lbRestartSelfFullDev=true;break;; #retry in development mode (path)
+          6): ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"} #can be customized by the user
+            ("${CFGastrSrcEditor[@]}" "$strDevSrcFile" & disown)&disown;
+            break;;
 					252)break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
