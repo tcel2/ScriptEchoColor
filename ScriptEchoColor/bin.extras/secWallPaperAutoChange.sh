@@ -172,10 +172,11 @@ if $bDaemon;then
   nSetIndex=-1
   nChosen=0
   bPlay=true
+  : ${CFGstrCurrentFile:=""}
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
-    if [[ ! -f "$strFile" ]];then
+    if [[ ! -f "$CFGstrCurrentFile" ]];then
       bChangeImage=true;
     fi
     
@@ -188,22 +189,22 @@ if $bDaemon;then
       declare -p CFGastrFileList nChosen nTotFiles |tr '[' '\n'
       
       strFileBase="${CFGastrFileList[$nChosen]-}"
-      strFile="`pwd`/$strFileBase";
-      declare -p strFile
+      CFGstrCurrentFile="`pwd`/$strFileBase";
+      declare -p CFGstrCurrentFile
       bInvalidFile=false
       strMsgWarn=""
-      if [[ -z "$strFile" ]];then
+      if [[ -z "$CFGstrCurrentFile" ]];then
         strMsgWarn="empty"
         bInvalidFile=true
       fi
-      if [[ ! -f "$strFile" ]];then
+      if [[ ! -f "$CFGstrCurrentFile" ]];then
         strMsgWarn="missing"
         bInvalidFile=true
       fi
       if $bInvalidFile;then
         declare -p nChosen
         echo "list size = ${#CFGastrFileList[@]}" >&2 &&:
-        echoc -p "failed selecting $strMsgWarn strFile='$strFile'"
+        echoc -p "failed selecting $strMsgWarn CFGstrCurrentFile='$CFGstrCurrentFile'"
         if((nSetIndex>-1));then
           echoc --info "fixing invalid nSetIndex='$nSetIndex'"
           nSetIndex=-1 #reset
@@ -219,11 +220,12 @@ if $bDaemon;then
       #excluding current from shuffle list to always have a new one
       unset CFGastrFileList[$nChosen]
       SECFUNCcfgWriteVar CFGastrFileList
-      nSetIndex=-1 # because as it was already changed, strFile will remain the same, and this grants the next auto-change will be random/suffle again!
+      SECFUNCcfgWriteVar CFGstrCurrentFile
+      nSetIndex=-1 # because as it was already changed, CFGstrCurrentFile will remain the same, and this grants the next auto-change will be random/suffle again!
     fi
 		
     strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
-    SECFUNCexecA -cE cp -v "$strFile" "${strTmpFilePreparing}"
+    SECFUNCexecA -cE cp -v "$CFGstrCurrentFile" "${strTmpFilePreparing}"
     
     function FUNCprepGeomInfo() { # <lstrFile>
       local lstrFile="$1"
@@ -232,7 +234,7 @@ if $bDaemon;then
       #nOrigW="`echo "$strOrigSize" |sed -r 's@([[:digit:]]*)x.*@\1@'`"
       eval `echo "$strOrigSize" |sed -r 's@([0-9]*)x([0-9]*)@nOrigW=\1;nOrigH=\2;@'`
     }
-    FUNCprepGeomInfo "$strFile"
+    FUNCprepGeomInfo "$CFGstrCurrentFile"
     
     # grants size preventing automatic from desktop manager using a lot (?) of CPU
     strSzOrEq="="
@@ -248,8 +250,8 @@ if $bDaemon;then
 #      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
       if((nOrigW<nResW5p6 || nOrigH<nResH5p6)) && which xbrzscale >/dev/null;then
         nXBRZ=2 # more than 2 is not good for most pics
-  #      if [[ -f "$HOME/.cache/${SECstrScriptSelfName}/${strFile}.resizeTo${nResW}x${nResH}" ]];then
-        strXBRZcache="$HOME/.cache/${SECstrScriptSelfName}/`basename "${strFile}"`-${nXBRZ}xBRZ.webp"
+  #      if [[ -f "$HOME/.cache/${SECstrScriptSelfName}/${CFGstrCurrentFile}.resizeTo${nResW}x${nResH}" ]];then
+        strXBRZcache="$HOME/.cache/${SECstrScriptSelfName}/`basename "${CFGstrCurrentFile}"`-${nXBRZ}xBRZ.webp"
         strXbrz=",${nXBRZ}xBRZ"
         if [[ -f "$strXBRZcache" ]];then
           #SECFUNCexecA -cE cp -vf "${strXBRZcache}" "${strTmpFilePreparing}"
@@ -370,7 +372,7 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}(RGB:$nAddR,$nAddG,$nAddB),`basename "$strFile"`"
+      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}(RGB:$nAddR,$nAddG,$nAddB),`basename "$CFGstrCurrentFile"`"
       # pseudo outline at 4 corners
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
@@ -411,10 +413,10 @@ if $bDaemon;then
       fi
     fi
     #~ else
-      #~ SECFUNCexecA -cE cp -f "$strFile" "$strTmpFile"
+      #~ SECFUNCexecA -cE cp -f "$CFGstrCurrentFile" "$strTmpFile"
     #~ fi
     
-		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$strFile";
+		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$CFGstrCurrentFile";
     bResetCounters=false;
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
