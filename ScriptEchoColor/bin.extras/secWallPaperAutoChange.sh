@@ -57,9 +57,9 @@ nChangeHue=7
 bFlip=false;
 bFlop=false;
 bWriteFilename=true;
-strResize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
-fResRatio="`FUNCratio $strResize`"
-declare -p strResize fResRatio
+strScreenSize="`xrandr |egrep " connected primary " |sed -r 's".* ([[:digit:]]*x[[:digit:]]*)[+].*"\1"'`"
+fResRatio="`FUNCratio $strScreenSize`"
+declare -p strScreenSize fResRatio
 SECFUNCcfgReadDB #after default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -88,8 +88,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWriteFilename=false;
 	elif [[ "$1" == "--path" || "$1" == "-p" ]];then #help <strWallPPath> wallpapers folder
 		shift;strWallPPath="$1"
-	elif [[ "$1" == "--resize" ]];then #help <strResize> prefer this size than default from primary monitor 
-    shift;strResize="$1"
+	elif [[ "$1" == "--resize" ]];then #help <strScreenSize> override default based on primary monitor 
+    shift;strScreenSize="$1"
 	elif [[ "$1" == "--find" ]];then #help <strFindRegex>
 		shift;strFindRegex="$1"
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -117,11 +117,27 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 cd $strWallPPath;
 
-fResRatio="`FUNCratio $strResize`"
-eval `echo "$strResize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
-declare -p strResize fResRatio
+fResRatio="`FUNCratio $strScreenSize`"
+eval `echo "$strScreenSize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
+declare -p strScreenSize fResRatio
 nResW5p6=$((nResW-`SECFUNCbcPrettyCalcA --scale 0 "${nResW}/12"`)) # /12 is for 16:9 monitor #TODO other monitor's ratios
 nResH5p6=$((nResH-`SECFUNCbcPrettyCalcA --scale 0 "${nResH}/6"`)) # good top/bottom blurred margin is 1/12 each (sum = 1/6) of the total requested height
+
+function FUNCconvert() {
+  (
+    local lnStart=$SECONDS
+    local lnPid
+    while ! lnPid=`pgrep convert`;do 
+      echo "`date` waiting convert to start...";
+      sleep 0.25;
+      if(( (SECONDS-lnStart) > 10));then
+        exit 0 # timedout
+      fi
+    done;
+    SECFUNCexecA -cE cpulimit -c 1 -l 50 -p $lnPid &&:
+  )&
+  SECFUNCexecA -cE nice -n 19 convert "$@"
+}
 
 nDelayMsg=3
 nTotFiles=0
@@ -209,6 +225,10 @@ if $bDaemon;then
       declare -p CFGstrCurrentFile
       bInvalidFile=false
       strMsgWarn=""
+      
+      unset CFGastrFileList[$nChosen] #excluding current from shuffle list to always have a new one
+      SECFUNCcfgWriteVar CFGastrFileList
+      
       if [[ -z "$CFGstrCurrentFile" ]];then
         strMsgWarn="empty"
         bInvalidFile=true
@@ -224,18 +244,15 @@ if $bDaemon;then
         if((nSetIndex>-1));then
           echoc --info "fixing invalid nSetIndex='$nSetIndex'"
           nSetIndex=-1 #reset
-        else
-          echoc --alert "unable to auto-fix!@-n #TODO Developer!"
+        #~ else
+          #~ echoc --alert "unable to auto-fix!@-n #TODO Developer!"
         fi
-        echoc -w -t $nSleep
+        echoc -w -t 3 #$nSleep
         continue
       fi
       
       #TODO auto download wallpapers one new per loop
       
-      #excluding current from shuffle list to always have a new one
-      unset CFGastrFileList[$nChosen]
-      SECFUNCcfgWriteVar CFGastrFileList
       SECFUNCcfgWriteVar CFGstrCurrentFile
       nSetIndex=-1 # because as it was already changed, CFGstrCurrentFile will remain the same, and this grants the next auto-change will be random/suffle again!
     fi
@@ -260,7 +277,7 @@ if $bDaemon;then
     strOrigSzTxt="$strOrigSize"
     bAllowZoom=false
     strTxtZoom=""
-    if [[ "$strOrigSize" != "$strResize" ]];then
+    if [[ "$strOrigSize" != "$strScreenSize" ]];then
       ##########
       ## xBRZ ##
       ##########
@@ -277,10 +294,10 @@ if $bDaemon;then
         else
           SECFUNCexecA -cE nice -n 19 xbrzscale $nXBRZ "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
           #~ SECFUNCexecA -cE nice -n 19 xbrzscale 2 "${strTmpFilePreparing}" "${strTmpFilePreparing}.png"
-          #~ SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
+          #~ FUNCconvert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
-          SECFUNCexecA -cE nice -n 19 convert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -vf "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
           mkdir -p "`dirname "$strXBRZcache"`/"
@@ -313,7 +330,7 @@ if $bDaemon;then
           strFixSz="${nFixW}x${nOrigH}"
           nLeftMargin=$(( (nOrigW-nFixW)/2 ))
           if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH nFixW fMaxRatio fOrigRatio fResRatio nLeftMargin;fi
-          SECFUNCexecA -cE nice -n 19 convert -extent "${strFixSz}+${nLeftMargin}+0" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -extent "${strFixSz}+${nLeftMargin}+0" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
           strFixSzTxt=",fixE:${strFixSz}"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
@@ -326,13 +343,13 @@ if $bDaemon;then
         if $bZoom;then
           nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
           nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
-          SECFUNCexecA -cE nice -n 19 convert -extent "${strResize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           strTxtZoom=",ZOOM"
         fi
       fi
 
-      strResizeFinal="$strResize"
+      strResizeFinal="$strScreenSize"
       astrCmdFrame=()
       nBorder=10
       nBorderX2=$((nBorder*2))
@@ -343,25 +360,25 @@ if $bDaemon;then
       nBorderOut="`SECFUNCbcPrettyCalcA --scale 0 "${nBorder}*0.6"`"
       if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH nBorder nBorderX2 nBorderIn nBorderOut;fi
       #if((nOrigW<(nResW-nBorderX2) && nOrigH<(nResH-nBorderX2)));then
-      if((nOrigW<(nResW-nBorderX2) || nOrigH<(nResH-nBorderX2)));then
+      if((nOrigW<(nResW-nBorderX2) && nOrigH<(nResH-nBorderX2)));then
         # creates a frame border on the small image
         strResizeFinal="$strOrigSize"
-        SECFUNCexecA -cE nice -n 19 convert -mattecolor black -compose Copy -frame "${nBorder}x${nBorder}+${nBorderOut}+${nBorderIn}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        FUNCconvert -mattecolor black -compose Copy -frame "${nBorder}x${nBorder}+${nBorderOut}+${nBorderIn}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
       strSzOrEq=""
       astrCmd=()
-      astrCmd+=( convert "${strTmpFilePreparing}" )
-      astrCmd+=( \( -clone 0 -blur 0x5 -resize $strResize\! -fill black -colorize 25% \) )
+      astrCmd+=( FUNCconvert "${strTmpFilePreparing}" )
+      astrCmd+=( \( -clone 0 -blur 0x5 -resize $strScreenSize\! -fill black -colorize 25% \) )
       #~ if((`SECFUNCarraySize astrCmdFrame`>0));then
         #~ astrCmd+=( "${astrCmdFrame[@]}" )
       #~ fi
       astrCmd+=( \( -clone 0 -resize $strResizeFinal \) )
-      #astrCmd+=( -crop  ${strResize}+10+10 )
+      #astrCmd+=( -crop  ${strScreenSize}+10+10 )
       astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
-      SECFUNCexecA -cE nice -n 19 "${astrCmd[@]}"
-      if $SECbExecVerboseEchoAllowed;then declare -p LINENO strOrigSize strResize strResizeFinal;fi
+      "${astrCmd[@]}"
+      if $SECbExecVerboseEchoAllowed;then declare -p LINENO strOrigSize strScreenSize strResizeFinal;fi
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     
@@ -377,7 +394,7 @@ if $bDaemon;then
       nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
       if $SECbExecVerboseEchoAllowed;then declare -p nAddR nAddG nAddB;fi
       
-      SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" \
+      FUNCconvert "${strTmpFilePreparing}" \
         -colorspace HSL \
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
@@ -388,13 +405,13 @@ if $bDaemon;then
     
     strFlipTxt=""
     if $bFlipKeep;then 
-      SECFUNCexecA -cE nice -n 19 convert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      FUNCconvert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
       strFlipTxt=",flip"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     strFlopTxt=""
     if $bFlopKeep;then
-      SECFUNCexecA -cE nice -n 19 convert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      FUNCconvert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
       strFlopTxt=",flop"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
@@ -410,7 +427,7 @@ if $bDaemon;then
       strTxt+="$strBNCurrent"
       
       # pseudo outline at 4 corners
-      SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
+      FUNCconvert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
         -fill green  -annotate +2+0 "$strTxt" \
         -fill blue   -annotate +0+0 "$strTxt" \
