@@ -65,7 +65,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
-	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams, and further passed to the X term
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
 			astrRemainingParams+=("$1")
@@ -83,9 +83,9 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-astrParms=( "${astrRemainingParams[@]}" )
-#~ if((`SECFUNCarraySize astrParms`==0));then
-  #~ astrParms+=(bash)
+astrXTermParms=( "${astrRemainingParams[@]}" )
+#~ if((`SECFUNCarraySize astrXTermParms`==0));then
+  #~ astrXTermParms+=(bash)
 #~ fi
 
 SECastrFullTermCmd=()
@@ -94,9 +94,9 @@ SECastrFullTermCmd=()
   #~ source <(secinit)
   
   #~ declare -p SECastrFullTermCmd
-  #~ echo "SECTERMrun: ${astrParms[@]}"
+  #~ echo "SECTERMrun: ${astrXTermParms[@]}"
   
-  #~ "${astrParms[@]}";nRet=$?
+  #~ "${astrXTermParms[@]}";nRet=$?
 
   #~ if((nRet!=0));then
     #~ declare -p nRet
@@ -112,15 +112,15 @@ if which mrxvt >/dev/null 2>&1;then
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  strConcatParms="${astrParms[@]-}"
+  strConcatParms="${astrXTermParms[@]-}"
   SECastrFullTermCmd+=(mrxvt -sl 1000 -aht +showmenu) #max -sl is 65535
   if [[ -n "$strConcatParms" ]];then
-    SECastrFullTermCmd+=(-title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrParms[@]}")
+    SECastrFullTermCmd+=(-title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrXTermParms[@]}")
   fi
   #SECastrFullTermCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" bash -c "FUNCrun238746478")
 else
   #SECastrFullTermCmd+=(xterm -e bash -c "FUNCrun238746478") # fallback
-  SECastrFullTermCmd+=(xterm "${astrParms[@]}-") # fallback
+  SECastrFullTermCmd+=(xterm "${astrXTermParms[@]}-") # fallback
 fi
 
 declare -p SECastrFullTermCmd # to be reused must be evaluated outside here or imported as source code

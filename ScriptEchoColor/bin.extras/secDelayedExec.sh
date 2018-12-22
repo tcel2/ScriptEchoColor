@@ -683,7 +683,7 @@ function FUNCrun(){
       #aCmdTerm=(xterm)
       #if which mrxvt >/dev/null 2>&1;then aCmdTerm=(mrxvt -aht +showmenu);fi # rxvt does not kill child proccesses when it is closed but mrxvt does!
       #SECFUNCexecA -ce "${aCmdTerm[@]}" -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
-      SECFUNCexecA -ce secTerm.sh -- -sl 1000 -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
+      SECFUNCexecA -ce secTerm.sh -- -title "$strTitle" ${astrXtermOpts[@]-} -e "${astrCmdToRun[@]}"
 		else
 #			declare -p astrRunParams
 			SECFUNCexecA -ce "${astrCmdToRun[@]}" #1>/dev/stdout 2>/dev/stderr
@@ -846,7 +846,19 @@ function FUNCrun(){
 				case $nRet in 
 					1)break;; #do not retry, end. The close button.
 					2)lbDevMode=true;; #retry in development mode (path)
-					3)xterm -maximized -e "secMaintenanceDaemon.sh --dump $$;SECFUNCdrawLine;echo 'astrRunParams: ${astrRunParams[@]}';SECFUNCdrawLine;bash";;
+					3)
+            function FUNCdump() {
+              source <(secinit)
+              SECFUNCexecA -ce secMaintenanceDaemon.sh --dump $$;
+              SECFUNCdrawLine;
+              declare -p astrRunParams
+              #echo 'astrRunParams: ${astrRunParams[@]}';
+              SECFUNCdrawLine;
+              bash
+            };export -f FUNCdump
+            SECFUNCarraysExport
+            secTerm.sh -- -m -e bash -c FUNCdump
+            ;;
 					4)lbDevMode=false;; #normal retry
 					5)lbRestartSelfFullDev=true;break;; #retry in development mode (path)
           6): ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"} #can be customized by the user

@@ -39,7 +39,8 @@ export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 CFGstrTest="Test"
 strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
-strTmpFile="$HOME/Pictures/Wallpapers/$strBaseTmpFileName"
+strWallPPath="$HOME/Pictures/Wallpapers/"
+strTmpFile="$strWallPPath/$strBaseTmpFileName"
 strPicURI="file://$strTmpFile"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
@@ -49,7 +50,7 @@ nChangeInterval=3600
 nChHueFastModeTimes=10
 nRandomHueInterval=$((nChangeInterval/nChHueFastModeTimes))
 strWallPPath="$HOME/Pictures/Wallpapers/"
-strFindRegex=".*[.]\(jpg\|png\)"
+strFindRegex=".*[.]\(jpg\|jpeg\|png\)"
 declare -p strFindRegex
 nChangeFast=5
 nChangeHue=7
@@ -172,15 +173,30 @@ if $bDaemon;then
   nSetIndex=-1
   nChosen=0
   bPlay=true
+  bDisableCurrent=false
+  bZoom=false
   : ${CFGstrCurrentFile:=""}
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
+    if $bDisableCurrent;then
+      if [[ -f "$CFGstrCurrentFile" ]];then
+        #SECFUNCexecA -ce mkdir -vp "$strWallPPath/.disabled/"
+        #SECFUNCexecA -ce mv -vf "$CFGstrCurrentFile" "$strWallPPath/.disabled/"
+        # to just hide is better, keeping at folders organized by user
+        SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "`dirname "$CFGstrCurrentFile"`/.`basename "$CFGstrCurrentFile"`" &&:
+      fi
+      bDisableCurrent=false
+      continue
+    fi
+    
     if [[ ! -f "$CFGstrCurrentFile" ]];then
       bChangeImage=true;
     fi
     
     if $bChangeImage;then
+      bZoom=false
+      
       if((nSetIndex>-1));then
         nChosen=$nSetIndex
       else
@@ -242,10 +258,12 @@ if $bDaemon;then
     strFixSzTxt=""
     strXbrz=""
     strOrigSzTxt="$strOrigSize"
+    bAllowZoom=false
+    strTxtZoom=""
     if [[ "$strOrigSize" != "$strResize" ]];then
-      #######
-      ## xBRZ
-      #######
+      ##########
+      ## xBRZ ##
+      ##########
       if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH;fi
 #      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
       if((nOrigW<nResW5p6 || nOrigH<nResH5p6)) && which xbrzscale >/dev/null;then
@@ -300,6 +318,17 @@ if $bDaemon;then
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
           FUNCprepGeomInfo "${strTmpFilePreparing}" # !!!!!!! WATCHOUT CHANGES ORIG VARS !!!!!!!!!!!!!!!!!!!!!
+        fi
+      fi
+      
+      if((nOrigW>nResW || nOrigH>nResH));then
+        bAllowZoom=true
+        if $bZoom;then
+          nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
+          nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
+          SECFUNCexecA -cE nice -n 19 convert -extent "${strResize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+          strTxtZoom=",ZOOM"
         fi
       fi
 
@@ -372,7 +401,14 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}(RGB:$nAddR,$nAddG,$nAddB),`basename "$CFGstrCurrentFile"`"
+      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}${strTxtZoom}(RGB:$nAddR,$nAddG,$nAddB)"
+      
+      # if filename is too big, trunc it
+      nColsLim=150 #TODO calc based on average font width and nResW with 15% error margin to less
+      strBNCurrent=",`basename "$CFGstrCurrentFile"`"
+      strBNCurrent="${strBNCurrent:0:$((150-${#strTxt}))}"
+      strTxt+="$strBNCurrent"
+      
       # pseudo outline at 4 corners
       SECFUNCexecA -cE nice -n 19 convert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
         -fill red    -annotate +0+2 "$strTxt" \
@@ -420,10 +456,12 @@ if $bDaemon;then
     bResetCounters=false;
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
+    strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom (is `SECFUNCternary $bZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
       "toggle _auto play mode to conserve CPU\n"
       "_change image now\n"
       "toggle _fast mode\n"
+      "_disable current\n"
       "fi_lter(@s@y$strFilter@S)\n"
       "toggle fl_ip\n"
       "toggle fl_op\n"
@@ -431,12 +469,18 @@ if $bDaemon;then
       "_set image index\n"
       "_verbose commands (to debug)\n"
       "fi_x wallpaper pic URI\n"
+      "$strOptZoom"
     )
     echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
       a)
         SECFUNCtoggleBoolean bPlay
         ;;
       c)
+        bChangeImage=true
+        bResetCounters=true
+        ;;
+      d)
+        bDisableCurrent=true;
         bChangeImage=true
         bResetCounters=true
         ;;
@@ -495,6 +539,9 @@ if $bDaemon;then
         ;;
       x)
         FUNCsetPicURI
+        ;;
+      z)
+        SECFUNCtoggleBoolean --show bZoom
         ;;
       *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
