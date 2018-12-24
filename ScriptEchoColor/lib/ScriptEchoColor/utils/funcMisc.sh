@@ -1114,6 +1114,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	#declare -p lastrAllCfgVars
 	
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
+    if [[ ! -f "$SECcfgFileName" ]];then echo -n >>"$SECcfgFileName";fi
     SECFUNCfileLock "$SECcfgFileName"
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
 			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVar
@@ -1159,6 +1160,99 @@ function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon e
 	SECFUNCexecOnSubShell 'source <(secinit --ilog --fast);_SECFUNCdaemonCheckHold_SubShell;' #--ilog to prevent creation of many temporary, and hard to track, log files.
 	
 	SECFUNCdbgFuncOutA;
+}
+
+function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child process waiting for other UNIQUE process match regex
+	SECFUNCdbgFuncInA;
+
+  local lstrMatchRegex="$1";shift
+
+	# var init here
+	local lstrExample="DefaultValue"
+  local lbExample=false
+	local lastrRemainingParams=()
+  local lnTimeout=10
+  local lnPercRelat=0
+	local lastrAllParams=("${@-}") # this may be useful
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCCcpulimit_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--timeout" || "$1" == "-t" ]];then #SECFUNCCcpulimit_help <lnTimeout>
+			shift;lnTimeout="$1"
+    elif [[ "$1" == "-l" || "$1" == "--limit" ]];then #SECFUNCCcpulimit_help use a percentage RELATIVE to the max processing power
+			shift;lnPercRelat="$1"
+		elif [[ "$1" == "--" ]];then #SECFUNCCcpulimit_help params after this are ignored as being these options, and stored at lastrRemainingParams. Will be used as cpulimit params.
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift&&: #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+
+  if((lnPercRelat>0));then
+    local lnCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
+    lastrRemainingParams+=(-l $((lnPercRelat*lnCPUs)))
+  fi
+	
+	#validate params here
+	if pgrep -f "$lstrMatchRegex" >/dev/null;then
+    SECFUNCechoErrA "this must be run before '$lstrMatchRegex' for uniqueness consistency."
+    exit 1 #TODO capture it how?
+  fi
+  
+	# code here
+  (
+    local lnStart=$SECONDS
+    local lnPid
+    while true;do 
+      if lnPid=`pgrep -f "$lstrMatchRegex"`;then
+        if((`echo "$lnPid" |wc -l`!=1));then
+          SECFUNCechoErrA "match '$lstrMatchRegex' must be unique!"
+          exit 1 #TODO capture it how?
+        fi
+        break
+      fi
+      echo "$FUNCNAME: `date` waiting '$lstrMatchRegex' to start..." >&2
+      sleep 0.25;
+      if(( (SECONDS-lnStart) > lnTimeout));then
+        exit 0 # timedout
+      fi
+    done;
+    if ! SECFUNCexecA -ce cpulimit "${lastrRemainingParams[@]}" -p $lnPid;then
+      SECFUNCechoWarnA "failed to start cpulimit"
+    fi
+  )&
+	
+	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
+}
+
+function SECFUNCtrash() { #help verbose but let only error/warn messages that are not too repetitive
+  #TODO how to fix the "unsecure...sticky" condition? it should explain why it is unsecure so we would know what to fix...
+  SECFUNCexecA -ce trash -v "$@" 2>&1 \
+    |egrep -v "trash: found unsecure [.]Trash dir \(should be sticky\):" \
+    |egrep -v "found unusable [.]Trash dir" \
+    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 13\] Permission denied:" \
+    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 2\] No such file or directory:" \
+    >&2
+}
+
+function SECFUNCfileSuffix() { #help <file> extracts the file suffix w/o '.'
+  local lstrFile="$1"
+  if [[ "$lstrFile" =~ .*[.].* ]];then
+    echo -n "$lstrFile" |sed -r "s'.*[.]([^.]*)$'\1'"
+  fi
+  return 0
 }
 
 function SECFUNCfileSleepDelay() { #help <file> show how long (in seconds) a file is not active (has not been updated or touch)
