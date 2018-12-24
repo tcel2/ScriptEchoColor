@@ -28,7 +28,7 @@ source <(secinit)
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
-bExample=false
+bContinue=false
 CFGstrTest="Test"
 : ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"}
 astrRemainingParams=()
@@ -37,7 +37,7 @@ SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t#[strFile] video to work with"
+		SECFUNCshowHelp --colorize "\t#[strFileAbs] video to work with"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
@@ -45,8 +45,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		shift
 		strExample="${1-}"
-	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
-		bExample=true
+	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help resume last work if any
+		bContinue=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -70,20 +70,34 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-# if a daemon or to prevent simultaneously running it: SECFUNCuniqueLock --waitbecomedaemon
+SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
-strFile="$1"; #help
-
-if [[ "${strFile:0:1}" == "/" ]];then
-  strOrigPath="`dirname "$strFile"`"
+if $bContinue;then
+  strFileAbs="$CFGstrFile"
+  strOrigPath="$CFGstrOrigPath"
 else
-  strOrigPath="`pwd`/`dirname "$strFile"`"
+  strFileAbs="$1"; #help
+  if [[ "${strFileAbs:0:1}" == "/" ]];then
+    strOrigPath="`dirname "$strFileAbs"`"
+  else
+    strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
+  fi
 fi
 
-nDurationMillis="`mediainfo -f "$strFile" |egrep "Duration.*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"`"
+if [[ ! -f "$strFileAbs" ]];then
+  echoc -p "missing strFileAbs='$strFileAbs'"
+  exit 1
+fi
+
+if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
+  echoc --info "Already HEVC format."
+  exit 0
+fi
+
+nDurationMillis="`mediainfo -f "$strFileAbs" |egrep "Duration.*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"`"
 nDurationSeconds=$((nDurationMillis/1000))
 
-nFileSz="`stat -c "%s" "$strFile"`";
+nFileSz="`stat -c "%s" "$strFileAbs"`";
 n1MB=1000000 #TODO 1024*1024
 : ${nMinMB:=1} #help
 nMinPartSz=$((nMinMB*n1MB))
@@ -98,16 +112,36 @@ nPartSeconds=$((nDurationSeconds/nParts));
 
 declare -p nDurationMillis nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
 
-strFileBN="`basename "$strFile" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
+strFileBN="`basename "$strFileAbs"`"
+strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
 
-strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
-strFileNoSuf="${strTmpWorkPath}/${strFileBN%.$strSuffix}"
+strSuffix="`SECFUNCfileSuffix "$strFileHash"`"
+strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
+
+strNewFormatSuffix="x265-HEVC"
+strFinalFileBN="${strFileBN}.${strNewFormatSuffix}.mp4"
+
+function FUNCmiOrigNew() {
+  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+  return 0
+}
+
+if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
+  FUNCmiOrigNew
+#  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
+  ls -l "$strFinalFileBN" "$strFileAbs"
+  echoc --info "already converted!"
+  exit 0
+fi
+
+CFGstrFile="$strFileAbs"     ;SECFUNCcfgWriteVar CFGstrFile
+CFGstrOrigPath="$strOrigPath";SECFUNCcfgWriteVar CFGstrOrigPath
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
 if [[ ! -f "${strFileNoSuf}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
-  SECFUNCexecA -ce avconv -i "$strFile" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileNoSuf}."%05d".mp4"
+  SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileNoSuf}."%05d".mp4"
 fi
 
 SECFUNCexecA -ce ls -l "${strFileNoSuf}."* #|sort -n
@@ -118,7 +152,6 @@ declare -p astrFilePartList |tr "[" "\n" >&2
 #nCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
 
 astrFilePartNewList=()
-strNewFormatSuffix="x265-HEVC"
 echoc --info "Converting" >&2
 for strFilePart in "${astrFilePartList[@]}";do
   strFilePartNS="${strFilePart%.mp4}"
@@ -136,7 +169,7 @@ for strFilePart in "${astrFilePartList[@]}";do
   
   if [[ ! -f "$strFilePartNew" ]];then
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
-    : ${nCPUPerc:=25} #help overall CPUs percentage
+    : ${nCPUPerc:=50} #help overall CPUs percentage
     SECFUNCCcpulimit "avconv" -l $nCPUPerc
     if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
@@ -165,12 +198,12 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   done
   SECFUNCexecA -ce cat "$strFileJoin"
 
-  strFinalFile="${strFileNoSuf}.${strNewFormatSuffix}.mp4"
   strFinalTmp="${strFileNoSuf}.${strNewFormatSuffix}-TMP.mp4"
   SECFUNCtrash "$strFinalTmp"&&:
   if SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
-    SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFile"
-    SECFUNCexecA -ce mv -vf "$strFinalFile" "${strOrigPath}/"
+    SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
+    SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
+    FUNCmiOrigNew
   fi
 )
 
