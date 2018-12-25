@@ -124,7 +124,7 @@ function FUNCconv() {
   fi
 };export -f FUNCconv
 
-: ${strRegexTypes:="jpg\|jpeg\|png\|bmp"} #help
+: ${strRegexTypes:="jpg\|jpeg\|png"} #help
 find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)" -exec bash -c "FUNCconv '{}'" \; &&:
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
