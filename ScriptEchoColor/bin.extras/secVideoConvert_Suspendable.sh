@@ -202,6 +202,8 @@ for strFilePart in "${astrFilePartList[@]}";do
     fi
   fi
   
+  echo ">>> DONE: $strFilePartNew" >&2
+  
   astrFilePartNewList+=( "`basename "$strFilePartNew"`" )
 done
 declare -p astrFilePartNewList |tr "[" "\n" >&2
