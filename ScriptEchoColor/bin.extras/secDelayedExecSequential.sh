@@ -213,9 +213,11 @@ if $bRunAll || [[ -n "$strFilter" ]];then
     echo "Cmd${iCount}/${#astrCmdListOrdered[@]}: $strCmd"
     if [[ -n "$strFilter" ]] && ! [[ "$strCmd" =~ $strFilter ]];then echo skip;continue;fi
     
-    while ! FUNCchkCanRunNext;do
-      echoc -w -t 1 "wait cpu free up a bit"
-    done # check cpu
+    if [[ -z "$strFilter" ]];then # using the filter will not wait for iddle enough cpu
+      while ! FUNCchkCanRunNext;do
+        echoc -w -t 1 "wait cpu free up a bit"
+      done # check cpu
+    fi
     
     if ! strDtTm="`SECFUNCdtFmt --filename`";then #TODO can this problem actually ever happen if the OS and hardware are all OK?
       strDtTm="_BUG_CANT_GET_DATETIME_"

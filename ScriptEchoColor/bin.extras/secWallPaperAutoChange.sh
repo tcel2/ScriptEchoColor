@@ -211,7 +211,7 @@ if $bDaemon;then
     fi
     
     if $bChangeImage;then
-      bZoom=false
+      #~ bZoom=false
       
       if((nSetIndex>-1));then
         nChosen=$nSetIndex
@@ -278,6 +278,10 @@ if $bDaemon;then
     bAllowZoom=false
     strTxtZoom=""
     if [[ "$strOrigSize" != "$strScreenSize" ]];then
+      if((nOrigW>nResW || nOrigH>nResH));then # b4 xbrz for quality zoom
+        bAllowZoom=true
+      fi
+      
       ##########
       ## xBRZ ##
       ##########
@@ -338,11 +342,12 @@ if $bDaemon;then
         fi
       fi
       
-      if((nOrigW>nResW || nOrigH>nResH));then
-        bAllowZoom=true
+      if $bAllowZoom;then
         if $bZoom;then
-          nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
-          nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
+          nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( RANDOM%(nOrigW-nResW) ));fi
+          nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  RANDOM%(nOrigH-nResH) ));fi
+          #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
+          #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
           FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           strTxtZoom=",ZOOM"

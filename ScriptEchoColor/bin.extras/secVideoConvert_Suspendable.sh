@@ -30,7 +30,6 @@ export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bContinue=false
 CFGstrTest="Test"
-: ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"}
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
@@ -73,15 +72,24 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
 if $bContinue;then
-  strFileAbs="$CFGstrFile"
+  strFileAbs="$CFGstrFileAbs"
   strOrigPath="$CFGstrOrigPath"
+  strTmpWorkPath="$CFGstrTmpWorkPath"
+  
+  echoc --info "Continue:"
+  declare -p strFileAbs strOrigPath strTmpWorkPath
 else
-  strFileAbs="$1"; #help
-  if [[ "${strFileAbs:0:1}" == "/" ]];then
-    strOrigPath="`dirname "$strFileAbs"`"
-  else
-    strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
-  fi
+  strFileAbs="$1";
+  #~ if [[ "${strFileAbs:0:1}" == "/" ]];then
+    #~ strOrigPath="`dirname "$strFileAbs"`"
+  #~ else
+    #~ strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
+    #~ strFileAbs="`pwd`/${strFileAbs}"
+  #~ fi
+  strFileAbs="`realpath "${strFileAbs}"`"
+  strOrigPath="`dirname "$strFileAbs"`"
+#  : ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"} #help
+  : ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
 fi
 
 if [[ ! -f "$strFileAbs" ]];then
@@ -147,8 +155,9 @@ if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
   exit 0
 fi
 
-CFGstrFile="$strFileAbs"     ;SECFUNCcfgWriteVar CFGstrFile
-CFGstrOrigPath="$strOrigPath";SECFUNCcfgWriteVar CFGstrOrigPath
+CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
+CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
+CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
