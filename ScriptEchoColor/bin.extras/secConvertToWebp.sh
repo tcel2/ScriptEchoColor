@@ -57,7 +57,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift;strExample="${1-}"
 	elif [[ "$1" == "-d" || "$1" == "--dryrun" ]];then #help only shows what would be done
 		bDryRun=true
-	elif [[ "$1" == "-t" || "$1" == "--trash" ]];then #help trash already converted old files
+	elif [[ "$1" == "-t" || "$1" == "--trash" ]];then #help trash already converted old files (use this on the 2nd run after confirming all is ok)
 		bTrash=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
@@ -93,28 +93,38 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 ###
 
 function FUNCconv() {
+  source <(secinit --fast)
+  
 	local lstrFile="$1"
 	local lstrQual="`echo "$fQuality" |tr '.' '_'`"
   strExt="`SECFUNCfileSuffix "$lstrFile"`"
 	lstrFileWebp="${lstrFile%.$strExt}-q${lstrQual}.webp"
 	if [[ ! -f "$lstrFileWebp" ]];then
 		echo
-		echo ">>> working with $lstrFile <-> $lstrFileWebp"
+		SECFUNCdrawLine --left ">>> working with $lstrFile <-> $lstrFileWebp "
     if ! $bDryRun;then
       SECFUNCCcpulimit "cwebp" -l 50
-      nice -n 19 cwebp -q $fQuality "$lstrFile" -o "$lstrFileWebp"
-      ls -l "$lstrFile" "$lstrFileWebp"
+      strTmpFl="${lstrFileWebp}.${SECstrScriptSelfName}-TMP"
+      if SECFUNCexecA -ce nice -n 19 cwebp -q $fQuality "$lstrFile" -o "$strTmpFl";then
+        if SECFUNCexecA -ce mv -vf "$strTmpFl" "${lstrFileWebp}";then
+          ls -l "$lstrFile" "$lstrFileWebp"
+        fi
+      fi
     fi
 	else
 		echo ">>> found $lstrFileWebp"
 	fi
   
-  if $bTrash;then
-    SECFUNCtrash "$lstrFile"
+	if [[ -f "$lstrFileWebp" ]] && ((`stat -c %s "$lstrFileWebp"`>0));then
+    if $bTrash;then
+      if ! $bDryRun;then
+        SECFUNCtrash "$lstrFile"
+      fi
+    fi
   fi
 };export -f FUNCconv
 
-: ${strRegexTypes:="jpg\|jpeg\|png\|bmp\|gif"} #help
-find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)" -exec bash -c "FUNCconv '{}'" \;
+: ${strRegexTypes:="jpg\|jpeg\|png\|bmp"} #help
+find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)" -exec bash -c "FUNCconv '{}'" \; &&:
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
