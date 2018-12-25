@@ -132,7 +132,7 @@ strFinalFileBN="${strFileBN}.${strNewFormatSuffix}.mp4"
 function FUNCmiOrigNew() {
   SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
   if echoc -t 60 -q "play the new file?";then
-    SECFUNCexecA -ce smplayer "$strFinalFileBN"&&:
+    SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
   fi
   FUNCtrashTmpOld
   return 0
@@ -150,7 +150,7 @@ function FUNCtrashTmpOld() {
 if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
   FUNCmiOrigNew
 #  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
-  ls -l "$strFinalFileBN" "$strFileAbs" &&:
+  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
   echoc --info "already converted!"
   exit 0
 fi
