@@ -175,6 +175,7 @@ declare -p astrFilePartList |tr "[" "\n" >&2
 
 astrFilePartNewList=()
 echoc --info "Converting" >&2
+nCount=0
 for strFilePart in "${astrFilePartList[@]}";do
   strFilePartNS="${strFilePart%.mp4}"
   strPartTmp="${strFileNoSuf}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
@@ -193,6 +194,7 @@ for strFilePart in "${astrFilePartList[@]}";do
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
     : ${nCPUPerc:=50} #help overall CPUs percentage
     SECFUNCCcpulimit "avconv" -l $nCPUPerc
+    echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
     if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
       #SECFUNCtrash "$strFilePart"
@@ -203,6 +205,8 @@ for strFilePart in "${astrFilePartList[@]}";do
   fi
   
   echo ">>> DONE: $strFilePartNew" >&2
+  
+  ((nCount++))&&:
   
   astrFilePartNewList+=( "`basename "$strFilePartNew"`" )
 done

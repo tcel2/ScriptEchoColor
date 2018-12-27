@@ -2441,9 +2441,12 @@ function SECFUNCcheckActivateRunLog() { #help
         ### exec > >(tee -a "$SECstrRunLogFile")
         #######
         "${lastrLogCmd[@]}" "$SECstrRunLogFile"&
-        exec >"$SECstrRunLogFile"
-				exec 2>&1
-#        echo $LINENO
+        
+        #################
+				### IMPORTANT!!! this would make stdout unusable when capturing it: exec 2>&1 
+        ##########
+        exec 2>"$SECstrRunLogFile" # actually only dbg/warn/error messages really need to be logged
+        #exec >"$SECstrRunLogFile"
 				
 				# waits log cmd to properly start...
 				while ! SECnRunLogTeePid="`pgrep -fx "${lastrLogCmd[*]} $SECstrRunLogFile"`";do 

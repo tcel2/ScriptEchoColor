@@ -33,6 +33,7 @@ if [[ -z "$CFGstrFileExecutable" ]];then
   SECFUNCechoErrA "not set: CFGstrFileExecutable='$CFGstrFileExecutable'"
   exit 1
 fi
+declare -p CFGstrFileExecutable
 
 function GAMEFUNCchkWinePrefix() {
 	if ${WINEPREFIX+false};then
@@ -189,6 +190,7 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 		shift
 	done
 	local lstrQuickSaveFullPathNameAndExt="${1-}"
+  declare -p lstrQuickSaveFullPathNameAndExt
 	
 	local lstrPathSavegames="`dirname "$lstrQuickSaveFullPathNameAndExt"`"
 	local lstrQuickSaveNameAndExt="`basename "$lstrQuickSaveFullPathNameAndExt"`"
@@ -397,7 +399,7 @@ function FUNCdaemonize(){ #obrigatory params: "$@"; makes the script command a d
 };export -f FUNCdaemonize
 
 function FUNCcheckIfThisScriptCmdIsRunning() { #~DEPRECATED (function name only)
-	local lstrId="`basename ${0}` ${@}"
+	local lstrId="`basename "$0"` ${@}"
 	while SECFUNCuniqueLock --id "$lstrId" --isdaemonrunning;do
 		echoc -pw -t 60 "script '$lstrId' already running, waiting other exit"
 	done

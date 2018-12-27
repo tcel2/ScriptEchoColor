@@ -22,7 +22,10 @@
 # Homepage: http://scriptechocolor.sourceforge.net/
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
-echoc -Rc 
+
+################# this sector also detects if will run this script updated from DEV folder #################################
+############# DO NOT USE SEC FUNCTIONS ON THIS SECTOR ! (TODO: explain why) ###################################
+echoc -Rc >&2
 
 strBN="`basename "$0"`"
 
@@ -48,16 +51,17 @@ fi
 
 if ! $bAlreadyDev;then
   strDevExec="$strSECDEVPath/bin.extras/$strBN"
-  if ! cmp $0 "$strDevExec";then
+  if ! cmp $0 "$strDevExec" >&2;then
     echo "'$strBN' is different at dev path '$strDevExec', running dev one" >&2
     "$strDevExec" "$@"
     exit 0;
   fi
 fi
-
 ################################################ above can run the updated dev script ################################################
 
-source <(secinit)
+source <(secinit --force) # SEC features from here
+
+SECFUNCexecA -ce ls -l /proc/$$/fd/ >&2
 
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
@@ -140,6 +144,11 @@ if [[ -n "${astrSECDEVCmds[@]-}" ]];then
   fi
 fi
 
+
+##############################
+### Preparing RC file      ###
+##############################
+
 strRCFileTmp="`mktemp`"
 declare -p strRCFileTmp >&2
 echo "# temp bash rc file from $0" >>"$strRCFileTmp"
@@ -150,24 +159,28 @@ fi
 
 cmdSecInit="source <(secinit --force --extras);"
 if $bAlreadyDev;then
+  echo "##################### Already in DEV mode ###################################" >>"$strRCFileTmp"
   echo "${cmdSecInit}" >>"$strRCFileTmp"
 else
+  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
+  cat "$HOME/.bashrc" >>"$strRCFileTmp"
+  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
+  echo >>"$strRCFileTmp"
+  
+  echo "########################################################" >>"$strRCFileTmp"
+  echo "#ScriptEchoColor development specifics" >>"$strRCFileTmp"
+  echo >>"$strRCFileTmp"
+  
   strPATHtmp=""
   strPATHtmp+="$strSECDEVPath/bin:"
   strPATHtmp+="$strSECDEVPath/bin.extras:"
   strPATHtmp+="$strSECDEVPath/bin.examples:"
   strPATHtmp+="$PATH"
-
-  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
-  cat "$HOME/.bashrc" >>"$strRCFileTmp"
-  #echo 'echo -n "LINENO=$LINENO."' >>"$strRCFileTmp"
-  echo >>"$strRCFileTmp"
-  echo "########################################################" >>"$strRCFileTmp"
-  echo "#ScriptEchoColor development specifics" >>"$strRCFileTmp"
-  echo >>"$strRCFileTmp"
   echo "export PATH='$strPATHtmp';" >>"$strRCFileTmp"
   echo >>"$strRCFileTmp"
+  
   echo "${cmdSecInit}" >>"$strRCFileTmp"
+  echo "SECFUNCfdReport >&2" >>"$strRCFileTmp"
   
   echo "source \"$strSECDEVPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh\"" >>"$strRCFileTmp"
 
@@ -228,7 +241,7 @@ fi
 
 if [[ -n "${astrSECDEVCmds[@]-}" ]];then
   echo >>"$strRCFileTmp"
-  echo "`declare -p astrSECDEVCmds`;" >>"$strRCFileTmp"
+  echo "`declare -p astrSECDEVCmds`; #applies the array" >>"$strRCFileTmp"
   echo '"${astrSECDEVCmds[@]}"&&:' >>"$strRCFileTmp"
   if $bExitAfterCmd;then
     echo 'exit $?;' >>"$strRCFileTmp"
@@ -237,8 +250,14 @@ fi
 
 echo "################ END OF $0 auto rc file ################" >>"$strRCFileTmp"
 
+##############################
+### RC file prepared above ###
+##############################
+
+
 SECFUNCexecA -ce ls -l "$strRCFileTmp" >&2
 SECFUNCexecA -ce cat "$strRCFileTmp" >&2
+SECFUNCexecA -ce ls -l /proc/$$/fd/ >&2
 #type FUNCrunAtom&&:
 #yad --info --text "$0:$LINENO"
 SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available

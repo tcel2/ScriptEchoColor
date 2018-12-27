@@ -102,11 +102,16 @@ function FUNCconv() {
 	if [[ ! -f "$lstrFileWebp" ]];then
 		echo
 		SECFUNCdrawLine --left ">>> working with $lstrFile <-> $lstrFileWebp "
+#    strTmpFl="${lstrFileWebp}.${SECstrScriptSelfName}-TMP"
+    strTmpFl=".${SECstrScriptSelfName}-TMP.webp"
+    astrCmd=(nice -n 19 cwebp -q $fQuality "$lstrFile" -o "$strTmpFl")
+    astrCmdMv=(mv -vf "$strTmpFl" "${lstrFileWebp}")
+    echo "CMD: ${astrCmd[@]}" >&2
+    echo "CMDMV: ${astrCmdMv[@]}" >&2
     if ! $bDryRun;then
       SECFUNCCcpulimit "cwebp" -l 50
-      strTmpFl="${lstrFileWebp}.${SECstrScriptSelfName}-TMP"
-      if SECFUNCexecA -ce nice -n 19 cwebp -q $fQuality "$lstrFile" -o "$strTmpFl";then
-        if SECFUNCexecA -ce mv -vf "$strTmpFl" "${lstrFileWebp}";then
+      if SECFUNCexecA -ce "${astrCmd[@]}";then
+        if SECFUNCexecA -ce "${astrCmdMv[@]}";then
           ls -l "$lstrFile" "$lstrFileWebp"
         fi
       fi

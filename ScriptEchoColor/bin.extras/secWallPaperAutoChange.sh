@@ -50,7 +50,7 @@ nChangeInterval=3600
 nChHueFastModeTimes=10
 nRandomHueInterval=$((nChangeInterval/nChHueFastModeTimes))
 strWallPPath="$HOME/Pictures/Wallpapers/"
-strFindRegex=".*[.]\(jpg\|jpeg\|png\)"
+strFindRegex=".*[.]\(jpg\|jpeg\|png\|webp\)"
 declare -p strFindRegex
 nChangeFast=5
 nChangeHue=7
