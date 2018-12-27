@@ -353,7 +353,13 @@ if $bDaemon;then
           strTxtZoom=",ZOOM"
         fi
       fi
-
+      
+      if [[ "$CFGstrCurrentFile" =~ .*[wW][eE][bB][pP]$ ]];then
+        FUNCconvert "${strTmpFilePreparing}" "${strTmpFilePreparing}.jpg"
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}.jpg" "${strTmpFilePreparing}2" #duhhh
+        SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+      fi
+      
       strResizeFinal="$strScreenSize"
       astrCmdFrame=()
       nBorder=10
