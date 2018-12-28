@@ -117,19 +117,49 @@ function FUNCconv() {
       fi
     fi
 	else
-		echo ">>> found $lstrFileWebp"
+		echo ">>> ($nCount/$nTotOld `bc <<< "scale=2;$nCount*100/$nTotOld"`%) found $lstrFileWebp"
 	fi
   
-	if [[ -f "$lstrFileWebp" ]] && ((`stat -c %s "$lstrFileWebp"`>0));then
-    if $bTrash;then
-      if ! $bDryRun;then
-        SECFUNCtrash "$lstrFile"
+  if $bTrash;then
+    if ! $bDryRun;then
+      if [[ -f "$lstrFileWebp" ]];then
+        if ((`stat -c %s "$lstrFileWebp"`>0));then #webp is theoretically good
+          SECFUNCtrash "$lstrFile"
+        else
+          SECFUNCechoErrA "webp file size is 0 lstrFileWebp='$lstrFileWebp'"
+        fi
       fi
     fi
   fi
 };export -f FUNCconv
 
 : ${strRegexTypes:="jpg\|jpeg\|png"} #help
-find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)" -exec bash -c "FUNCconv '{}'" \; &&:
+
+function FUNCstats() {
+  local lstrRgx="$1";shift
+  local lType="$1";shift
+  local nTotSz=0;
+  IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]\(${lstrRgx}\)" -exec stat -c %s '{}' \;)&&:;
+  for nSz in "${anList[@]}";do 
+    ((nTotSz+=nSz))&&:;
+    echo -n "." >&2;
+  done;echo >&2
+  echo "$lType: Tot=${#anList[*]}  nTotSz.MB=`bc <<< "scale=2;$nTotSz/(1024*1024)"`" >&2
+  echo ${#anList[*]}
+}
+export nTotOld="`FUNCstats "$strRegexTypes" "Old"`"
+
+#~ nTotSzNew=0;
+#~ IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]webp" -exec stat -c %s '{}' \;)&&:;
+#~ for nSz in "${anList[@]}";do ((nTotSzNew+=nSz))&&:;echo -n "." >&2;done;
+#~ echo "TotNew=${#anList[*]}  nTotSzNew.MB=`bc <<< "scale=2;$nTotSzNew/(1024*1024)"`"
+FUNCstats "webp" "New"
+
+IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)")&&:
+export nCount=0
+for strFile in "${astrFileList[@]}";do
+  FUNCconv "$strFile"
+  ((nCount++))&&:
+done
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
