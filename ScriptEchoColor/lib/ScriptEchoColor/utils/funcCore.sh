@@ -688,20 +688,26 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 ## 	return 1
 #}
 
-function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cleaning array elements. If lstrMatch is empty, will clean empty elements (default behavior)
+function SECFUNCarrayWork() { #help
 	# var init here
 	local lstrArrayId=""
-	local lstrMatch=""
+	local lstrParam1=""
+  local lbCleanMode=false
+  local lbPrependMode=false
 	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCarrayClean_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCarrayWork_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
-#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayClean_help <lstrExample> MISSING DESCRIPTION
+#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayWork_help <lstrExample> MISSING DESCRIPTION
 #			shift
 #			lstrExample="${1-}"
-		elif [[ "$1" == "--" ]];then #SECFUNCarrayClean_help params after this are ignored as being these options, and stored at lastrRemainingParams
+    elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help 
+      lbCleanMode=true
+    elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help 
+      lbPrependMode=true
+		elif [[ "$1" == "--" ]];then #SECFUNCarrayWork_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
@@ -719,15 +725,9 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 	done
 	
 	# code here
-	lstrArrayId="${1-}"
-	shift
-	lstrMatch="${1-}"
+	lstrArrayId="${1-}";shift
+	lstrParam1="${1-}";shift
 	
-#	if ! declare -p "$lstrArrayId" >>/dev/null;then
-#		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
-#		echo "0"
-#		return 1
-#	fi
 	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
 		echo "0"
@@ -739,45 +739,63 @@ function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cl
 	
 	#set -x
 	local lstrArrayAllElements="${lstrArrayId}[@]"
-	local lstrArrayCopyTmp=("${!lstrArrayAllElements}")
-	#local lstrArraySize="#${lstrArrayId}[@]"
-#	echo "TST: ${lstrArrayCopyTmp[@]}" >&2
-	#local lnSize="${!lstrArraySize}"
-	local lnIndex=0
-	for strTmp in "${lstrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
-#			echo "strTmp='$strTmp' $lnIndex" >&2
-#			declare -p "$lstrArrayId" >&2
-			
-		local lbUnset=false
-		if [[ -z "$lstrMatch" ]];then
-			if [[ -z "$strTmp" ]];then
-				lbUnset=true
-			fi
-		elif [[ "$strTmp" =~ $lstrMatch ]];then
-			lbUnset=true
-		fi
-		
-		if $lbUnset;then
-			#eval "unset $lstrArrayId[$lnIndex]"
-			unset lstrArrayCopyTmp[$lnIndex]
-#			declare -p "$lstrArrayId" >&2
-		fi
-		((lnIndex++))&&:
-	done
-	#set +x
+	local lastrArrayCopyTmp=("${!lstrArrayAllElements}")
+  
+  if $lbCleanMode;then
+    local lstrMatch="$lstrParam1"
+    local lnIndex=0
+    for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
+      local lbUnset=false
+      if [[ -z "$lstrMatch" ]];then
+        if [[ -z "$strTmp" ]];then
+          lbUnset=true
+        fi
+      elif [[ "$strTmp" =~ $lstrMatch ]];then
+        lbUnset=true
+      fi
+      
+      if $lbUnset;then
+        unset lastrArrayCopyTmp[$lnIndex]
+      fi
+      ((lnIndex++))&&:
+    done
+  elif $lbPrependMode;then
+    lastrArrayCopyTmp=("$lstrParam1" "${lastrArrayCopyTmp[@]}")
+  fi
 	
-	#declare -p lstrArrayCopyTmp >&2 #@@@R
-	if((${#lstrArrayCopyTmp[@]}==0));then
+	#declare -p lastrArrayCopyTmp >&2 #@@@R
+	if((${#lastrArrayCopyTmp[@]}==0));then
 		eval "$lstrArrayId"'=()'
 	else
 		# the remaining elements index values will be kept (ex.: 1 8 12 13 15), this fixed it
 		#eval "$lstrArrayId=(\"\${$lstrArrayId[@]-}\")"
-		eval "$lstrArrayId"'=("${lstrArrayCopyTmp[@]}")'
+		eval "$lstrArrayId"'=("${lastrArrayCopyTmp[@]}")'
 	#	eval "$lstrArrayId=(\"\${${!lstrArrayAllElements}}\")"
 	fi
 	
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
+
+function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cleaning array elements. If lstrMatch is empty, will clean empty elements (default behavior)
+  SECFUNCarrayWork --clean "$1" "$2"
+}
+
+function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
+  SECFUNCarrayWork --prepend "$1" "$2"
+}
+#~ function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
+	#~ lstrArrayId="${1-}";shift
+	#~ lstrValue="${1-}";shift
+  
+	#~ if ! SECFUNCarrayCheck "$lstrArrayId";then
+		#~ SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
+		#~ echo "0"
+		#~ return 1
+	#~ fi
+  
+  #~ return 0
+#~ }
+
 
 : ${SECstrBashSourceFiles:=}
 export SECstrBashSourceFiles

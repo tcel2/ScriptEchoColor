@@ -408,27 +408,33 @@ function FUNCcopy() {
 	SECFUNCdbgFuncOutA
 };export -f FUNCcopy
 
-
+sedCleanYadOutput="s'^TRUE[|](.*)[|]$'\1'" # sed cleans yad output to leave only one filename per line
 function FUNCzenitySelectFiles() {
 	local lstrTitle="$1"
 	shift
 	
-	local listSelected=`yad --list --checklist --column="" --column="$lstrTitle" "$@"`&&:
+  local lastrCmd=(yad --list --checklist --column="" --column="$lstrTitle" "$@")
+  declare -p lastrCmd >&2
+  echo "YAD-CMD: ${lastrCmd[@]}" >&2
+	local listSelected="`"${lastrCmd[@]}"`"&&:
 	
 	if [[ -n "$listSelected" ]];then
 		echoc --info "Selected files list:" >&2
 		echo "$listSelected" >&2
-		local alistSelected=(`echo "$listSelected" |sed -r "$sedEscapeQuotes" |sed -r "$sedEncloseLineOnQuotes" |sed -r "$sedTrSeparatorToQuotes"`)
-		echo "${alistSelected[@]}" >&2
-		echo "${alistSelected[@]}"
+#		local alistSelected=(`echo "$listSelected" |sed -r "$sedEscapeQuotes" |sed -r "$sedEncloseLineOnQuotes" |sed -r "$sedTrSeparatorToQuotes"`)
+    echo "$listSelected" |sed -r "$sedCleanYadOutput" 
+		#~ local lalistSelected;IFS=$'\n' read -d '' -r -a lalistSelected < <(echo "$listSelected" |sed -r "s'^TRUE[|](.*)[|]$'\1'")&&:
+    #~ declare -p lalistSelected >&2
+		#~ echo "${lalistSelected[@]}" >&2
+		#~ echo "${lalistSelected[@]}"
 	fi
 };export -f FUNCzenitySelectFiles
 function FUNCzenitySelectAndAddFiles() {
-	local lstrFilesToAdd="`FUNCzenitySelectFiles "file to add" "$@"`"
-	if [[ -n "$lstrFilesToAdd" ]];then
-		echoc --info "Adding requested files: $lstrFilesToAdd"
-		#echo "lstrFilesToAdd='$lstrFilesToAdd'" >&2
-		eval $0 --skipnautilus --addfiles $lstrFilesToAdd
+#	local lstrFilesToAdd="`FUNCzenitySelectFiles "file to add" "$@"`"
+	local lastrFilesToAdd=();IFS=$'\n' read -d '' -r -a lastrFilesToAdd < <(FUNCzenitySelectFiles "file to add" "$@")&&:
+	if [[ -n "${lastrFilesToAdd[@]-}" ]];then
+		echoc --info "Adding requested files: ${lastrFilesToAdd[@]}"
+		eval $0 --skipnautilus --addfiles "${lastrFilesToAdd[@]}"
 	else
 		echoc --info "no files selected"
 	fi
@@ -728,9 +734,10 @@ elif $bLsMissHist; then
 	done;
 	
 	if $bRmRBFfilesMode && ((${#aFileOnRBFbutNotOnReal[@]}>0));then
-		strRBFfilesToTrash=`FUNCzenitySelectFiles "file to remove" "${aFileOnRBFbutNotOnReal[@]}"`
+#		strRBFfilesToTrash=`FUNCzenitySelectFiles "file to remove" "${aFileOnRBFbutNotOnReal[@]}"`
+  	astrRBFfilesToTrash=();IFS=$'\n' read -d '' -r -a astrRBFfilesToTrash < <(FUNCzenitySelectFiles "file to remove" "${aFileOnRBFbutNotOnReal[@]}")&&:
 		echoc --info "Trashing RBF requested files."
-		if eval trash -v $strRBFfilesToTrash;then
+		if SECFUNCtrash "${astrRBFfilesToTrash[@]}";then
 			if echoc -q "recreate history file?";then
 				$0 --recreatehist
 			fi

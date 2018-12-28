@@ -58,7 +58,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 			shift&&: #will consume all remaining params
 		done
 	else
-		echoc -p "invalid option '$1'"
+		SECFUNCechoErrA "invalid option '$1'"
 		#"$SECstrScriptSelfName" --help
 		$0 --help #$0 considers ./, works best anyway..
 		exit 1
@@ -71,14 +71,24 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
+if ! SECFUNCarrayCheck CFGastrFileList;then
+  CFGastrFileList=()
+fi
+declare -p CFGastrFileList
+
 if $bContinue;then
   strFileAbs="$CFGstrFileAbs"
+  if [[ -z "$strFileAbs" ]];then
+    strFileAbs="${CFGastrFileList[0]-}"
+  fi
+  
   strOrigPath="$CFGstrOrigPath"
   strTmpWorkPath="$CFGstrTmpWorkPath"
   
   echoc --info "Continue:"
   declare -p strFileAbs strOrigPath strTmpWorkPath
 else
+  CFGastrFileList=("$@")
   strFileAbs="$1";
   #~ if [[ "${strFileAbs:0:1}" == "/" ]];then
     #~ strOrigPath="`dirname "$strFileAbs"`"
@@ -93,7 +103,7 @@ else
 fi
 
 if [[ ! -f "$strFileAbs" ]];then
-  echoc -p "missing strFileAbs='$strFileAbs'"
+  SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
   exit 1
 fi
 
@@ -110,7 +120,7 @@ n1MB=1000000 #TODO 1024*1024
 : ${nMinMB:=1} #help
 nMinPartSz=$((nMinMB*n1MB))
 if((nFileSz<nMinPartSz));then
-  echoc -p "file is too small for this feature"
+  SECFUNCechoErrA "file is too small for this feature"
   exit 1
 fi
 nParts=$((nFileSz/nMinPartSz))
@@ -158,6 +168,7 @@ fi
 CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
 CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
 CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
+SECFUNCcfgWriteVar CFGastrFileList
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
@@ -199,7 +210,7 @@ for strFilePart in "${astrFilePartList[@]}";do
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
       #SECFUNCtrash "$strFilePart"
     else
-      echoc -p "failed to prepare strFilePartNew='$strFilePartNew'"
+      SECFUNCechoErrA "failed to prepare strFilePartNew='$strFilePartNew'"
       exit 1
     fi
   fi
@@ -232,6 +243,19 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
     FUNCmiOrigNew
+    
+    # make it ready to continue on next run
+    if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then
+      SECFUNCechoErrA "CFGstrFileAbs='$CFGstrFileAbs' CFGastrFileList[0]='${CFGastrFileList[0]}' should be the same"
+      exit 1
+    fi
+    unset CFGastrFileList[0]; CFGastrFileList=( "${CFGastrFileList[@]}" ); SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+    CFGstrFileAbs="";SECFUNCcfgWriteVar CFGstrFileAbs
+    
+    #~ if((${#CFGastrFileList[*]}>0));then
+      #~ "$0" --continue #TODO recursive means more memory used :(, make it a child and wait it end?
+      #~ #TODO exit 0 # but wait the child(s) exit too!
+    #~ fi
   fi
 )
 

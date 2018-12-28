@@ -48,6 +48,7 @@ nFreeCpuPercToAllow=25
 strFilter=""
 bListOnly=false
 bRunAll=false
+#~ bDev=false
 #SECFUNCfdReport;SECFUNCrestoreDefaultOutputs;SECFUNCfdReport;strLogFile="`secDelayedExec.sh --getgloballogfile`";SECFUNCfdReport;declare -p strLogFile;exit 0
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -63,6 +64,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strExample="${1-}"
 	elif [[ "$1" == "-r" || "$1" == "--runall" ]];then #help use on startup
     bRunAll=true
+	#~ elif [[ "$1" == "--dev" ]];then #help use development environment
+    #~ bDev=true
 	elif [[ "$1" == "-f" || "$1" == "--filter" ]];then #help <strFilter> do the work only if entry matches regex filter
     shift
 		strFilter="${1-}"
