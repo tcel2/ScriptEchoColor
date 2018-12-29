@@ -92,6 +92,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # 10.0 #documents lets read hard/light things too
 ###
 
+astrFileFailList=()
 function FUNCconv() {
   #source <(secinit --fast)
   
@@ -114,6 +115,8 @@ function FUNCconv() {
         if SECFUNCexecA -ce "${astrCmdMv[@]}";then
           ls -l "$lstrFile" "$lstrFileWebp"
         fi
+      else
+        astrFileFailList+=("$lstrFile")
       fi
     fi
 	else
@@ -161,5 +164,8 @@ for strFile in "${astrFileList[@]}";do
   FUNCconv "$strFile"
   ((nCount++))&&:
 done
+
+declare -p astrFileFailList
+for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";done
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
