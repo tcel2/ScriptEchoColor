@@ -166,6 +166,9 @@ for strFile in "${astrFileList[@]}";do
 done
 
 declare -p astrFileFailList
-for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";done
+if((${#astrFileFailList[*]}>0));then
+  for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";hexdump -C -n 48 "$strFileFail";done
+  for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";done
+fi
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
