@@ -149,10 +149,12 @@ function FUNCmiOrigNew() {
 }
 
 function FUNCtrashTmpOld() {
-  SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
+  SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
+  SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
   if echoc -t 60 -q "trash tmp and old files?";then
     SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
     SECFUNCtrash "$strFileAbs"&&:
+    SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
   fi
   
   echoc -w -t 60
