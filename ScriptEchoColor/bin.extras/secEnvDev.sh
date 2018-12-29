@@ -27,6 +27,8 @@
 ############# DO NOT USE SEC FUNCTIONS ON THIS SECTOR ! (TODO: explain why) ###################################
 echoc -Rc >&2
 
+ls -l /proc/$$/fd/ >&2
+
 strBN="`basename "$0"`"
 
 strCfg="$HOME/.$strBN.cfg"

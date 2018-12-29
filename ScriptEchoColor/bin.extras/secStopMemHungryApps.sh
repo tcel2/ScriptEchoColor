@@ -45,7 +45,7 @@ CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 
-astrRegexIgnorePgrepBase=(Xorg compiz metacity xfwm4 kwin mutter dbus) # all window managers at least and a few other important things
+astrRegexIgnorePgrepBase=(Xorg compiz metacity xfwm4 kwin mutter dbus ibus) # all window managers at least and a few other important things
 CFGastrRegexIgnorePgrep=()
 strFifoFl="`SECFUNCcreateFIFO`"
 : ${nMemLimKB:=500000} #help
