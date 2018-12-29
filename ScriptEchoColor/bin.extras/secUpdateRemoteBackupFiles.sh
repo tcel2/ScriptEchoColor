@@ -121,6 +121,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		exit 0
 	elif [[ "$1" == "--daemon" ]]; then #help runs automatically forever
 		bDaemon=true
+declare -p bDaemon LINENO
 		#bLookForChanges=true
 	elif [[ "$1" == "--compress" || "$1" == "-c" ]]; then #help will backup a compressed file instead
 		bCompress=true
@@ -203,7 +204,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 	
 	shift
 done
+declare -p bDaemon LINENO
 SECFUNCvarReadDB #;SECFUNCexecA -ce cat $SECvarFile
+declare -p bDaemon LINENO
 
 varset --default bNextRunShowFullLog=false
 
@@ -586,6 +589,7 @@ function FUNCcheckUpdateAllCompressedFiles() {
 
 ################### MAIN CODES ######################################
 
+declare -p bDaemon LINENO
 if $bDaemon;then
 	SECFUNCuniqueLock --daemonwait
 	#secDaemonsControl.sh --register

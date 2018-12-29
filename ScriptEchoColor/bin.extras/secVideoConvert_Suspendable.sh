@@ -154,6 +154,8 @@ function FUNCtrashTmpOld() {
     SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
     SECFUNCtrash "$strFileAbs"&&:
   fi
+  
+  echoc -w -t 60
   return 0
 }
 
@@ -258,5 +260,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
     #~ fi
   fi
 )
+
+echoc -w -t 60
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting

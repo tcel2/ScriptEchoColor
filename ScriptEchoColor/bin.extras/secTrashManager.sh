@@ -293,6 +293,7 @@ while true;do
 				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
 				#####
         while true;do
+          astrFileTIList=()
 #          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"' |sort -u`)&&:
           astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sort -u`)&&:
           bAllOk=true
@@ -304,6 +305,8 @@ while true;do
               else
                 SECFUNCdrawLine " $strPHexa "
                 pwd
+                IFS=$'\n' read -d '' -r -a astrFileTIListPart < <(egrep "$strPHexa" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
+                astrFileTIList+=( "${astrFileTIListPart[@]}" )
                 egrep "$strPHexa" ../info/*.trashinfo
                 bAllOk=false
               fi;
@@ -313,11 +316,21 @@ while true;do
           if $bAllOk;then 
             break;
           else
+            declare -p astrFileTIList
             #egrep "%.." ../info/*.trashinfo
-            while ! echoc -t 600 -q "there are files with invalid names on the trash! they have to be cleaned manually for now @s@g:@r(@S, retry?";do #TODO inodes?
+            while ! echoc -t 600 -q "there are files with non supported names (by this script) on the trash! they have to be cleaned manually for now @s@g:@r(@S, try to remove them all now and retry normal work?";do #TODO inodes?
               echoc --alert --say "invalid trash file names"
             done
-            
+            #sedUrlDecoder='s % \\\\x g'
+            #IFS=$'\n' read -d '' -r -a astrList < <(egrep "%EF" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
+            declare -p astrFileTIList
+            for strFileWeirdoTI in "${astrFileTIList[@]}";do 
+              declare -p strFileWeirdoTI
+              strFileWeirdo="`basename "${strFileWeirdoTI%.trashinfo}"`"
+              if SECFUNCexecA -ce ls -l "$strFileWeirdo" "$strFileWeirdoTI";then
+                SECFUNCexecA -ce rm -vf "$strFileWeirdo" "$strFileWeirdoTI"
+              fi
+            done
           fi
         done
         
