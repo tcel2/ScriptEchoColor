@@ -756,8 +756,9 @@ function FUNCrun(){
     
     strRetryFull="RetrySelfFull-DEV"
 		if $bStay || $bStayForce || $lbErr;then
-      astrEditDevSrcFileCmd=(secEnvDev.sh --exit which "${astrRunParams[0]}");declare -p astrEditDevSrcFileCmd >&2;
-      strDevSrcFile="`${astrEditDevSrcFileCmd[@]} 2>/dev/null`";declare -p strDevSrcFile >&2;
+      astrEditDevSrcFileCmd=(secEnvDev.sh --devpath which "${astrRunParams[0]}");declare -p astrEditDevSrcFileCmd >&2;
+#      strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}" 2>/dev/null`";declare -p strDevSrcFile >&2;
+      strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}"`";declare -p strDevSrcFile >&2;
       
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
