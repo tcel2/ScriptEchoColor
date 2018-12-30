@@ -1302,15 +1302,15 @@ function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIP
 	local lastrAllParams=("${@-}") # this may be useful
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
+		if [[ "$1" == "--help" ]];then #SECFUNCcreateFIFO_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCcreateFIFO_help <lstrExample> MISSING DESCRIPTION
 			shift
 			lstrExample="${1-}"
-    elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
+    elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #SECFUNCcreateFIFO_help MISSING DESCRIPTION
       lbExample=true
-		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+		elif [[ "$1" == "--" ]];then #SECFUNCcreateFIFO_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
@@ -1350,30 +1350,70 @@ function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIP
 }
 
 function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the commands can be many params
+	SECFUNCdbgFuncInA;
+	# var init here
+	local lstrExample="DefaultValue"
+  local lbOnOff=false
+	local lastrRemainingParams=()
+	local lastrAllParams=("${@-}") # this may be useful
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		if [[ "$1" == "--help" ]];then #SECFUNCternary_help show this help
+			SECFUNCshowHelp $FUNCNAME
+			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCternary_help <lstrExample> MISSING DESCRIPTION
+			shift;lstrExample="${1-}"
+    elif [[ "$1" == "-o" || "$1" == "--onoff" ]];then #SECFUNCternary_help simple echo ON or OFF
+      lbOnOff=true
+		elif [[ "$1" == "--" ]];then #SECFUNCternary_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			shift #lastrRemainingParams=("$@")
+			while ! ${1+false};do	# checks if param is set
+				lastrRemainingParams+=("$1")
+				shift&&: #will consume all remaining params
+			done
+		else
+			SECFUNCechoErrA "invalid option '$1'"
+			$FUNCNAME --help
+			SECFUNCdbgFuncOutA;return 1
+#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#			SECFUNCechoErrA "invalid option '$1'"
+#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		fi
+		shift&&:
+	done
+	
+	#validate params here
+	
   #TODO allow many params to be cmdTrue ending it with ';' or \; like `find -exec` works :)
   local lboolValue=$1
   if [[ "$lboolValue" != "true" && "$lboolValue" != "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
     SECFUNCechoErrA "lboolValue must be 'true' or 'false'"
     return 1
   fi
-  shift
-  
-  if [[ "$1" != "?" ]];then
-    SECFUNCechoErrA "missing '?'"
-    return 1
-  fi
-  shift
+  shift&&:
   
   local lacmdTrue=()
-  while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done
-  shift
-  
   local lacmdFalse=()
-  while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done
+  if $lbOnOff;then
+    lacmdTrue=(echo ON)
+    lacmdFalse=(echo OFF)
+  else
+    if [[ "$1" != "?" ]];then
+      SECFUNCechoErrA "missing '?'"
+      return 1
+    fi
+    shift
+    
+    while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done
+    shift
+    
+    while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done
+  fi
   
   if((`SECFUNCarraySize lacmdTrue`==0));then SECFUNCechoErrA "empty lacmdTrue";fi
   if((`SECFUNCarraySize lacmdFalse`==0));then SECFUNCechoErrA "empty lacmdFalse";fi
-  
+    
+	# work here
   if $lboolValue;then
     "${lacmdTrue[@]}"
   else
@@ -1382,7 +1422,7 @@ function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the c
   
   #~ declare -p lboolValue lacmdTrue lacmdFalse
   
-  return 0
+	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 function SECFUNCtoggleBoolean(){ #help toggles a variable "boolean" value (true or false) only if it was already set as "boolean"

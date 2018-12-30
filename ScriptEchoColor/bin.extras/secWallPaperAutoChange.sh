@@ -124,18 +124,19 @@ nResW5p6=$((nResW-`SECFUNCbcPrettyCalcA --scale 0 "${nResW}/12"`)) # /12 is for 
 nResH5p6=$((nResH-`SECFUNCbcPrettyCalcA --scale 0 "${nResH}/6"`)) # good top/bottom blurred margin is 1/12 each (sum = 1/6) of the total requested height
 
 function FUNCconvert() {
-  (
-    local lnStart=$SECONDS
-    local lnPid
-    while ! lnPid=`pgrep convert`;do 
-      echo "`date` waiting convert to start...";
-      sleep 0.25;
-      if(( (SECONDS-lnStart) > 10));then
-        exit 0 # timedout
-      fi
-    done;
-    SECFUNCexecA -cE cpulimit -c 1 -l 50 -p $lnPid &&:
-  )&
+  #~ (
+    #~ local lnStart=$SECONDS
+    #~ local lnPid
+    #~ while ! lnPid=`pgrep convert`;do 
+      #~ echo "`date` waiting convert to start...";
+      #~ sleep 0.25;
+      #~ if(( (SECONDS-lnStart) > 10));then
+        #~ exit 0 # timedout
+      #~ fi
+    #~ done;
+    #~ SECFUNCexecA -cE cpulimit -c 1 -l 50 -p $lnPid &&:
+  #~ )&
+  SECFUNCCcpulimit convert -l 25
   SECFUNCexecA -cE nice -n 19 convert "$@"
 }
 
@@ -301,7 +302,7 @@ if $bDaemon;then
           #~ FUNCconvert "${strTmpFilePreparing}.png" "${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
-          FUNCconvert -sharpen 20x20 "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -sharpen 20x20 "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -vf "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
           mkdir -p "`dirname "$strXBRZcache"`/"
@@ -334,7 +335,7 @@ if $bDaemon;then
           strFixSz="${nFixW}x${nOrigH}"
           nLeftMargin=$(( (nOrigW-nFixW)/2 ))
           if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH nFixW fMaxRatio fOrigRatio fResRatio nLeftMargin;fi
-          FUNCconvert -extent "${strFixSz}+${nLeftMargin}+0" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -extent "${strFixSz}+${nLeftMargin}+0" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
           strFixSzTxt=",fixE:${strFixSz}"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           
@@ -348,14 +349,14 @@ if $bDaemon;then
           nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  RANDOM%(nOrigH-nResH) ));fi
           #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
           #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
-          FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+          FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
           SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
           strTxtZoom=",ZOOM"
         fi
       fi
       
       if [[ "$CFGstrCurrentFile" =~ .*[wW][eE][bB][pP]$ ]];then
-        FUNCconvert "${strTmpFilePreparing}" "${strTmpFilePreparing}.jpg"
+        FUNCconvert "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}.jpg" # jpg type must be forced or will fail sometimes
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}.jpg" "${strTmpFilePreparing}2" #duhhh
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
@@ -374,7 +375,7 @@ if $bDaemon;then
       if((nOrigW<(nResW-nBorderX2) && nOrigH<(nResH-nBorderX2)));then
         # creates a frame border on the small image
         strResizeFinal="$strOrigSize"
-        FUNCconvert -mattecolor black -compose Copy -frame "${nBorder}x${nBorder}+${nBorderOut}+${nBorderIn}" "${strTmpFilePreparing}" "${strTmpFilePreparing}2"
+        FUNCconvert -mattecolor black -compose Copy -frame "${nBorder}x${nBorder}+${nBorderOut}+${nBorderIn}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
         SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
       fi
       
@@ -387,7 +388,7 @@ if $bDaemon;then
       #~ fi
       astrCmd+=( \( -clone 0 -resize $strResizeFinal \) )
       #astrCmd+=( -crop  ${strScreenSize}+10+10 )
-      astrCmd+=( -delete 0 -gravity center -composite "${strTmpFilePreparing}2" )
+      astrCmd+=( -delete 0 -gravity center -composite "jpeg:${strTmpFilePreparing}2" )
       "${astrCmd[@]}"
       if $SECbExecVerboseEchoAllowed;then declare -p LINENO strOrigSize strScreenSize strResizeFinal;fi
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
@@ -410,19 +411,19 @@ if $bDaemon;then
                    -channel R -evaluate add ${nAddR}% \
           +channel -channel G -evaluate add ${nAddG}% \
           +channel -channel B -evaluate add ${nAddB}% \
-          +channel -set colorspace HSL -colorspace sRGB "${strTmpFilePreparing}2"
+          +channel -set colorspace HSL -colorspace sRGB "jpeg:${strTmpFilePreparing}2"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     
     strFlipTxt=""
     if $bFlipKeep;then 
-      FUNCconvert -flip "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      FUNCconvert -flip "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2";
       strFlipTxt=",flip"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     strFlopTxt=""
     if $bFlopKeep;then
-      FUNCconvert -flop "${strTmpFilePreparing}" "${strTmpFilePreparing}2";
+      FUNCconvert -flop "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2";
       strFlopTxt=",flop"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
@@ -444,7 +445,7 @@ if $bDaemon;then
         -fill blue   -annotate +0+0 "$strTxt" \
         -fill purple -annotate +2+2 "$strTxt" \
         -fill white  -annotate +1+1 "$strTxt" \
-        "${strTmpFilePreparing}2"
+        "jpeg:${strTmpFilePreparing}2"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     
@@ -484,20 +485,20 @@ if $bDaemon;then
     bResetCounters=false;
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
-    strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom (is `SECFUNCternary $bZoom ? echo ON : echo OFF`)\n";fi
+    #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $bZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
       "toggle _auto play mode to conserve CPU\n"
       "_change image now\n"
-      "toggle _fast mode\n"
+      "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)\n"
       "_disable current\n"
       "fi_lter(@s@y$strFilter@S)\n"
-      "toggle fl_ip\n"
-      "toggle fl_op\n"
-      "_reset timeout counter\n"
+      "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)\n"
+      "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)\n"
+      "_reset timeout counter ($nSumSleep/$nChangeInterval)\n"
       "_set image index\n"
-      "_verbose commands (to debug)\n"
+      "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)\n"
       "fi_x wallpaper pic URI\n"
-      "$strOptZoom"
+      "toggle _zoom if possible (is `SECFUNCternary --onoff $bZoom`)\n" #"$strOptZoom"
     )
     echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
       a)

@@ -97,7 +97,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	
 	#validate params here
 	
-	# code here
+	# work here
 	
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
