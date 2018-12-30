@@ -143,14 +143,18 @@ function FUNCconvert() {
 nDelayMsg=3
 nTotFiles=0
 strFilter=".*"
+bShowHidden=false
 function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#CFGastrFileList[@]}
-	
 	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
     # ignores hidden (even at hidden folders) and the tmp files
+    grepIgnore="/[.]"
+    if $bShowHidden;then #never DISABLED ones tho
+      grepIgnore="/[.]DISABLED[.]"
+    fi
 		IFS=$'\n' read -d '' -r -a CFGastrFileList < <(
       find -iregex "$strFindRegex" \
-        |egrep -v "/[.]" \
+        |egrep -v "${grepIgnore}" \
         |grep -v "$strBaseTmpFileName" \
         |egrep "$strFilter" \
         |sort \
@@ -201,7 +205,7 @@ if $bDaemon;then
         #SECFUNCexecA -ce mkdir -vp "$strWallPPath/.disabled/"
         #SECFUNCexecA -ce mv -vf "$CFGstrCurrentFile" "$strWallPPath/.disabled/"
         # to just hide is better, keeping at folders organized by user
-        SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "`dirname "$CFGstrCurrentFile"`/.`basename "$CFGstrCurrentFile"`" &&:
+        SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "`dirname "$CFGstrCurrentFile"`/.DISABLED.`basename "$CFGstrCurrentFile"`" &&:
       fi
       bDisableCurrent=false
       continue
@@ -491,6 +495,7 @@ if $bDaemon;then
       "_change image now\n"
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)\n"
       "_disable current\n"
+      "show _hidden toggle (`SECFUNCternary --onoff $bShowHidden`)\n"
       "fi_lter(@s@y$strFilter@S)\n"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)\n"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)\n"
@@ -520,6 +525,12 @@ if $bDaemon;then
         else
           nSleep=$nChangeInterval;declare -p nSleep
         fi
+        bResetCounters=true
+        ;;
+      h)
+        SECFUNCtoggleBoolean bShowHidden
+        FUNCchkUpdateFileList --refill
+        bChangeImage=true
         bResetCounters=true
         ;;
       l)
