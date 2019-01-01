@@ -692,21 +692,31 @@ function SECFUNCarrayWork() { #help
 	# var init here
 	local lstrArrayId=""
 	local lstrParam1=""
-  local lbCleanMode=false
-  local lbPrependMode=false
+  local lstrMode=""
+  #local lbCleanMode=false
+  #~ local lbPrependMode=false
+  #~ local lbMergeMode=false
 	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCarrayWork_help show this help
 			SECFUNCshowHelp $FUNCNAME
+      #~ SECFUNCshowHelp "[lstrParam1]"
 			return 0
 #		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayWork_help <lstrExample> MISSING DESCRIPTION
 #			shift
 #			lstrExample="${1-}"
-    elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help 
-      lbCleanMode=true
-    elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help 
-      lbPrependMode=true
+    elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help <lstrArrayId> [value]
+#      lbCleanMode=true
+      lstrMode="CLEAN"
+    elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help <lstrArrayId> <value>
+   #   lbPrependMode=true
+      lstrMode="PREPEND"
+    elif [[ "$1" == "--merge" ]];then #SECFUNCarrayWork_help <lstrArrayId> <other array id> mix the values of 2 arrays on the 1st one, sort/order aphanumeric and eliminates dups
+    #  lbMergeMode=true
+      lstrMode="MERGE"
+    elif [[ "$1" == "--uniq" ]];then #SECFUNCarrayWork_help <lstrArrayId> remove dups and sort
+      lstrMode="UNIQ"
 		elif [[ "$1" == "--" ]];then #SECFUNCarrayWork_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -725,12 +735,11 @@ function SECFUNCarrayWork() { #help
 	done
 	
 	# code here
-	lstrArrayId="${1-}";shift
-	lstrParam1="${1-}";shift
+	lstrArrayId="${1-}";shift&&:
+	lstrParam1="${1-}";shift&&:
 	
 	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
-		echo "0"
 		return 1
 	fi
 	
@@ -741,27 +750,67 @@ function SECFUNCarrayWork() { #help
 	local lstrArrayAllElements="${lstrArrayId}[@]"
 	local lastrArrayCopyTmp=("${!lstrArrayAllElements}")
   
-  if $lbCleanMode;then
-    local lstrMatch="$lstrParam1"
-    local lnIndex=0
-    for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
-      local lbUnset=false
-      if [[ -z "$lstrMatch" ]];then
-        if [[ -z "$strTmp" ]];then
+#  if $lbCleanMode;then
+#  elif $lbPrependMode;then
+#  elif $lbMergeMode;then
+#  fi
+  case "$lstrMode" in
+    CLEAN)
+      local lstrMatch="$lstrParam1"
+      local lnIndex=0
+      for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
+        local lbUnset=false
+        if [[ -z "$lstrMatch" ]];then
+          if [[ -z "$strTmp" ]];then
+            lbUnset=true
+          fi
+        elif [[ "$strTmp" =~ $lstrMatch ]];then
           lbUnset=true
         fi
-      elif [[ "$strTmp" =~ $lstrMatch ]];then
-        lbUnset=true
+        
+        if $lbUnset;then
+          unset lastrArrayCopyTmp[$lnIndex]
+        fi
+        ((lnIndex++))&&:
+      done
+      ;;
+    PREPEND)
+      local lstrPrependValue="$lstrParam1"
+      lastrArrayCopyTmp=("$lstrPrependValue" "${lastrArrayCopyTmp[@]}")
+      ;;
+    UNIQ)
+      local lastrTmp=( "${lastrArrayCopyTmp[0]}" )
+      #~ declare -p lastrTmp
+      SECFUNCarrayWork --merge "$lstrArrayId" lastrTmp
+      return $?
+      ;;
+    MERGE)
+      local lstrArrayIdOther="$lstrParam1"
+      if ! SECFUNCarrayCheck "$lstrArrayIdOther";then
+        SECFUNCechoErrA "invalid lstrArrayIdOther='$lstrArrayIdOther'"
+        return 1
       fi
+      local lstrArrayAllElementsOther="${lstrArrayIdOther}[@]"
+      local lastrArrayCopyTmpOther=("${!lstrArrayAllElementsOther}")
       
-      if $lbUnset;then
-        unset lastrArrayCopyTmp[$lnIndex]
-      fi
-      ((lnIndex++))&&:
-    done
-  elif $lbPrependMode;then
-    lastrArrayCopyTmp=("$lstrParam1" "${lastrArrayCopyTmp[@]}")
-  fi
+      local lastrTmp=("${lastrArrayCopyTmp[@]}" "${lastrArrayCopyTmpOther[@]}")
+      local lastrList
+      IFS=$'\n' read -d '' -r -a lastrList < <(for str in "${lastrTmp[@]}";do echo "$str";done |sort -u)&&: #TODO find a way to keep the original order just appending the new array...
+        #~ (for str in "${lastrArrayCopyTmp[@]}";do echo "$str";done) \
+        #~ && \
+        #~ (for str in "${lastrArrayCopyTmpOther[@]}";do echo "$str";done) \
+        #~ | sort -u #TODO find a way to keep the original order just appending the new array...
+      #~ )&&:
+      #declare -p lastrList
+      #echo "$lstrArrayId"'=("${lastrList[@]}")'
+      eval "$lstrArrayId"'=("${lastrList[@]}")'
+      return 0
+      ;;
+    *) 
+      SECFUNCechoErrA "invalid mode '$lstrMode'";
+      return 1; 
+      ;;
+  esac
 	
 	#declare -p lastrArrayCopyTmp >&2 #@@@R
 	if((${#lastrArrayCopyTmp[@]}==0));then

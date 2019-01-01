@@ -36,7 +36,7 @@ SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t#[strFileAbs] video to work with"
+		SECFUNCshowHelp --colorize "\t#[strNewFiles...] videos to work with"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
@@ -69,38 +69,57 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
-
 if ! SECFUNCarrayCheck CFGastrFileList;then
   CFGastrFileList=()
 fi
+for strNewFile in "$@";do
+  if [[ -f "$strNewFile" ]];then
+    CFGastrFileList+=("`realpath "$strNewFile"`")
+    SECFUNCarrayWork --uniq CFGastrFileList
+    SECFUNCcfgWriteVar CFGastrFileList
+  else  
+    SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
+  fi
+done
 declare -p CFGastrFileList
 
-if $bContinue;then
-  strFileAbs="$CFGstrFileAbs"
-  if [[ -z "$strFileAbs" ]];then
-    strFileAbs="${CFGastrFileList[0]-}"
-  fi
-  
-  strOrigPath="$CFGstrOrigPath"
-  strTmpWorkPath="$CFGstrTmpWorkPath"
-  
-  echoc --info "Continue:"
-  declare -p strFileAbs strOrigPath strTmpWorkPath
-else
-  CFGastrFileList=("$@")
-  strFileAbs="$1";
-  #~ if [[ "${strFileAbs:0:1}" == "/" ]];then
-    #~ strOrigPath="`dirname "$strFileAbs"`"
-  #~ else
-    #~ strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
-    #~ strFileAbs="`pwd`/${strFileAbs}"
+SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
+
+strFileAbs="${CFGastrFileList[0]-}"
+strOrigPath="`dirname "$strFileAbs"`"
+: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+#~ echoc --info "Continue:"
+#~ if $bContinue;then
+  #~ strFileAbs="${CFGastrFileList[0]-}"
+  #~ echoc --info "Continue:"
+#~ else
+  #~ :
+#~ fi
+
+#~ if $bContinue;then
+  #~ strFileAbs="$CFGstrFileAbs"
+  #~ if [[ -z "$strFileAbs" ]];then
+    #~ strFileAbs="${CFGastrFileList[0]-}"
   #~ fi
-  strFileAbs="`realpath "${strFileAbs}"`"
-  strOrigPath="`dirname "$strFileAbs"`"
-#  : ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"} #help
-  : ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
-fi
+  
+  #~ strOrigPath="$CFGstrOrigPath"
+  #~ strTmpWorkPath="$CFGstrTmpWorkPath"
+  
+  #~ echoc --info "Continue:"
+  #~ declare -p strFileAbs strOrigPath strTmpWorkPath
+#~ else
+  #~ strFileAbs="$1";
+  #~ # if [[ "${strFileAbs:0:1}" == "/" ]];then
+    #~ # strOrigPath="`dirname "$strFileAbs"`"
+  #~ # else
+    #~ # strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
+    #~ # strFileAbs="`pwd`/${strFileAbs}"
+  #~ # fi
+  #~ strFileAbs="`realpath "${strFileAbs}"`"
+  #~ strOrigPath="`dirname "$strFileAbs"`"
+#~ #  : ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"} #help
+  #~ : ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+#~ fi
 
 if [[ ! -f "$strFileAbs" ]];then
   SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
@@ -133,11 +152,12 @@ declare -p nDurationMillis nDurationSeconds nFileSz nMinPartSz nParts nPartSecon
 strFileBN="`basename "$strFileAbs"`"
 strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
 
-strSuffix="`SECFUNCfileSuffix "$strFileHash"`"
-strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
+strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
+#strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
+strFileTmp="${strTmpWorkPath}/${strFileHash}"
 
 strNewFormatSuffix="x265-HEVC"
-strFinalFileBN="${strFileBN}.${strNewFormatSuffix}.mp4"
+strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
 
 function FUNCmiOrigNew() {
   SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
@@ -169,21 +189,21 @@ if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
   exit 0
 fi
 
-CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
-CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
-CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
-SECFUNCcfgWriteVar CFGastrFileList
+#~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
+#~ CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
+#~ CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
+#~ SECFUNCcfgWriteVar CFGastrFileList
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
-if [[ ! -f "${strFileNoSuf}.00000.mp4" ]];then
+if [[ ! -f "${strFileTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
-  SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileNoSuf}."%05d".mp4"
+  SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileTmp}."%05d".mp4"
 fi
 
-SECFUNCexecA -ce ls -l "${strFileNoSuf}."* #|sort -n
+SECFUNCexecA -ce ls -l "${strFileTmp}."* #|sort -n
 
-IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strFileNoSuf}."?????".mp4" |sort -n)&&:
+IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strFileTmp}."?????".mp4" |sort -n)&&:
 declare -p astrFilePartList |tr "[" "\n" >&2
 
 #nCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
@@ -193,7 +213,7 @@ echoc --info "Converting" >&2
 nCount=0
 for strFilePart in "${astrFilePartList[@]}";do
   strFilePartNS="${strFilePart%.mp4}"
-  strPartTmp="${strFileNoSuf}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
+  strPartTmp="${strFileTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
   strFilePartNew="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strFilePartNewUnsafeName="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strSafeFileName="`dirname "$strFilePartNewUnsafeName"`/`basename "$strFilePartNewUnsafeName" |md5sum |awk '{print $1}'`" #|tr -d " "
@@ -230,7 +250,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
 ( # to cd
   SECFUNCexecA -ce cd "$strTmpWorkPath"
   
-  strFileJoin="`basename "${strFileNoSuf}.join"`"
+  strFileJoin="`basename "${strFileTmp}.join"`"
   
   echoc --info "Joining" >&2
   SECFUNCtrash "$strFileJoin" &&:
@@ -241,7 +261,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   done
   SECFUNCexecA -ce cat "$strFileJoin"
 
-  strFinalTmp="${strFileNoSuf}.${strNewFormatSuffix}-TMP.mp4"
+  strFinalTmp="${strFileTmp}.${strNewFormatSuffix}-TMP.mp4"
   SECFUNCtrash "$strFinalTmp"&&:
   if SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
@@ -249,12 +269,25 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
     FUNCmiOrigNew
     
     # make it ready to continue on next run
-    if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then
-      SECFUNCechoErrA "CFGstrFileAbs='$CFGstrFileAbs' CFGastrFileList[0]='${CFGastrFileList[0]}' should be the same"
-      exit 1
-    fi
-    unset CFGastrFileList[0]; CFGastrFileList=( "${CFGastrFileList[@]}" ); SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-    CFGstrFileAbs="";SECFUNCcfgWriteVar CFGstrFileAbs
+    #~ if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then
+      #~ SECFUNCechoErrA "CFGstrFileAbs='$CFGstrFileAbs' CFGastrFileList[0]='${CFGastrFileList[0]}' should be the same"
+      #~ exit 1
+    #~ fi
+    
+    # merge current list with possible new values
+    astrFileListBKP=( "${CFGastrFileList[@]}" ); 
+    SECFUNCcfgReadDB
+    SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
+    
+    # clean final list from current file
+    sedRegexPreciseMatch='s"(.)"[\1]"g'
+    strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+    SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+    #unset CFGastrFileList[0]; 
+    #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
+    SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+    
+    #~ CFGstrFileAbs="";SECFUNCcfgWriteVar CFGstrFileAbs
     
     #~ if((${#CFGastrFileList[*]}>0));then
       #~ "$0" --continue #TODO recursive means more memory used :(, make it a child and wait it end?
