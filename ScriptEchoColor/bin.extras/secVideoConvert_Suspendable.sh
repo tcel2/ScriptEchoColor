@@ -108,7 +108,7 @@ else
       SECFUNCcfgReadDB
       echoc --info " Continue @s@{By}Loop@S: "
       declare -p CFGastrFileList |tr '[' '\n'
-      if((`SECFUNCarraySize CFGastrFileList`==0));then break;fi
+      if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t 60 "Waiting new job requests";continue;fi #break;fi
       #~ strFileAbs="${CFGastrFileList[0]-}"
       #~ if [[ -f "$strFileAbs" ]];then
         #~ $0 --workonlywith "$strFileAbs" &&:
@@ -122,6 +122,7 @@ else
         echoc -w -t 60
       done
     done
+    #~ echoc -w -t 60
     exit 0
   else
     # choses 1st to work on it
@@ -209,7 +210,7 @@ function FUNCmiOrigNew() {
     SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
     
     # clean final list from current file
-    sedRegexPreciseMatch='s"(.)"[\1]"g'
+    #~ sedRegexPreciseMatch='s"(.)"[\1]"g'
     strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
     SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
     #unset CFGastrFileList[0]; 
@@ -225,6 +226,11 @@ function FUNCmiOrigNew() {
 function FUNCtrashTmpOld() {
   SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
   SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
+  
+  if((`stat -c "%s" "$strOrigPath/$strFinalFileBN"` > `stat -c "%s" "$strFileAbs"`));then
+    echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
+  fi
+  
   if echoc -t 60 -q "trash tmp and old files?";then
     SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
     SECFUNCtrash "$strFileAbs"&&:
