@@ -32,18 +32,21 @@ bContinue=false
 CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
+strWorkWith=""
+bWorkWith=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
-		SECFUNCshowHelp --colorize "\t#[strNewFiles...] videos to work with"
+		SECFUNCshowHelp --colorize "\t#[strNewFiles...] add videos to work with"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+	elif [[ "$1" == "-o" || "$1" == "--workonlywith" ]];then #help <strWorkWith> process a single file
 		shift
-		strExample="${1-}"
+		strWorkWith="${1-}"
+    bWorkWith=true
 	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help resume last work if any
 		bContinue=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -69,25 +72,76 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-if ! SECFUNCarrayCheck CFGastrFileList;then
-  CFGastrFileList=()
-fi
-for strNewFile in "$@";do
-  if [[ -f "$strNewFile" ]];then
-    CFGastrFileList+=("`realpath "$strNewFile"`")
-    SECFUNCarrayWork --uniq CFGastrFileList
-    SECFUNCcfgWriteVar CFGastrFileList
-  else  
-    SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
+sedRegexPreciseMatch='s"(.)"[\1]"g'
+
+if $bWorkWith;then
+  if ! strWorkWith="`realpath "$strWorkWith"`";then
+    SECFUNCechoErrA "missing strWorkWith='$strWorkWith'"
+    exit 1
   fi
-done
-declare -p CFGastrFileList
+  
+  if ! SECFUNCarrayContains CFGastrFileList "$strWorkWith";then
+    SECFUNCarrayPrepend CFGastrFileList "$strWorkWith"
+  fi
+  
+  strFileAbs="$strWorkWith"
+else
+  ######################
+  ### the default is to add many files:
+  ######################
+  if ! SECFUNCarrayCheck CFGastrFileList;then
+    CFGastrFileList=()
+  fi
+  for strNewFile in "$@";do
+    if [[ -f "$strNewFile" ]];then
+      CFGastrFileList+=("`realpath "$strNewFile"`")
+      SECFUNCarrayWork --uniq CFGastrFileList
+      SECFUNCcfgWriteVar CFGastrFileList
+    else  
+      SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
+    fi
+  done
+  declare -p CFGastrFileList
+  
+  if $bContinue;then
+    while true;do
+      SECFUNCcfgReadDB
+      echoc --info " Continue @s@{By}Loop@S: "
+      declare -p CFGastrFileList |tr '[' '\n'
+      if((`SECFUNCarraySize CFGastrFileList`==0));then break;fi
+      #~ strFileAbs="${CFGastrFileList[0]-}"
+      #~ if [[ -f "$strFileAbs" ]];then
+        #~ $0 --workonlywith "$strFileAbs" &&:
+      #~ fi
+      
+      #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+      #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+      #~ SECFUNCcfgWriteVar CFGastrFileList
+      for strFileAbs in "${CFGastrFileList[@]}";do
+        SECFUNCexecA -ce $0 --workonlywith "$strFileAbs" &&:
+        echoc -w -t 60
+      done
+    done
+    exit 0
+  else
+    # choses 1st to work on it
+    strFileAbs="${CFGastrFileList[0]-}"
+  fi
+fi
+
+if SECFUNCuniqueLock --isdaemonrunning;then
+  echoc --info "daemon already running, exiting."
+  exit 0
+fi
 
 SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
-strFileAbs="${CFGastrFileList[0]-}"
 strOrigPath="`dirname "$strFileAbs"`"
 : ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+
+declare -p strFileAbs strOrigPath strTmpWorkPath
+echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
+
 #~ echoc --info "Continue:"
 #~ if $bContinue;then
   #~ strFileAbs="${CFGastrFileList[0]-}"
@@ -184,17 +238,18 @@ function FUNCtrashTmpOld() {
 }
 
 if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
-  if FUNCmiOrigNew;then
-    if $bContinue;then
-      $0 --continue #TODO avoid nesting messing memory
-      exit 0
-    fi
-  else
+  FUNCmiOrigNew&&:
+  #~ if FUNCmiOrigNew;then
+    #~ if $bContinue;then
+      #~ $0 --continue #TODO avoid nesting messing memory
+      #~ exit 0
+    #~ fi
+  #~ else
   #  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
     ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
-    echoc --info "already converted!"
+    echoc --info "already converted to strFinalFileBN='$strFinalFileBN'"
     exit 0
-  fi
+  #~ fi
 fi
 
 #~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
