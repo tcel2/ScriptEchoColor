@@ -42,6 +42,19 @@ if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
   exit 1
 fi
 
+strPATHtmp=""
+strPATHtmp+="$strSECDEVPath/bin:"
+strPATHtmp+="$strSECDEVPath/bin.extras:"
+strPATHtmp+="$strSECDEVPath/bin.examples:"
+strPATHtmp+="$PATH"
+
+if [[ "${1-}" == "--devpath" ]];then #help ~single just uses the dev path at PATH env var to exec a command and promptly exits
+  shift
+  export PATH="$strPATHtmp"
+  "$@"
+  exit #with the return value of the command
+fi
+
 bAlreadyDev=false;
 if [[ "$(realpath -e "`secGetInstallPath`")" == "$strSECDEVPath" ]];then
   bAlreadyDev=true;
@@ -76,7 +89,6 @@ astrAllParams=("${@-}") # this may be useful
 bExitAfterCmd=false
 bCleanSECEnv=false
 bIfNotInst=false
-bWhich=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -95,8 +107,6 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		if $bAlreadyDev;then exit 0;else exit 1;fi
 	elif [[ "$1" == "--ifnotinst" ]];then #help only use development environment if the command is not installed
 		bIfNotInst=true
-	elif [[ "$1" == "--devpath" ]];then #help ~single just uses the dev path at PATH env var to exec a command and promptly exits
-    bWhich=true
 	elif [[ "$1" == "--exit" ]];then #help exit after running user command
 		bExitAfterCmd=true
 	elif [[ "$1" == "--clean" ]];then #help clean SEC env vars b4 running
@@ -124,19 +134,6 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
-strPATHtmp=""
-strPATHtmp+="$strSECDEVPath/bin:"
-strPATHtmp+="$strSECDEVPath/bin.extras:"
-strPATHtmp+="$strSECDEVPath/bin.examples:"
-strPATHtmp+="$PATH"
-
-if $bWhich;then
-  (
-    export PATH="$strPATHtmp"
-    "$@"
-  )
-  exit #with the return value of the command
-fi
 
 if [[ -n "${@-}" ]];then
   astrSECDEVCmds=("$@")

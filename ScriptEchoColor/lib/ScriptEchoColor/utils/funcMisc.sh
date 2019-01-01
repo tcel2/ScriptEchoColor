@@ -1165,20 +1165,21 @@ function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon e
 function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child process waiting for other UNIQUE process match regex
 	SECFUNCdbgFuncInA;
 
-  local lstrMatchRegex="$1";shift
-
 	# var init here
 	local lstrExample="DefaultValue"
   local lbExample=false
 	local lastrRemainingParams=()
   local lnTimeout=10
   local lnPercRelat=0
+  local lstrMatchRegex=""
 	local lastrAllParams=("${@-}") # this may be useful
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCCcpulimit_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
+		elif [[ "$1" == "--regex" || "$1" == "-r" ]];then #SECFUNCCcpulimit_help <lstrMatchRegex>
+			shift;lstrMatchRegex="$1"
 		elif [[ "$1" == "--timeout" || "$1" == "-t" ]];then #SECFUNCCcpulimit_help <lnTimeout>
 			shift;lnTimeout="$1"
     elif [[ "$1" == "-l" || "$1" == "--limit" ]];then #SECFUNCCcpulimit_help use a percentage RELATIVE to the max processing power
@@ -1208,7 +1209,7 @@ function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child pro
 	#validate params here
 	if pgrep -f "$lstrMatchRegex" >/dev/null;then
     SECFUNCechoErrA "this must be run before '$lstrMatchRegex' for uniqueness consistency."
-    exit 1 #TODO capture it how?
+    return 1 #TODO capture it how?
   fi
   
 	# code here
@@ -1232,6 +1233,7 @@ function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child pro
     if ! SECFUNCexecA -ce cpulimit "${lastrRemainingParams[@]}" -p $lnPid;then
       SECFUNCechoWarnA "failed to start cpulimit"
     fi
+    exit 0
   )&
 	
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning

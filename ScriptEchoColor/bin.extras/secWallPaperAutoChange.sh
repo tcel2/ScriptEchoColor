@@ -136,8 +136,9 @@ function FUNCconvert() {
     #~ done;
     #~ SECFUNCexecA -cE cpulimit -c 1 -l 50 -p $lnPid &&:
   #~ )&
-  SECFUNCCcpulimit convert -l 25
+  (SECFUNCCcpulimit -r "convert.*${strBaseTmpFileName}" -t 1 -l 25)&&:
   SECFUNCexecA -cE nice -n 19 convert "$@"
+  return 0
 }
 
 nDelayMsg=3

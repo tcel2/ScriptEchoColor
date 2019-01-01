@@ -110,7 +110,7 @@ function FUNCconv() {
     echo "CMD: ${astrCmd[@]}" >&2
     echo "CMDMV: ${astrCmdMv[@]}" >&2
     if ! $bDryRun;then
-      #cwebp is too fast... SECFUNCCcpulimit "cwebp" -l 50
+      #cwebp is too fast... SECFUNCCcpulimit -r "cwebp" -l 50
       if SECFUNCexecA -ce "${astrCmd[@]}";then
         if SECFUNCexecA -ce "${astrCmdMv[@]}";then
           ls -l "$lstrFile" "$lstrFileWebp"

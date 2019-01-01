@@ -332,7 +332,7 @@ elif $bPidDump;then
   echoc --info "Newest:"
   find "/run/shm/.SEC.$USER/log/" -type d -iname "${nPidToDump}_*" |while read strPath;do find "$strPath/" -iname "*.log" -exec stat -c "%Y %y %N" '{}' ';';done |sort #|tail -n 3
   echoc --info "Newest w/o secEnvDev:"
-  find "/run/shm/.SEC.$USER/log/" -type d -iname "${nPidToDump}_*" |while read strPath;do find "$strPath/" -iname "*.log" -exec stat -c "%Y %y %N" '{}' ';';done |sort |grep -v "secEnvDev"
+  find "/run/shm/.SEC.$USER/log/" -type d -iname "${nPidToDump}_*" |while read strPath;do find "$strPath/" -iname "*.log" -exec stat -c "%Y %y %N" '{}' ';';done |sort |egrep -v "/[^/]*secEnvDev"&&:
 	
 	if [[ -d "/proc/$nPidToDump" ]];then
 		SECFUNCexecA -ce ps --forest -p `SECFUNCppidList -a --pid $nPidToDump`

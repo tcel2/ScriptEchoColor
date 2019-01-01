@@ -208,7 +208,7 @@ for strFilePart in "${astrFilePartList[@]}";do
   if [[ ! -f "$strFilePartNew" ]];then
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
     : ${nCPUPerc:=50} #help overall CPUs percentage
-    SECFUNCCcpulimit "avconv" -l $nCPUPerc
+    SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
     if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"

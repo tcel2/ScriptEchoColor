@@ -106,7 +106,7 @@ export bListAlreadyRunningAndNew=false
 export bListIniCommands=false
 export bStay=false
 export bStayForce=false
-export strEvalStayForce=""
+export strPgrepRegexStayForce=""
 export bListWaiting=false
 export bCheckPointDaemonHold=false
 export bRunAllNow=false
@@ -152,8 +152,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		bCheckIfAlreadyRunning=false
 	elif [[ "$1" == "-d" || "$1" == "--shouldnotexit" ]];then #help ~daemon indicated that the command should not exit normally (it should stay running like a daemon), if it does, it logs 'Sne' (Should not exit)
 		bStay=true
-	elif [[ "$1" == "-D" || "$1" == "--checkstillrunning" ]];then #help ~daemon <strEvalStayForce> like -d but as the app will detach itself, this grants it will be re-run if it exits.  strEvalStayForce will be run to test if it is still running ex.: 'qdbus |grep SomeAppCommand'
-    shift;strEvalStayForce="$1"
+#	elif [[ "$1" == "-D" || "$1" == "--checkstillrunning" ]];then #help ~daemon <strEvalStayForce> like -d but as the app will detach itself, this grants it will be re-run if it exits.  strEvalStayForce will be run to test if it is still running ex.: 'qdbus |grep SomeAppCommand'
+	elif [[ "$1" == "-D" || "$1" == "--checkstillrunning" ]];then #help ~daemon <strPgrepRegexStayForce> like -d but as the app will detach itself, this grants it will be re-run if it exits.  strPgrepRegexStayForce will test if it is still running
+    shift;strPgrepRegexStayForce="$1"
 		bStayForce=true
 	elif [[ "$1" == "--autoretry" ]];then #help <nAutoRetryDelay> for the daemon mode, if the command exits with error, will auto retry after delay if it is >= 0
     shift
@@ -607,13 +608,13 @@ function FUNCrun(){
 		export strFileRetVal=$(mktemp)
     export SEC_WARN=$bEnableSECWarnMessages
 		function FUNCrunAtom(){
-      declare -p astrRunParams&&:
 			source <(secinit) #this will apply the exported arrays
       declare -p astrRunParams&&:
       
 			# also, this command: `env -i bash -c "\`SECFUNCparamsToEval "$@"\`"` did not fully work as vars like TERM have not required value (despite this is expected)
 			# nothing related to SEC will run after SECFUNCcleanEnvironment unless if reinitialized
-			( SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
+			( 
+        SECbRunLog=true SECFUNCcheckActivateRunLog -v; #forced log!
         declare -p astrRunParams&&:
       
         evalCleanEnv=":";
@@ -637,19 +638,23 @@ function FUNCrun(){
 				#~ "${astrRunParams[@]}"
 #        anSPidAfter=(`ps --no-headers -o pid --sid $$`)
         if $bStayForce;then
-          strInfoSF="${astrRunParams[@]-} #strEvalStayForce='$strEvalStayForce'"
-          if eval "$strEvalStayForce";then
+          strInfoSF="${astrRunParams[@]-} #strPgrepRegexStayForce='$strPgrepRegexStayForce'"
+          if pgrep -fx "$strPgrepRegexStayForce";then
             echo "Already running: $strInfoSF"
           else
-            echo "astrRunParams='${astrRunParams[@]-}' $LINENO"
-            "${astrRunParams[@]}"
-            while ! eval "$strEvalStayForce";do
-              echo "Wating it start: $strInfoSF"
+            echo "ln$LINENO: astrRunParams='${astrRunParams[@]-}'"
+            #SECFUNCexecA -ce "${astrRunParams[@]}" # !!! IMPORTANT !!! it may or not detach itself !!!
+            #SECFUNCexecA -ce --child "${astrRunParams[@]}"
+            ("${astrRunParams[@]}" & disown)&disown
+            while ! pgrep -fx "$strPgrepRegexStayForce";do
+              echo "Waiting it start: $strInfoSF"
+              sleep 0.5
             done
           fi
           
+          echo "ln$LINENO:"
           while true;do
-            if ! eval "$strEvalStayForce";then break;fi
+            if ! pgrep -fx "$strPgrepRegexStayForce";then break;fi
 #            anPGrep=(`pgrep -fx "^${astrRunParams[@]}$"`)
             echo "Still running: $strInfoSF"
             sleep 5
@@ -758,7 +763,10 @@ function FUNCrun(){
 		if $bStay || $bStayForce || $lbErr;then
       astrEditDevSrcFileCmd=(secEnvDev.sh --devpath which "${astrRunParams[0]}");declare -p astrEditDevSrcFileCmd >&2;
 #      strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}" 2>/dev/null`";declare -p strDevSrcFile >&2;
-      strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}"`";declare -p strDevSrcFile >&2;
+      export strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}"`";declare -p strDevSrcFile >&2;
+      if ! [[ "$strDevSrcFile" =~ .*[.]sh$ ]];then
+        strDevSrcFile=""
+      fi
       
 			lstrTxt+="QUESTION:\n";
 			lstrTxt+="\tDo you want to try to run it again?\n";
@@ -803,10 +811,46 @@ function FUNCrun(){
           bEnableSECWarnMessages #2
           bCleanSECenv #3
 				);declare -p astrYadFields
-        strBtnEdSrc=""
-        if [[ "${astrRunParams[0]}" =~ .*[.]sh ]];then
-          strBtnEdSrc='--button=EditSource-DEV:6'
+        
+        astrBtnEdSrc=()
+        if [[ -n "$strDevSrcFile" ]];then
+          #strBtnEdSrc='--button=EditSource-DEV:6'
+          : ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"};export CFGastrSrcEditor #can be customized by the user
+          astrBtnEdSrc[0]=--field="EditSource-DEV `basename "$strDevSrcFile"`!!will open a text/source editor:FBTN"
+          FUNCedSrc(){
+            source <(secinit)
+            SECFUNCexecA -ce "${CFGastrSrcEditor[@]}" "$strDevSrcFile" >&2
+          };export -f FUNCedSrc
+          astrBtnEdSrc[1]="bash -c FUNCedSrc"
+        else
+          astrBtnEdSrc[0]=--field="\"PlaceHolder\"!!Ignore me, I mean it:FBTN"
+          FUNCeaster(){
+            astrEasterEggs=(
+              "You are funny!" 
+              "Ouch!" 
+              "Ignore me, I mean it!" 
+              "Aww common..." 
+              "what time is it? nah... I dont care..." 
+              "BOOOO!" 
+              "I am deprecated, now leave me alone..." 
+              "Go play some game!" 
+              "Go back to work!" 
+              "Go exercise ur body!" 
+              "Take a break!" 
+              "Become vegan! well, at least vegetarian..." 
+              "Wake up!" 
+              "I won't do anything, seriously!" 
+              "I won't work, don't waste your time!" 
+              "I am not a button! Stop that!" 
+              "Are you a button too?" 
+              "I would like to share a wide spread secret: 1+1>=3 ;)"
+            )
+            aBg=(R G B C M Y K W);aFg=(r g b c m y k w)
+            echoc --say "@{${aBg[$((RANDOM%${#aBg[*]}))]}${aFg[$((RANDOM%${#aFg[*]}))]}} ${astrEasterEggs[$((RANDOM%${#astrEasterEggs[*]}))]} " >&2
+          };export -f FUNCeaster
+          astrBtnEdSrc[1]="bash -c FUNCeaster"
         fi
+        
         astrYadExecParams=(
           "${astrYadBasicOpts[@]}"
           
@@ -814,22 +858,24 @@ function FUNCrun(){
           --button="Retry-DEV:2"
           --button="${strRetryFull}:5"
           --button="${strDumpRetryBtnTxt}:3" 
-          $strBtnEdSrc
           --button="gtk-close:1" 
           
           --form 
-          --field "[${astrYadFields[0]}] Use Xterm:chk" 
-          --field "[${astrYadFields[1]}] b4 run" 
-          --field "[${astrYadFields[2]}] :chk" 
-          --field "[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
-          --field "info:TXT" # the editable text field is MUCH better than the --text label, it has scroll bar, fixed width in pixels to the window size, 3 click selectable line, everything is better for big texts!
+          --field="[${astrYadFields[0]}] Use Xterm:chk" 
+          --field="[${astrYadFields[1]}] b4 run" 
+          --field="[${astrYadFields[2]}] :chk" 
+          --field="[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
+          "${astrBtnEdSrc[0]}"
+          --field="info:TXT" # the editable text field is MUCH better than the --text label, it has scroll bar, fixed width in pixels to the window size, 3 click selectable line, everything is better for big texts!
           "${!astrYadFields[0]}" # redirected values
           "${!astrYadFields[1]}" 
           "${!astrYadFields[2]}" 
           "${!astrYadFields[3]}" 
+          "${astrBtnEdSrc[1]}"
           "$lstrTxt" # options to be captured put above info text dummy (changes are ignored) field
         )
         declare -p astrYadExecParams
+        SECFUNCarraysExport
         strYadOutput="`SECFUNCexecA -ce yad "${astrYadExecParams[@]}"`"&&:;nRet=$? #astrYadFields entries values will be used to set the default of the yad fields (like the checkbox, the text field etc) !!! :D
 	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" 
 	#			IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
@@ -862,9 +908,9 @@ function FUNCrun(){
             ;;
 					4)lbDevMode=false;; #normal retry
 					5)lbRestartSelfFullDev=true;break;; #retry in development mode (path)
-          6): ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"} #can be customized by the user
-            ("${CFGastrSrcEditor[@]}" "$strDevSrcFile" & disown)&disown;
-            break;;
+          #~ 6): ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"} #can be customized by the user
+            #~ ("${CFGastrSrcEditor[@]}" "$strDevSrcFile" & disown)&disown;
+            #~ break;;
 					252)break;; #do not retry, end. Closed using the "window close" title button.
           *)
             SECFUNCechoErrA "unsupported yad return value nRet='$nRet'"
