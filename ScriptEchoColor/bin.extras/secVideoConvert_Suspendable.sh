@@ -131,6 +131,79 @@ if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
   exit 0
 fi
 
+strFileBN="`basename "$strFileAbs"`"
+strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
+
+strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
+#strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
+strFileTmp="${strTmpWorkPath}/${strFileHash}"
+
+strNewFormatSuffix="x265-HEVC"
+strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
+
+function FUNCmiOrigNew() {
+  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+  
+  if echoc -t 60 -q "play the new file?";then
+    SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
+  fi
+  
+  if FUNCtrashTmpOld;then
+    # merge current list with possible new values
+    astrFileListBKP=( "${CFGastrFileList[@]}" ); 
+    SECFUNCcfgReadDB
+    SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
+    
+    # clean final list from current file
+    sedRegexPreciseMatch='s"(.)"[\1]"g'
+    strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+    SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+    #unset CFGastrFileList[0]; 
+    #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
+    SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+    
+    return 0
+  fi
+  
+  return 1
+}
+
+function FUNCtrashTmpOld() {
+  SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
+  SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
+  if echoc -t 60 -q "trash tmp and old files?";then
+    SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
+    SECFUNCtrash "$strFileAbs"&&:
+    SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
+  else
+    return 1
+  fi
+  
+  echoc -w -t 60
+  return 0
+}
+
+if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
+  if FUNCmiOrigNew;then
+    if $bContinue;then
+      $0 --continue #TODO avoid nesting messing memory
+      exit 0
+    fi
+  else
+  #  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
+    ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
+    echoc --info "already converted!"
+    exit 0
+  fi
+fi
+
+#~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
+#~ CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
+#~ CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
+#~ SECFUNCcfgWriteVar CFGastrFileList
+
+SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
+
 nDurationMillis="`mediainfo -f "$strFileAbs" |egrep "Duration.*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"`"
 nDurationSeconds=$((nDurationMillis/1000))
 
@@ -148,53 +221,6 @@ nPartSeconds=$((nDurationSeconds/nParts));
 ((nPartSeconds+=1))&&: # to compensate for remaining milliseconds
 
 declare -p nDurationMillis nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
-
-strFileBN="`basename "$strFileAbs"`"
-strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
-
-strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
-#strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
-strFileTmp="${strTmpWorkPath}/${strFileHash}"
-
-strNewFormatSuffix="x265-HEVC"
-strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
-
-function FUNCmiOrigNew() {
-  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
-  if echoc -t 60 -q "play the new file?";then
-    SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
-  fi
-  FUNCtrashTmpOld
-  return 0
-}
-
-function FUNCtrashTmpOld() {
-  SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
-  SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
-  if echoc -t 60 -q "trash tmp and old files?";then
-    SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
-    SECFUNCtrash "$strFileAbs"&&:
-    SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
-  fi
-  
-  echoc -w -t 60
-  return 0
-}
-
-if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
-  FUNCmiOrigNew
-#  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
-  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
-  echoc --info "already converted!"
-  exit 0
-fi
-
-#~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
-#~ CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
-#~ CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
-#~ SECFUNCcfgWriteVar CFGastrFileList
-
-SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
 if [[ ! -f "${strFileTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
@@ -266,7 +292,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   if SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
-    FUNCmiOrigNew
+    FUNCmiOrigNew&&:
     
     # make it ready to continue on next run
     #~ if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then
@@ -274,18 +300,18 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
       #~ exit 1
     #~ fi
     
-    # merge current list with possible new values
-    astrFileListBKP=( "${CFGastrFileList[@]}" ); 
-    SECFUNCcfgReadDB
-    SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
+    #~ # merge current list with possible new values
+    #~ astrFileListBKP=( "${CFGastrFileList[@]}" ); 
+    #~ SECFUNCcfgReadDB
+    #~ SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
     
-    # clean final list from current file
-    sedRegexPreciseMatch='s"(.)"[\1]"g'
-    strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-    SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-    #unset CFGastrFileList[0]; 
-    #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
-    SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+    #~ # clean final list from current file
+    #~ sedRegexPreciseMatch='s"(.)"[\1]"g'
+    #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+    #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+    #~ #unset CFGastrFileList[0]; 
+    #~ #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
+    #~ SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
     
     #~ CFGstrFileAbs="";SECFUNCcfgWriteVar CFGstrFileAbs
     
@@ -294,6 +320,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
       #~ #TODO exit 0 # but wait the child(s) exit too!
     #~ fi
   fi
+  exit 0
 )
 
 echoc -w -t 60
