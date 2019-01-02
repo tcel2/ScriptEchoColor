@@ -191,7 +191,7 @@ strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contai
 
 strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
 #strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
-strFileTmp="${strTmpWorkPath}/${strFileHash}"
+strFileHashTmp="${strTmpWorkPath}/${strFileHash}"
 
 strNewFormatSuffix="x265-HEVC"
 strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
@@ -208,14 +208,47 @@ function FUNCflDurationSec() {
   return 0
 }
 
-function FUNCavconv() { #help [--part] <lstrIn> <lstrOut>
+function FUNCavconvRaw() {
+  #~ SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileHashTmp}."%05d".mp4" #|tee -a 
+  #~ SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp"
+  #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strFileHashTmp}.log"
+  : ${nCPUPerc:=50} #help overall CPUs percentage
+  SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
+  #~ (
+    #~ SECFUNCfdReport
+    #~ exec 2>&1 
+    #~ exec > >(tee -a "${strFileHashTmp}.log")
+    #~ ls -l ${strFileHashTmp}.log
+    #~ SECFUNCfdReport
+    #~ SECFUNCexecA -ce nice -n 19 avconv "$@" >"${strFileHashTmp}.log" 2>&1
+    #~ ls -l ${strFileHashTmp}.log
+    #~ #cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+  #~ )
+  (
+    strFlLog="${strFileHashTmp}.$BASHPID.log"
+    echo -n >>"$strFlLog"
+    tail -F --pid $BASHPID "$strFlLog"&
+    SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
+    cat "$strFlLog" >>"${strFileHashTmp}.log"
+    exit $nRet
+  )
+  return $?
+}
+
+function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   local lastrPartParms=(-c:v libx265 -c:a libmp3lame) #libx265 -x265-params lossless=1
   if [[ "$1" == "--part" ]];then lastrPartParms+=(-fflags +genpts);shift;fi
   local lstrIn="$1";shift
   local lstrOut="$1";shift
-  : ${nCPUPerc:=50} #help overall CPUs percentage
-  SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
-  SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut"
+  FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut"
+  #~ : ${nCPUPerc:=50} #help overall CPUs percentage
+  #~ SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
+  #~ (
+    #~ exec 2>&1 
+    #~ exec > >(tee -a "${strFileHashTmp}.log")
+    #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strFileHashTmp}.log"
+    #~ #cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+  #~ )
 }
 
 function FUNCplay() {
@@ -250,10 +283,10 @@ function FUNCmiOrigNew() {
 }
 
 function FUNCrecreate() {
-  if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
+  if echoc -t 60 -q "recreate the new file now using it's full length (ignore split parts) ?";then
     SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-    FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-    echo -n >"${strFileTmp}.recreated"
+    FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+    echo -n >"${strFileHashTmp}.recreated"
     FUNCplay
     return 0
   fi
@@ -279,10 +312,20 @@ function FUNCtrashTmpOld() {
         echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
         #~ if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
           #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-          #~ FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+          #~ FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
           #~ FUNCplay
           #~ continue #iLoop2
         #~ fi
+        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
+      fi
+      
+      if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
+        echoc -w -t 60 --alert "@YATTENTION!!!@-n The individual parts processing encountered the problematic the warnings above!"
+        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
+      fi
+
+      if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
+        echoc -w -t 60 --alert "@YATTENTION!!!@-n The parts joining encountered problematic the warnings above!"
         if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
       fi
     fi
@@ -290,7 +333,7 @@ function FUNCtrashTmpOld() {
   done
   
   if ! $bRecreatedNow;then
-    if [[ -f "${strFileTmp}.recreated" ]];then # created before this current run
+    if [[ -f "${strFileHashTmp}.recreated" ]];then # created before this current run
       FUNCplay
     else
       if ! FUNCrecreate;then
@@ -350,14 +393,15 @@ nPartSeconds=$((nDurationSeconds/nParts));
 
 declare -p nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
 
-if [[ ! -f "${strFileTmp}.00000.mp4" ]];then
+if [[ ! -f "${strFileHashTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
-  SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileTmp}."%05d".mp4"
+  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileHashTmp}."%05d".mp4" #|tee -a "${strFileHashTmp}.log"
+  #~ cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
 fi
 
-SECFUNCexecA -ce ls -l "${strFileTmp}."* #|sort -n
+SECFUNCexecA -ce ls -l "${strFileHashTmp}."* #|sort -n
 
-IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strFileTmp}."?????".mp4" |sort -n)&&:
+IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strFileHashTmp}."?????".mp4" |sort -n)&&:
 declare -p astrFilePartList |tr "[" "\n" >&2
 
 #nCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
@@ -367,7 +411,7 @@ echoc --info "Converting" >&2
 nCount=0
 for strFilePart in "${astrFilePartList[@]}";do
   strFilePartNS="${strFilePart%.mp4}"
-  strPartTmp="${strFileTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
+  strPartTmp="${strFileHashTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
   strFilePartNew="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strFilePartNewUnsafeName="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strSafeFileName="`dirname "$strFilePartNewUnsafeName"`/`basename "$strFilePartNewUnsafeName" |md5sum |awk '{print $1}'`" #|tr -d " "
@@ -384,7 +428,7 @@ for strFilePart in "${astrFilePartList[@]}";do
     #: ${nCPUPerc:=50} #help overall CPUs percentage
     #SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
-    if FUNCavconv --part "$strFilePart" "$strPartTmp";then
+    if FUNCavconvConv --part "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
       #SECFUNCtrash "$strFilePart"
@@ -405,7 +449,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
 ( # to cd
   SECFUNCexecA -ce cd "$strTmpWorkPath"
   
-  strFileJoin="`basename "${strFileTmp}.join"`"
+  strFileJoin="`basename "${strFileHashTmp}.join"`"
   
   echoc --info "Joining" >&2
   SECFUNCtrash "$strFileJoin" &&:
@@ -416,9 +460,11 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   done
   SECFUNCexecA -ce cat "$strFileJoin"
 
-  strFinalTmp="${strFileTmp}.${strNewFormatSuffix}-TMP.mp4"
+  strFinalTmp="${strFileHashTmp}.${strNewFormatSuffix}-TMP.mp4"
   SECFUNCtrash "$strFinalTmp"&&:
-  if SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
+  if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
+    #~ cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+    
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
     FUNCmiOrigNew&&:
