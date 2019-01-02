@@ -196,12 +196,38 @@ strFileTmp="${strTmpWorkPath}/${strFileHash}"
 strNewFormatSuffix="x265-HEVC"
 strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
 
-function FUNCmiOrigNew() {
-  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
-  
+function FUNCflSize() {
+  stat -c "%s" "$1"
+}
+
+function FUNCflDurationMillis() {
+  mediainfo -f "$1" |egrep "Duration .*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"
+}
+function FUNCflDurationSec() {
+  echo $((`FUNCflDurationMillis "$1"`/1000))&&:
+  return 0
+}
+
+function FUNCavconv() { #help [--part] <lstrIn> <lstrOut>
+  local lastrPartParms=(-c:v libx265 -c:a libmp3lame) #libx265 -x265-params lossless=1
+  if [[ "$1" == "--part" ]];then lastrPartParms+=(-fflags +genpts);shift;fi
+  local lstrIn="$1";shift
+  local lstrOut="$1";shift
+  : ${nCPUPerc:=50} #help overall CPUs percentage
+  SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
+  SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut"
+}
+
+function FUNCplay() {
   if echoc -t 60 -q "play the new file?";then
     SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
   fi
+}
+
+function FUNCmiOrigNew() {
+  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+  
+  FUNCplay
   
   if FUNCtrashTmpOld;then
     # merge current list with possible new values
@@ -225,11 +251,28 @@ function FUNCmiOrigNew() {
 
 function FUNCtrashTmpOld() {
   SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
-  SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN" &&:
-  
-  if((`stat -c "%s" "$strOrigPath/$strFinalFileBN"` > `stat -c "%s" "$strFileAbs"`));then
-    echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
-  fi
+  for((iLoop2=0;iLoop2<2;iLoop2++));do
+    if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then
+      if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
+        echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
+      fi
+      
+      nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
+      nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
+      nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
+      if((nMargin==0));then nMargin=1;fi
+      if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
+        echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
+        if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
+          SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+          FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+          FUNCplay
+          continue #iLoop2
+        fi
+      fi
+    fi
+    break #iLoop2
+  done
   
   if echoc -t 60 -q "trash tmp and old files?";then
     SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
@@ -265,10 +308,9 @@ fi
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
-nDurationMillis="`mediainfo -f "$strFileAbs" |egrep "Duration.*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"`"
-nDurationSeconds=$((nDurationMillis/1000))
+nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
-nFileSz="`stat -c "%s" "$strFileAbs"`";
+nFileSz="`FUNCflSize "$strFileAbs"`";
 n1MB=1000000 #TODO 1024*1024
 : ${nMinMB:=1} #help
 nMinPartSz=$((nMinMB*n1MB))
@@ -281,7 +323,7 @@ nParts=$((nFileSz/nMinPartSz))
 nPartSeconds=$((nDurationSeconds/nParts));
 ((nPartSeconds+=1))&&: # to compensate for remaining milliseconds
 
-declare -p nDurationMillis nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
+declare -p nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
 
 if [[ ! -f "${strFileTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
@@ -314,10 +356,11 @@ for strFilePart in "${astrFilePartList[@]}";do
   
   if [[ ! -f "$strFilePartNew" ]];then
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
-    : ${nCPUPerc:=50} #help overall CPUs percentage
-    SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
+    #: ${nCPUPerc:=50} #help overall CPUs percentage
+    #SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
-    if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
+    if FUNCavconv --part "$strFilePart" "$strPartTmp";then
+    #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
       #SECFUNCtrash "$strFilePart"
     else

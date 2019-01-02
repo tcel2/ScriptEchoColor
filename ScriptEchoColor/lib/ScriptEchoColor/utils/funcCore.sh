@@ -1292,6 +1292,16 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 #	fi
 #}
 
+function SECFUNCisSimilar() { #help <lnValueA> <lnValueB> <lnMargin>
+  local lnValueA="$1";shift
+  local lnValueB="$1";shift
+  local lnMargin="$1";shift
+  if((lnValueA==lnValueB));then return 0;fi
+  if((lnValueA>lnValueB && lnValueA<=(lnValueB+lnMargin) ));then return 0;fi
+  if((lnValueB>lnValueA && lnValueB<=(lnValueA+lnMargin) ));then return 0;fi
+  return 1
+}
+
 function SECFUNCisNumber(){ #help "is float" check by default
 	local bDecimalCheck=false
 	local bNotNegativeCheck=false
