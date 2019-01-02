@@ -28,9 +28,12 @@ source <(secinit)
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
+strNewFormatSuffix="x265-HEVC"
 bContinue=false
 CFGstrTest="Test"
 astrRemainingParams=()
+CFGastrTmpWorkPathList=()
+CFGastrFileList=()
 astrAllParams=("${@-}") # this may be useful
 strWorkWith=""
 bWorkWith=false
@@ -71,8 +74,49 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
-# Main code
+function FUNCflFinal() { #help <lstrFl>
+  local lstrFl="$1"
+  local lstrSuffix="`SECFUNCfileSuffix "$strFileBN"`"
+  echo "${lstrFl%.$lstrSuffix}.${strNewFormatSuffix}.mp4"
+}
+
+function FUNCflBNHash() {
+  echo "`basename "$1"`" |md5sum |awk '{print $1}'
+}
+
+function FUNCflOrigPath() {
+  local lstr="`dirname "$1"`"
+  if [[ -z "$lstr" ]];then
+    SECFUNCechoErrA "empty dirname, not abs filename"
+    exit 1
+  fi
+  echo "$lstr"
+}
+
+function FUNCflTmpWorkPath() {
+  #: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+  echo "`FUNCflOrigPath "$1"`/.${SECstrScriptSelfName}.tmp/"
+}
+
 sedRegexPreciseMatch='s"(.)"[\1]"g'
+function FUNCflCleanFromDB() {
+  local lstrFl="$1"
+  
+  #####
+  ## Database consistency:
+  #####
+  # merge current list with possible new values
+  local lastrFileListBKP=( "${CFGastrFileList[@]}" ); 
+  SECFUNCcfgReadDB
+  SECFUNCarrayWork --merge CFGastrFileList lastrFileListBKP
+  # clean final list from current file
+  local lstrRegexPreciseMatch="^`echo "$lstrFl" |sed -r "$sedRegexPreciseMatch"`$"
+  SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
+  SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+  declare -p FUNCNAME lstrFl lstrRegexPreciseMatch CFGastrFileList
+}
+
+# Main code
 
 if $bWorkWith;then
   if ! strWorkWith="`realpath "$strWorkWith"`";then
@@ -89,9 +133,9 @@ else
   ######################
   ### the default is to add many files:
   ######################
-  if ! SECFUNCarrayCheck CFGastrFileList;then
-    CFGastrFileList=()
-  fi
+  #~ if ! SECFUNCarrayCheck CFGastrFileList;then
+    #~ CFGastrFileList=()
+  #~ fi
   for strNewFile in "$@";do
     if [[ -f "$strNewFile" ]];then
       CFGastrFileList+=("`realpath "$strNewFile"`")
@@ -119,8 +163,8 @@ else
       #~ SECFUNCcfgWriteVar CFGastrFileList
       for strFileAbs in "${CFGastrFileList[@]}";do
         SECFUNCexecA -ce $0 --workonlywith "$strFileAbs" &&:
-        while SECFUNCuniqueLock --isdaemonrunning;do echoc -w -t 3 "wait daemon exit";done
-        echoc -w -t 60
+        #while SECFUNCuniqueLock --isdaemonrunning;do echoc -w -t 1 "wait daemon exit";done
+        #~ echoc -w -t 60
       done
     done
     #~ echoc -w -t 60
@@ -131,15 +175,16 @@ else
   fi
 fi
 
-if SECFUNCuniqueLock --isdaemonrunning;then
-  echoc --info "daemon already running, exiting."
-  exit 0
-fi
+#~ if SECFUNCuniqueLock --isdaemonrunning;then
+  #~ echoc --info "daemon already running, exiting."
+  #~ exit 0
+#~ fi
 
 SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
-strOrigPath="`dirname "$strFileAbs"`"
-: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+strOrigPath="`FUNCflOrigPath "$strFileAbs"`"
+#: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
+: ${strTmpWorkPath:="`FUNCflTmpWorkPath "$strFileAbs"`"} #help
 
 declare -p strFileAbs strOrigPath strTmpWorkPath
 echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
@@ -184,18 +229,17 @@ fi
 
 if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
   echoc --info "Already HEVC format."
+  FUNCflCleanFromDB "$strFileAbs"
   exit 0
 fi
 
 strFileBN="`basename "$strFileAbs"`"
-strFileHash="`echo "$strFileBN" |md5sum |awk '{print $1}'`" #the file may contain chars avconv wont accept at .join file
+strFileNmHash="`FUNCflBNHash "$strFileBN"`" #the file may contain chars avconv wont accept at .join file
 
-strSuffix="`SECFUNCfileSuffix "$strFileBN"`"
-#strFileNoSuf="${strTmpWorkPath}/${strFileHash%.$strSuffix}"
-strFileHashTmp="${strTmpWorkPath}/${strFileHash}"
-
-strNewFormatSuffix="x265-HEVC"
-strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
+#strFileNoSuf="${strTmpWorkPath}/${strFileNmHash%.$strSuffix}"
+strAbsFileNmHashTmp="${strTmpWorkPath}/${strFileNmHash}"
+#strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
+strFinalFileBN="`FUNCflFinal "$strFileBN"`"
 
 function FUNCflSize() {
   stat -c "%s" "$1"
@@ -210,27 +254,27 @@ function FUNCflDurationSec() {
 }
 
 function FUNCavconvRaw() {
-  #~ SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileHashTmp}."%05d".mp4" #|tee -a 
+  #~ SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a 
   #~ SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp"
-  #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strFileHashTmp}.log"
+  #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strAbsFileNmHashTmp}.log"
   : ${nCPUPerc:=50} #help overall CPUs percentage
   SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
   #~ (
     #~ SECFUNCfdReport
     #~ exec 2>&1 
-    #~ exec > >(tee -a "${strFileHashTmp}.log")
-    #~ ls -l ${strFileHashTmp}.log
+    #~ exec > >(tee -a "${strAbsFileNmHashTmp}.log")
+    #~ ls -l ${strAbsFileNmHashTmp}.log
     #~ SECFUNCfdReport
-    #~ SECFUNCexecA -ce nice -n 19 avconv "$@" >"${strFileHashTmp}.log" 2>&1
-    #~ ls -l ${strFileHashTmp}.log
-    #~ #cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+    #~ SECFUNCexecA -ce nice -n 19 avconv "$@" >"${strAbsFileNmHashTmp}.log" 2>&1
+    #~ ls -l ${strAbsFileNmHashTmp}.log
+    #~ #cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
   #~ )
   (
-    strFlLog="${strFileHashTmp}.$BASHPID.log"
+    strFlLog="${strAbsFileNmHashTmp}.$BASHPID.log"
     echo -n >>"$strFlLog"
     tail -F --pid $BASHPID "$strFlLog"&
     SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
-    cat "$strFlLog" >>"${strFileHashTmp}.log"
+    cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
     exit $nRet
   )
   return $?
@@ -246,10 +290,16 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   #~ SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
   #~ (
     #~ exec 2>&1 
-    #~ exec > >(tee -a "${strFileHashTmp}.log")
-    #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strFileHashTmp}.log"
-    #~ #cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+    #~ exec > >(tee -a "${strAbsFileNmHashTmp}.log")
+    #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strAbsFileNmHashTmp}.log"
+    #~ #cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
   #~ )
+}
+
+function FUNCrecreate() {
+  SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+  FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+  echo -n >"${strAbsFileNmHashTmp}.recreated"
 }
 
 #~ function FUNCplay() {
@@ -287,7 +337,7 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   #~ if echoc -t 60 -q "recreate the new file now using it's full length (ignore split parts) ?";then
     #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
     #~ FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-    #~ echo -n >"${strFileHashTmp}.recreated"
+    #~ echo -n >"${strAbsFileNmHashTmp}.recreated"
     #~ FUNCplay
     #~ return 0
   #~ fi
@@ -295,7 +345,7 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
 #~ }
 
 #~ function FUNCtrashTmpOld() {
-  #~ SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
+  #~ SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileNmHash}"* &&:
   #~ bRecreatedNow=false
   
   #~ for((iLoop2=0;iLoop2<2;iLoop2++));do
@@ -314,12 +364,12 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
         #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
       #~ fi
       
-      #~ if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
+      #~ if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
         #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The individual parts processing encountered the problematic the warnings above!"
         #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
       #~ fi
 
-      #~ if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
+      #~ if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strAbsFileNmHashTmp}.log";then
         #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The parts joining encountered problematic the warnings above!"
         #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
       #~ fi
@@ -328,7 +378,7 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   #~ done
   
   #~ if ! $bRecreatedNow;then
-    #~ if [[ -f "${strFileHashTmp}.recreated" ]];then # created before this current run
+    #~ if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # created before this current run
       #~ FUNCplay
     #~ else
       #~ if ! FUNCrecreate;then
@@ -338,7 +388,7 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   #~ fi
   
   #~ if echoc -t 60 -q "trash tmp and old files?";then
-    #~ SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
+    #~ SECFUNCtrash "${strTmpWorkPath}/${strFileNmHash}"*
     #~ SECFUNCtrash "$strFileAbs"&&:
     #~ SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
   #~ else
@@ -353,12 +403,12 @@ function FUNCvalidateFinal() {
   local lnRet=0
   local lstrAtt="@YATTENTION!!!@-n "
   
-  if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
+  if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The individual parts processing encountered the problematic the warnings above!"
     ((lnRet++))&&:
   fi
 
-  if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
+  if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The parts joining encountered problematic the warnings above!"
     ((lnRet++))&&:
   fi
@@ -389,55 +439,81 @@ function FUNCfinalMenuChk() {
     if ! FUNCvalidateFinal;then
       strReco="@s@n!RECOMMENDED!@S "
     fi
-    if [[ -f "${strFileHashTmp}.recreated" ]];then # even if re-created before this current run
-      strReco="(DONE) "
+    if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # even if re-created before this current run
+      strReco="(already did) "
     fi
     
     astrOpt=(
       "_diff old from new media info?"
-      "_list all and chose a new one to work with?"
+      "_list all?"
       "_play the new file?"
       "_recreate ${strReco}the new file now using it's full length (ignore split parts)?"
+      "_skip this file for now?"
       "_trash tmp and old files?"
-      "_quit, skip this file for now?"
+      "set a new one to _work with?"
     )
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
     #~ echoc -t 60 -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
-    echoc -t 60 -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Dq"&&:;nRet=$?;case "`secascii $nRet`" in 
+    echoc -t 60 -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
       d)
         SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
         ;;
       l)
-        :
+        SECFUNCcfgReadDB
+        
+        echoc --info "Files:"
+        for strFl in "${CFGastrFileList[@]}";do
+          local lstrFlFinal="`FUNCflFinal "$strFl"`"
+          local lstrTmpPh="`FUNCflTmpWorkPath "$strFl"`";CFGastrTmpWorkPathList+=("$lstrTmpPh")
+          local lstrFlBNHash="`FUNCflBNHash "$strFl"`"
+          local lstrFlRec="$lstrTmpPh/${lstrFlBNHash}.recreated";#declare -p lstrFlRec
+          local lstrFlFinalSz="";if [[ -f "$lstrFlFinal" ]];then lstrFlFinalSz="$(du -h "$lstrFlFinal" |awk '{print $1}')";fi
+          local lstrHasRec="$(SECFUNCternary --echotf "wasR" "" test -f "$lstrFlRec")"
+          local lnParts="`ls "$lstrTmpPh/$lstrFlBNHash"*.mp4 2>/dev/null |wc -l`"
+          
+          echo -n "  $(SECFUNCternary --echotf "DONE${lstrHasRec}=${lstrFlFinalSz}" "ToDo" test -f "$lstrFlFinal"), "
+          echo -n "Parts=$lnParts, "
+#          echo -n "Dur=`FUNCflDurationSec "$lstrFlFinal"`/`FUNCflDurationSec "$strFl"`"
+          echo -n "OrigDurSec=`FUNCflDurationSec "$strFl"`, "
+          echo -n "\"`du -h "$strFl"`\", "
+          if [[ -f "$lstrFlFinal" ]];then echo -n "\"${lstrFlFinal}\", ";fi
+          echo -n "$lstrFlBNHash, "
+          #~ echo -n "`basename "$strFl"`, "
+          #~ echo -n "at `dirname "$strFl"`"
+          echo
+        done
+        
+        echoc --info "TmpFolders:"
+        SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
+        for strTmpPh in "${CFGastrTmpWorkPathList[@]}";do
+          if [[ -d "$strTmpPh" ]];then
+            du -sh "$strTmpPh" 2>/dev/null
+          fi
+        done
         ;;
       p)
         SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
         ;;
       r)
-        SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-        FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-        echo -n >"${strFileHashTmp}.recreated"
+        FUNCrecreate
+        ;;
+      s)
+        break;
         ;;
       t)
-        SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
+        SECFUNCtrash "${strTmpWorkPath}/${strFileNmHash}"*
         SECFUNCtrash "$strFileAbs"&&:
         
-        #####
-        ## Database consistency:
-        #####
-        # merge current list with possible new values
-        astrFileListBKP=( "${CFGastrFileList[@]}" ); 
-        SECFUNCcfgReadDB
-        SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
-        # clean final list from current file
-        strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-        SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-        SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-        
+        FUNCflCleanFromDB "$strFileAbs"
         break
         ;;
-      q)
-        break;
+      w)
+        local lstrNewWork="`echoc -S "paste the abs filename to work on it now"`"
+        if [[ -f "$lstrNewWork" ]];then
+          $0 --workonlywith "$lstrNewWork"
+        else
+          SECFUNCechoErrA "not found lstrNewWork='$lstrNewWork'"
+        fi
         ;;
       *)
         continue
@@ -462,12 +538,14 @@ FUNCfinalMenuChk
 #~ SECFUNCcfgWriteVar CFGastrFileList
 
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
+CFGastrTmpWorkPathList+=("$strTmpWorkPath");SECFUNCcfgWriteVar CFGastrTmpWorkPathList
 
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
 if(( nDurationSeconds <= (60*5) ));then
   echoc --info "short video nDurationSeconds='$nDurationSeconds'"
-  FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+  FUNCrecreate
+  #~ FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
   FUNCmiOrigNew&&:
   exit 0
 fi
@@ -487,15 +565,15 @@ nPartSeconds=$((nDurationSeconds/nParts));
 
 declare -p nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
 
-if [[ ! -f "${strFileHashTmp}.00000.mp4" ]];then
+if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
-  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strFileHashTmp}."%05d".mp4" #|tee -a "${strFileHashTmp}.log"
-  #~ cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
+  #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
 fi
 
-SECFUNCexecA -ce ls -l "${strFileHashTmp}."* #|sort -n
+SECFUNCexecA -ce ls -l "${strAbsFileNmHashTmp}."* #|sort -n
 
-IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strFileHashTmp}."?????".mp4" |sort -n)&&:
+IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strAbsFileNmHashTmp}."?????".mp4" |sort -n)&&:
 declare -p astrFilePartList |tr "[" "\n" >&2
 
 #nCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
@@ -505,7 +583,7 @@ echoc --info "Converting" >&2
 nCount=0
 for strFilePart in "${astrFilePartList[@]}";do
   strFilePartNS="${strFilePart%.mp4}"
-  strPartTmp="${strFileHashTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
+  strPartTmp="${strAbsFileNmHashTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
   strFilePartNew="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strFilePartNewUnsafeName="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strSafeFileName="`dirname "$strFilePartNewUnsafeName"`/`basename "$strFilePartNewUnsafeName" |md5sum |awk '{print $1}'`" #|tr -d " "
@@ -543,7 +621,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
 ( # to cd
   SECFUNCexecA -ce cd "$strTmpWorkPath"
   
-  strFileJoin="`basename "${strFileHashTmp}.join"`"
+  strFileJoin="`basename "${strAbsFileNmHashTmp}.join"`"
   
   echoc --info "Joining" >&2
   SECFUNCtrash "$strFileJoin" &&:
@@ -554,10 +632,10 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   done
   SECFUNCexecA -ce cat "$strFileJoin"
 
-  strFinalTmp="${strFileHashTmp}.${strNewFormatSuffix}-TMP.mp4"
+  strFinalTmp="${strAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
   SECFUNCtrash "$strFinalTmp"&&:
   if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
-    #~ cat "$SECstrRunLogFile" >>"${strFileHashTmp}.log"
+    #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
     
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
