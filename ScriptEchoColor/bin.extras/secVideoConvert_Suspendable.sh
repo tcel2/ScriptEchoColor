@@ -249,8 +249,21 @@ function FUNCmiOrigNew() {
   return 1
 }
 
+function FUNCrecreate() {
+  if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
+    SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+    FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+    echo -n >"${strFileTmp}.recreated"
+    FUNCplay
+    return 0
+  fi
+  return 1
+}
+
 function FUNCtrashTmpOld() {
   SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
+  bRecreatedNow=false
+  
   for((iLoop2=0;iLoop2<2;iLoop2++));do
     if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then
       if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
@@ -261,18 +274,30 @@ function FUNCtrashTmpOld() {
       nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
       nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
       if((nMargin==0));then nMargin=1;fi
+      declare -p nDurSecOld nDurSecNew nMargin
       if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
         echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-        if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
-          SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-          FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-          FUNCplay
-          continue #iLoop2
-        fi
+        #~ if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
+          #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+          #~ FUNCavconv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+          #~ FUNCplay
+          #~ continue #iLoop2
+        #~ fi
+        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
       fi
     fi
     break #iLoop2
   done
+  
+  if ! $bRecreatedNow;then
+    if [[ -f "${strFileTmp}.recreated" ]];then # created before this current run
+      FUNCplay
+    else
+      if ! FUNCrecreate;then
+        FUNCplay
+      fi
+    fi
+  fi
   
   if echoc -t 60 -q "trash tmp and old files?";then
     SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
