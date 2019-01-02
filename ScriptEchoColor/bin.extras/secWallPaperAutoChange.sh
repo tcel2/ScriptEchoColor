@@ -492,21 +492,22 @@ if $bDaemon;then
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
     #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $bZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
-      "toggle _auto play mode to conserve CPU\n"
-      "_change image now\n"
-      "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)\n"
-      "_disable current\n"
-      "show _hidden toggle (`SECFUNCternary --onoff $bShowHidden`)\n"
-      "fi_lter(@s@y$strFilter@S)\n"
-      "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)\n"
-      "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)\n"
-      "_reset timeout counter ($nSumSleep/$nChangeInterval)\n"
-      "_set image index\n"
-      "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)\n"
-      "fi_x wallpaper pic URI\n"
-      "toggle _zoom if possible (is `SECFUNCternary --onoff $bZoom`)\n" #"$strOptZoom"
+      "toggle _auto play mode to conserve CPU"
+      "_change image now"
+      "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
+      "_disable current"
+      "show _hidden toggle (`SECFUNCternary --onoff $bShowHidden`)"
+      "fi_lter(@s@y$strFilter@S)"
+      "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
+      "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
+      "_reset timeout counter ($nSumSleep/$nChangeInterval)"
+      "_set image index"
+      "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)"
+      "fi_x wallpaper pic URI"
+      "toggle _zoom if possible (is `SECFUNCternary --onoff $bZoom`)" #"$strOptZoom"
     )
-    echoc -t $nSleep -Q "@O\n ${astrOpt[*]}"&&:; nRet=$?; case "`secascii $nRet`" in 
+    #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
+    echoc -t $nSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n"&&:; nRet=$?; case "`secascii $nRet`" in 
       a)
         SECFUNCtoggleBoolean bPlay
         ;;

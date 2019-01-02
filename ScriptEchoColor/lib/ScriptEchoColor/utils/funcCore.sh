@@ -571,6 +571,18 @@ function SECFUNCarrayCmp() { #help <lstrArrayIdA> <lstrArrayIdB> return 0 if bot
 #	fi
 }
 
+function SECFUNCarrayJoin() { #help <lstrJoinToken> <values...>
+  local lstrJoinToken="$1";shift
+  local lnIndex
+  local lnTot=${#*}
+  for((lnIndex=0;lnIndex<lnTot;lnIndex++));do
+    if((lnIndex>0));then echo -n "${lstrJoinToken}";fi
+    echo -n "$1";shift
+  done
+  #~ for strOpt in "$@";do echo -n "${strOpt}${lstrJoinToken}";done
+  return 0
+}
+
 function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment variable is an array, return 0 (true)
 	# var init here
 	local lstrExample="DefaultValue"

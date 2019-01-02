@@ -119,6 +119,7 @@ else
       #~ SECFUNCcfgWriteVar CFGastrFileList
       for strFileAbs in "${CFGastrFileList[@]}";do
         SECFUNCexecA -ce $0 --workonlywith "$strFileAbs" &&:
+        while SECFUNCuniqueLock --isdaemonrunning;do echoc -w -t 3 "wait daemon exit";done
         echoc -w -t 60
       done
     done
@@ -251,123 +252,209 @@ function FUNCavconvConv() { #help [--part] <lstrIn> <lstrOut>
   #~ )
 }
 
-function FUNCplay() {
-  if echoc -t 60 -q "play the new file?";then
-    SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
-  fi
-}
+#~ function FUNCplay() {
+  #~ if echoc -t 60 -q "play the new file?";then
+    #~ SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
+  #~ fi
+#~ }
 
-function FUNCmiOrigNew() {
-  SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+#~ function FUNCmiOrigNew() {
+  #~ SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
   
-  FUNCplay
+  #~ FUNCplay
   
-  if FUNCtrashTmpOld;then
-    # merge current list with possible new values
-    astrFileListBKP=( "${CFGastrFileList[@]}" ); 
-    SECFUNCcfgReadDB
-    SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
+  #~ if FUNCtrashTmpOld;then
+    #~ # merge current list with possible new values
+    #~ astrFileListBKP=( "${CFGastrFileList[@]}" ); 
+    #~ SECFUNCcfgReadDB
+    #~ SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
     
-    # clean final list from current file
-    #~ sedRegexPreciseMatch='s"(.)"[\1]"g'
-    strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-    SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-    #unset CFGastrFileList[0]; 
-    #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
-    SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+    #~ # clean final list from current file
+    #~ # sedRegexPreciseMatch='s"(.)"[\1]"g'
+    #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+    #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+    #~ #unset CFGastrFileList[0]; 
+    #~ #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
+    #~ SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
     
-    return 0
+    #~ return 0
+  #~ fi
+  
+  #~ return 1
+#~ }
+
+#~ function FUNCrecreate() {
+  #~ if echoc -t 60 -q "recreate the new file now using it's full length (ignore split parts) ?";then
+    #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+    #~ FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+    #~ echo -n >"${strFileHashTmp}.recreated"
+    #~ FUNCplay
+    #~ return 0
+  #~ fi
+  #~ return 1
+#~ }
+
+#~ function FUNCtrashTmpOld() {
+  #~ SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
+  #~ bRecreatedNow=false
+  
+  #~ for((iLoop2=0;iLoop2<2;iLoop2++));do
+    #~ if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then
+      #~ if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
+        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
+      #~ fi
+      
+      #~ nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
+      #~ nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
+      #~ nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
+      #~ if((nMargin==0));then nMargin=1;fi
+      #~ declare -p nDurSecOld nDurSecNew nMargin
+      #~ if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
+        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
+        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
+      #~ fi
+      
+      #~ if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
+        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The individual parts processing encountered the problematic the warnings above!"
+        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
+      #~ fi
+
+      #~ if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
+        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The parts joining encountered problematic the warnings above!"
+        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
+      #~ fi
+    #~ fi
+    #~ break #iLoop2
+  #~ done
+  
+  #~ if ! $bRecreatedNow;then
+    #~ if [[ -f "${strFileHashTmp}.recreated" ]];then # created before this current run
+      #~ FUNCplay
+    #~ else
+      #~ if ! FUNCrecreate;then
+        #~ FUNCplay
+      #~ fi
+    #~ fi
+  #~ fi
+  
+  #~ if echoc -t 60 -q "trash tmp and old files?";then
+    #~ SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
+    #~ SECFUNCtrash "$strFileAbs"&&:
+    #~ SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
+  #~ else
+    #~ return 1
+  #~ fi
+  
+  #~ echoc -w -t 60
+  #~ return 0
+#~ }
+
+function FUNCvalidateFinal() {
+  local lnRet=0
+  local lstrAtt="@YATTENTION!!!@-n "
+  
+  if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
+    echoc --alert "${lstrAtt}The individual parts processing encountered the problematic the warnings above!"
+    ((lnRet++))&&:
+  fi
+
+  if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
+    echoc --alert "${lstrAtt}The parts joining encountered problematic the warnings above!"
+    ((lnRet++))&&:
   fi
   
-  return 1
-}
-
-function FUNCrecreate() {
-  if echoc -t 60 -q "recreate the new file now using it's full length (ignore split parts) ?";then
-    SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-    FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-    echo -n >"${strFileHashTmp}.recreated"
-    FUNCplay
-    return 0
+  if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
+    echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
+    ((lnRet++))&&:
   fi
-  return 1
+  
+  nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
+  nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
+  nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
+  if((nMargin==0));then nMargin=1;fi
+  declare -p nDurSecOld nDurSecNew nMargin
+  if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
+    echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
+    ((lnRet++))&&:
+  fi
+  
+  return $lnRet
 }
 
-function FUNCtrashTmpOld() {
-  SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileHash}"* &&:
-  bRecreatedNow=false
-  
-  for((iLoop2=0;iLoop2<2;iLoop2++));do
-    if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then
-      if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
-        echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
-      fi
-      
-      nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
-      nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
-      nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
-      if((nMargin==0));then nMargin=1;fi
-      declare -p nDurSecOld nDurSecNew nMargin
-      if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
-        echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-        #~ if echoc -t 60 -q "recreate the new file now using it's full length (no parts) ?";then
-          #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-          #~ FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-          #~ FUNCplay
-          #~ continue #iLoop2
-        #~ fi
-        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      fi
-      
-      if SECFUNCexecA -ce egrep "Past duration .* too large" "${strFileHashTmp}.log";then
-        echoc -w -t 60 --alert "@YATTENTION!!!@-n The individual parts processing encountered the problematic the warnings above!"
-        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      fi
-
-      if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strFileHashTmp}.log";then
-        echoc -w -t 60 --alert "@YATTENTION!!!@-n The parts joining encountered problematic the warnings above!"
-        if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      fi
+function FUNCfinalMenuChk() {
+  while true;do
+    if ! SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then return 0;fi
+    
+    strReco=""
+    if ! FUNCvalidateFinal;then
+      strReco="@s@n!RECOMMENDED!@S "
     fi
-    break #iLoop2
+    if [[ -f "${strFileHashTmp}.recreated" ]];then # even if re-created before this current run
+      strReco="(DONE) "
+    fi
+    
+    astrOpt=(
+      "_diff old from new media info?"
+      "_list all and chose a new one to work with?"
+      "_play the new file?"
+      "_recreate ${strReco}the new file now using it's full length (ignore split parts)?"
+      "_trash tmp and old files?"
+      "_quit, skip this file for now?"
+    )
+    #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
+    #~ echoc -t 60 -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
+    echoc -t 60 -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Dq"&&:;nRet=$?;case "`secascii $nRet`" in 
+      d)
+        SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+        ;;
+      l)
+        :
+        ;;
+      p)
+        SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
+        ;;
+      r)
+        SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+        FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+        echo -n >"${strFileHashTmp}.recreated"
+        ;;
+      t)
+        SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
+        SECFUNCtrash "$strFileAbs"&&:
+        
+        #####
+        ## Database consistency:
+        #####
+        # merge current list with possible new values
+        astrFileListBKP=( "${CFGastrFileList[@]}" ); 
+        SECFUNCcfgReadDB
+        SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
+        # clean final list from current file
+        strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
+        SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
+        SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+        
+        break
+        ;;
+      q)
+        break;
+        ;;
+      *)
+        continue
+        ;;
+    esac
   done
   
-  if ! $bRecreatedNow;then
-    if [[ -f "${strFileHashTmp}.recreated" ]];then # created before this current run
-      FUNCplay
-    else
-      if ! FUNCrecreate;then
-        FUNCplay
-      fi
-    fi
-  fi
-  
-  if echoc -t 60 -q "trash tmp and old files?";then
-    SECFUNCtrash "${strTmpWorkPath}/${strFileHash}"*
-    SECFUNCtrash "$strFileAbs"&&:
-    SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
-  else
-    return 1
-  fi
-  
-  echoc -w -t 60
-  return 0
+  exit 0
 }
 
-if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
-  FUNCmiOrigNew&&:
-  #~ if FUNCmiOrigNew;then
-    #~ if $bContinue;then
-      #~ $0 --continue #TODO avoid nesting messing memory
-      #~ exit 0
-    #~ fi
-  #~ else
-  #  ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs"
-    ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
-    echoc --info "already converted to strFinalFileBN='$strFinalFileBN'"
-    exit 0
-  #~ fi
-fi
+FUNCfinalMenuChk
+#~ if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
+  #~ FUNCmiOrigNew&&:
+  #~ ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
+  #~ echoc --info "already converted to strFinalFileBN='$strFinalFileBN'"
+  #~ exit 0
+#~ fi
 
 #~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
 #~ CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
@@ -377,6 +464,13 @@ fi
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
 
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
+
+if(( nDurationSeconds <= (60*5) ));then
+  echoc --info "short video nDurationSeconds='$nDurationSeconds'"
+  FUNCavconvConv "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+  FUNCmiOrigNew&&:
+  exit 0
+fi
 
 nFileSz="`FUNCflSize "$strFileAbs"`";
 n1MB=1000000 #TODO 1024*1024
@@ -467,7 +561,8 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
     
     SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
-    FUNCmiOrigNew&&:
+    #~ FUNCmiOrigNew&&:
+    FUNCfinalMenuChk
     
     # make it ready to continue on next run
     #~ if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then

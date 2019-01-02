@@ -580,7 +580,8 @@ function FUNCrun(){
 #	source <(secinit)
 #	SECFUNCarraysRestore
 	nRunTimes=0
-	local lbDevMode=false
+  local lbDevModeBeforeRun="`SECFUNCternary --tf secEnvDev.sh --isdevmode`"
+	local lbDevMode=false;if $lbDevModeBeforeRun;then lbDevMode=true;fi
  	local lbRestartSelfFullDev=false
   
   local lastrRestart=()
@@ -789,6 +790,7 @@ function FUNCrun(){
 			lstrTxt+="\t TERM=$TERM\n";
 			lstrTxt+="\t PATH='$PATH'\n";
 			lstrTxt+="\t lbDevMode='$lbDevMode'\n";
+      lstrTxt+="\t lbDevModeBeforeRun='$lbDevModeBeforeRun'\n";
       lstrTxt+="\t strDevSrcFile='$strDevSrcFile'\n";
 			lstrTxt+="\n";
 #			lstrTxt+="Tips:\n";
@@ -829,7 +831,7 @@ function FUNCrun(){
               "You are funny!" 
               "Ouch!" 
               "Ignore me, I mean it!" 
-              "Aww common..." 
+              "Aww common, leave me alone..." 
               "what time is it? nah... I dont care..." 
               "BOOOO!" 
               "I am deprecated, now leave me alone..." 
@@ -841,7 +843,7 @@ function FUNCrun(){
               "Wake up!" 
               "I won't do anything, seriously!" 
               "I won't work, don't waste your time!" 
-              "I am not a button! Stop that!" 
+              "I am not a normal button! Stop that!" 
               "Are you a button too?" 
               "I would like to share a wide spread secret: 1+1>=3 ;)"
             )
@@ -851,15 +853,26 @@ function FUNCrun(){
           astrBtnEdSrc[1]="bash -c FUNCeaster"
         fi
         
-        astrYadExecParams=(
-          "${astrYadBasicOpts[@]}"
-          
-          --button="Retry:4" # ATTENTION!!! exit VALUES are NOT in order!!!!!
+        #~ strRetryNormal="--button=\"Retry:4\""
+        #~ if $lbDevModeBeforeRun;then
+          #~ strRetryNormal=""
+        #~ fi
+        astrYadExecParams=( "${astrYadBasicOpts[@]}" )
+        
+        # ATTENTION!!! exit VALUES are NOT in order!!!!!
+        if ! $lbDevModeBeforeRun;then
+          astrYadExecParams+=(
+            --button="Retry:4"
+            --button="${strRetryFull}:5"
+          )
+        fi
+        astrYadExecParams+=(
           --button="Retry-DEV:2"
-          --button="${strRetryFull}:5"
           --button="${strDumpRetryBtnTxt}:3" 
           --button="gtk-close:1" 
-          
+        )
+        
+        astrYadExecParams+=(
           --form 
           --field="[${astrYadFields[0]}] Use Xterm:chk" 
           --field="[${astrYadFields[1]}] b4 run" 

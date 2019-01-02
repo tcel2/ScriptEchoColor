@@ -1351,13 +1351,15 @@ function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIP
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the commands can be many params
+function SECFUNCternary() { #help <boolValue|command> [ ? <acmdTrue> : <acmdFalse> ] # the commands can be many params least ? and :
 	SECFUNCdbgFuncInA;
 	# var init here
 	local lstrExample="DefaultValue"
-  local lbOnOff=false
+  local lbEchoTrueFalse=false
 	local lastrRemainingParams=()
 	local lastrAllParams=("${@-}") # this may be useful
+  local lstrEchoTrue="ON"
+  local lstrEchoFalse="OFF"
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCternary_help show this help
@@ -1366,7 +1368,15 @@ function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the c
 		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCternary_help <lstrExample> MISSING DESCRIPTION
 			shift;lstrExample="${1-}"
     elif [[ "$1" == "-o" || "$1" == "--onoff" ]];then #SECFUNCternary_help simple echo ON or OFF
-      lbOnOff=true
+      lbEchoTrueFalse=true
+    elif [[ "$1" == "-e" || "$1" == "--echotf" ]];then #SECFUNCternary_help <lstrEchoTrue> <lstrEchoFalse>
+      shift;lstrEchoTrue="$1"
+      shift;lstrEchoFalse="$1"
+      lbEchoTrueFalse=true
+    elif [[ "$1" == "--tf" ]];then #SECFUNCternary_help
+      lstrEchoTrue="true"
+      lstrEchoFalse="false"
+      lbEchoTrueFalse=true
 		elif [[ "$1" == "--" ]];then #SECFUNCternary_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -1386,37 +1396,55 @@ function SECFUNCternary() { #help <boolValue> ? <acmdTrue> : <acmdFalse> # the c
 	
 	#validate params here
 	
-  #TODO allow many params to be cmdTrue ending it with ';' or \; like `find -exec` works :)
-  local lboolValue=$1
-  if [[ "$lboolValue" != "true" && "$lboolValue" != "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
-    SECFUNCechoErrA "lboolValue must be 'true' or 'false'"
-    return 1
-  fi
-  shift&&:
-  
+  local lacmdCond=()
   local lacmdTrue=()
   local lacmdFalse=()
-  if $lbOnOff;then
-    lacmdTrue=(echo ON)
-    lacmdFalse=(echo OFF)
+  
+  #~ if [[ "${1-}" == "true" || "${1-}" == "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
+    #~ :
+  #~ fi
+  
+  #~ local lboolValue="${1-}"
+  #~ local lbCondFound=false
+  #~ if [[ "$lboolValue" == "true" || "$lboolValue" == "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
+    #~ lacmdCond=( "$lboolValue" );shift&&:
+    #~ if [[ "$1" != "?" ]];then
+      #~ SECFUNCechoErrA "missing '?'"
+      #~ return 1
+    #~ fi
+  #~ else
+    #~ while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done
+  #~ fi
+  #~ if [[ "$lboolValue" != "true" && "$lboolValue" != "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
+    #~ while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done
+    #~ lbCondFound=true
+    #~ SECFUNCechoErrA "lboolValue must be 'true' or 'false'"
+    #~ return 1
+  #~ fi
+  #~ shift&&:
+  
+  if $lbEchoTrueFalse;then
+    while [[ -n "${1-}" ]];do lacmdCond+=("$1");shift;done # tail
+    lacmdTrue=(  echo "$lstrEchoTrue"  )
+    lacmdFalse=( echo "$lstrEchoFalse" )
   else
-    if [[ "$1" != "?" ]];then
-      SECFUNCechoErrA "missing '?'"
-      return 1
-    fi
-    shift
+    #~ if [[ "$1" != "?" ]];then
+      #~ SECFUNCechoErrA "missing '?'"
+      #~ return 1
+    #~ fi
+    #~ shift
+    while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done;shift
     
-    while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done
-    shift
+    while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done;shift
     
-    while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done
+    while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done # tail
   fi
   
-  if((`SECFUNCarraySize lacmdTrue`==0));then SECFUNCechoErrA "empty lacmdTrue";fi
+  if((`SECFUNCarraySize lacmdTrue `==0));then SECFUNCechoErrA "empty lacmdTrue ";fi
   if((`SECFUNCarraySize lacmdFalse`==0));then SECFUNCechoErrA "empty lacmdFalse";fi
     
 	# work here
-  if $lboolValue;then
+  if "${lacmdCond[@]}" 1>&2;then
     "${lacmdTrue[@]}"
   else
     "${lacmdFalse[@]}"
