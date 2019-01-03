@@ -78,7 +78,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 			shift;lstrExample="${1-}"
     elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
       lbExample=true
-		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams
+		elif [[ "$1" == "--" ]];then #FUNCexample_help params after this are ignored as being these options, and stored at lastrRemainingParams. TODO explain how it will be used
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
 				lastrRemainingParams+=("$1")
@@ -98,6 +98,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	#validate params here
 	
 	# work here
+  if((`SECFUNCarraySize lastrRemainingParams`>0));then :;fi
 	
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
@@ -128,7 +129,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
 		shift
 		pSECFUNCcfgOptSet "$@";exit 0;
-	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams
+	elif [[ "$1" == "--" ]];then #help params after this are ignored as being these options, and stored at astrRemainingParams. TODO explain how it will be used
 		shift #astrRemainingParams=("$@")
 		while ! ${1+false};do	# checks if param is set
 			astrRemainingParams+=("$1")
@@ -146,6 +147,8 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
+if((`SECFUNCarraySize astrRemainingParams`>0));then :;fi
+
 SECFUNCexec -ce FUNCcodingGuide
 SECFUNCexec -ce FUNCexample --help
 
