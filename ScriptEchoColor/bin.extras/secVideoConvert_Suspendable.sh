@@ -116,6 +116,12 @@ function FUNCflCleanFromDB() {
   declare -p FUNCNAME lstrFl lstrRegexPreciseMatch CFGastrFileList
 }
 
+function FUNCflAddToDB() {
+  CFGastrFileList+=("`realpath "$1"`")
+  SECFUNCarrayWork --uniq CFGastrFileList
+  SECFUNCcfgWriteVar CFGastrFileList
+}
+
 # Main code
 
 if $bWorkWith;then
@@ -138,9 +144,11 @@ else
   #~ fi
   for strNewFile in "$@";do
     if [[ -f "$strNewFile" ]];then
-      CFGastrFileList+=("`realpath "$strNewFile"`")
-      SECFUNCarrayWork --uniq CFGastrFileList
-      SECFUNCcfgWriteVar CFGastrFileList
+      echo "working with: strNewFile='$strNewFile'"
+      FUNCflAddToDB "$strNewFile"
+      #~ CFGastrFileList+=("`realpath "$strNewFile"`")
+      #~ SECFUNCarrayWork --uniq CFGastrFileList
+      #~ SECFUNCcfgWriteVar CFGastrFileList
     else  
       SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
     fi
@@ -240,6 +248,53 @@ strFileNmHash="`FUNCflBNHash "$strFileBN"`" #the file may contain chars avconv w
 strAbsFileNmHashTmp="${strTmpWorkPath}/${strFileNmHash}"
 #strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
 strFinalFileBN="`FUNCflFinal "$strFileBN"`"
+
+function FUNCextConv() {
+  local lstrExt="$1"
+  if [[ "`SECFUNCfileSuffix "$strFileAbs"`" == "$lstrExt" ]];then
+    strFl3gpAsMp4="${strFileAbs%.${lstrExt}}.mp4"
+    if [[ ! -f "$strFl3gpAsMp4" ]];then
+      #TODO what about large 3gp files?
+      case "$lstrExt" in
+        3gp) 
+          avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4"
+          ;;
+        gif)
+          local laCompat=(-movflags faststart -pix_fmt yuv420p) # options for better browsers compatibility and performance
+          local lstrFixToValidSize="scale=trunc(iw/2)*2:trunc(ih/2)*2" # must be mult of 2
+          avconv -i "$strFileAbs" "${laCompat[@]}" -vf "$lstrFixToValidSize" "$strFl3gpAsMp4"
+          ;;
+      esac
+    fi
+    
+    if echoc -q "trash ${lstrExt} file?";then
+      FUNCflCleanFromDB "$strFileAbs"
+      FUNCflAddToDB "$strFl3gpAsMp4"
+      echoc --info ".${lstrExt} file was converted to .mp4 wich will now be used instead on next run"
+      SECFUNCexecA -ce ls -l "${strFileAbs%.${lstrExt}}"*
+      SECFUNCtrash "$strFileAbs"
+    fi
+    
+    exit 0 #yes, exit to let the new full filename be used properly
+  fi
+}
+FUNCextConv 3gp
+FUNCextConv gif
+#~ if [[ "`SECFUNCfileSuffix "$strFileAbs"`" == "3gp" ]];then
+  #~ strFl3gpAsMp4="${strFileAbs%.3gp}.mp4"
+  #~ if [[ ! -f "$strFl3gpAsMp4" ]];then
+    #~ avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4";
+  #~ fi
+  #~ FUNCflCleanFromDB "$strFileAbs"
+  #~ FUNCflAddToDB "$strFl3gpAsMp4"
+  #~ echoc --info ".3gp file was converted to .mp4 wich will now be used instead on next run"
+  #~ SECFUNCexecA -ce ls -l "${strFileAbs%.3gp}"*
+  #~ if echoc -q "trash 3gp file?";then
+    #~ SECFUNCtrash "$strFileAbs"
+  #~ fi
+  #~ #TODO what about large 3gp files?
+  #~ exit 0
+#~ fi
 
 function FUNCflSize() {
   stat -c "%s" "$1"
@@ -474,7 +529,7 @@ function FUNCfinalMenuChk() {
           echo -n "  $(SECFUNCternary --echotf "DONE${lstrHasRec}=${lstrFlFinalSz}" "ToDo" test -f "$lstrFlFinal"), "
           echo -n "Parts=$lnParts, "
 #          echo -n "Dur=`FUNCflDurationSec "$lstrFlFinal"`/`FUNCflDurationSec "$strFl"`"
-          echo -n "OrigDurSec=`FUNCflDurationSec "$strFl"`, "
+          if [[ "`SECFUNCfileSuffix "$strFl"`" == "mp4" ]];then echo -n "OrigDurSec=`FUNCflDurationSec "$strFl"`, ";fi
           echo -n "\"`du -h "$strFl"`\", "
           if [[ -f "$lstrFlFinal" ]];then echo -n "\"${lstrFlFinal}\", ";fi
           echo -n "$lstrFlBNHash, "
