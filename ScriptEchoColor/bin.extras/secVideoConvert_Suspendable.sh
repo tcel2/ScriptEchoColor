@@ -37,6 +37,10 @@ n1MB=$((1024*1024))
 : ${nPartMinMB:=1}
 export nPartMinMB #help when splitting, parts will have this minimum MB size if possible
 
+: ${nSlowQSleep:=60}
+export nSlowQSleep #help every question will wait this seconds
+CFGnDefQSleep=$nSlowQSleep
+
 astrVidExtList=(mp4 3gp flv avi mov mpeg)
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
@@ -134,7 +138,7 @@ function FUNCflAddToDB() {
   SECFUNCcfgWriteVar CFGastrFileList
 }
 
-# Main code
+# Main code ######################################################################################
 
 if $bWorkWith;then
   if ! strWorkWith="`realpath "$strWorkWith"`";then
@@ -172,7 +176,7 @@ else
       SECFUNCcfgReadDB
       echoc --info " Continue @s@{By}Loop@S: "
       declare -p CFGastrFileList |tr '[' '\n'
-      if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t 60 "Waiting new job requests";continue;fi #break;fi
+      if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
       #~ strFileAbs="${CFGastrFileList[0]-}"
       #~ if [[ -f "$strFileAbs" ]];then
         #~ $0 --onlyworkwith "$strFileAbs" &&:
@@ -182,12 +186,22 @@ else
       #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
       #~ SECFUNCcfgWriteVar CFGastrFileList
       for strFileAbs in "${CFGastrFileList[@]}";do
-        SECFUNCexecA -ce $0 --onlyworkwith "$strFileAbs" &&:
+        if ! SECFUNCexecA -ce $0 --onlyworkwith "$strFileAbs";then
+          echoc -t $CFGnDefQSleep -p "ln$LINENO: failed strFileAbs='$strFileAbs'"
+        fi
+        
+        SECFUNCcfgReadDB
+        if [[ -f "${CFGstrPriorityWork-}" ]];then
+          if ! SECFUNCexecA -ce $0 --onlyworkwith "$CFGstrPriorityWork";then
+            echoc -t $CFGnDefQSleep -p "ln$LINENO: failed strFileAbs='$strFileAbs'"
+          fi
+          SECFUNCcfgWriteVar CFGstrPriorityWork=""
+        fi
         #while SECFUNCuniqueLock --isdaemonrunning;do echoc -w -t 1 "wait daemon exit";done
-        #~ echoc -w -t 60
+        #~ echoc -w -t $CFGnDefQSleep
       done
     done
-    #~ echoc -w -t 60
+    #~ echoc -w -t $CFGnDefQSleep
     exit 0
   else
     # choses 1st to work on it
@@ -214,6 +228,10 @@ echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
 
 if [[ ! -f "$strFileAbs" ]];then
   SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
+  if echoc -t $CFGnDefQSleep -q "remove missing file from list?";then
+    FUNCflCleanFromDB "$strFileAbs"
+    exit 0
+  fi
   exit 1
 fi
 
@@ -234,7 +252,7 @@ strFinalFileBN="`FUNCflFinal "$strFileBN"`"
 function FUNCshortDurChk() {
   nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
   if(( nDurationSeconds > nShortDur ));then
-    if ! echoc -t 60 -q "this is a long file nDurationSeconds='$nDurationSeconds', work on it?";then
+    if ! echoc -t $CFGnDefQSleep -q "this is a long file nDurationSeconds='$nDurationSeconds', work on it?";then
       return 1
     fi
   fi
@@ -259,7 +277,7 @@ function FUNCavconvRaw() {
   (
     strFlLog="${strAbsFileNmHashTmp}.$BASHPID.log"
     echo -n >>"$strFlLog"
-    tail -F --pid $BASHPID "$strFlLog"&
+    tail -F --pid=$$ "$strFlLog"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
     SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
     cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
     exit $nRet
@@ -362,7 +380,7 @@ function FUNCextDirectConv() {
     
     #~ if [[ -f "$strFl3gpAsMp4" ]];then
       #~ SECFUNCexecA -ce ls -l "$strFileAbs" "$strFl3gpAsMp4"
-      #~ if echoc -t 60 -q "trash ${lstrExt} file?";then
+      #~ if echoc -t $CFGnDefQSleep -q "trash ${lstrExt} file?";then
         #~ FUNCflCleanFromDB "$strFileAbs"
         #~ #FUNCflAddToDB "$strFl3gpAsMp4"
         #~ #echoc --info ".${lstrExt} file was converted to .mp4 wich will now be used instead on next run"
@@ -447,6 +465,7 @@ function FUNCfinalMenuChk() {
     
     astrOpt=(
       "_diff old from new media info?"
+      "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep}"
       "_list all?"
       "_play the new file?"
       "_recreate ${strReco}the new file now using it's full length (ignore split parts)?"
@@ -455,10 +474,18 @@ function FUNCfinalMenuChk() {
       "set a new one to _work with?"
     )
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
-    #~ echoc -t 60 -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
-    echoc -t 60 -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
+    #~ echoc -t $CFGnDefQSleep -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
+    echoc -t $CFGnDefQSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
       d)
         SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+        ;;
+      f)
+        if((CFGnDefQSleep>5));then
+          CFGnDefQSleep=5
+        else
+          CFGnDefQSleep=$nSlowQSleep
+        fi
+        SECFUNCcfgWriteVar CFGnDefQSleep
         ;;
       l)
         SECFUNCcfgReadDB
@@ -513,7 +540,9 @@ function FUNCfinalMenuChk() {
       w)
         local lstrNewWork="`echoc -S "paste the abs filename to work on it now"`"
         if [[ -f "$lstrNewWork" ]];then
-          $0 --onlyworkwith "$lstrNewWork"
+          #$0 --onlyworkwith "$lstrNewWork"
+          SECFUNCcfgWriteVar CFGstrPriorityWork="$lstrNewWork"
+          break; 
         else
           SECFUNCechoErrA "not found lstrNewWork='$lstrNewWork'"
         fi
@@ -548,7 +577,8 @@ fi
 if $bJustRecreateDirectly;then
   FUNCrecreate
   #~ FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-  FUNCmiOrigNew&&:
+  #~ FUNCmiOrigNew&&:
+  FUNCfinalMenuChk
   exit 0
 fi
 
@@ -647,6 +677,6 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   exit 0
 )
 
-echoc -w -t 60
+echoc -w -t $CFGnDefQSleep
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
