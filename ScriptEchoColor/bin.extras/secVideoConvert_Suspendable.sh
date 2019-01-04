@@ -37,6 +37,7 @@ n1MB=$((1024*1024))
 : ${nPartMinMB:=1}
 export nPartMinMB #help when splitting, parts will have this minimum MB size if possible
 
+astrVidExtList=(mp4 3gp flv avi mov mpeg)
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
 bContinue=false
@@ -123,7 +124,8 @@ function FUNCflCleanFromDB() {
   local lstrRegexPreciseMatch="^`echo "$lstrFl" |sed -r "$sedRegexPreciseMatch"`$"
   SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
   SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-  declare -p FUNCNAME lstrFl lstrRegexPreciseMatch CFGastrFileList
+  declare -p FUNCNAME lstrFl lstrRegexPreciseMatch
+  declare -p CFGastrFileList |tr '[' '\n'
 }
 
 function FUNCflAddToDB() {
@@ -163,7 +165,7 @@ else
       SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
     fi
   done
-  declare -p CFGastrFileList
+  declare -p CFGastrFileList |tr '[' '\n'
   
   if $bContinue;then
     while true;do
@@ -204,42 +206,11 @@ strOrigPath="`FUNCflOrigPath "$strFileAbs"`"
 #: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
 : ${strTmpWorkPath:="`FUNCflTmpWorkPath "$strFileAbs"`"}
 export strTmpWorkPath #help if not set will be automatic based on current work file
+SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
+CFGastrTmpWorkPathList+=("$strTmpWorkPath");SECFUNCcfgWriteVar CFGastrTmpWorkPathList
 
 declare -p strFileAbs strOrigPath strTmpWorkPath
 echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
-
-#~ echoc --info "Continue:"
-#~ if $bContinue;then
-  #~ strFileAbs="${CFGastrFileList[0]-}"
-  #~ echoc --info "Continue:"
-#~ else
-  #~ :
-#~ fi
-
-#~ if $bContinue;then
-  #~ strFileAbs="$CFGstrFileAbs"
-  #~ if [[ -z "$strFileAbs" ]];then
-    #~ strFileAbs="${CFGastrFileList[0]-}"
-  #~ fi
-  
-  #~ strOrigPath="$CFGstrOrigPath"
-  #~ strTmpWorkPath="$CFGstrTmpWorkPath"
-  
-  #~ echoc --info "Continue:"
-  #~ declare -p strFileAbs strOrigPath strTmpWorkPath
-#~ else
-  #~ strFileAbs="$1";
-  #~ # if [[ "${strFileAbs:0:1}" == "/" ]];then
-    #~ # strOrigPath="`dirname "$strFileAbs"`"
-  #~ # else
-    #~ # strOrigPath="`pwd`/`dirname "$strFileAbs"`/"
-    #~ # strFileAbs="`pwd`/${strFileAbs}"
-  #~ # fi
-  #~ strFileAbs="`realpath "${strFileAbs}"`"
-  #~ strOrigPath="`dirname "$strFileAbs"`"
-#~ #  : ${strTmpWorkPath:="`pwd`/.${SECstrScriptSelfName}.tmp/"} #help
-  #~ : ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
-#~ fi
 
 if [[ ! -f "$strFileAbs" ]];then
   SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
@@ -362,7 +333,7 @@ function FUNCavconvConv() { #help
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function FUNCextConv() {
+function FUNCextDirectConv() {
   local lstrExt="$1"
   if [[ "`SECFUNCfileSuffix "$strFileAbs"`" == "$lstrExt" ]];then
     #strFl3gpAsMp4="${strFileAbs%.${lstrExt}}.mp4"
@@ -370,12 +341,12 @@ function FUNCextConv() {
     if [[ ! -f "$strFl3gpAsMp4" ]];then
       #TODO what about large 3gp files?
       case "$lstrExt" in
-        3gp) 
+        "3gp") 
           if FUNCshortDurChk;then
             FUNCavconvConv --io "$strFileAbs" "$strFl3gpAsMp4" #avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4"
           fi
           ;;
-        gif)
+        "gif")
           local laOpts=()
           laOpts+=(-movflags faststart -pix_fmt yuv420p) # options for better browsers compatibility and performance
           laOpts+=(-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2") # fix to valid size that must be mult of 2
@@ -389,52 +360,35 @@ function FUNCextConv() {
       esac
     fi
     
-    if [[ -f "$strFl3gpAsMp4" ]];then
-      SECFUNCexecA -ce ls -l "$strFileAbs" "$strFl3gpAsMp4"
-      if echoc -t 60 -q "trash ${lstrExt} file?";then
-        FUNCflCleanFromDB "$strFileAbs"
-        #FUNCflAddToDB "$strFl3gpAsMp4"
-        #echoc --info ".${lstrExt} file was converted to .mp4 wich will now be used instead on next run"
-        #~ echoc --info ".${lstrExt} file was converted to .mp4"
-        #~ SECFUNCexecA -ce ls -l "${strFileAbs%.${lstrExt}}"*
-        SECFUNCtrash "$strFileAbs"
-      fi
-    fi
+    #~ if [[ -f "$strFl3gpAsMp4" ]];then
+      #~ SECFUNCexecA -ce ls -l "$strFileAbs" "$strFl3gpAsMp4"
+      #~ if echoc -t 60 -q "trash ${lstrExt} file?";then
+        #~ FUNCflCleanFromDB "$strFileAbs"
+        #~ #FUNCflAddToDB "$strFl3gpAsMp4"
+        #~ #echoc --info ".${lstrExt} file was converted to .mp4 wich will now be used instead on next run"
+        #~ # echoc --info ".${lstrExt} file was converted to .mp4"
+        #~ # SECFUNCexecA -ce ls -l "${strFileAbs%.${lstrExt}}"*
+        #~ SECFUNCtrash "$strFileAbs"
+      #~ fi
+    #~ fi
     
-    exit 0 #yes, exit to let the new full filename be used properly
+    #~ exit 0 #yes, exit to let the new full filename be used properly
   fi
   
   return 0
 }
-
-##########################################################
-################## these will `exit` on matching     #####
-FUNCextConv 3gp                                       ####
-FUNCextConv gif                                        ###
-##########################################################
-
-#~ if [[ "`SECFUNCfileSuffix "$strFileAbs"`" == "3gp" ]];then
-  #~ strFl3gpAsMp4="${strFileAbs%.3gp}.mp4"
-  #~ if [[ ! -f "$strFl3gpAsMp4" ]];then
-    #~ avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4";
-  #~ fi
-  #~ FUNCflCleanFromDB "$strFileAbs"
-  #~ FUNCflAddToDB "$strFl3gpAsMp4"
-  #~ echoc --info ".3gp file was converted to .mp4 wich will now be used instead on next run"
-  #~ SECFUNCexecA -ce ls -l "${strFileAbs%.3gp}"*
-  #~ if echoc -q "trash 3gp file?";then
-    #~ SECFUNCtrash "$strFileAbs"
-  #~ fi
-  #~ #TODO what about large 3gp files?
-  #~ exit 0
-#~ fi
 
 function FUNCflSize() {
   stat -c "%s" "$1"
 }
 
 function FUNCflDurationMillis() {
-  mediainfo -f "$1" |egrep "Duration .*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"
+  if SECFUNCarrayContains astrVidExtList "`SECFUNCfileSuffix "$1"`";then
+    mediainfo -f "$1" |egrep "Duration .*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"
+  else
+    echo "0" #TODO -1 as an indicator?
+  fi
+  return 0
 }
 function FUNCflDurationSec() {
   echo $((`FUNCflDurationMillis "$1"`/1000))&&:
@@ -446,103 +400,6 @@ function FUNCrecreate() {
   FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
   echo -n >"${strAbsFileNmHashTmp}.recreated"
 }
-
-#~ function FUNCplay() {
-  #~ if echoc -t 60 -q "play the new file?";then
-    #~ SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
-  #~ fi
-#~ }
-
-#~ function FUNCmiOrigNew() {
-  #~ SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
-  
-  #~ FUNCplay
-  
-  #~ if FUNCtrashTmpOld;then
-    #~ # merge current list with possible new values
-    #~ astrFileListBKP=( "${CFGastrFileList[@]}" ); 
-    #~ SECFUNCcfgReadDB
-    #~ SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
-    
-    #~ # clean final list from current file
-    #~ # sedRegexPreciseMatch='s"(.)"[\1]"g'
-    #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-    #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-    #~ #unset CFGastrFileList[0]; 
-    #~ #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
-    #~ SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-    
-    #~ return 0
-  #~ fi
-  
-  #~ return 1
-#~ }
-
-#~ function FUNCrecreate() {
-  #~ if echoc -t 60 -q "recreate the new file now using it's full length (ignore split parts) ?";then
-    #~ SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-    #~ FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
-    #~ echo -n >"${strAbsFileNmHashTmp}.recreated"
-    #~ FUNCplay
-    #~ return 0
-  #~ fi
-  #~ return 1
-#~ }
-
-#~ function FUNCtrashTmpOld() {
-  #~ SECFUNCexecA -ce ls -l "${strTmpWorkPath}/${strFileNmHash}"* &&:
-  #~ bRecreatedNow=false
-  
-  #~ for((iLoop2=0;iLoop2<2;iLoop2++));do
-    #~ if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then
-      #~ if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
-        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n the new file is BIGGER than old one!"
-      #~ fi
-      
-      #~ nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
-      #~ nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
-      #~ nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
-      #~ if((nMargin==0));then nMargin=1;fi
-      #~ declare -p nDurSecOld nDurSecNew nMargin
-      #~ if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
-        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      #~ fi
-      
-      #~ if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
-        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The individual parts processing encountered the problematic the warnings above!"
-        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      #~ fi
-
-      #~ if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strAbsFileNmHashTmp}.log";then
-        #~ echoc -w -t 60 --alert "@YATTENTION!!!@-n The parts joining encountered problematic the warnings above!"
-        #~ if FUNCrecreate;then bRecreatedNow=true;continue;fi #iLoop2
-      #~ fi
-    #~ fi
-    #~ break #iLoop2
-  #~ done
-  
-  #~ if ! $bRecreatedNow;then
-    #~ if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # created before this current run
-      #~ FUNCplay
-    #~ else
-      #~ if ! FUNCrecreate;then
-        #~ FUNCplay
-      #~ fi
-    #~ fi
-  #~ fi
-  
-  #~ if echoc -t 60 -q "trash tmp and old files?";then
-    #~ SECFUNCtrash "${strTmpWorkPath}/${strFileNmHash}"*
-    #~ SECFUNCtrash "$strFileAbs"&&:
-    #~ SECFUNCexecA -ce ls -l "$strOrigPath/$strFinalFileBN" &&:
-  #~ else
-    #~ return 1
-  #~ fi
-  
-  #~ echoc -w -t 60
-  #~ return 0
-#~ }
 
 function FUNCvalidateFinal() {
   local lnRet=0
@@ -608,6 +465,7 @@ function FUNCfinalMenuChk() {
         
         echoc --info "Files:"
         for strFl in "${CFGastrFileList[@]}";do
+          local lstrSuf="`SECFUNCfileSuffix "$strFl"`"
           local lstrFlFinal="`FUNCflFinal "$strFl"`"
           local lstrTmpPh="`FUNCflTmpWorkPath "$strFl"`";CFGastrTmpWorkPathList+=("$lstrTmpPh")
           local lstrFlBNHash="`FUNCflBNHash "$strFl"`"
@@ -619,7 +477,7 @@ function FUNCfinalMenuChk() {
           echo -n "  $(SECFUNCternary --echotf "DONE${lstrHasRec}=${lstrFlFinalSz}" "ToDo" test -f "$lstrFlFinal"), "
           echo -n "Parts=$lnParts, "
 #          echo -n "Dur=`FUNCflDurationSec "$lstrFlFinal"`/`FUNCflDurationSec "$strFl"`"
-          if [[ "`SECFUNCfileSuffix "$strFl"`" == "mp4" ]];then echo -n "OrigDurSec=`FUNCflDurationSec "$strFl"`, ";fi
+          if [[ "$lstrSuf" == "mp4" ]];then echo -n "OrigDurSec=`FUNCflDurationSec "$strFl"`, ";fi
           echo -n "\"`du -h "$strFl"`\", "
           if [[ -f "$lstrFlFinal" ]];then echo -n "\"${lstrFlFinal}\", ";fi
           echo -n "$lstrFlBNHash, "
@@ -669,21 +527,9 @@ function FUNCfinalMenuChk() {
   exit 0
 }
 
+FUNCextDirectConv "3gp"
+FUNCextDirectConv "gif"
 FUNCfinalMenuChk
-#~ if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
-  #~ FUNCmiOrigNew&&:
-  #~ ls -l "$strOrigPath/$strFinalFileBN" "$strFileAbs" &&:
-  #~ echoc --info "already converted to strFinalFileBN='$strFinalFileBN'"
-  #~ exit 0
-#~ fi
-
-#~ CFGstrFileAbs="$strFileAbs"        ;SECFUNCcfgWriteVar CFGstrFileAbs
-#~ CFGstrOrigPath="$strOrigPath"      ;SECFUNCcfgWriteVar CFGstrOrigPath
-#~ CFGstrTmpWorkPath="$strTmpWorkPath";SECFUNCcfgWriteVar CFGstrTmpWorkPath
-#~ SECFUNCcfgWriteVar CFGastrFileList
-
-SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
-CFGastrTmpWorkPathList+=("$strTmpWorkPath");SECFUNCcfgWriteVar CFGastrTmpWorkPathList
 
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
@@ -797,32 +643,6 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
     SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
     #~ FUNCmiOrigNew&&:
     FUNCfinalMenuChk
-    
-    # make it ready to continue on next run
-    #~ if [[ "$CFGstrFileAbs" != "${CFGastrFileList[0]}" ]];then
-      #~ SECFUNCechoErrA "CFGstrFileAbs='$CFGstrFileAbs' CFGastrFileList[0]='${CFGastrFileList[0]}' should be the same"
-      #~ exit 1
-    #~ fi
-    
-    #~ # merge current list with possible new values
-    #~ astrFileListBKP=( "${CFGastrFileList[@]}" ); 
-    #~ SECFUNCcfgReadDB
-    #~ SECFUNCarrayWork --merge CFGastrFileList astrFileListBKP
-    
-    #~ # clean final list from current file
-    #~ sedRegexPreciseMatch='s"(.)"[\1]"g'
-    #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-    #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-    #~ #unset CFGastrFileList[0]; 
-    #~ #CFGastrFileList=( "${CFGastrFileList[@]}" ); 
-    #~ SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-    
-    #~ CFGstrFileAbs="";SECFUNCcfgWriteVar CFGstrFileAbs
-    
-    #~ if((${#CFGastrFileList[*]}>0));then
-      #~ "$0" --continue #TODO recursive means more memory used :(, make it a child and wait it end?
-      #~ #TODO exit 0 # but wait the child(s) exit too!
-    #~ fi
   fi
   exit 0
 )

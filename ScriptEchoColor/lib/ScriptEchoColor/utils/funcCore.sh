@@ -436,7 +436,7 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 	return 0
 }
 
-function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> return 0 if it contains element
+function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch...> return 0 if it contains any of the elements
 	# var init here
 	local lstrExample="DefaultValue"
 	local lastrRemainingParams=()
@@ -466,30 +466,31 @@ function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch> retu
 	done
 	
 	local lstrArrayIdA="${1-}"
-	shift
-	local lstrElementToMatch="${1-}"
-	shift 
-	
-	if ! SECFUNCarrayCheck "$lstrArrayIdA";then
-		SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
-		return 1 #generic error indicating a problem that MUST be fixed by the user
-	fi
-	
-	if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
-#		SECFUNCechoWarnA "empty array lstrArrayIdA='$lstrArrayIdA'"
-		###
-		# SAY NOTHING!!! the contains check can return false (non 0) in case array is empty, is not even a warning...
-		###
-		return 4 #empty array
-	fi
-	
-	local lstrArrayIdValA="${lstrArrayIdA}[@]"
-	for lstrCheck in "${!lstrArrayIdValA}";do
-#		echo "($lstrCheck) == ($lstrElementToMatch)" >&2
-		if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
-			return 0
-		fi
-	done
+  
+	while shift;do
+    local lstrElementToMatch="${1-}"
+    
+    if ! SECFUNCarrayCheck "$lstrArrayIdA";then
+      SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
+      return 1 #generic error indicating a problem that MUST be fixed by the user
+    fi
+    
+    if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
+  #		SECFUNCechoWarnA "empty array lstrArrayIdA='$lstrArrayIdA'"
+      ###
+      # SAY NOTHING!!! the contains check can return false (non 0) in case array is empty, is not even a warning...
+      ###
+      return 4 #empty array
+    fi
+    
+    local lstrArrayIdValA="${lstrArrayIdA}[@]"
+    for lstrCheck in "${!lstrArrayIdValA}";do
+  #		echo "($lstrCheck) == ($lstrElementToMatch)" >&2
+      if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
+        return 0
+      fi
+    done
+  done
 	
 	#SECFUNCechoWarnA "element lstrElementToMatch='$lstrElementToMatch' not found."
 	###
