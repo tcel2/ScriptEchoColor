@@ -642,6 +642,7 @@ function FUNCfinalMenuChk() {
   exit 0
 }
 
+FUNCfinalMenuChk
 FUNCextDirectConv "3gp"
 FUNCextDirectConv "gif"
 FUNCfinalMenuChk
