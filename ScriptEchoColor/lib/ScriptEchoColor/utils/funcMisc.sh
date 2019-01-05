@@ -1365,13 +1365,11 @@ function SECFUNCternary() { #help <boolValue|command> [ ? <acmdTrue> : <acmdFals
 		if [[ "$1" == "--help" ]];then #SECFUNCternary_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCternary_help <lstrExample> MISSING DESCRIPTION
-			shift;lstrExample="${1-}"
     elif [[ "$1" == "-o" || "$1" == "--onoff" ]];then #SECFUNCternary_help simple echo ON or OFF
       lbEchoTrueFalse=true
     elif [[ "$1" == "-e" || "$1" == "--echotf" ]];then #SECFUNCternary_help <lstrEchoTrue> <lstrEchoFalse>
-      shift;lstrEchoTrue="$1"
-      shift;lstrEchoFalse="$1"
+      shift;lstrEchoTrue="${1}"
+      shift;lstrEchoFalse="${1}"
       lbEchoTrueFalse=true
     elif [[ "$1" == "--tf" ]];then #SECFUNCternary_help
       lstrEchoTrue="true"
@@ -1400,44 +1398,16 @@ function SECFUNCternary() { #help <boolValue|command> [ ? <acmdTrue> : <acmdFals
   local lacmdTrue=()
   local lacmdFalse=()
   
-  #~ if [[ "${1-}" == "true" || "${1-}" == "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
-    #~ :
-  #~ fi
-  
-  #~ local lboolValue="${1-}"
-  #~ local lbCondFound=false
-  #~ if [[ "$lboolValue" == "true" || "$lboolValue" == "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
-    #~ lacmdCond=( "$lboolValue" );shift&&:
-    #~ if [[ "$1" != "?" ]];then
-      #~ SECFUNCechoErrA "missing '?'"
-      #~ return 1
-    #~ fi
-  #~ else
-    #~ while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done
-  #~ fi
-  #~ if [[ "$lboolValue" != "true" && "$lboolValue" != "false" ]];then #TODO 0 or 1 too? but 0=true or false? hehe.. :/
-    #~ while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done
-    #~ lbCondFound=true
-    #~ SECFUNCechoErrA "lboolValue must be 'true' or 'false'"
-    #~ return 1
-  #~ fi
-  #~ shift&&:
-  
   if $lbEchoTrueFalse;then
-    while [[ -n "${1-}" ]];do lacmdCond+=("$1");shift;done # tail
+    while ! ${1+false};do lacmdCond+=("$1");shift;done # tail
     lacmdTrue=(  echo "$lstrEchoTrue"  )
     lacmdFalse=( echo "$lstrEchoFalse" )
   else
-    #~ if [[ "$1" != "?" ]];then
-      #~ SECFUNCechoErrA "missing '?'"
-      #~ return 1
-    #~ fi
-    #~ shift
     while [[ "$1" != "?" ]];do lacmdCond+=("$1");shift;done;shift
     
     while [[ "$1" != ":" ]];do lacmdTrue+=("$1");shift;done;shift
     
-    while [[ -n "${1-}" ]];do lacmdFalse+=("$1");shift;done # tail
+    while ! ${1+false};do lacmdFalse+=("$1");shift;done # tail
   fi
   
   if((`SECFUNCarraySize lacmdTrue `==0));then SECFUNCechoErrA "empty lacmdTrue ";fi

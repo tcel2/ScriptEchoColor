@@ -520,19 +520,23 @@ function FUNCvalidateFinal() {
     ((lnRet++))&&:
   fi
   
-  if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
-    echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
-    ((lnRet++))&&:
-  fi
-  
-  nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
-  nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
-  nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
-  if((nMargin==0));then nMargin=1;fi
-  declare -p nDurSecOld nDurSecNew nMargin
-  if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
-    echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-    ((lnRet++))&&:
+  if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
+    if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
+      echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
+      ((lnRet++))&&:
+    fi
+    
+    nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
+    nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
+    nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
+    if((nMargin==0));then nMargin=1;fi
+    declare -p nDurSecOld nDurSecNew nMargin
+    if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
+      echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
+      ((lnRet++))&&:
+    fi
+  else
+    SEC_WARN=true SECFUNCechoWarnA "final file '$strOrigPath/$strFinalFileBN' is not ready yet"
   fi
   
   return $lnRet
@@ -540,26 +544,34 @@ function FUNCvalidateFinal() {
 
 function FUNCfinalMenuChk() {
   while true;do
-    if ! SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then return 0;fi
-    
-    strReco=""
-    if ! FUNCvalidateFinal;then
-      strReco="@s@n!RECOMMENDED!@S "
+    local lbReady=false
+    if SECFUNCexecA -ce ls -l "$strFileAbs" "$strOrigPath/$strFinalFileBN";then 
+      lbReady=true
     fi
+    
+    local lstrReco=""
     if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # even if re-created before this current run
-      strReco="(already did) "
+      lstrReco="(already did tho) "
+    else
+      if ! FUNCvalidateFinal;then
+        lstrReco="@s@n!RECOMMENDED!@S "
+      fi
     fi
     
     astrOpt=(
-      "_diff old from new media info?"
+      "_diff old from new media info? (ready)"
       "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep}"
       "_list all?"
-      "_play the new file?"
-      "_recreate ${strReco}the new file now using it's full length (ignore split parts)?"
+      "_play the new file? (ready)"
+      "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
       "_skip this file for now?"
-      "_trash tmp and old files?"
-      "set a new one to _work with?"
+      "_trash tmp and original video files?"
+      "re-_validate `SECFUNCternary -e "logs and final file" "existing logs" $lbReady`?"
+      "set a new video to _work with?"
     )
+    if ! $lbReady;then
+      SECFUNCarrayClean astrOpt ".*\(ready\)$"
+    fi
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
     #~ echoc -t $CFGnDefQSleep -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
     echoc -t $CFGnDefQSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
@@ -618,6 +630,9 @@ function FUNCfinalMenuChk() {
         FUNCflCleanFromDB "$strFileAbs"
         break
         ;;
+      v)
+        FUNCvalidateFinal&&:
+        ;;
       w)
         local lstrNewWork="`echoc -S "paste the abs filename to work on it now"`"
         if [[ -f "$lstrNewWork" ]];then
@@ -629,7 +644,11 @@ function FUNCfinalMenuChk() {
         fi
         ;;
       *)
-        continue
+        if $lbReady;then
+          continue
+        else
+          break
+        fi
         ;;
     esac
   done

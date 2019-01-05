@@ -719,7 +719,7 @@ function SECFUNCarrayWork() { #help
 #		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayWork_help <lstrExample> MISSING DESCRIPTION
 #			shift
 #			lstrExample="${1-}"
-    elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help <lstrArrayId> [value]
+    elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help <lstrArrayId> [value] helps on regex cleaning array elements. If value to match is empty, will clean empty elements (default behavior)
 #      lbCleanMode=true
       lstrMode="CLEAN"
     elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help <lstrArrayId> <value>
@@ -838,7 +838,7 @@ function SECFUNCarrayWork() { #help
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function SECFUNCarrayClean() { #help <lstrArrayId> [lstrMatch] helps on regex cleaning array elements. If lstrMatch is empty, will clean empty elements (default behavior)
+function SECFUNCarrayClean() { #help 
   SECFUNCarrayWork --clean "$1" "$2"
 }
 

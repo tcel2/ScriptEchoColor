@@ -74,7 +74,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 		if [[ "$1" == "--help" ]];then #FUNCexample_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
+		elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #FUNCexample_help <lstrExample> MISSING DESCRIPTION
 			shift;lstrExample="${1-}"
     elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #FUNCexample_help MISSING DESCRIPTION
       lbExample=true
