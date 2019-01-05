@@ -746,6 +746,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		shift
 	done
 	
+  if [[ -z "$lstrCaller" ]];then local lastrFunc=( "${FUNCNAME[@]}" );unset lastrFunc[0];lstrCaller="(${lastrFunc[*]}): ";fi
+  
   if $bVerboseEchoRequested;then 
     bExecEcho=true;
     if ! $SECbExecVerboseEchoAllowed;then 
@@ -907,7 +909,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		
 		local lstrFunctionInfo=""
 		if $lbFunctionInfoShow;then
-			lstrFunctionInfo="$FUNCNAME: lstrCaller=${lstrCaller}: "
+			lstrFunctionInfo="${lstrCaller}: "
 		fi
 		
 		local lstrChildIndicator=""
@@ -923,7 +925,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	fi
 	
 	if $bWaitKey;then
-		echo -n "[`SECFUNCdtTimeForLogMessages`]$FUNCNAME: lstrCaller=${lstrCaller}: press a key to exec..." >&2;read -n 1;
+		echo -n "[`SECFUNCdtTimeForLogMessages`]${lstrCaller}: press a key to exec..." >&2;read -n 1;
 	fi
 	
   #: ${SECbExecJustEcho:=true} #keep here! `secinit --fast` would not 
@@ -1131,7 +1133,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   SECFUNCechoDbgA "lstrCaller=${lstrCaller}: ${lstrReturned}$lstrExec"
   
 	if $bShowElapsed;then
-		echo "[`SECFUNCdtTimeForLogMessages`]SECFUNCexec: lstrCaller=${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$lnDelayEndTime-$lnDelayInitTime"`s"
+		echo "[`SECFUNCdtTimeForLogMessages`]${lstrCaller}: ELAPSED=`SECFUNCbcPrettyCalcA "$lnDelayEndTime-$lnDelayInitTime"`s"
 	fi
 	
 	if((lnSECFUNCexecReturnValue!=0));then

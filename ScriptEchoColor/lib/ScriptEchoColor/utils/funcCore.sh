@@ -1475,6 +1475,7 @@ function SECFUNCechoErr() { #help echo error messages
 	done
 	
 	###### main code
+  if [[ -z "$lstrCaller" ]];then local lastrFunc=( "${FUNCNAME[@]}" );unset lastrFunc[0];lstrCaller="(${lastrFunc[*]}): ";fi
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECERROR: ${lstrCaller}$@"
 	if ! $lbLogOnly;then
 		if $SEC_MsgColored;then
@@ -1570,6 +1571,8 @@ function SECFUNCechoDbg() { #help will echo only if debug is enabled with SEC_DE
 	done
 	
 	###### main code
+  #if [[ -z "$lstrCaller" ]];then local lastrFunc=( "${FUNCNAME[@]}" );unset lastrFunc[0];lstrCaller="(${lastrFunc[*]}): ";fi  
+  
 	if [[ -n "$lstrCaller" ]];then #this is a generic spot to be a bit more helpful
 		SECstrDbgLastCaller="${lstrCaller} ${lastrRemainingParams[@]-}"
 	fi
@@ -1741,6 +1744,7 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 	fi
 	
 	###### main code
+  if [[ -z "$lstrCaller" ]];then local lastrFunc=( "${FUNCNAME[@]}" );unset lastrFunc[0];lstrCaller="(${lastrFunc[*]}): ";fi
 	local l_output=" [`SECFUNCdtTimeForLogMessages`]SECWARN: ${lstrCaller}$@"
 	if $SEC_MsgColored;then
 		echo -e "\E[0m\E[93m${l_output}\E[0m" >&2
