@@ -50,8 +50,10 @@ astrRemainingParams=()
 CFGastrTmpWorkPathList=()
 CFGastrFileList=()
 astrAllParams=("${@-}") # this may be useful
+sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
 bWorkWith=false
+bTrashMode=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -67,6 +69,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWorkWith=true
 	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help resume last work if any
 		bContinue=true
+	elif [[ "$1" == "--trash" ]];then #help tmp and new files maintenance
+		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -113,7 +117,6 @@ function FUNCflTmpWorkPath() {
   echo "`FUNCflOrigPath "$1"`/.${SECstrScriptSelfName}.tmp/"
 }
 
-sedRegexPreciseMatch='s"(.)"[\1]"g'
 function FUNCflCleanFromDB() {
   local lstrFl="$1"
   
@@ -138,7 +141,72 @@ function FUNCflAddToDB() {
   SECFUNCcfgWriteVar CFGastrFileList
 }
 
+function FUNCworkWith() {
+  if ! SECFUNCexecA -ce $0 --onlyworkwith "$1";then
+    echoc -t $CFGnDefQSleep -p "failed '$1'"
+    return 1
+  fi
+  return 0
+}
+
+function FUNCtmpFolders() {
+  local lbTrash=false;
+  if [[ "${1-}" == "--trash" ]];then
+    lbTrash=true;
+    shift
+  fi
+  
+  echoc --info "TmpFolders:"
+  SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
+  for strTmpPh in "${CFGastrTmpWorkPathList[@]}";do
+    if [[ -d "$strTmpPh" ]];then
+      if $lbTrash;then SECFUNCdrawLine;fi
+      du -sh "$strTmpPh" 2>/dev/null
+      
+      if $lbTrash;then
+        echoc -w -t 5 "trashing it..."
+        SECFUNCtrash "$strTmpPh/"
+      fi
+    fi
+  done
+  return 0
+}
+
+function FUNCnewFiles() {
+  local lbTrash=false;
+  if [[ "${1-}" == "--trash" ]];then
+    lbTrash=true;
+    shift
+  fi
+  
+  for strFl in "${CFGastrFileList[@]}";do
+    if $lbTrash;then SECFUNCdrawLine;fi
+    strFlNEW="`FUNCflFinal "$strFl"`"
+    if ls -l "$strFlNEW";then
+      if $lbTrash;then
+        echoc -w -t 5 "trashing it..."
+        SECFUNCtrash "$strFlNEW"
+      fi
+    fi
+  done
+  return 0
+}
+
 # Main code ######################################################################################
+
+if $bTrashMode;then
+  FUNCtmpFolders
+  if echoc -q "trash all temp folders above?";then
+    FUNCtmpFolders --trash
+  fi
+  
+  FUNCnewFiles
+  if echoc -q "trash all newly enconded files above?";then
+    FUNCnewFiles --trash
+  fi
+  
+  exit 0
+fi
 
 if $bWorkWith;then
   if ! strWorkWith="`realpath "$strWorkWith"`";then
@@ -186,20 +254,24 @@ else
       #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
       #~ SECFUNCcfgWriteVar CFGastrFileList
       for strFileAbs in "${CFGastrFileList[@]}";do
-        if ! SECFUNCexecA -ce $0 --onlyworkwith "$strFileAbs";then
-          echoc -t $CFGnDefQSleep -p "ln$LINENO: failed strFileAbs='$strFileAbs'"
-        fi
-        
         SECFUNCcfgReadDB
+        
         if [[ -f "${CFGstrPriorityWork-}" ]];then
-          if ! SECFUNCexecA -ce $0 --onlyworkwith "$CFGstrPriorityWork";then
-            echoc -t $CFGnDefQSleep -p "ln$LINENO: failed strFileAbs='$strFileAbs'"
-          fi
+          echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
+          FUNCworkWith "$CFGstrPriorityWork"&&:
           SECFUNCcfgWriteVar CFGstrPriorityWork=""
         fi
-        #while SECFUNCuniqueLock --isdaemonrunning;do echoc -w -t 1 "wait daemon exit";done
-        #~ echoc -w -t $CFGnDefQSleep
+        
+        if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
+          echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
+          continue;
+        fi
+        
+        SECFUNCcfgWriteVar CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
+        FUNCworkWith "$strFileAbs"&&:
       done
+      SECFUNCcfgWriteVar CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
+      
     done
     #~ echoc -w -t $CFGnDefQSleep
     exit 0
@@ -280,9 +352,13 @@ function FUNCavconvRaw() {
     tail -F --pid=$$ "$strFlLog"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
     SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
     cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
+    if((nRet!=0));then
+      SECFUNCechoErrA "failed nRet=$nRet"
+    fi
     exit $nRet
-  )
-  return $?
+  );local lnRet=$?;
+  declare -p FUNCNAME lnRet
+  return $lnRet
 }
 
 function FUNCavconvConv() { #help
@@ -338,7 +414,9 @@ function FUNCavconvConv() { #help
     lastrPartParms+=( "${lastrRemainingParams[@]}" )
   fi
   
-  FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut"
+  if ! FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut";then
+    return 1
+  fi
   #~ : ${nCPUPerc:=50} #help overall CPUs percentage
   #~ SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
   #~ (
@@ -512,14 +590,8 @@ function FUNCfinalMenuChk() {
           #~ echo -n "at `dirname "$strFl"`"
           echo
         done
-        
-        echoc --info "TmpFolders:"
-        SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
-        for strTmpPh in "${CFGastrTmpWorkPathList[@]}";do
-          if [[ -d "$strTmpPh" ]];then
-            du -sh "$strTmpPh" 2>/dev/null
-          fi
-        done
+
+        FUNCtmpFolders
         ;;
       p)
         SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
@@ -669,8 +741,9 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
     #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
     
-    SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
-    SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
+    #~ SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
+    #~ SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
+    SECFUNCexecA -ce mv -vf "$strFinalTmp" "${strOrigPath}/"
     #~ FUNCmiOrigNew&&:
     FUNCfinalMenuChk
   fi
