@@ -719,7 +719,7 @@ function FUNCrun(){
 		fi
 		
     astrYadBasicOpts=(
-      --title "SDE(${astrRunParams[0]}) - $SECstrScriptSelfName[$$]" 
+      --title "SDE(`basename "${astrRunParams[0]}"`) - $SECstrScriptSelfName[$$]" 
       --separator="\n"
       --sticky
       --center
@@ -825,7 +825,7 @@ function FUNCrun(){
           };export -f FUNCedSrc
           astrBtnEdSrc[1]="bash -c FUNCedSrc"
         else
-          astrBtnEdSrc[0]=--field="\"PlaceHolder\"!!Ignore me, I mean it:FBTN"
+          astrBtnEdSrc[0]=--field="\"PlaceHolder\"!!Ignore me, I mean it ;):FBTN"
           FUNCeaster(){
             astrEasterEggs=(
               "You are funny!" 

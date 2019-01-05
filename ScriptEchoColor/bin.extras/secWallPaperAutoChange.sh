@@ -36,6 +36,10 @@ function FUNCratio() {
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
+
+: ${CFGbZoom:=false};
+export CFGbZoom #help set initial zoom mode toggle
+
 strExample="DefaultValue"
 CFGstrTest="Test"
 strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
@@ -196,7 +200,6 @@ if $bDaemon;then
   nChosen=0
   bPlay=true
   bDisableCurrent=false
-  bZoom=false
   : ${CFGstrCurrentFile:=""}
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
@@ -217,7 +220,7 @@ if $bDaemon;then
     fi
     
     if $bChangeImage;then
-      #~ bZoom=false
+      #~ CFGbZoom=false
       
       if((nSetIndex>-1));then
         nChosen=$nSetIndex
@@ -349,14 +352,16 @@ if $bDaemon;then
       fi
       
       if $bAllowZoom;then
-        if $bZoom;then
-          nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( RANDOM%(nOrigW-nResW) ));fi
-          nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  RANDOM%(nOrigH-nResH) ));fi
-          #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
-          #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
-          FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
-          SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-          strTxtZoom=",ZOOM"
+        if((RANDOM%4>0));then # 25% chance of not zooming once
+          if $CFGbZoom;then
+            nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( RANDOM%(nOrigW-nResW) ));fi
+            nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  RANDOM%(nOrigH-nResH) ));fi
+            #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
+            #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
+            FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
+            SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+            strTxtZoom=",ZOOM"
+          fi
         fi
       fi
       
@@ -490,7 +495,7 @@ if $bDaemon;then
     bResetCounters=false;
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
-    #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $bZoom ? echo ON : echo OFF`)\n";fi
+    #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $CFGbZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
       "toggle _auto play mode to conserve CPU"
       "_change image now"
@@ -504,7 +509,7 @@ if $bDaemon;then
       "_set image index"
       "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)"
       "fi_x wallpaper pic URI"
-      "toggle _zoom if possible (is `SECFUNCternary --onoff $bZoom`)" #"$strOptZoom"
+      "toggle _zoom if possible (is `SECFUNCternary --onoff $CFGbZoom`)" #"$strOptZoom"
     )
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
     echoc -t $nSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n"&&:; nRet=$?; case "`secascii $nRet`" in 
@@ -583,7 +588,7 @@ if $bDaemon;then
         FUNCsetPicURI
         ;;
       z)
-        SECFUNCtoggleBoolean --show bZoom
+        SECFUNCtoggleBoolean --show CFGbZoom
         ;;
       *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
