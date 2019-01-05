@@ -195,6 +195,8 @@ function FUNCnewFiles() {
 # Main code ######################################################################################
 
 if $bTrashMode;then
+  SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
+
   FUNCtmpFolders
   if echoc -q "trash all temp folders above?";then
     FUNCtmpFolders --trash
