@@ -251,8 +251,9 @@ else
         
         if [[ -f "${CFGstrPriorityWork-}" ]];then
           echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
-          SECFUNCcfgWriteVar CFGstrPriorityWork="" # to let it be skipped
-          FUNCworkWith "$CFGstrPriorityWork"&&:
+          strPriorityWork="$CFGstrPriorityWork"
+          SECFUNCcfgWriteVar CFGstrPriorityWork="" # to let it be skipped on next run
+          FUNCworkWith "$strPriorityWork"&&:
         fi
         
         if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
