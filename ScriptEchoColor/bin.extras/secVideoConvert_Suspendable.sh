@@ -245,21 +245,14 @@ else
       echoc --info " Continue @s@{By}Loop@S: "
       declare -p CFGastrFileList |tr '[' '\n'
       if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
-      #~ strFileAbs="${CFGastrFileList[0]-}"
-      #~ if [[ -f "$strFileAbs" ]];then
-        #~ $0 --onlyworkwith "$strFileAbs" &&:
-      #~ fi
       
-      #~ strRegexPreciseMatch="^`echo "$strFileAbs" |sed -r "$sedRegexPreciseMatch"`$"
-      #~ SECFUNCarrayClean CFGastrFileList "$strRegexPreciseMatch"
-      #~ SECFUNCcfgWriteVar CFGastrFileList
       for strFileAbs in "${CFGastrFileList[@]}";do
         SECFUNCcfgReadDB
         
         if [[ -f "${CFGstrPriorityWork-}" ]];then
           echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
+          SECFUNCcfgWriteVar CFGstrPriorityWork="" # to let it be skipped
           FUNCworkWith "$CFGstrPriorityWork"&&:
-          SECFUNCcfgWriteVar CFGstrPriorityWork=""
         fi
         
         if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
@@ -269,11 +262,10 @@ else
         
         SECFUNCcfgWriteVar CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
         FUNCworkWith "$strFileAbs"&&:
+        SECFUNCcfgWriteVar CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
       done
-      SECFUNCcfgWriteVar CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
-      
     done
-    #~ echoc -w -t $CFGnDefQSleep
+    
     exit 0
   else
     # choses 1st to work on it
