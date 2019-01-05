@@ -414,7 +414,21 @@ function FUNCavconvConv() { #help
     lastrPartParms+=( "${lastrRemainingParams[@]}" )
   fi
   
-  if ! FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut";then
+  #~ local lstrTmpWorkPath="``"
+  #~ local lstrFileNmHash="`FUNCflBNHash "$lstrIn"`"
+  #~ local lstrAbsFileNmHashTmp="${strTmpWorkPath}/${lstrFileNmHash}"
+  #~ local lstrFinalTmp="${lstrAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
+  #~ SECFUNCtrash "$lstrFinalTmp"&&:
+  #~ if ! FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFinalTmp";then
+    #~ SECFUNCexecA -ce mv -vf "$lstrFinalTmp" "$lstrOut"
+    #~ return 1
+  #~ fi
+  local lstrFlTmp="${lstrOut}.TEMP_INCOMPLETE.mp4"
+  SECFUNCtrash "$lstrFlTmp"&&:
+  if FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFlTmp";then
+    SECFUNCexecA -ce mv -vf "$lstrFlTmp" "$lstrOut"
+  else
+    SECFUNCtrash "$lstrFlTmp"&&:
     return 1
   fi
   #~ : ${nCPUPerc:=50} #help overall CPUs percentage
