@@ -27,8 +27,8 @@ source <(secinit)
 : ${nShortDur:=$((60*5))}
 export nShortDur #help short duration limit check
 
-: ${nCPUPerc:=50}
-export nCPUPerc #help overall CPUs percentage
+: ${CFGnCPUPerc:=50}
+export CFGnCPUPerc #help overall CPUs percentage
 
 : ${bLossLessMode:=false}
 export bLossLessMode #help for conversion, test once at least to make sure is what you really want...
@@ -132,7 +132,7 @@ function FUNCflCleanFromDB() {
   SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
   SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
   declare -p FUNCNAME lstrFl lstrRegexPreciseMatch
-  declare -p CFGastrFileList |tr '[' '\n'
+  #declare -p CFGastrFileList |tr '[' '\n'
 }
 
 function FUNCflAddToDB() {
@@ -143,7 +143,7 @@ function FUNCflAddToDB() {
 
 function FUNCworkWith() {
   if ! SECFUNCexecA -ce $0 --onlyworkwith "$1";then
-    echoc -t $CFGnDefQSleep -p "failed '$1'"
+    echoc -w -t $CFGnDefQSleep -p "failed '$1'"
     return 1
   fi
   return 0
@@ -251,21 +251,22 @@ else
       for strFileAbs in "${CFGastrFileList[@]}";do
         SECFUNCcfgReadDB
         
-        if [[ -f "${CFGstrPriorityWork-}" ]];then
+        while [[ -f "${CFGstrPriorityWork-}" ]];do
           echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
-          strPriorityWork="$CFGstrPriorityWork"
-          SECFUNCcfgWriteVar CFGstrPriorityWork="" # to let it be skipped on next run
+          strPriorityWork="$CFGstrPriorityWork";SECFUNCcfgWriteVar -r CFGstrPriorityWork="" # to let it be skipped on next run
+          FUNCflAddToDB "$strPriorityWork" #to grant it will be there too
           FUNCworkWith "$strPriorityWork"&&:
-        fi
+          SECFUNCcfgReadDB
+        done
         
         if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
           echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
           continue;
         fi
         
-        SECFUNCcfgWriteVar CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
+        SECFUNCcfgWriteVar -r CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
         FUNCworkWith "$strFileAbs"&&:
-        SECFUNCcfgWriteVar CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
+        SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
       done
     done
     
@@ -283,6 +284,7 @@ fi
 
 SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
+strSuffix="`SECFUNCfileSuffix "$strFileAbs"`"
 strOrigPath="`FUNCflOrigPath "$strFileAbs"`"
 #: ${strTmpWorkPath:="$strOrigPath/.${SECstrScriptSelfName}.tmp/"} #help
 : ${strTmpWorkPath:="`FUNCflTmpWorkPath "$strFileAbs"`"}
@@ -327,20 +329,7 @@ function FUNCshortDurChk() {
 }
 
 function FUNCavconvRaw() {
-  #~ SECFUNCexecA -ce avconv -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a 
-  #~ SECFUNCexecA -ce avconv -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp"
-  #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strAbsFileNmHashTmp}.log"
-  SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
-  #~ (
-    #~ SECFUNCfdReport
-    #~ exec 2>&1 
-    #~ exec > >(tee -a "${strAbsFileNmHashTmp}.log")
-    #~ ls -l ${strAbsFileNmHashTmp}.log
-    #~ SECFUNCfdReport
-    #~ SECFUNCexecA -ce nice -n 19 avconv "$@" >"${strAbsFileNmHashTmp}.log" 2>&1
-    #~ ls -l ${strAbsFileNmHashTmp}.log
-    #~ #cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
-  #~ )
+  SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc
   (
     strFlLog="${strAbsFileNmHashTmp}.$BASHPID.log"
     echo -n >>"$strFlLog"
@@ -350,7 +339,7 @@ function FUNCavconvRaw() {
     if((nRet!=0));then
       SECFUNCechoErrA "failed nRet=$nRet"
     fi
-    exit $nRet
+    exit $nRet # subshell
   );local lnRet=$?;
   declare -p FUNCNAME lnRet
   return $lnRet
@@ -391,9 +380,6 @@ function FUNCavconvConv() { #help
 			SECFUNCechoErrA "invalid option '$1'"
 			$FUNCNAME --help
 			SECFUNCdbgFuncOutA;return 1
-#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-#			SECFUNCechoErrA "invalid option '$1'"
-#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
 		fi
 		shift&&:
 	done
@@ -409,15 +395,6 @@ function FUNCavconvConv() { #help
     lastrPartParms+=( "${lastrRemainingParams[@]}" )
   fi
   
-  #~ local lstrTmpWorkPath="``"
-  #~ local lstrFileNmHash="`FUNCflBNHash "$lstrIn"`"
-  #~ local lstrAbsFileNmHashTmp="${strTmpWorkPath}/${lstrFileNmHash}"
-  #~ local lstrFinalTmp="${lstrAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
-  #~ SECFUNCtrash "$lstrFinalTmp"&&:
-  #~ if ! FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFinalTmp";then
-    #~ SECFUNCexecA -ce mv -vf "$lstrFinalTmp" "$lstrOut"
-    #~ return 1
-  #~ fi
   local lstrFlTmp="${lstrOut}.TEMP_INCOMPLETE.mp4"
   SECFUNCtrash "$lstrFlTmp"&&:
   if FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFlTmp";then
@@ -426,58 +403,40 @@ function FUNCavconvConv() { #help
     SECFUNCtrash "$lstrFlTmp"&&:
     return 1
   fi
-  #~ : ${nCPUPerc:=50} #help overall CPUs percentage
-  #~ SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
-  #~ (
-    #~ exec 2>&1 
-    #~ exec > >(tee -a "${strAbsFileNmHashTmp}.log")
-    #~ SECFUNCexecA -ce nice -n 19 avconv -i "$lstrIn" "${lastrPartParms[@]}" "$lstrOut" #|tee -a "${strAbsFileNmHashTmp}.log"
-    #~ #cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
-  #~ )
 	
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
 function FUNCextDirectConv() {
   local lstrExt="$1"
-  if [[ "`SECFUNCfileSuffix "$strFileAbs"`" == "$lstrExt" ]];then
-    #strFl3gpAsMp4="${strFileAbs%.${lstrExt}}.mp4"
-    strFl3gpAsMp4="`FUNCflFinal "$strFileAbs"`"
-    if [[ ! -f "$strFl3gpAsMp4" ]];then
-      #TODO what about large 3gp files?
-      case "$lstrExt" in
-        "3gp") 
-          if FUNCshortDurChk;then
-            FUNCavconvConv --io "$strFileAbs" "$strFl3gpAsMp4" #avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4"
-          fi
-          ;;
-        "gif")
-          local laOpts=()
-          laOpts+=(-movflags faststart -pix_fmt yuv420p) # options for better browsers compatibility and performance
-          laOpts+=(-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2") # fix to valid size that must be mult of 2
-          #avconv -i "$strFileAbs" "${laCompat[@]}" -vf "$lstrFixToValidSize" "$strFl3gpAsMp4"
-          FUNCavconvConv --mute --io "$strFileAbs" "$strFl3gpAsMp4" -- "${laOpts[@]}"
-          ;;
-        *)
-          SECFUNCechoErrA "unsupported lstrExt='$lstrExt'!!!"
-          _SECFUNCcriticalForceExit
-          ;;
-      esac
-    fi
-    
-    #~ if [[ -f "$strFl3gpAsMp4" ]];then
-      #~ SECFUNCexecA -ce ls -l "$strFileAbs" "$strFl3gpAsMp4"
-      #~ if echoc -t $CFGnDefQSleep -q "trash ${lstrExt} file?";then
-        #~ FUNCflCleanFromDB "$strFileAbs"
-        #~ #FUNCflAddToDB "$strFl3gpAsMp4"
-        #~ #echoc --info ".${lstrExt} file was converted to .mp4 wich will now be used instead on next run"
-        #~ # echoc --info ".${lstrExt} file was converted to .mp4"
-        #~ # SECFUNCexecA -ce ls -l "${strFileAbs%.${lstrExt}}"*
-        #~ SECFUNCtrash "$strFileAbs"
-      #~ fi
-    #~ fi
-    
-    #~ exit 0 #yes, exit to let the new full filename be used properly
+  
+  if [[ "`SECFUNCfileSuffix "$strFileAbs"`" != "$lstrExt" ]];then return 1;fi
+  
+  #strFl3gpAsMp4="${strFileAbs%.${lstrExt}}.mp4"
+  strFl3gpAsMp4="`FUNCflFinal "$strFileAbs"`"
+  if [[ ! -f "$strFl3gpAsMp4" ]];then
+    #TODO what about large 3gp files?
+    case "$lstrExt" in
+      "3gp") 
+        if FUNCshortDurChk;then
+          FUNCrecreateRaw FUNCavconvConv --io "$strFileAbs" "$strFl3gpAsMp4"
+          #FUNCavconvConv --io "$strFileAbs" "$strFl3gpAsMp4" #avconv -i "$strFileAbs" -acodec copy "$strFl3gpAsMp4"
+          #echo -n >"${strAbsFileNmHashTmp}.recreated" # the small file fully created is equivalent to recreate function
+        fi
+        ;;
+      "gif")
+        local laOpts=()
+        laOpts+=(-movflags faststart -pix_fmt yuv420p) # options for better browsers compatibility and performance
+        laOpts+=(-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2") # fix to valid size that must be mult of 2
+        #avconv -i "$strFileAbs" "${laCompat[@]}" -vf "$lstrFixToValidSize" "$strFl3gpAsMp4"
+        FUNCrecreateRaw FUNCavconvConv --mute --io "$strFileAbs" "$strFl3gpAsMp4" -- "${laOpts[@]}"
+        #echo -n >"${strAbsFileNmHashTmp}.recreated" # the small file fully created is equivalent to recreate function
+        ;;
+      *)
+        SECFUNCechoErrA "unsupported lstrExt='$lstrExt'!!!"
+        _SECFUNCcriticalForceExit
+        ;;
+    esac
   fi
   
   return 0
@@ -500,10 +459,25 @@ function FUNCflDurationSec() {
   return 0
 }
 
-function FUNCrecreate() {
+function FUNCrecreateRaw() {
   SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-  FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
+  
+  "$@"&&:;lnRet=$?;
+  if((lnRet!=0));then 
+    SECFUNCechoErrA "failed executing (lnRet=$?) '$*'"
+    exit 1 # it is good to exit here to avoid having to capture this func return value TODO provide a better explanation :P
+  fi
+  
   echo -n >"${strAbsFileNmHashTmp}.recreated"
+}
+
+function FUNCrecreate() {
+  if [[ -n "${1-}" ]];then       
+    SECFUNCechoErrA "use FUNCrecreateRaw instead: $*"
+    _SECFUNCcriticalForceExit
+  fi
+
+  FUNCrecreateRaw FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
 }
 
 function FUNCvalidateFinal() {
@@ -512,18 +486,18 @@ function FUNCvalidateFinal() {
   
   if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The individual parts processing encountered the problematic the warnings above!"
-    ((lnRet++))&&:
+    lnRet=1
   fi
 
   if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The parts joining encountered problematic the warnings above!"
-    ((lnRet++))&&:
+    lnRet=2
   fi
   
   if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
     if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
       echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
-      ((lnRet++))&&:
+      lnRet=3
     fi
     
     nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
@@ -533,13 +507,25 @@ function FUNCvalidateFinal() {
     declare -p nDurSecOld nDurSecNew nMargin
     if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
       echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-      ((lnRet++))&&:
+      lnRet=4
     fi
   else
-    SEC_WARN=true SECFUNCechoWarnA "final file '$strOrigPath/$strFinalFileBN' is not ready yet"
+    SECFUNCechoErrA "The validation REQUIRES the final file '$strOrigPath/$strFinalFileBN' to be READY!"
+    _SECFUNCcriticalForceExit
+    #~ SEC_WARN=true SECFUNCechoWarnA "final file '$strOrigPath/$strFinalFileBN' is not ready yet"
+    #~ lnRet=5
   fi
   
+  if((lnRet!=0));then echo "$FUNCNAME lnRet=$lnRet";fi
+  
   return $lnRet
+}
+
+function FUNCrecreateExtChk() {
+  if FUNCextDirectConv "3gp" || FUNCextDirectConv "gif";then
+    return 0
+  fi
+  return 1
 }
 
 function FUNCfinalMenuChk() {
@@ -553,28 +539,46 @@ function FUNCfinalMenuChk() {
     if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # even if re-created before this current run
       lstrReco="(already did tho) "
     else
-      if ! FUNCvalidateFinal;then
+      if $lbReady && ! FUNCvalidateFinal;then
         lstrReco="@s@n!RECOMMENDED!@S "
       fi
     fi
     
+    local lstrGifCycleSuffix="-Cycle.gif"
+    local lbIsGifCycle=false;if [[ "$strFileAbs" =~ $lstrGifCycleSuffix ]];then lbIsGifCycle=true;fi
     astrOpt=(
-      "_diff old from new media info? (ready)"
+      "apply patrol _cycle `SECFUNCternary -e "(alredy did) " "" $lbIsGifCycle`reverse gif effect on original file? #gif"
+      "_diff old from new media info? #ready"
       "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep}"
-      "_list all?"
-      "_play the new file? (ready)"
+      "_list all probably useful details?"
+      "_play the new file? #ready"
       "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
-      "_skip this file for now?"
+      "_s `SECFUNCternary -e "skip this completed file for now?" "continue working on current file now?" $lbReady`"
       "_trash tmp and original video files?"
-      "re-_validate `SECFUNCternary -e "logs and final file" "existing logs" $lbReady`?"
+      "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
       "set a new video to _work with?"
     )
+    #############
+    ### removed option keys will be ignored and `echoc -Q` will just return 0 for them and any other non set keys
+    #############
     if ! $lbReady;then
-      SECFUNCarrayClean astrOpt ".*\(ready\)$"
+      SECFUNCarrayClean astrOpt ".*[#]ready$"
     fi
-    #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
-    #~ echoc -t $CFGnDefQSleep -Q "@O\n ${strOpts}"&&:; nRet=$?; case "`secascii $nRet`" in 
+    if [[ "$strSuffix" != "gif" ]];then
+      SECFUNCarrayClean astrOpt ".*[#]gif$"
+    fi
     echoc -t $CFGnDefQSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
+      c)
+        local lstrFlNewCycleGif="${strFileAbs%.${strSuffix}}${lstrGifCycleSuffix}"
+        SECFUNCCcpulimit -r "convert" -l $CFGnCPUPerc
+        if SECFUNCexecA -ce convert "$strFileAbs" -coalesce -duplicate 1,-2-1 -verbose -layers OptimizePlus -loop 0 "$lstrFlNewCycleGif";then
+          FUNCflAddToDB "$lstrFlNewCycleGif"
+          FUNCflCleanFromDB "$strFileAbs"
+          SECFUNCtrash "$strFileAbs" "$strOrigPath/$strFinalFileBN"&&:
+          SECFUNCcfgWriteVar -r CFGstrPriorityWork="$lstrFlNewCycleGif"
+          exit 0
+        fi
+        ;;
       d)
         SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
         ;;
@@ -584,7 +588,7 @@ function FUNCfinalMenuChk() {
         else
           CFGnDefQSleep=$nSlowQSleep
         fi
-        SECFUNCcfgWriteVar CFGnDefQSleep
+        SECFUNCcfgWriteVar -r CFGnDefQSleep
         ;;
       l)
         SECFUNCcfgReadDB
@@ -618,17 +622,23 @@ function FUNCfinalMenuChk() {
         SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
         ;;
       r)
-        FUNCrecreate
+        if ! FUNCrecreateExtChk;then
+          FUNCrecreate
+        fi
         ;;
-      s)
-        break;
+      s) # DEFAULT from timeout
+        if $lbReady;then
+          exit 0 # to work with the next one
+        else
+          return 0 # will just continue the flow and work on the current file
+        fi
         ;;
       t)
         SECFUNCtrash "${strTmpWorkPath}/${strFileNmHash}"*
         SECFUNCtrash "$strFileAbs"&&:
         
         FUNCflCleanFromDB "$strFileAbs"
-        break
+        exit 0 # to work with the next one
         ;;
       v)
         FUNCvalidateFinal&&:
@@ -637,29 +647,35 @@ function FUNCfinalMenuChk() {
         local lstrNewWork="`echoc -S "paste the abs filename to work on it now"`"
         if [[ -f "$lstrNewWork" ]];then
           #$0 --onlyworkwith "$lstrNewWork"
-          SECFUNCcfgWriteVar CFGstrPriorityWork="$lstrNewWork"
-          break; 
+          SECFUNCcfgWriteVar -r CFGstrPriorityWork="$lstrNewWork"
+          exit 0 # to let it be processed on next run
         else
           SECFUNCechoErrA "not found lstrNewWork='$lstrNewWork'"
         fi
         ;;
-      *)
-        if $lbReady;then
-          continue
-        else
-          break
-        fi
+      *) ############## 
+         ### a wrong key pressed will just show the menu again
+         ##############
         ;;
     esac
   done
-  
-  exit 0
 }
 
+#####################################################################
+#####################################################################
+########################## WORK ON FILE #############################
+#####################################################################
+#####################################################################
+
 FUNCfinalMenuChk
-FUNCextDirectConv "3gp"
-FUNCextDirectConv "gif"
-FUNCfinalMenuChk
+if FUNCrecreateExtChk;then
+  FUNCfinalMenuChk
+  exit 0 # because is an alternative video processing mode
+fi
+
+############################
+### normal video processing mode
+############################
 
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
@@ -730,8 +746,8 @@ for strFilePart in "${astrFilePartList[@]}";do
   
   if [[ ! -f "$strFilePartNew" ]];then
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
-    #: ${nCPUPerc:=50} #help overall CPUs percentage
-    #SECFUNCCcpulimit -r "avconv" -l $nCPUPerc
+    #: ${CFGnCPUPerc:=50} #help overall CPUs percentage
+    #SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
     if FUNCavconvConv --part --io "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
@@ -765,20 +781,19 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
   done
   SECFUNCexecA -ce cat "$strFileJoin"
 
-  strFinalTmp="${strAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
-  SECFUNCtrash "$strFinalTmp"&&:
-  if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalTmp";then
+  strFinalFlHashNmTmp="${strAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
+  SECFUNCtrash "$strFinalFlHashNmTmp"&&:
+  if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalFlHashNmTmp";then
     #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
     
-    #~ SECFUNCexecA -ce mv -vf "$strFinalTmp" "$strFinalFileBN"
-    #~ SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
-    SECFUNCexecA -ce mv -vf "$strFinalTmp" "${strOrigPath}/"
+    SECFUNCexecA -ce mv -vf "$strFinalFlHashNmTmp" "$strFinalFileBN" #rename from hashedNm to correct final name
+    SECFUNCexecA -ce mv -vf "$strFinalFileBN" "${strOrigPath}/"
     #~ FUNCmiOrigNew&&:
     FUNCfinalMenuChk
   fi
-  exit 0
+  exit 0 # from subshell
 )
 
-echoc -w -t $CFGnDefQSleep
+echoc -w -t $CFGnDefQSleep "Finished work with strFinalFileBN='$strFinalFileBN'"
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
