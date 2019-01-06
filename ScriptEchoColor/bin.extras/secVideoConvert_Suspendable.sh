@@ -69,7 +69,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWorkWith=true
 	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help resume last work if any
 		bContinue=true
-	elif [[ "$1" == "--trash" ]];then #help tmp and new files maintenance
+	elif [[ "$1" == "--trash" ]];then #help tmp and new files maintenance (mainly for development pourposes)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
@@ -156,8 +156,12 @@ function FUNCtmpFolders() {
     shift
   fi
   
-  echoc --info "TmpFolders:"
+  for strFl in "${CFGastrFileList[@]}";do # grant nothing is missing
+    CFGastrTmpWorkPathList+=("`FUNCflTmpWorkPath "$strFl"`")
+  done
   SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
+  
+  echoc --info "TmpFolders:"
   for strTmpPh in "${CFGastrTmpWorkPathList[@]}";do
     if [[ -d "$strTmpPh" ]];then
       if $lbTrash;then SECFUNCdrawLine;fi
@@ -198,12 +202,12 @@ if $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
 
   FUNCtmpFolders
-  if echoc -q "trash all temp folders above?";then
+  if [[ "`echoc -S "trash all temp folders above? type 'YES'"`" == "YES" ]];then
     FUNCtmpFolders --trash
   fi
   
   FUNCnewFiles
-  if echoc -q "trash all newly enconded files above?";then
+  if [[ "`echoc -S "trash all newly enconded files above? type 'YES'"`" == "YES" ]];then
     FUNCnewFiles --trash
   fi
   
@@ -311,10 +315,10 @@ if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
 fi
 
 strFileBN="`basename "$strFileAbs"`"
-strFileNmHash="`FUNCflBNHash "$strFileBN"`" #the file may contain chars avconv wont accept at .join file
+strFileBNHash="`FUNCflBNHash "$strFileBN"`" #the file may contain chars avconv wont accept at .join file
 
-#strFileNoSuf="${strTmpWorkPath}/${strFileNmHash%.$strSuffix}"
-strAbsFileNmHashTmp="${strTmpWorkPath}/${strFileNmHash}"
+#strFileNoSuf="${strTmpWorkPath}/${strFileBNHash%.$strSuffix}"
+strAbsFileNmHashTmp="${strTmpWorkPath}/${strFileBNHash}"
 #strFinalFileBN="${strFileBN%.$strSuffix}.${strNewFormatSuffix}.mp4"
 strFinalFileBN="`FUNCflFinal "$strFileBN"`"
 
@@ -442,7 +446,7 @@ function FUNCextDirectConv() {
   return 0
 }
 
-function FUNCflSize() {
+function FUNCflSize() { # in bytes
   stat -c "%s" "$1"
 }
 
@@ -634,7 +638,7 @@ function FUNCfinalMenuChk() {
         fi
         ;;
       t)
-        SECFUNCtrash "${strTmpWorkPath}/${strFileNmHash}"*
+        SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
         SECFUNCtrash "$strFileAbs"&&:
         
         FUNCflCleanFromDB "$strFileAbs"
@@ -738,7 +742,7 @@ for strFilePart in "${astrFilePartList[@]}";do
   #~ strSafeFileName="`dirname "$strFilePartNewUnsafeName"`/`basename "$strFilePartNewUnsafeName" |md5sum |awk '{print $1}'`" #|tr -d " "
   #~ strFilePartNew="$strSafeFileName"
 #  declare -p strFilePart strFilePartNS strPartTmp strFilePartNewUnsafeName strSafeFileName strFilePartNew >&2
-  declare -p strFilePart strFilePartNS strPartTmp strFilePartNew >&2
+  declare -p strFilePart strFilePartNS strPartTmp strFilePartNew strTmpWorkPath strFileBNHash >&2
   
   if [[ -f "$strPartTmp" ]];then
     SECFUNCtrash "$strPartTmp"&&:
@@ -748,7 +752,17 @@ for strFilePart in "${astrFilePartList[@]}";do
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
     #: ${CFGnCPUPerc:=50} #help overall CPUs percentage
     #SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc
-    echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`% for '$strFileAbs'"
+    nPerc="`bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`"
+    #~ acmdFind=(find "${strTmpWorkPath}/" -maxdepth 1 -iregex ".*/${strFileBNHash}[.].*NewPart.*[.]mp4$")
+    IFS=$'\n' read -d '' -r -a astrNewPartsList < <(find "${strTmpWorkPath}/" -maxdepth 1 -iregex ".*/${strFileBNHash}[.].*NewPart.*[.]mp4$")&&:
+    #~ declare -p acmdFind
+    #declare -p astrNewPartsList |tr '[' '\n'
+    nNewPartsCurSizeKB=$((0+`du "${astrNewPartsList[@]}" |awk '{print $1 "+"}' |tr -d '\n'`0)) # the du size is in KB but makes no diff in this calc mode/way
+    nEstimFinalSzKB="`bc <<< "scale=0;100*$nNewPartsCurSizeKB/$nPerc"`"
+    nFileSzKB=$((nFileSz/1024))
+    nPercComp="`bc <<< "scale=2;100*$nEstimFinalSzKB/$nFileSzKB"`"
+    declare -p nNewPartsCurSizeKB nEstimFinalSzKB nFileSzKB
+    echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, ${nPerc}% (EstComp=${nPercComp}%) for '$strFileAbs'"
     if FUNCavconvConv --part --io "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
