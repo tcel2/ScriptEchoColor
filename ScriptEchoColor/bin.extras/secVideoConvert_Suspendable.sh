@@ -24,7 +24,7 @@
 
 source <(secinit)
 
-: ${nShortDur:=$((60*5))}
+: ${nShortDur:=$((60*1))}
 export nShortDur #help short duration limit check
 
 : ${CFGnCPUPerc:=50}
@@ -297,7 +297,7 @@ echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
 
 if [[ ! -f "$strFileAbs" ]];then
   SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
-  if echoc -t $CFGnDefQSleep -q "remove missing file from list?";then
+  if echoc -t $CFGnDefQSleep -q "remove missing file from list?@Dy";then
     FUNCflCleanFromDB "$strFileAbs"
     exit 0
   fi
@@ -748,7 +748,7 @@ for strFilePart in "${astrFilePartList[@]}";do
 #    SECFUNCCcpulimit "avconv" -- -l $((25*nCPUs))
     #: ${CFGnCPUPerc:=50} #help overall CPUs percentage
     #SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc
-    echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`%"
+    echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, `bc <<< "scale=2;($nCount*100/${#astrFilePartList[*]})"`% for '$strFileAbs'"
     if FUNCavconvConv --part --io "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
