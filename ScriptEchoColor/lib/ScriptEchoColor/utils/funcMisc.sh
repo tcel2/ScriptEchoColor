@@ -985,15 +985,13 @@ function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars
 			
 #			declare -p CFGanPidRequesterListForFancyWork >&2
 #			cat "$SECcfgFileName" >&2
-			eval "`cat "$SECcfgFileName"`" #TODO eval is safer than `source`? in case of a corrupt file? ugh????
-#			declare -p CFGanPidRequesterListForFancyWork >&2
-			local lnRetFromEval=$?
-			if((lnRetFromEval!=0));then
-				SECFUNCechoErrA "at config file SECcfgFileName='$SECcfgFileName'"
-				SECFUNCfixCorruptFile "$SECcfgFileName"
-			else
-				break
-			fi
+			if eval "`cat "$SECcfgFileName"`";then #TODO eval is safer than `source`? in case of a corrupt file? ugh????
+        break;
+      fi
+      
+      SECFUNCechoErrA "error evaluating config file SECcfgFileName='$SECcfgFileName' (corrupted?)"
+      
+      SECFUNCfixCorruptFile "$SECcfgFileName"
 		done
 		if ! $lbKeepLocked;then SECFUNCfileLock --unlock "$SECcfgFileName";fi
   fi
@@ -1050,26 +1048,31 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 		return 1
 	fi
 	
-	eval "export $lstrVarId" #make it sure it is exported
+	eval "export $lstrVarId" #make sure it is exported
 	
 	local lstrToWrite="`pSECFUNCprepareEnvVarsToWriteDB ${lstrVarId}`"
 	
-	if [[ ! -f "$SECcfgFileName" ]];then
-		echo -n >"$SECcfgFileName"
+	if [[ -f "$SECcfgFileName" ]];then
+    cp -fT "$SECcfgFileName" "${SECcfgFileName}.bkp" # used by SECFUNCfixCorruptFile
+  else
+		echo -n >"$SECcfgFileName" # to let lock work
 	fi
 	
   if $lbChkLock;then 
-    if ! SECFUNCfileLock --islocked >/dev/null;then
+    if ! SECFUNCfileLock --islocked "$SECcfgFileName" >/dev/null;then
       SECFUNCfileLock "$SECcfgFileName";
     fi
   fi
+  
 	######
 	# this will remove the variable declaration
 	######
 	sed -i "/^declare [^ ]* ${lstrVarId}=/d" "$SECcfgFileName" 
+  
 	if ! $lbRemoveVar;then
 		echo "${lstrToWrite}" >>"$SECcfgFileName" #append new line with var
 	fi
+  
 	if ! $lbKeepLocked;then SECFUNCfileLock --unlock "$SECcfgFileName";fi
 	
 	chmod u+rw,go-rw "$SECcfgFileName" #permissions for safety
@@ -1237,16 +1240,6 @@ function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child pro
   )&
 	
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
-}
-
-function SECFUNCtrash() { #help verbose but let only error/warn messages that are not too repetitive
-  #TODO how to fix the "unsecure...sticky" condition? it should explain why it is unsecure so we would know what to fix...
-  SECFUNCexecA -ce trash -v "$@" 2>&1 \
-    |egrep -v "trash: found unsecure [.]Trash dir \(should be sticky\):" \
-    |egrep -v "found unusable [.]Trash dir" \
-    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 13\] Permission denied:" \
-    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 2\] No such file or directory:" \
-    >&2
 }
 
 function SECFUNCfileSuffix() { #help <file> extracts the file suffix w/o '.'

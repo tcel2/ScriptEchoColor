@@ -23,6 +23,8 @@
 # Project Homepage: https://sourceforge.net/projects/scriptechocolor/
 
 
+##########################################################################################################
+################# SECTOR:REDIRECTION:BEGIN
 ################# this sector also detects if will run this script updated from DEV folder #################################
 ############# DO NOT USE SEC FUNCTIONS ON THIS SECTOR ! (TODO: explain why) ###################################
 echoc -Rc >&2
@@ -72,9 +74,13 @@ if ! $bAlreadyDev;then
     exit 0;
   fi
 fi
-################################################ above can run the updated dev script ################################################
+##############################################
+###### SECTOR:REDIRECTION:END
+############################# above can run the updated dev script ################################################
 
+declare -p LINENO >&2
 source <(secinit --force) # SEC features from here
+declare -p LINENO >&2
 
 SECFUNCexecA -ce ls -l /proc/$$/fd/ >&2
 
@@ -169,10 +175,6 @@ strRCFileTmp="`mktemp`"
 declare -p strRCFileTmp >&2
 echo "# temp bash rc file from $0" >>"$strRCFileTmp"
 
-if $bCleanSECEnv;then
-  SECFUNCcleanEnvironment
-fi
-
 cmdSecInit="source <(secinit --force --extras);"
 if $bAlreadyDev;then
   echo "##################### Already in DEV mode ###################################" >>"$strRCFileTmp"
@@ -195,8 +197,6 @@ else
   
   echo "source \"$strSECDEVPath/lib/ScriptEchoColor/extras/secFuncPromptCommand.sh\"" >>"$strRCFileTmp"
 
-  : ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr
-  
   # FUNCTIONS ONLY!
   echo '
   function SECFUNCbeforePromptCommand_CustomUserCommand(){
@@ -273,6 +273,16 @@ SECFUNCexecA -ce ls -l /proc/$$/fd/ >&2
 #yad --info --text "$0:$LINENO"
 SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
 #echo -n "LINENO=$LINENO."
+
+#########################################################################################
+############################# sec env cleaned after here !!! ############################
+#########################################################################################
+if $bCleanSECEnv;then
+  SECFUNCcleanEnvironment # to prevent clashes with the development changes
+fi
+
+: ${SECDEVbUnboundErr:=false};export SECDEVbUnboundErr # after ENV cleanup!
+
 if $bAlreadyDev;then
   #if SECFUNCisShellInteractive;then
   if $bExitAfterCmd;then

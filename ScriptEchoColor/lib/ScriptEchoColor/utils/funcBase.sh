@@ -61,6 +61,17 @@ function SECFUNCrealFile(){ #help
 	echo "$lfile"
 }
 
+function SECFUNCtrash() { #help verbose but let only error/warn messages that are not too repetitive
+  #TODO how to fix the "unsecure...sticky" condition? it should explain why it is unsecure so we would know what to fix...
+  #TODO --quiet to remove -v, but... the whole point of this function is to be verbose and hide "useless" messages that repeat a lot messing the log "needlessly?" as there is no tip on how to fix the related "problems"
+  SECFUNCexecA -ce trash -v "$@" 2>&1 \
+    |egrep -v "trash: found unsecure [.]Trash dir \(should be sticky\):" \
+    |egrep -v "found unusable [.]Trash dir" \
+    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 13\] Permission denied:" \
+    |egrep -v "Failed to trash .*Trash.*, because :\[Errno 2\] No such file or directory:" \
+    >&2
+}
+
 function SECFUNCarraysExport() { #help export all arrays marked to be exported 'declare -x'
 	SECFUNCdbgFuncInA;
 	
@@ -1393,42 +1404,70 @@ function SECFUNCdrawLine() { #help [wordsAlignedDefaultMiddle] [lineFillChars]
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCfixCorruptFile() { #help usually after a blackout?
+function SECFUNCfixCorruptFile() { #help <lstrDataFile> usually after a blackout?
 	local lstrDataFile="${1-}"
 	
+  local lstrMsgCCDF="\E[0m\E[93m\E[41m\E[5m $FUNCNAME:Critical: Corrupt data-file! \E[0m" #CriticalCorruptDataFile
+  #~ local lstrMsgCCDFfmt="`echo -e "$lstrMsgCriticalCorruptDataFile"`"
+  
 	if [[ ! -f "$lstrDataFile" ]];then
-		SECFUNCechoErrA "invalid file lstrDataFile='$lstrDataFile'"
-		return 1
-	fi
-	
-	# deal only with real files and not symlinks..
-	lstrDataFile="`readlink -f "${lstrDataFile}"`"
-	
-	local lstrMsgCriticalCorruptDataFile="\E[0m\E[93m\E[41m\E[5m Critical: Corrupt data-file! \E[0m"
-	echo -e "$lstrMsgCriticalCorruptDataFile backuping..." >&2
-	cp -v "$lstrDataFile" "${lstrDataFile}.`SECFUNCdtFmt --filename`" >&2
-	echo " >>---[Possible lines with problem]--->" >&2
-	cat "$lstrDataFile" |cat -n |sed "/^[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:alnum:]_]*=.*/d" >&2
-	if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` This can happen after a blackout. It is advised to manually fix the data file. Removing it may cause script malfunction. Remove it anyway (y/...)? (any other key to manually fix it)" strResp;echo "$strResp"`" == "y" ]];then
-		echo >&2
-		rm -v "$lstrDataFile" >&2
-		
-		# recreate the datafile so symlinks dont get broken avoiding creating new files and disconnecting sec pids...
-		echo -n "" >"$lstrDataFile"
-		while true;do
-			if [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` As you removed the file, it is adviseable to stop the script now with 'Ctrl+c', or you wish to continue running it at your own risk (y)?" strResp;echo "$strResp"`" == "y" ]];then
-				echo >&2
-				break;
-			fi
-			echo >&2
-		done
-	else
-		echo >&2
-		while [[ "`read -n 1 -p "\`echo -e "$lstrMsgCriticalCorruptDataFile"\` (waiting manual fix) ready to continue (y/...)?" strResp;echo "$strResp"`" != "y" ]];do
-			echo >&2
-		done
-		echo >&2
-	fi
+		SECFUNCechoErrA "lstrDataFile='$lstrDataFile' is missing"
+    
+    if [[ -f "${lstrDataFile}.bkp" ]];then
+      echo -e "$FUNCNAME: Auto restoring the backup file..." >&2
+      cp -vfT "${lstrDataFile}.bkp" "${lstrDataFile}"
+      read -n 1 -p "$FUNCNAME: Data file was missing and a backup was restored, press any key to continue..."
+      return 0 # theoretically ok to continue, just may be outdated...
+    fi
+    SECFUNCechoErrA "backup file '${lstrDataFile}.bkp' is missing"
+    
+    exit 1 # must exit to void messing script var values
+  fi
+  
+  # deal only with real files and not symlinks..
+  lstrDataFile="`readlink -f "${lstrDataFile}"`" #TODO realpath
+  
+  echo -e "$lstrMsgCCDF backuping corrupted file..." >&2
+  cp -vT "$lstrDataFile" "${lstrDataFile}.`SECFUNCdtFmt --filename`.CORRUPTED" >&2
+  
+  ##### TODO explain this b4 re-enabling ###
+  ### echo " >>---[Possible lines with problem]--->" >&2
+  ### cat "$lstrDataFile" |cat -n |sed "/^[[:blank:]]*[[:digit:]]*[[:blank:]]*[[:alnum:]_]*=.*/d" >&2
+  
+  ls -l "$lstrDataFile" >&2
+
+  echo -e "${lstrMsgCCDF} This can happen after a blackout." >&2
+  echo -e "${lstrMsgCCDF} It is advised to manually fix the data file for best results." >&2
+  echo -e "${lstrMsgCCDF} Removing/cleaning it may cause script malfunction." >&2
+  local lbHasBkpOpt=false;if [[ -f "${lstrDataFile}.bkp" ]];then lbHasBkpOpt=true;ls -l "${lstrDataFile}.bkp" >&2;fi
+  while true;do # a loop so wrong key pressess wont upset the user
+    echo -e "[c] clean the config file? (will auto 'exit 1' ending the script with error)" >&2;
+    echo -e "[r] Retry current data file? (you should manually fix it before retrying)" >&2;
+    if $lbHasBkpOpt;then 
+      echo -e "[t] A possibly outdated backup was found, restore it now? You should compare them before doing it. (will auto 'return 0' to let the datafile be read again)" >&2;
+    fi
+    #~ local lstrQuestion="${lstrMsgCCDFfmt} This can happen after a blackout.\n"
+    local lstrResp
+    read -n 1 -p "Answer:" lstrResp&&:;echo;echo
+    
+    if [[ "$lstrResp" == "c" ]];then
+      echo >&2
+      SECFUNCtrash "$lstrDataFile" >&2
+      
+      # recreate the datafile so symlinks dont get broken avoiding creating new files and disconnecting sec pids...
+      echo -n "" >"$lstrDataFile"
+      
+      echo -e "${lstrMsgCCDF} As the datafile file was cleaned, it will 'exit 1' now..." >&2
+      exit 1 # must exit to void messing script var values
+    elif [[ "$lstrResp" == "t" ]];then
+      cp -vfT "${lstrDataFile}.bkp" "${lstrDataFile}"
+      return 0
+    elif [[ "$lstrResp" == "r" ]];then
+      return 0
+    fi
+  done
+  
+  return 0
 }
 
 function SECFUNCcleanEnvironment() { #help clean environment from everything related to ScriptEchoColor

@@ -54,6 +54,7 @@ sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
 bWorkWith=false
 bTrashMode=false
+bAddFiles=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -63,13 +64,15 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help <strWorkWith> process a single file
+	elif [[ "$1" == "-a" || "$1" == "--add" ]];then #help ~single add one or more files
+		bAddFiles=true
+	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help ~daemon resume work list
+		bContinue=true
+	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help ~single <strWorkWith> process a single file
 		shift
 		strWorkWith="${1-}"
     bWorkWith=true
-	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help resume last work if any
-		bContinue=true
-	elif [[ "$1" == "--trash" ]];then #help tmp and new files maintenance (mainly for development pourposes)
+	elif [[ "$1" == "--trash" ]];then #help ~single tmp and new files maintenance (mainly for this script development)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
@@ -149,7 +152,7 @@ function FUNCworkWith() {
   return 0
 }
 
-function FUNCtmpFolders() {
+function FUNCworkFolders() {
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -161,9 +164,12 @@ function FUNCtmpFolders() {
   done
   SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
   
+  local lbFound=false
   echoc --info "TmpFolders:"
   for strTmpPh in "${CFGastrTmpWorkPathList[@]}";do
     if [[ -d "$strTmpPh" ]];then
+      lbFound=true
+      
       if $lbTrash;then SECFUNCdrawLine;fi
       du -sh "$strTmpPh" 2>/dev/null
       
@@ -173,6 +179,37 @@ function FUNCtmpFolders() {
       fi
     fi
   done
+  
+  if ! $lbFound;then return 1;fi
+  
+  return 0
+}
+
+function FUNCvalidateOrigFiles() {
+  local lbTrash=false;
+  if [[ "${1-}" == "--clean" ]];then
+    lbTrash=true;
+    shift
+  fi
+  
+  local lbFound=false
+  for strFl in "${CFGastrFileList[@]}";do
+    if $lbTrash;then SECFUNCdrawLine;fi
+    
+    if ! ls -l "$strFl" >/dev/null;then # will only output on failure
+      lbFound=true
+      if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
+    else
+      if mediainfo "$strFl" |grep "Format.*:.*HEVC";then
+        lbFound=true
+        echo "Is already HEVC: '$strFl'" >&2
+        if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
+      fi
+    fi
+  done
+  
+  if ! $lbFound;then return 1;fi
+  
   return 0
 }
 
@@ -183,16 +220,21 @@ function FUNCnewFiles() {
     shift
   fi
   
+  local lbFound=false
   for strFl in "${CFGastrFileList[@]}";do
     if $lbTrash;then SECFUNCdrawLine;fi
     strFlNEW="`FUNCflFinal "$strFl"`"
     if ls -l "$strFlNEW";then
+      lbFound=true
       if $lbTrash;then
         echoc -w -t 5 "trashing it..."
         SECFUNCtrash "$strFlNEW"
       fi
     fi
   done
+
+  if ! $lbFound;then return 1;fi
+
   return 0
 }
 
@@ -200,21 +242,21 @@ function FUNCnewFiles() {
 
 if $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
-
-  FUNCtmpFolders
-  if [[ "`echoc -S "trash all temp folders above? type 'YES'"`" == "YES" ]];then
-    FUNCtmpFolders --trash
+  
+  if FUNCvalidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
+    FUNCvalidateOrigFiles --clean
   fi
   
-  FUNCnewFiles
-  if [[ "`echoc -S "trash all newly enconded files above? type 'YES'"`" == "YES" ]];then
+  if FUNCworkFolders && [[ "`echoc -S "trash all temp folders above? type 'YES'"`" == "YES" ]];then
+    FUNCworkFolders --trash
+  fi
+  
+  if FUNCnewFiles && [[ "`echoc -S "trash all newly enconded files above? type 'YES'"`" == "YES" ]];then
     FUNCnewFiles --trash
   fi
   
   exit 0
-fi
-
-if $bWorkWith;then
+elif $bWorkWith;then
   if ! strWorkWith="`realpath "$strWorkWith"`";then
     SECFUNCechoErrA "missing strWorkWith='$strWorkWith'"
     exit 1
@@ -225,13 +267,37 @@ if $bWorkWith;then
   fi
   
   strFileAbs="$strWorkWith"
-else
-  ######################
-  ### the default is to add many files:
-  ######################
-  #~ if ! SECFUNCarrayCheck CFGastrFileList;then
-    #~ CFGastrFileList=()
-  #~ fi
+elif $bContinue;then
+  while true;do
+    SECFUNCcfgReadDB
+    echoc --info " Continue @s@{By}Loop@S: "
+    declare -p CFGastrFileList |tr '[' '\n'
+    if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
+    
+    for strFileAbs in "${CFGastrFileList[@]}";do
+      SECFUNCcfgReadDB
+      
+      while [[ -f "${CFGstrPriorityWork-}" ]];do
+        echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
+        strPriorityWork="$CFGstrPriorityWork";SECFUNCcfgWriteVar -r CFGstrPriorityWork="" # to let it be skipped on next run
+        FUNCflAddToDB "$strPriorityWork" #to grant it will be there too
+        FUNCworkWith "$strPriorityWork"&&:
+        SECFUNCcfgReadDB
+      done
+      
+      if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
+        echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
+        continue;
+      fi
+      
+      SECFUNCcfgWriteVar -r CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
+      FUNCworkWith "$strFileAbs"&&:
+      SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
+    done
+  done
+  
+  exit 0
+elif $bAddFiles;then 
   for strNewFile in "$@";do
     if [[ -f "$strNewFile" ]];then
       echo "working with: strNewFile='$strNewFile'"
@@ -245,40 +311,12 @@ else
   done
   declare -p CFGastrFileList |tr '[' '\n'
   
-  if $bContinue;then
-    while true;do
-      SECFUNCcfgReadDB
-      echoc --info " Continue @s@{By}Loop@S: "
-      declare -p CFGastrFileList |tr '[' '\n'
-      if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
-      
-      for strFileAbs in "${CFGastrFileList[@]}";do
-        SECFUNCcfgReadDB
-        
-        while [[ -f "${CFGstrPriorityWork-}" ]];do
-          echoc --info "@s@{By}PRIORITY:@S CFGstrPriorityWork='$CFGstrPriorityWork'"
-          strPriorityWork="$CFGstrPriorityWork";SECFUNCcfgWriteVar -r CFGstrPriorityWork="" # to let it be skipped on next run
-          FUNCflAddToDB "$strPriorityWork" #to grant it will be there too
-          FUNCworkWith "$strPriorityWork"&&:
-          SECFUNCcfgReadDB
-        done
-        
-        if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
-          echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
-          continue;
-        fi
-        
-        SECFUNCcfgWriteVar -r CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
-        FUNCworkWith "$strFileAbs"&&:
-        SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
-      done
-    done
-    
-    exit 0
-  else
-    # choses 1st to work on it
-    strFileAbs="${CFGastrFileList[0]-}"
-  fi
+  #~ # choses 1st to work on it
+  #~ strFileAbs="${CFGastrFileList[0]-}"
+  exit 0
+else
+  echoc -p "invalid usage"
+  exit 1
 fi
 
 #~ if SECFUNCuniqueLock --isdaemonrunning;then
@@ -301,16 +339,16 @@ echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
 
 if [[ ! -f "$strFileAbs" ]];then
   SECFUNCechoErrA "missing strFileAbs='$strFileAbs'"
-  if echoc -t $CFGnDefQSleep -q "remove missing file from list?@Dy";then
-    FUNCflCleanFromDB "$strFileAbs"
-    exit 0
-  fi
+  #~ if echoc -t $CFGnDefQSleep -q "remove missing file from list?@Dy";then
+    #~ FUNCflCleanFromDB "$strFileAbs"
+    #~ exit 0
+  #~ fi
   exit 1
 fi
 
 if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
   echoc --info "Already HEVC format."
-  FUNCflCleanFromDB "$strFileAbs"
+  #~ FUNCflCleanFromDB "$strFileAbs"
   exit 0
 fi
 
@@ -620,7 +658,7 @@ function FUNCfinalMenuChk() {
           echo
         done
 
-        FUNCtmpFolders
+        FUNCworkFolders
         ;;
       p)
         SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
