@@ -720,16 +720,16 @@ fi
 
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
-nFileSz="`FUNCflSizeBytes "$strFileAbs"`";
-nMinPartSz=$((CFGnPartMinMB*n1MB)) #not precise tho as split is based on keyframes #TODO right?
+nFileSzBytes="`FUNCflSizeBytes "$strFileAbs"`";
+nMinPartSzBytes=$((CFGnPartMinMB*n1MB)) #not precise tho as split is based on keyframes #TODO right?
 
 bJustRecreateDirectly=false
 if(( nDurationSeconds <= nShortDur ));then
   echoc --info "short video nDurationSeconds='$nDurationSeconds'"
   bJustRecreateDirectly=true
 fi
-if((nFileSz<nMinPartSz));then
-  echoc --info "small file nFileSz='$nFileSz'"
+if((nFileSzBytes<nMinPartSzBytes));then
+  echoc --info "small file nFileSzBytes='$nFileSzBytes'"
   bJustRecreateDirectly=true
 fi
 if $bJustRecreateDirectly;then ################ ALTERNATIVE PROCESSING ##################
@@ -757,19 +757,21 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   fi
   
   nDurMillis="`FUNCflDurationMillis "$strFileAbs"`"
-  nMillisPerKeyFrame=$((nDurMillis/nTotKeyFrames))
-  nKBperKeyFrame=$((nFileSz/nTotKeyFrames))
+  nMillisPerKeyFrame=$((nDurMillis/nTotKeyFrames)) # average
+  nBytesPerKeyFrame=$((nFileSzBytes/nTotKeyFrames)) # average
+  nTargetPartBytes=$((10*n1MB))
+  nKeyFramesPerPart=$((nTargetPartBytes/nBytesPerKeyFrame))
   
-  declare -p nDurMillis nMillisPerKeyFrame nKBperKeyFrame >&2
+  declare -p nDurMillis nMillisPerKeyFrame nBytesPerKeyFrame nTargetPartBytes nKeyFramesPerPart >&2
   
   ############ keep this to re-think if ever..
-  ###  nParts=$((nFileSz/nMinPartSz))
+  ###  nParts=$((nFileSzBytes/nMinPartSzBytes))
   ###  CFGnPartSeconds=$((nDurationSeconds/nParts));
   ###  ((CFGnPartSeconds+=1))&&: # to compensate for remaining milliseconds
   ###  if((CFGnPartSeconds<30));then
   ###    CFGnPartSeconds=30; # max bitrate encoding perf is reached around 5s to 10s so this may overall speedup
   ###  fi
-  ###  declare -p nDurationSeconds nFileSz nMinPartSz nParts CFGnPartSeconds
+  ###  declare -p nDurationSeconds nFileSzBytes nMinPartSzBytes nParts CFGnPartSeconds
   ############
   
   FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
@@ -817,7 +819,7 @@ for strFilePart in "${astrFilePartList[@]}";do
     if((`SECFUNCarraySize astrNewPartsList`>0));then
       nNewPartsCurSizeKB=$((0+`du "${astrNewPartsList[@]}" |awk '{print $1 "+"}' |tr -d '\n'`0)) # the du size is in KB but makes no diff in this calc mode/way
       nEstimFinalSzKB="`bc <<< "scale=0;100*$nNewPartsCurSizeKB/$nPerc"`"
-      nFileSzKB=$((nFileSz/1024))
+      nFileSzKB=$((nFileSzBytes/1024))
       nPercComp="`bc <<< "scale=2;100*$nEstimFinalSzKB/$nFileSzKB"`"
       declare -p nNewPartsCurSizeKB nEstimFinalSzKB nFileSzKB
     fi
