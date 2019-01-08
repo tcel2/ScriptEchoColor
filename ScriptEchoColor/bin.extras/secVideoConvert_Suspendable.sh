@@ -34,8 +34,11 @@ export CFGnCPUPerc #help overall CPUs percentage
 export bLossLessMode #help for conversion, test once at least to make sure is what you really want...
 
 n1MB=$((1024*1024))
-: ${nPartMinMB:=1}
-export nPartMinMB #help when splitting, parts will have this minimum MB size if possible
+: ${CFGnPartMinMB:=1}
+#export CFGnPartMinMB #help when splitting, parts will have this minimum MB size if possible
+
+: ${CFGnPartSeconds:=30}; # from tests, max bitrate encoding perf is reached around 5s to 10s so 30s may overall speedup TODO confirm this is a good tip or not
+export CFGnPartSeconds #help when splitting, parts will have around this length
 
 : ${nSlowQSleep:=60}
 export nSlowQSleep #help every question will wait this seconds
@@ -484,7 +487,7 @@ function FUNCextDirectConv() {
   return 0
 }
 
-function FUNCflSize() { # in bytes
+function FUNCflSizeBytes() { # in bytes
   stat -c "%s" "$1"
 }
 
@@ -537,7 +540,7 @@ function FUNCvalidateFinal() {
   fi
   
   if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
-    if((`FUNCflSize "$strOrigPath/$strFinalFileBN"` > `FUNCflSize "$strFileAbs"`));then
+    if((`FUNCflSizeBytes "$strOrigPath/$strFinalFileBN"` > `FUNCflSizeBytes "$strFileAbs"`));then
       echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
       lnRet=3
     fi
@@ -715,14 +718,10 @@ if FUNCrecreateExtChk;then
   exit 0 # because is an alternative video processing mode
 fi
 
-############################
-### normal video processing mode
-############################
-
 nDurationSeconds="`FUNCflDurationSec "$strFileAbs"`"
 
-nFileSz="`FUNCflSize "$strFileAbs"`";
-nMinPartSz=$((nPartMinMB*n1MB)) #not precise tho as split is based on keyframes #TODO right?
+nFileSz="`FUNCflSizeBytes "$strFileAbs"`";
+nMinPartSz=$((CFGnPartMinMB*n1MB)) #not precise tho as split is based on keyframes #TODO right?
 
 bJustRecreateDirectly=false
 if(( nDurationSeconds <= nShortDur ));then
@@ -733,7 +732,7 @@ if((nFileSz<nMinPartSz));then
   echoc --info "small file nFileSz='$nFileSz'"
   bJustRecreateDirectly=true
 fi
-if $bJustRecreateDirectly;then
+if $bJustRecreateDirectly;then ################ ALTERNATIVE PROCESSING ##################
   FUNCrecreate
   #~ FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
   #~ FUNCmiOrigNew&&:
@@ -741,26 +740,43 @@ if $bJustRecreateDirectly;then
   exit 0
 fi
 
-#~ nFileSz="`FUNCflSize "$strFileAbs"`";
-#~ n1MB=1000000 #TODO 1024*1024
-#~ nPartMinMB=1
-#~ nMinPartSz=$((nPartMinMB*n1MB))
-#~ if((nFileSz<nMinPartSz));then
-  #~ SECFUNCechoErrA "file is too small for this feature"
-  #~ exit 1
-#~ fi
-nParts=$((nFileSz/nMinPartSz))
+############################
+### normal video processing mode
+############################
 
-nPartSeconds=$((nDurationSeconds/nParts));
-((nPartSeconds+=1))&&: # to compensate for remaining milliseconds
-
-declare -p nDurationSeconds nFileSz nMinPartSz nParts nPartSeconds
-
+###################################### SPLIT ORIGINAL ##############################
 if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
-  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $nPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
+  
+  nTotKeyFrames="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |wc -l`"
+  declare -p nTotKeyFrames >&2
+  
+  if((nTotKeyFrames<2));then
+    echoc -p "unable to properly split strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
+    exit 1
+  fi
+  
+  nDurMillis="`FUNCflDurationMillis "$strFileAbs"`"
+  nMillisPerKeyFrame=$((nDurMillis/nTotKeyFrames))
+  nKBperKeyFrame=$((nFileSz/nTotKeyFrames))
+  
+  declare -p nDurMillis nMillisPerKeyFrame nKBperKeyFrame >&2
+  
+  ############ keep this to re-think if ever..
+  ###  nParts=$((nFileSz/nMinPartSz))
+  ###  CFGnPartSeconds=$((nDurationSeconds/nParts));
+  ###  ((CFGnPartSeconds+=1))&&: # to compensate for remaining milliseconds
+  ###  if((CFGnPartSeconds<30));then
+  ###    CFGnPartSeconds=30; # max bitrate encoding perf is reached around 5s to 10s so this may overall speedup
+  ###  fi
+  ###  declare -p nDurationSeconds nFileSz nMinPartSz nParts CFGnPartSeconds
+  ############
+  
+  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
   #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
 fi
+
+################################ WORK ON EACH PART ##############################
 
 SECFUNCexecA -ce ls -l "${strAbsFileNmHashTmp}."* #|sort -n
 
@@ -773,6 +789,8 @@ astrFilePartNewList=()
 echoc --info "Converting" >&2
 nCount=0
 for strFilePart in "${astrFilePartList[@]}";do
+  SECFUNCcfgReadDB # dynamic updates functionalities like cpulimit
+  
   strFilePartNS="${strFilePart%.mp4}"
   strPartTmp="${strAbsFileNmHashTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
   strFilePartNew="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
@@ -795,11 +813,14 @@ for strFilePart in "${astrFilePartList[@]}";do
     IFS=$'\n' read -d '' -r -a astrNewPartsList < <(find "${strTmpWorkPath}/" -maxdepth 1 -iregex ".*/${strFileBNHash}[.].*NewPart.*[.]mp4$")&&:
     #~ declare -p acmdFind
     #declare -p astrNewPartsList |tr '[' '\n'
-    nNewPartsCurSizeKB=$((0+`du "${astrNewPartsList[@]}" |awk '{print $1 "+"}' |tr -d '\n'`0)) # the du size is in KB but makes no diff in this calc mode/way
-    nEstimFinalSzKB="`bc <<< "scale=0;100*$nNewPartsCurSizeKB/$nPerc"`"
-    nFileSzKB=$((nFileSz/1024))
-    nPercComp="`bc <<< "scale=2;100*$nEstimFinalSzKB/$nFileSzKB"`"
-    declare -p nNewPartsCurSizeKB nEstimFinalSzKB nFileSzKB
+    nPercComp=0
+    if((`SECFUNCarraySize astrNewPartsList`>0));then
+      nNewPartsCurSizeKB=$((0+`du "${astrNewPartsList[@]}" |awk '{print $1 "+"}' |tr -d '\n'`0)) # the du size is in KB but makes no diff in this calc mode/way
+      nEstimFinalSzKB="`bc <<< "scale=0;100*$nNewPartsCurSizeKB/$nPerc"`"
+      nFileSzKB=$((nFileSz/1024))
+      nPercComp="`bc <<< "scale=2;100*$nEstimFinalSzKB/$nFileSzKB"`"
+      declare -p nNewPartsCurSizeKB nEstimFinalSzKB nFileSzKB
+    fi
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, ${nPerc}% (EstComp=${nPercComp}%) for '$strFileAbs'"
     if FUNCavconvConv --part --io "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
@@ -818,6 +839,8 @@ for strFilePart in "${astrFilePartList[@]}";do
   astrFilePartNewList+=( "`basename "$strFilePartNew"`" )
 done
 declare -p astrFilePartNewList |tr "[" "\n" >&2
+
+################################# JOIN NEW PARTS ON FINAL FILE ########################
 
 ( # to cd
   SECFUNCexecA -ce cd "$strTmpWorkPath"
