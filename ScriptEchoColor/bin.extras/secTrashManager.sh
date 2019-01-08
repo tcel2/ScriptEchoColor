@@ -364,6 +364,8 @@ while true;do
 						bRmFileOrPath=true
             strRPExist="e" #only allow existing target
             
+            if [[ "$strFile" == "." ]];then bRmFileOrPath=false;fi # there was a file "../info/..trashinfo", how it happened? IDK... but it would make this code remove the "Trash/files" folder itself in full :P
+            
             if [[ -L "$strFile" ]];then  # symlinks are ok to be removed directly. SYMLINK TEST above/before all others IS MANDATORY to not consider it as a directory!
               bSymlink=true;
               strRPExist="m" #allow not existing target
@@ -396,7 +398,7 @@ while true;do
               strReport+="strFileDT='$strFileDT',"
               strReport+="AvailMB='`FUNCavailMB "$strTrashFolder"`'," #avail after each rm
               strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
-              echo "$strReport"
+              echo "$strReport" >&2
             fi
 					
 						if ! $bDummyRun;then
