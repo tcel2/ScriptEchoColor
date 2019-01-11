@@ -53,6 +53,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
   local lbCheck=false
   local lstrXdotoolSearchBy="--name"
   local lbIsWindowID=false
+  local lbSticky=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCCwindowCmd_help
@@ -65,6 +66,8 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			lstrXdotoolSearchBy="$1"
 		elif [[ "$1" == "--ontop" ]];then #SECFUNCCwindowCmd_help set window on top
 			lbOnTop=true
+		elif [[ "$1" == "--sticky" ]];then #SECFUNCCwindowCmd_help show on all workspaces
+			lbSticky=true
 		elif [[ "$1" == "--focus" ]];then #SECFUNCCwindowCmd_help focus window
 			lbFocus=true
 		elif [[ "$1" == "--maximize" || "$1" == "-x" ]];then #SECFUNCCwindowCmd_help maximize window
@@ -222,6 +225,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 #child process
 		local lbStop=false
 		trap 'lbStop=true;' USR1
+		declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom >&2
 		while true;do
 			if $lbStop;then
 				break
@@ -240,20 +244,23 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				##################
 				# each option will be issued one time, so must be disabled 
 				##################
-				if $lbOnTop && wmctrl -i -a $lnWindowId -b add,above;then
+				if $lbOnTop && SECFUNCexecA -ce wmctrl -i -a $lnWindowId -b add,above;then
 					lbOnTop=false;
 				fi
-				if $lbFocus && xdotool windowactivate $lnWindowId && xdotool windowfocus $lnWindowId && wmctrl -i -r $lnWindowId -b remove,below;then # if minimized, must be activated before focus!
+				if $lbSticky && SECFUNCexecA -ce wmctrl -i -a $lnWindowId -b add,sticky;then
+					lbSticky=false;
+				fi
+				if $lbFocus && SECFUNCexecA -ce xdotool windowactivate $lnWindowId && SECFUNCexecA -ce xdotool windowfocus $lnWindowId && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b remove,below;then # if minimized, must be activated before focus!
 					lbFocus=false
 				fi
-				if $lbMaximize && wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
+				if $lbMaximize && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
 					lbMaximize=false;
 				fi
 #				if $lbMinimize && wmctrl -i -r $lnWindowId -b add,hidden;then
-				if $lbMinimize && xdotool windowminimize $lnWindowId && wmctrl -i -r $lnWindowId -b add,below;then # "below" is a trick in case "window" cant be minimized properly
+				if $lbMinimize && SECFUNCexecA -ce xdotool windowminimize $lnWindowId && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b add,below;then # "below" is a trick in case "window" cant be minimized properly
 					lbMinimize=false;
 				fi
-				if $lbMoveGeom && wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then #TODO xdotool doesnt work well for this? because of top systray panel?
+				if $lbMoveGeom && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -e 0,$lnPosX,$lnPosY,$lnWidth,$lnHeight;then #TODO xdotool doesnt work well for this? because of top systray panel?
 					lbMoveGeom=false;
 				fi
 				#############
@@ -262,7 +269,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				# only end when all is done
 				#############
-				declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom 
+				declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom >&2
 				if	! $lbOnTop && 
 						! $lbFocus && 
 						! $lbMaximize && 
