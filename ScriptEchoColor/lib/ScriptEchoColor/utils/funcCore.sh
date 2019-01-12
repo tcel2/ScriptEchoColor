@@ -551,25 +551,6 @@ function SECFUNCarrayCmp() { #help <lstrArrayIdA> <lstrArrayIdB> return 0 if bot
 	fi
 	
 	return 0
-	
-#	local lstrArrayIdValA="${lstrArrayIdA}[@]"
-#	local lstrArrayIdValB="${lstrArrayIdB}[@]"
-#	
-#	local lbIsEqual=true
-#	for strA in "${!lstrArrayIdValA}";do
-#		for strB in "${!lstrArrayIdValB}";do
-#			if [[ "$strA" != "$strB" ]];then
-#				lbIsEqual=false;
-#				break;
-#			fi
-#		done 
-#	done
-#	
-#	if $lbIsEqual;then 
-#		return 0; 
-#	else 
-#		return 1;
-#	fi
 }
 
 function SECFUNCarrayJoin() { #help <lstrJoinToken> <values...>
@@ -640,72 +621,13 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
  	
  	return 0;
 }
-#function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment variable is an array
-#	# var init here
-#	local lstrExample="DefaultValue"
-#	local lastrRemainingParams=()
-#	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
-#		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-#		if [[ "$1" == "--help" ]];then #SECFUNCarrayCheck_help show this help
-#			SECFUNCshowHelp $FUNCNAME
-#			return 0
-#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayCheck_help <lstrExample> MISSING DESCRIPTION
-#			shift
-#			lstrExample="${1-}"
-#		elif [[ "$1" == "--" ]];then #SECFUNCarrayCheck_help params after this are ignored as being these options, and stored at lastrRemainingParams
-#			shift #lastrRemainingParams=("$@")
-#			while ! ${1+false};do	# checks if param is set
-#				lastrRemainingParams+=("$1")
-#				shift #will consume all remaining params
-#			done
-#		else
-#			SECFUNCechoErrA "invalid option '$1'"
-#			$FUNCNAME --help
-#			return 1
-##		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-##			SECFUNCechoErrA "invalid option '$1'"
-##			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
-#		fi
-#		shift&&:
-#	done
-#	
-#	# code here
-#	local lstrArrayId="$1"
-#	
-#	# valid env var
-#	if ! declare -p "$lstrArrayId" >>/dev/null;then
-#		return 1;
-#	fi
-
-#	#local l_strTmp=`declare |grep "^$1=("`; #declare is a bit slower than export
-#	#eval "export $lstrArrayId"
-#	# export it to easy tests below
-#	if ! declare -x $lstrArrayId;then
-#		return 1
-#	fi
-#	
-#	#export |grep "${lstrArrayId}=" >&2 #@@@R
-#	#export >&2 #@@@R
-#	
-#	local l_strTmp="`export |grep "^declare -[Aa]x ${lstrArrayId}='("`";
-# 	#if(($?==0));then
-# 	if [[ -z "$l_strTmp" ]]; then
-# 		return 1;
-# 	fi;
-# 	
-# 	return 0;
-##  local l_arrayCount=`eval 'echo ${#'$1'[*]}'`
-##  if((l_arrayCount>1));then
-##  	return 0;
-## 	fi
-## 	return 1
-#}
 
 function SECFUNCarrayWork() { #help
 	# var init here
 	local lstrArrayId=""
 	local lstrParam1=""
   local lstrMode=""
+  local lbVerbose=false
   #local lbCleanMode=false
   #~ local lbPrependMode=false
   #~ local lbMergeMode=false
@@ -721,15 +643,19 @@ function SECFUNCarrayWork() { #help
 #			lstrExample="${1-}"
     elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help <lstrArrayId> [value] helps on regex cleaning array elements. If value to match is empty, will clean empty elements (default behavior)
 #      lbCleanMode=true
-      lstrMode="CLEAN"
+      lstrMode="$1"
+    elif [[ "$1" == "--show" ]];then #SECFUNCarrayWork_help <lstrArrayId> [indentation] show one entry per line
+      lstrMode="$1"
     elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help <lstrArrayId> <value>
    #   lbPrependMode=true
-      lstrMode="PREPEND"
+      lstrMode="$1"
     elif [[ "$1" == "--merge" ]];then #SECFUNCarrayWork_help <lstrArrayId> <other array id> mix the values of 2 arrays on the 1st one, sort/order aphanumeric and eliminates dups
     #  lbMergeMode=true
-      lstrMode="MERGE"
+      lstrMode="$1"
     elif [[ "$1" == "--uniq" ]];then #SECFUNCarrayWork_help <lstrArrayId> remove dups and sort
-      lstrMode="UNIQ"
+      lstrMode="$1"
+    elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #SECFUNCarrayWork_help show extra info at each functionality where it was implemented
+      lbVerbose=true
 		elif [[ "$1" == "--" ]];then #SECFUNCarrayWork_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -749,7 +675,7 @@ function SECFUNCarrayWork() { #help
 	
 	# code here
 	lstrArrayId="${1-}";shift&&:
-	lstrParam1="${1-}";shift&&:
+  local lbP1=false;if ! ${1+false};then lbP1=true;fi;lstrParam1="${1-}";shift&&:
 	
 	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
@@ -768,7 +694,7 @@ function SECFUNCarrayWork() { #help
 #  elif $lbMergeMode;then
 #  fi
   case "$lstrMode" in
-    CLEAN)
+    --clean)
       local lstrMatch="$lstrParam1"
       local lnIndex=0
       for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
@@ -787,17 +713,35 @@ function SECFUNCarrayWork() { #help
         ((lnIndex++))&&:
       done
       ;;
-    PREPEND)
+    --show)
+      local lstrEntry
+      local lstrIndent="${lstrParam1}";if ! $lbP1;then lstrIndent="  ";fi
+      #~ if $lbVerbose;then echo "lstrArrayId=(";fi
+      #~ local lstrPliq="";if $lbVerbose;then lstrPliq="\"";fi
+      local lnIndex
+      for((lnIndex=0;lnIndex<${#lastrArrayCopyTmp[*]};lnIndex++));do #TODO THIS WILL NOT KEEP EXISTING INDEXES!!! so unset in-between will just be compacted :O
+#      for lstrEntry in "${lastrArrayCopyTmp[@]}";do
+        if $lbVerbose;then
+          echo "${lstrIndent}lstrArrayId[$lnIndex]=\"`printf "%q" ${lastrArrayCopyTmp[lnIndex]}`\""
+        else
+          echo "${lstrIndent}${lastrArrayCopyTmp[lnIndex]}"
+        fi
+        #~ echo "${lstrIndent}${lstrPliq}${lstrEntry}${lstrPliq}"
+      done
+      #~ if $lbVerbose;then echo ")";fi
+      return 0
+      ;;
+    --prepend)
       local lstrPrependValue="$lstrParam1"
       lastrArrayCopyTmp=("$lstrPrependValue" "${lastrArrayCopyTmp[@]}")
       ;;
-    UNIQ)
+    --uniq)
       local lastrTmp=( "${lastrArrayCopyTmp[0]}" )
       #~ declare -p lastrTmp
       SECFUNCarrayWork --merge "$lstrArrayId" lastrTmp
       return $?
       ;;
-    MERGE)
+    --merge)
       local lstrArrayIdOther="$lstrParam1"
       if ! SECFUNCarrayCheck "$lstrArrayIdOther";then
         SECFUNCechoErrA "invalid lstrArrayIdOther='$lstrArrayIdOther'"
@@ -838,12 +782,16 @@ function SECFUNCarrayWork() { #help
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+function SECFUNCarrayShow() {
+  SECFUNCarrayWork --show "$@"
+}
+
 function SECFUNCarrayClean() { #help 
-  SECFUNCarrayWork --clean "$1" "$2"
+  SECFUNCarrayWork --clean "$@"
 }
 
 function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
-  SECFUNCarrayWork --prepend "$1" "$2"
+  SECFUNCarrayWork --prepend "$@"
 }
 #~ function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
 	#~ lstrArrayId="${1-}";shift

@@ -516,7 +516,6 @@ function FUNClsNot() { #synchronize like
 		echoc --info "File list that are not at Remote Backup Folder:"
     SECFUNCexecA -ce ls -ltr "${astrFileList[@]}"
     #for strFile in "${astrFileList[@]}";do echo "$strFile";done
-		#declare -p c |tr '[' '\n'
 		
 		if ! $bAddFilesMode && echoc -t 60 -q "select what files you want to add?";then
 			bAddFilesMode=true

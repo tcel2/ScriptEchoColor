@@ -142,7 +142,7 @@ cd $HOME/.config/autostart/
 IFS=$'\n' read -d '' -r -a astrFileList < <(grep "enabled=true" * |cut -d: -f1)&&:
 
 echo
-echo "Enabled FILES at: '`pwd`'"
+echo "Enabled FILES at: '`pwd`/'"
 for strFile in "${astrFileList[@]}";do  
   echo -e " $strFile     #`egrep -h "Exec=.* --SequentialCfg " "${strFile}" |sed 's"^Exec=""'`"
 done
@@ -151,7 +151,7 @@ done
 
 ########## autostart commands
 IFS=$'\n' read -d '' -r -a astrCmdList < <(egrep -h "Exec=.* --SequentialCfg " "${astrFileList[@]}" |sed 's"^Exec=""' |sort)&&:
-#declare -p astrCmdList |tr '[' '\n'
+#SECFUNCarrayShow astrCmdList
 
 ########## prepare list to be ordered
 sedGetSleepTime="s'.*-s[ ]*([[:digit:]]*) .*'\1'"
@@ -160,7 +160,7 @@ for strCmd in "${astrCmdList[@]}";do
   nIndex=$((10#`echo "$strCmd" |sed -r "$sedGetSleepTime"`));
   astrCmdListToSort+=("$nIndex $strCmd")
 done
-#declare -p astrCmdListToSort |tr '[' '\n'
+#SECFUNCarrayShow astrCmdListToSort
  
 ########## order the list
 sedRmOrderDigits='s"^[[:digit:]]* ""'
@@ -169,7 +169,7 @@ astrCmdListOrdered=()
 IFS=$'\n' read -d '' -r -a astrCmdListOrdered < <(for strSCmd in "${astrCmdListToSort[@]}";do echo "$strSCmd";done |sort -n |sed -r -e "$sedRmOrderDigits" -e "$sedRmSeqCfgOpt")&&:
 echo
 echo "Sequential CMDs:"
-declare -p astrCmdListOrdered |tr '[' '\n'
+SECFUNCarrayShow astrCmdListOrdered
 
 if $bListOnly;then exit 0;fi
 

@@ -138,7 +138,7 @@ function FUNCflCleanFromDB() {
   SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
   SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
   declare -p FUNCNAME lstrFl lstrRegexPreciseMatch
-  #declare -p CFGastrFileList |tr '[' '\n'
+  #SECFUNCarrayShow CFGastrFileList
 }
 
 function FUNCflAddToDB() {
@@ -274,7 +274,7 @@ elif $bContinue;then
   while true;do
     SECFUNCcfgReadDB
     echoc --info " Continue @s@{By}Loop@S: "
-    declare -p CFGastrFileList |tr '[' '\n'
+    SECFUNCarrayShow CFGastrFileList
     if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
     
     for strFileAbs in "${CFGastrFileList[@]}";do
@@ -312,7 +312,7 @@ elif $bAddFiles;then
       SEC_WARN=true SECFUNCechoWarnA "missing strNewFile='$strNewFile'"
     fi
   done
-  declare -p CFGastrFileList |tr '[' '\n'
+  SECFUNCarrayShow CFGastrFileList
   
   #~ # choses 1st to work on it
   #~ strFileAbs="${CFGastrFileList[0]-}"
@@ -814,7 +814,7 @@ for strFilePart in "${astrFilePartList[@]}";do
     #~ acmdFind=(find "${strTmpWorkPath}/" -maxdepth 1 -iregex ".*/${strFileBNHash}[.].*NewPart.*[.]mp4$")
     IFS=$'\n' read -d '' -r -a astrNewPartsList < <(find "${strTmpWorkPath}/" -maxdepth 1 -iregex ".*/${strFileBNHash}[.].*NewPart.*[.]mp4$")&&:
     #~ declare -p acmdFind
-    #declare -p astrNewPartsList |tr '[' '\n'
+    #SECFUNCarrayShow astrNewPartsList
     nPercComp=0
     if((`SECFUNCarraySize astrNewPartsList`>0));then
       nNewPartsCurSizeKB=$((0+`du "${astrNewPartsList[@]}" |awk '{print $1 "+"}' |tr -d '\n'`0)) # the du size is in KB but makes no diff in this calc mode/way

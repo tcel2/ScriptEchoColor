@@ -227,7 +227,8 @@ if $bDaemon;then
       else
         nChosen=$((RANDOM%nTotFiles));
       fi
-      declare -p CFGastrFileList nChosen nTotFiles |tr '[' '\n'
+      SECFUNCarrayShow CFGastrFileList
+      declare -p nChosen nTotFiles
       
       strFileBase="${CFGastrFileList[$nChosen]-}"
       CFGstrCurrentFile="`pwd`/$strFileBase";
@@ -542,14 +543,14 @@ if $bDaemon;then
         ;;
       l)
         FUNCchkUpdateFileList --refill
-        declare -p CFGastrFileList |tr '[' '\n'
+        SECFUNCarrayShow CFGastrFileList
         declare -p strFilter
         #TODO for some inexplicable (?) reason, while 's' option will collect text and work fine many times, after this option is selected nothing will output anymore on text prompts `echoc -S`... scary... 8-( ), could be cuz of the @D default option? or even the '(' ')' test more later...
         strFilter="`echoc -S "Type a regex filter (can be a subfolder name)@D${strFilter}"`"
         declare -p strFilter
         FUNCchkUpdateFileList --refill
         if((`SECFUNCarraySize CFGastrFileList`>0));then
-          declare -p CFGastrFileList |tr '[' '\n'
+          SECFUNCarrayShow CFGastrFileList
           bChangeImage=true;
           bResetCounters=true
         else
@@ -571,7 +572,7 @@ if $bDaemon;then
         ;; 
       s)
         FUNCchkUpdateFileList --refill
-        declare -p CFGastrFileList |tr '[' '\n'
+        SECFUNCarrayShow CFGastrFileList
         nSetIndex="`echoc -S "set image index"`"
         if SECFUNCisNumber -dn "$nSetIndex" && ((nSetIndex<nTotFiles));then
           bChangeImage=true;

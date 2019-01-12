@@ -107,7 +107,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "Recovers window manager after it's crash, and helps easily replacing it."
 		SECFUNCshowHelp --colorize "The default auto-recovery window manager option (if not set) is the last detected. If none is detected, prefers in this order: compiz, metacity, xfwm4 (will check if they are installed)"
-		echo "WMs that support param '--replace':`declare -p astrSuppertedWM |tr '[' '\n' |sed 's@.*@ &@'`"
+		echo "WMs that support param '--replace':`SECFUNCarrayShow astrSuppertedWM`"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "-w" ]];then #help <strPreferedWM> force the default auto recovery option
