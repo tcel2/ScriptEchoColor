@@ -572,7 +572,7 @@ if $bDaemon;then
         ;; 
       s)
         FUNCchkUpdateFileList --refill
-        SECFUNCarrayShow CFGastrFileList
+        SECFUNCarrayShow -v CFGastrFileList
         nSetIndex="`echoc -S "set image index"`"
         if SECFUNCisNumber -dn "$nSetIndex" && ((nSetIndex<nTotFiles));then
           bChangeImage=true;

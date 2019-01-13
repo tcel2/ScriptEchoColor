@@ -722,7 +722,7 @@ function SECFUNCarrayWork() { #help
       for((lnIndex=0;lnIndex<${#lastrArrayCopyTmp[*]};lnIndex++));do #TODO THIS WILL NOT KEEP EXISTING INDEXES!!! so unset in-between will just be compacted :O
 #      for lstrEntry in "${lastrArrayCopyTmp[@]}";do
         if $lbVerbose;then
-          echo "${lstrIndent}lstrArrayId[$lnIndex]=\"`printf "%q" ${lastrArrayCopyTmp[lnIndex]}`\""
+          echo "${lstrIndent}lstrArrayId[$lnIndex]=\"`printf "%q" "${lastrArrayCopyTmp[lnIndex]}"`\""
         else
           echo "${lstrIndent}${lastrArrayCopyTmp[lnIndex]}"
         fi
