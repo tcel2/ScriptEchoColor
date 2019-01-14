@@ -499,22 +499,38 @@ elif $bRandom;then
   
   astrOODMBkpGammaRGB=()
   bOODMplay=false
+  nOODMSec=$SECONDS
+  bOODMSmoothResetting=false
   function FUNConlyOverDesktopMode() {
     if ! $bOnlyOverDesktop;then return 0;fi # let it play normally
     
-    if SECFUNCdelay ${FUNCNAME[0]} --checkorinit1 3;then
+#    if SECFUNCdelay ${FUNCNAME[0]} --checkorinit1 3;then
+    if(( SECONDS >= (nOODMSec+3) ));then # 2000x faster than SECFUNCdelay! :) #id="test$RANDOM";i=0;while true;do if SECFUNCdelay $id --checkorinit 3;then break;fi; echo $((i++));done #id="test$RANDOM";i=0;nSec=$SECONDS;while true;do if((SECONDS>=(nSec+3)));then break;fi; echo $((i++));done
       if FUNCisOverDesktop;then
         astrOODMBkpGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
         bOODMplay=true
         return 0 # play if over desktop
       else
-        echo -en "(mouse cursor is not over desktop at `date`)\r"
-        if $bOODMplay;then
-          if((`SECFUNCarraySize astrOODMBkpGammaRGB`>0));then FUNCsetGamma "${astrOODMBkpGammaRGB[@]}";fi # restore gamma once only
-          FUNCinitVars #reset to avoid too many annoying gamma jumps
-          bOODMplay=false
+        nRto=100;nGto=100;nBto=100 # overrides random mode
+        if((nR!=100 && nG!=100 && nB!=100));then
+          bOODMSmoothResetting=true
+          return 0 # smoothly resets gamma
+        else
+          if $bOODMplay;then
+            echo "(gamma smooth reset completed at `date`!)"
+            if((`SECFUNCarraySize astrOODMBkpGammaRGB`>0));then FUNCsetGamma "${astrOODMBkpGammaRGB[@]}";fi # restore gamma double granted
+            bOODMplay=false
+            bOODMSmoothResetting=false
+          fi
+          echo -en "(mouse cursor is not over desktop at `date`)\r"
+          return 1 # suspend
         fi
-        return 1 # suspend
+        #~ if $bOODMplay;then
+          #~ if((`SECFUNCarraySize astrOODMBkpGammaRGB`>0));then FUNCsetGamma "${astrOODMBkpGammaRGB[@]}";fi # restore gamma once only
+          #~ FUNCinitVars #reset to avoid too many annoying gamma jumps
+          #~ bOODMplay=false
+        #~ fi
+        #~ return 1 # suspend
       fi
     else
       if $bOODMplay;then return 0;else return 1;fi # keep playing/suspended til next check time even if over windows now to avoid using xdotool too much TODO is that still a problem?
@@ -529,9 +545,11 @@ elif $bRandom;then
 	while true; do
     if ! FUNConlyOverDesktopMode;then sleep 1;continue;fi
     
-    FUNCto $nR $nRto;nRto=$nFUNCto
-    FUNCto $nG $nGto;nGto=$nFUNCto
-    FUNCto $nB $nBto;nBto=$nFUNCto
+    if ! $bOODMSmoothResetting;then
+      FUNCto $nR $nRto;nRto=$nFUNCto
+      FUNCto $nG $nGto;nGto=$nFUNCto
+      FUNCto $nB $nBto;nBto=$nFUNCto
+    fi
 		
     FUNCwalk $nR $nRto;nR=$nFUNCwalk
     FUNCwalk $nG $nGto;nG=$nFUNCwalk
@@ -560,7 +578,7 @@ elif $bRandom;then
     if $SEC_DEBUG;then
       echo "$strFRGB `printf "%03d,%03d,%03d" $nR $nG $nB` to $strTo" >&2
     else
-      if((SECONDS>nSecPrev));then # report once per second
+      if $bOODMSmoothResetting || ((SECONDS>nSecPrev));then # report once per second
   #      printf "RGB `FUNCupDown $nR $nRto`%03d,`FUNCupDown $nG $nGto`%03d,`FUNCupDown $nB $nBto`%03d to $strTo\r" $nR $nG $nB
         printf "RGB ${strR}%03d,${strG}%03d,${strB}%03d to $strTo\r" $nR $nG $nB
         nSecPrev=$SECONDS
