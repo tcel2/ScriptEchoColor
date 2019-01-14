@@ -142,6 +142,7 @@ CFGbRefreshKeepGammaNow=false
 SECFUNCcfgFileName --get
 SECFUNCcfgFileName --show
 SECFUNCexecA -ce xgamma
+bOnlyOverDesktop=false
 afCurrentGamma=(`FUNCgetCurrentGammaRGB --force`);
 astrConnectedMonitors=(`xrandr |grep connected -w |awk '{print $1}'`);declare -p astrConnectedMonitors
 #strMonitor="${astrConnectedMonitors[0]}"
@@ -211,7 +212,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
     if ! SECFUNCarrayContains astrConnectedMonitors "$strMonitor";then
       echoc -p "invalid monitor strMonitor='$strMonitor'"
     fi
-	elif [[ "$1" == "--random" ]];then #help [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
+	elif [[ "$1" == "--onlydesk" ]];then #help will be active only if mouse is over the desktop (no window under it)
+    bOnlyOverDesktop=true
+	elif [[ "$1" == "--random" ]];then #help ~last [nRgfStep] [nRgfDelay] [nRgfMin] [nRgfMax]
 		#help ~daemon a loop that does random gamma fade, fun effect.
 		#help will not modify configuration file.
 		#help incompatible with --keep.
@@ -418,13 +421,16 @@ elif $bRandom;then
 	###################################
 
 	# internal variables
-	nR=100
-	nG=100
-	nB=100
-	nRto=$nR
-	nGto=$nG
-	nBto=$nB
 	nMinLimit=10
+  FUNCinitVars() { #reset also
+    declare -g nR=100
+    declare -g nG=100
+    declare -g nB=100
+    declare -g nRto=$nR
+    declare -g nGto=$nG
+    declare -g nBto=$nB
+  }
+  FUNCinitVars
 
   nFUNCto=0
 	FUNCto() {
@@ -480,27 +486,57 @@ elif $bRandom;then
     #echo "$strFUNCupDown"
 	}
 
+  function FUNCisOverDesktop() {
+    local lnWId=0
+    lnWId=`xdotool getmouselocation|grep -o "[[:digit:]]*$"`&&:
+#    declare -p lnWId >&2
+    if((lnWId==0)) || [[ -z "$lnWId" ]];then return 0;fi # when locked from metacity
+    #declare -p lnWId;
+    #xdotool getwindowname $lnWId;
+    if xwininfo -id $lnWId |egrep -q "xwininfo: Window id:.*(the root window|Desktop|nux input window|gnome-screensaver|has no name)";then return 0;fi # when locked from compiz = "nux input window", locked from metacity = "has no name"
+    return 1
+  }
+  
+  astrOODMBkpGammaRGB=()
+  bOODMplay=false
+  function FUNConlyOverDesktopMode() {
+    if ! $bOnlyOverDesktop;then return 0;fi # let it play normally
+    
+    if SECFUNCdelay ${FUNCNAME[0]} --checkorinit1 3;then
+      if FUNCisOverDesktop;then
+        astrOODMBkpGammaRGB=(`FUNCgetCurrentGammaRGB --force`)
+        bOODMplay=true
+        return 0 # play if over desktop
+      else
+        echo -en "(mouse cursor is not over desktop at `date`)\r"
+        if $bOODMplay;then
+          if((`SECFUNCarraySize astrOODMBkpGammaRGB`>0));then FUNCsetGamma "${astrOODMBkpGammaRGB[@]}";fi # restore gamma once only
+          FUNCinitVars #reset to avoid too many annoying gamma jumps
+          bOODMplay=false
+        fi
+        return 1 # suspend
+      fi
+    else
+      if $bOODMplay;then return 0;else return 1;fi # keep playing/suspended til next check time even if over windows now to avoid using xdotool too much TODO is that still a problem?
+    fi
+    
+    return 1 # fallback granted suspend
+  }
+  
   #tabs 2
   nSecPrev=0
   declare -p nMinLimit nRgfStep nRgfDelay nRgfMin nRgfMax
 	while true; do
-		#~ nRto=`FUNCto $nR $nRto`
-		#~ nGto=`FUNCto $nG $nGto`
-		#~ nBto=`FUNCto $nB $nBto`
+    if ! FUNConlyOverDesktopMode;then sleep 1;continue;fi
+    
     FUNCto $nR $nRto;nRto=$nFUNCto
     FUNCto $nG $nGto;nGto=$nFUNCto
     FUNCto $nB $nBto;nBto=$nFUNCto
 		
-		#~ nR=`FUNCwalk $nR $nRto`
-		#~ nG=`FUNCwalk $nG $nGto`
-		#~ nB=`FUNCwalk $nB $nBto`
     FUNCwalk $nR $nRto;nR=$nFUNCwalk
     FUNCwalk $nG $nGto;nG=$nFUNCwalk
     FUNCwalk $nB $nBto;nB=$nFUNCwalk
 		
-    #~ fR="`FUNCtoFloat $nR`"
-    #~ fG="`FUNCtoFloat $nG`"
-    #~ fB="`FUNCtoFloat $nB`"
     FUNCtoFloat $nR;fR=$fFUNCtoFloat
     FUNCtoFloat $nG;fG=$fFUNCtoFloat
     FUNCtoFloat $nB;fB=$fFUNCtoFloat

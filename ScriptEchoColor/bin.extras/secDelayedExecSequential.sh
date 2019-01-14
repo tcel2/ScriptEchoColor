@@ -96,7 +96,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 # Main code
 if $bRunAll || $bListOnly || [[ -n "$strFilter" ]];then
-  :
+  : # will do more stuff below
 else
   exit 0
 fi
