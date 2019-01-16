@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2004-2014 by Henrique Abdalla
+# Copyright (C) 2004-2019 by Henrique Abdalla
 #
 # This file is part of ScriptEchoColor.
 #
@@ -412,6 +412,7 @@ elif $bRandom;then
 	fi
 	
 	SECFUNCuniqueLock --daemonwait
+  SECFUNCexecA -ce renice -n 19 $$
 	
 	trap '{ echo "(ctrl+c pressed, resetting gamma and exiting...)";$SECstrScriptSelfName --reset; exit 1; }' INT
 
@@ -486,6 +487,16 @@ elif $bRandom;then
     #echo "$strFUNCupDown"
 	}
 
+  astrODMatchList=(
+    "\(the root window\)" # w/o nautilus
+    "\"Desktop\"" # with nautilus
+    "\"nux input window\"" # when locked from compiz
+    "\"gnome-screensaver\"" # happened once TODO more info
+    "\(has no name\)" #when locked from metacity TODO too vague
+  )
+  strODMatch="`SECFUNCarrayJoin "|" "${astrODMatchList[@]}"`";#declare -p strODMatch
+  strODPrevMatch=""
+  nODPrevWId=-2
   function FUNCisOverDesktop() {
     local lnWId=0
     lnWId=`xdotool getmouselocation|grep -o "[[:digit:]]*$"`&&:
@@ -493,7 +504,14 @@ elif $bRandom;then
     if((lnWId==0)) || [[ -z "$lnWId" ]];then return 0;fi # when locked from metacity
     #declare -p lnWId;
     #xdotool getwindowname $lnWId;
-    if xwininfo -id $lnWId |egrep -q "xwininfo: Window id:.*(the root window|Desktop|nux input window|gnome-screensaver|has no name)";then return 0;fi # when locked from compiz = "nux input window", locked from metacity = "has no name"
+    if strMatched="`xwininfo -id $lnWId |egrep "xwininfo: Window id:.*(${strODMatch})"`";then
+      if [[ "$strODPrevMatch" != "$strMatched" ]] || ((lnWId!=nODPrevWId));then
+        echo "DEBUG-`date`[PLAY]: lnWId='$lnWId' strMatched='$strMatched'" >&2
+      fi
+      strODPrevMatch="$strMatched"
+      nODPrevWId="$lnWId"
+      return 0;
+    fi 
     return 1
   }
   
@@ -533,7 +551,7 @@ elif $bRandom;then
         #~ return 1 # suspend
       fi
     else
-      if $bOODMplay;then return 0;else return 1;fi # keep playing/suspended til next check time even if over windows now to avoid using xdotool too much TODO is that still a problem?
+      if $bOODMplay;then return 0;else return 1;fi # keep playing/suspended til next check time even if over windows now to avoid using xdotool too much TODO is that still a problem? was the cause of random reboots at all in the past?
     fi
     
     return 1 # fallback granted suspend
