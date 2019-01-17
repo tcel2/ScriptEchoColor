@@ -2677,7 +2677,10 @@ export SECcolorLightBackgroundYellow="$SECcharEsc[103m"
 export SECcolorLightBackgroundBlack="$SECcharEsc[100m" #yes it is 40...
 export SECcolorLightBackgroundWhite="$SECcharEsc[107m"
 
+# special
 export SECcolorCancel="$SECcharEsc[0m"
+export SECcolorBold="$SECcharEsc[1m"
+export SECcolorDim="$SECcharEsc[2m"
 
 SECFUNCcheckActivateRunLog #important to be here as shell may not be interactive so log will be automatically activated...
 

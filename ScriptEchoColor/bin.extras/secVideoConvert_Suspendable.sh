@@ -598,7 +598,7 @@ function FUNCfinalMenuChk() {
       "_list all probably useful details?"
       "_play the new file? #ready"
       "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
-      "_s `SECFUNCternary -e "skip this completed file for now?" "continue working on current file now?" $lbReady`"
+      "_s `SECFUNCternary -e "skip this @s@{yn}COMPLETED@S file for now?" "continue working on current file now?" $lbReady`"
       "_trash tmp and original video files?"
       "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
       "set a new video to _work with?"

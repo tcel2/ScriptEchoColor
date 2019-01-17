@@ -674,6 +674,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	local lbRestoreDefOutputs=false;
   local bVerboseEchoRequested=false;
   local lnTimeout=0
+  local lstrComment=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
@@ -692,6 +693,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lbRestoreDefOutputs=true;
 		elif [[ "$1" == "--colorize" || "$1" == "-c" ]];then #SECFUNCexec_help output colored
 			lbColorize=true
+    elif [[ "$1" == "--comment" || "$1" == "-m" ]];then #SECFUNCexec_help will be appended on echoed line
+      shift;lstrComment="$1"
 		elif [[ "$1" == "--quiet" || "$1" == "-q" ]];then #SECFUNCexec_help ommit command output to stdout and stderr (logging overrides this)
 			lbOmitOutput=true
 		elif [[ "$1" == "--quietoutput" ]];then #deprecated
@@ -909,10 +912,26 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		local lstrColorSuffix=""
 		if $lbColorize;then
 #			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
-			lstrColorPrefix="${SECcolorCancel}${SECcolorWhite}\E[46m\E[1m"
+			lstrColorPrefixDbg="${SECcolorCancel}${SECcolorWhite}${SECcolorLightBackgroundBlack}"
+			lstrColorPrefixCmd="${SECcolorCancel}${SECcolorWhite}${SECcolorBackgroundCyan}${SECcolorBold}"
 			lstrColorSuffix="${SECcolorCancel}"
 		fi
 		
+		if $lbChild;then # BEFORE comment check
+			lstrComment+=" (as "
+			if $lbDetach;then
+				lstrComment+="DETACHED "
+			fi
+			lstrComment+="CHILD process see var SEClstrFuncExecLastChildRef)"
+		fi
+    
+    if [[ -n "$lstrComment" ]];then
+      lstrComment=" # ${lstrComment} "
+      if $lbColorize;then
+        lstrComment="${SECcolorCancel}${SECcolorLightBackgroundCyan}${SECcolorLightBlue}${lstrComment}"
+      fi
+    fi
+    
 		local lstrDateTime="";
 		if $lbDateTimeShow;then
 			lstrDateTime="[`SECFUNCdtTimeForLogMessages`] "
@@ -923,16 +942,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 			lstrFunctionInfo="${lstrCaller}: "
 		fi
 		
-		local lstrChildIndicator=""
-		if $lbChild;then
-			lstrChildIndicator=" # as "
-			if $lbDetach;then
-				lstrChildIndicator+="DETACHED "
-			fi
-			lstrChildIndicator+="CHILD process (see var SEClstrFuncExecLastChildRef)"
-		fi
-		
-		echo -e "${lstrColorPrefix}${lstrDateTime}${lstrFunctionInfo}${lstrExec}${lstrChildIndicator}${lstrColorSuffix}" >&2
+		echo -e "${lstrColorPrefixDbg}${lstrDateTime}${lstrFunctionInfo}${lstrColorPrefixCmd} ${lstrExec}${lstrComment}${lstrColorSuffix}" >&2
 	fi
 	
 	if $bWaitKey;then
