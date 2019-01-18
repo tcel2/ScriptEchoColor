@@ -893,7 +893,7 @@ function FUNCrun(){
 	#						--field "[${astrYadFields[1]}] (use '\x7C' instead of '|')" 
 	#			IFS=$'\n' read -d '|' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
-				declare -p astrYadReturnValues
+				declare -p astrYadReturnValues >&2
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
 					if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
 					strCodeToEval="${astrYadReturnValues[1]}"
@@ -902,6 +902,7 @@ function FUNCrun(){
 					#bCleanSECenv="`echo ${astrYadReturnValues[3]} |tr "[:upper:]" "[:lower:]"`"
 	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi
+        declare -p bXterm strCodeToEval bEnableSECWarnMessages bCleanSECenv >&2
         echoc --info "nRet='$nRet'"
 				case $nRet in 
 					1)break;; #do not retry, end. The close button.
@@ -943,7 +944,11 @@ function FUNCrun(){
 				#~ if [[ -n "$strCodeToEval" ]];then
 					#~ eval "$strCodeToEval"
 				#~ fi
-				eval "$strCodeToEval" # empty eval causes no trouble, TODO may help with some commands if outside 'if' block?
+        #~ declare -p strCodeToEval >&2
+				if ! eval "$strCodeToEval";then # empty eval causes no trouble, TODO may help with some commands if outside 'if' block?
+          declare -p strCodeToEval >&2
+          SECFUNCechoErrA "eval of strCodeToEval failed, if it continues running may cause inconsistencies!" #TODO let user manage it thru yad prompt?
+        fi
 			else
 				lstrTxt+="Obs.: Developer options if you install \`yad\`.\n";
 				lstrTxt+="\n";
