@@ -908,7 +908,8 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	SECFUNCechoDbgA "lstrCaller=${lstrCaller}: $lstrExec"
 	
 	if $bExecEcho; then
-		local lstrColorPrefix=""
+		local lstrColorPrefixDbg=""
+		local lstrColorPrefixCmd=""
 		local lstrColorSuffix=""
 		if $lbColorize;then
 #			lstrColorPrefix="\E[0m\E[37m\E[46m\E[1m"
