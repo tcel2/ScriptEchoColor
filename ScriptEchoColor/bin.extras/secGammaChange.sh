@@ -504,11 +504,21 @@ elif $bRandom;then
     if((lnWId==0)) || [[ -z "$lnWId" ]];then return 0;fi # when locked from metacity
     #declare -p lnWId;
     #xdotool getwindowname $lnWId;
-    if strMatched="`xwininfo -id $lnWId |egrep "xwininfo: Window id:.*(${strODMatch})"`";then
-      if [[ "$strODPrevMatch" != "$strMatched" ]] || ((lnWId!=nODPrevWId));then
-        echo "DEBUG-`date`[PLAY]: lnWId='$lnWId' strMatched='$strMatched'" >&2
+    local lstrInfo="`xprop -id $lnWId`"
+    if echo "$lstrInfo" |grep -q _NET_WM_WINDOW_TYPE_DESKTOP;then return 0;fi
+    if echo "$lstrInfo" |grep -q _NET_WM_WINDOW_TYPE_DIALOG;then return 1;fi
+    
+#    if lstrMatched="`echo "$lstrInfo" |egrep "xwininfo: Window id:.*(${strODMatch})"`";then
+    local lbIs=false
+    local lstrMatched
+    if lstrMatched="`echo "$lstrInfo" |egrep "^WM_NAME\(STRING\) = (${strODMatch})$"`";then
+      lbIs=true
+    fi
+    if $lbIs;then
+      if [[ "$strODPrevMatch" != "$lstrMatched" ]] || ((lnWId!=nODPrevWId));then
+        echo "DEBUG-`date`[PLAY]: lnWId='$lnWId' lstrMatched='$lstrMatched'" >&2
       fi
-      strODPrevMatch="$strMatched"
+      strODPrevMatch="$lstrMatched"
       nODPrevWId="$lnWId"
       return 0;
     fi 
