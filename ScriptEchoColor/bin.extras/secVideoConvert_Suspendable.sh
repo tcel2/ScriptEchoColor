@@ -44,6 +44,7 @@ export CFGnPartSeconds #help when splitting, parts will have around this length
 export nSlowQSleep #help every question will wait this seconds
 CFGnDefQSleep=$nSlowQSleep
 
+bUseCPUlimit=true
 astrVidExtList=(mp4 3gp flv avi mov mpeg)
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
@@ -165,7 +166,7 @@ function FUNCworkFolders() {
   for strFl in "${CFGastrFileList[@]}";do # grant nothing is missing
     CFGastrTmpWorkPathList+=("`FUNCflTmpWorkPath "$strFl"`")
   done
-  SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;#SECFUNCcfgWriteVar CFGastrTmpWorkPathList
+  SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;SECFUNCcfgWriteVar CFGastrTmpWorkPathList
   
   local lbFound=false
   echoc --info "TmpFolders:"
@@ -335,7 +336,7 @@ strOrigPath="`FUNCflOrigPath "$strFileAbs"`"
 : ${strTmpWorkPath:="`FUNCflTmpWorkPath "$strFileAbs"`"}
 export strTmpWorkPath #help if not set will be automatic based on current work file
 SECFUNCexecA -ce mkdir -vp "$strTmpWorkPath"
-CFGastrTmpWorkPathList+=("$strTmpWorkPath");SECFUNCcfgWriteVar CFGastrTmpWorkPathList
+CFGastrTmpWorkPathList+=("$strTmpWorkPath");SECFUNCarrayWork --uniq CFGastrTmpWorkPathList;SECFUNCcfgWriteVar CFGastrTmpWorkPathList
 
 declare -p strFileAbs strOrigPath strTmpWorkPath
 echoc --info " CURRENT WORK: @{Gr}$strFileAbs "
@@ -374,7 +375,7 @@ function FUNCshortDurChk() {
 }
 
 function FUNCavconvRaw() {
-  SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc
+  if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc;fi
   (
     strFlLog="${strAbsFileNmHashTmp}.$BASHPID.log"
     echo -n >>"$strFlLog"
@@ -592,7 +593,7 @@ function FUNCfinalMenuChk() {
     local lstrGifCycleSuffix="-Cycle.gif"
     local lbIsGifCycle=false;if [[ "$strFileAbs" =~ $lstrGifCycleSuffix ]];then lbIsGifCycle=true;fi
     astrOpt=(
-      "apply patrol _cycle `SECFUNCternary -e "(alredy did) " "" $lbIsGifCycle`reverse gif effect on original file? #gif"
+      "apply patrol _cycle `SECFUNCternary -e "(@s@yALREADY DID@S) " "" $lbIsGifCycle`reverse gif effect on original file? #gif"
       "_diff old from new media info? #ready"
       "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep}"
       "_list all probably useful details?"
@@ -600,6 +601,7 @@ function FUNCfinalMenuChk() {
       "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
       "_s `SECFUNCternary -e "skip this @s@{yn}COMPLETED@S file for now?" "continue working on current file now?" $lbReady`"
       "_trash tmp and original video files?"
+      "_use cpulimit (`SECFUNCternary --onoff $bUseCPUlimit`)?"
       "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
       "set a new video to _work with?"
     )
@@ -642,7 +644,7 @@ function FUNCfinalMenuChk() {
         for strFl in "${CFGastrFileList[@]}";do
           local lstrSuf="`SECFUNCfileSuffix "$strFl"`"
           local lstrFlFinal="`FUNCflFinal "$strFl"`"
-          local lstrTmpPh="`FUNCflTmpWorkPath "$strFl"`";CFGastrTmpWorkPathList+=("$lstrTmpPh")
+          local lstrTmpPh="`FUNCflTmpWorkPath "$strFl"`";#CFGastrTmpWorkPathList+=("$lstrTmpPh")
           local lstrFlBNHash="`FUNCflBNHash "$strFl"`"
           local lstrFlRec="$lstrTmpPh/${lstrFlBNHash}.recreated";#declare -p lstrFlRec
           local lstrFlFinalSz="";if [[ -f "$lstrFlFinal" ]];then lstrFlFinalSz="$(du -h "$lstrFlFinal" |awk '{print $1}')";fi
@@ -684,6 +686,9 @@ function FUNCfinalMenuChk() {
         
         FUNCflCleanFromDB "$strFileAbs"
         exit 0 # to work with the next one
+        ;;
+      u)
+        SECFUNCtoggleBoolean --show bUseCPUlimit
         ;;
       v)
         FUNCvalidateFinal&&:

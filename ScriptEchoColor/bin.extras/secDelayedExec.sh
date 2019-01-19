@@ -815,6 +815,7 @@ function FUNCrun(){
 				);declare -p astrYadFields
         
         astrBtnEdSrc=()
+        astrBtnEdSrcCfg=()
         if [[ -n "$strDevSrcFile" ]];then
           #strBtnEdSrc='--button=EditSource-DEV:6'
           : ${CFGastrSrcEditor[0]:="`if which geany >/dev/null;then echo geany;else echo gedit;fi`"};export CFGastrSrcEditor #can be customized by the user
@@ -824,8 +825,19 @@ function FUNCrun(){
             SECFUNCexecA -ce "${CFGastrSrcEditor[@]}" "$strDevSrcFile" >&2
           };export -f FUNCedSrc
           astrBtnEdSrc[1]="bash -c FUNCedSrc"
+          
+          export strFlSrcCfg="`SECFUNCcfgFileName --get "$strDevSrcFile"`"
+ #         if [[ -f "$strFlSrcCfg" ]];then
+            astrBtnEdSrcCfg[0]=--field="Edit config file for `basename "$strDevSrcFile"`!!will open a text/source editor:FBTN"
+            FUNCedSrcCfg(){
+              source <(secinit)
+              SECFUNCexecA -ce "${CFGastrSrcEditor[@]}" "$strFlSrcCfg" >&2
+            };export -f FUNCedSrcCfg
+            astrBtnEdSrcCfg[1]="bash -c FUNCedSrcCfg"
+#          fi
         else
           astrBtnEdSrc[0]=--field="\"PlaceHolder\"!!Ignore me, I mean it ;):FBTN"
+          astrBtnEdSrcCfg[0]=--field="\"PlaceHolderCfg\"!!Ignore me too, I mean it ;):FBTN"
           FUNCeaster(){
             astrEasterEggs=(
               "You are funny!" 
@@ -837,7 +849,7 @@ function FUNCrun(){
               "I am deprecated, now leave me alone..." 
               "Go play some game!" 
               "Go back to work!" 
-              "Go exercise ur body!" 
+              "Go exercise your body!" 
               "Take a break!" 
               "Become vegan! well, at least vegetarian..." 
               "Wake up!" 
@@ -851,6 +863,7 @@ function FUNCrun(){
             echoc --say "@{${aBg[$((RANDOM%${#aBg[*]}))]}${aFg[$((RANDOM%${#aFg[*]}))]}} ${astrEasterEggs[$((RANDOM%${#astrEasterEggs[*]}))]} " >&2
           };export -f FUNCeaster
           astrBtnEdSrc[1]="bash -c FUNCeaster"
+          astrBtnEdSrcCfg[1]="bash -c FUNCeaster"
         fi
         
         #~ strRetryNormal="--button=\"Retry:4\""
@@ -879,12 +892,14 @@ function FUNCrun(){
           --field="[${astrYadFields[2]}] :chk" 
           --field="[${astrYadFields[3]}] disabled helps with SEC scripts:chk" 
           "${astrBtnEdSrc[0]}"
+          "${astrBtnEdSrcCfg[0]}"
           --field="info:TXT" # the editable text field is MUCH better than the --text label, it has scroll bar, fixed width in pixels to the window size, 3 click selectable line, everything is better for big texts!
           "${!astrYadFields[0]}" # redirected values
           "${!astrYadFields[1]}" 
           "${!astrYadFields[2]}" 
           "${!astrYadFields[3]}" 
           "${astrBtnEdSrc[1]}"
+          "${astrBtnEdSrcCfg[1]}"
           "$lstrTxt" # options to be captured put above info text dummy (changes are ignored) field
         )
         declare -p astrYadExecParams
@@ -895,10 +910,20 @@ function FUNCrun(){
 				IFS=$'\n' read -d '' -r -a astrYadReturnValues < <(echo "$strYadOutput")&&:
 				declare -p astrYadReturnValues >&2
 				if((`SECFUNCarraySize astrYadReturnValues`>0));then
-					if [[ "${astrYadReturnValues[0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
-					strCodeToEval="${astrYadReturnValues[1]}"
-					if [[ "${astrYadReturnValues[2]}" == "TRUE" ]];then bEnableSECWarnMessages=true;else bEnableSECWarnMessages=false;fi 
-					if [[ "${astrYadReturnValues[3]}" == "TRUE" ]];then bCleanSECenv=true;else bCleanSECenv=false;fi 
+          # clicking on buttons that generate output (or may be even not), each click will prepend one array item that MUST be skipped!
+          nFirst=0
+          for nIndex in "${!astrYadReturnValues[@]}";do
+            # ATTENTION!!! this check is SPECIFIC for a first item of CHECKBOX TYPE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if [[ "${astrYadReturnValues[nIndex]}" == "TRUE" ]] || [[ "${astrYadReturnValues[nIndex]}" == "FALSE" ]];then
+              nFirst=$nIndex
+              break;
+            fi
+          done
+          
+					if [[ "${astrYadReturnValues[nFirst+0]}" == "TRUE" ]];then bXterm=true;else bXterm=false;fi
+					strCodeToEval="${astrYadReturnValues[nFirst+1]}"
+					if [[ "${astrYadReturnValues[nFirst+2]}" == "TRUE" ]];then bEnableSECWarnMessages=true;else bEnableSECWarnMessages=false;fi 
+					if [[ "${astrYadReturnValues[nFirst+3]}" == "TRUE" ]];then bCleanSECenv=true;else bCleanSECenv=false;fi 
 					#bCleanSECenv="`echo ${astrYadReturnValues[3]} |tr "[:upper:]" "[:lower:]"`"
 	#					strCodeToEval="`echo "$strCodeToEval" |sed -r 's"[\]x7[Cc]"|"g'`"
 				fi

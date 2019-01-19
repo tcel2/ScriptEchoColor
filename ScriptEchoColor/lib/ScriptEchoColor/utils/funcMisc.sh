@@ -830,15 +830,18 @@ function pSECFUNCcfgOptSet(){ #help <"$@"> to be used at --cfg scripts option
 	return 0
 }
 
-function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[SECcfgFileName], if not set will default to `basename "$0"`
+function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[SECcfgFileName], if not specified will default to `basename "$0"`
 	# var init here
 	local lbGetFilename=false
 	local lbShow=false
+  local lstrTarget=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCcfgFileName_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			return 0
+		#~ elif [[ "$1" == "--target" || "$1" == "-t" ]];then #SECFUNCcfgFileName_help <lstrTarget> use that script file as target
+			#~ shift;lstrTarget="$1"
 		elif [[ "$1" == "--get" || "$1" == "-g" ]];then #SECFUNCcfgFileName_help get the config filename.
 			lbGetFilename=true
 		elif [[ "$1" == "--show" || "$1" == "-s" ]];then #SECFUNCcfgFileName_help show config file contents
@@ -856,7 +859,8 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 		fi
 		shift&&:
 	done
-	
+	lstrTarget="${1-}"
+  
 	local lpath="$SECstrUserHomeConfigPath/SEC.ScriptsConfigurationFiles"
 	#if [[ -d "$SECstrUserHomeConfigPath/SEC.AppVars.DB" ]];then mv -v "$SECstrUserHomeConfigPath/SEC.AppVars.DB" "$lpath" >&2;	ln -sv "$lpath" "$SECstrUserHomeConfigPath/SEC.AppVars.DB" >&2; fi 
 	if [[ ! -d "$lpath" ]];then
@@ -868,8 +872,8 @@ function SECFUNCcfgFileName() { #help Application config file for scripts.\n\t[S
 	fi
 	
 	# SECcfgFileName is a global
-	if [[ -n "${1-}" ]];then
-		SECcfgFileName="$lpath/${1}.cfg"
+	if [[ -n "$lstrTarget" ]];then
+		SECcfgFileName="$lpath/`basename "${lstrTarget}"`.cfg"
 	#fi
 	else
 		if [[ -z "$SECcfgFileName" ]];then
