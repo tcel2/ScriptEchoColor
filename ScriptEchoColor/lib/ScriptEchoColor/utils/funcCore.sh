@@ -627,7 +627,9 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	# valid env var check
 #	if ! declare -p "$lstrArrayId" >>/dev/null 2>&1;then
   local lstrInfo
-	if ! lstrInfo="`declare -p "$lstrArrayId"`" >>/dev/null 2>&1;then
+  #declare -p lstrArrayId FUNCNAME $lstrArrayId >&2
+#	if ! lstrInfo="`declare -p "$lstrArrayId" >/dev/null 2>&1`";then
+	if ! lstrInfo="`declare -p "$lstrArrayId" 2>/dev/null`";then
 		# I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
 		SECFUNCechoDbgA "env var lstrArrayId='$lstrArrayId' not declared yet."
 		return 1;
@@ -868,7 +870,7 @@ export SECbBashSourceFilesShow
 : ${SECbBashSourceFilesForceShowOnce:=false}
 export SECbBashSourceFilesForceShowOnce
 
-function SECFUNCbashSourceFiles() { #help
+function _SECFUNCbashSourceFiles() { #help DEPRECATE IT?
 	if ! $SECbBashSourceFilesForceShowOnce;then
 		if ! $SECbBashSourceFilesShow;then
 			return
