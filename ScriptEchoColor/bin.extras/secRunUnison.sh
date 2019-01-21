@@ -118,46 +118,36 @@ fi
 function FUNCrun() {
 	# strProfile must be without quotes so an empty profile will not be evaluated as a parameter
 	#echo "<$strProfile>"
+  local lastrCmdRun=()
 	if [[ -z "$strProfile" ]];then
-		strExec=$(SECFUNCparamsToEval $strExecutable               -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
+    lastrCmdRun+=($strExecutable               -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
 	else
-		strExec=$(SECFUNCparamsToEval $strExecutable "$strProfile" -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
+    lastrCmdRun+=($strExecutable "$strProfile" -fastcheck true -times -retry 2 $strUiMode $strCmdForce1st "$@")
 	fi
-	lbRun=false
+  local lstrEcho=$(SECFUNCparamsToEval "${lastrCmdRun[@]}")
+	local lbRun=false
 	
 	if $bAutoRun;then
 		lbRun=true
 	else
 		if $bWait;then
-			echoc --info "$strExec"
+			echoc --info "$lstrEcho"
 			if echoc -q "Run it?";then
 				lbRun=true
 			fi
 		else
 			lbRun=true
 		fi
-#		if $bDaemon;then
-#			lbRun=true
-#		elif $bWait;then
-#			echoc --info "$strExec"
-#			if echoc -q "Run it?";then
-#				lbRun=true
-#			fi
-#		else
-#			lbRun=true
-#		fi
 	fi
 
 	if $lbRun;then
-		if ! echoc -x "$strExec";then
-			echoc -wp "fix it or bug report"
+    if ! SECFUNCexecA -ce "${lastrCmdRun[@]}";then
+			SECFUNCechoErrA "failed running '${lastrCmdRun[@]}' fix it or bug report"
 			exit 1
 		fi
 	else
 		exit
 	fi
-	#echoc --info "$strExec"
-	#eval "$strExec"
 }
 
 if $bDaemon;then

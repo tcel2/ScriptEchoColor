@@ -1348,7 +1348,7 @@ function SECFUNCcreateFIFO(){ #help [lstrCustomName] create a temporary FIFO PIP
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function SECFUNCternary() { #help <boolValue|command> [ ? <acmdTrue> : <acmdFalse> ] # the commands can be many params least ? and :
+function SECFUNCternary() { #help <boolValue|conditional command ...> [ ? <acmdTrue> : <acmdFalse> ] # the commands can be many params least '?' and ':'. Options may change the way to collect these params (basically do not use the optional params here).
 	SECFUNCdbgFuncInA;
 	# var init here
 	local lstrExample="DefaultValue"
@@ -1407,13 +1407,18 @@ function SECFUNCternary() { #help <boolValue|command> [ ? <acmdTrue> : <acmdFals
     while ! ${1+false};do lacmdFalse+=("$1");shift;done # tail
   fi
   
+  if((`SECFUNCarraySize lacmdCond `==0));then SECFUNCechoErrA "empty condition ";fi
   if((`SECFUNCarraySize lacmdTrue `==0));then SECFUNCechoErrA "empty lacmdTrue ";fi
   if((`SECFUNCarraySize lacmdFalse`==0));then SECFUNCechoErrA "empty lacmdFalse";fi
     
 	# work here
+#  if SECFUNCexecA -ce -m "condition #TRUE='' #FALSE=''" "${lacmdCond[@]}" 1>&2;then
   if "${lacmdCond[@]}" 1>&2;then
     "${lacmdTrue[@]}"
   else
+    if [[ "${lacmdCond[0]}" != "false" ]];then
+      echo "DBG:$FUNCNAME: ${lacmdCond[@]} ? ${lacmdTrue[@]} : ${lacmdFalse[@]}" >&2 #TODO the error may be due to 'command not found' but that may also be the user choice! anyway show some log to help #TODO show this only in verbose mode?
+    fi
     "${lacmdFalse[@]}"
   fi
   

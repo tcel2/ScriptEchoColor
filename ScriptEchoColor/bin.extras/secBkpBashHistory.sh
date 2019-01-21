@@ -82,12 +82,39 @@ if((`SECFUNCarraySize astrRemainingParams`>0));then :;fi
 # if a daemon or to prevent simultaneously running it: 
 SECFUNCuniqueLock --waitbecomedaemon
 
-strTmpFile="`mktemp`"
-strBHL="$HOME/.bashHistoryBkp.log"
+strNewBkpTmpFile="`mktemp`"
+strBkpFile="$HOME/.bashHistoryBkp.log"
+
+function FUNCflInfo() { #<mode> <file>
+  local lstrMode="$1";shift
+  local lstrFile="$1";shift
+  case "$lstrMode" in
+    lines)
+      cat "$lstrFile" |wc -l
+      ;;
+    size)
+      stat -c %s "$lstrFile"
+      ;;
+    *)
+      SECFUNCechoErrA "invalid lstrMode='$lstrMode'"
+      _SECFUNCcriticalForceExit
+      ;;
+  esac
+  return 0
+}
 
 function FUNCupdateTmpBkp() {
-  egrep "#.*[@]BKP" "${CFGstrFlHist}" -aw -B 1 |egrep -v "^--$" >"${strTmpFile}"
-  SECFUNCexecA -ce ls -l "${strTmpFile}"
+  if ! egrep "#.*[@]BKP" "${CFGstrFlHist}" -aw -B 1 |egrep -v "^--$" >"${strNewBkpTmpFile}";then
+    echoc -p "there is no history to backup, create some or restore the backup file"
+    if [[ -f "$strBkpFile" ]];then
+      SECFUNCexecA -ce wc -l "$strBkpFile"
+      echo "meld '$strBkpFile' '${CFGstrFlHist}' #Compare" >&2
+      echo "cp -vf '$strBkpFile' '${CFGstrFlHist}' #Restore (OVERWRITE)" >&2
+      echo "cat '$strBkpFile' >>'${CFGstrFlHist}' #Append, even if datetime is not in correct order, it will still work. Btw, \`history -w\` will not sort it." >&2
+    fi
+    exit 1
+  fi
+  SECFUNCexecA -ce ls -l "${strNewBkpTmpFile}"
 }
 
 FUNCupdateTmpBkp
@@ -95,9 +122,9 @@ FUNCupdateTmpBkp
 if $bMaint;then
   echoc --info "maintenance sector"
 
-  IFS=$'\n' read -d '' -r -a astrList < <(cat "$strTmpFile"&&:)&&:
+  IFS=$'\n' read -d '' -r -a astrList < <(cat "$strNewBkpTmpFile"&&:)&&:
   #~ declare -p astrList
-  #egrep "#.*[@]BKP" $HOME/.bash_eternal_history -aw |sort -u >"$strTmpFile";
+  #egrep "#.*[@]BKP" $HOME/.bash_eternal_history -aw |sort -u >"$strNewBkpTmpFile";
   declare -a astrNewList;astrNewList=()
   for((i=0;i<"${#astrList[*]}";i++));do
     strLine="${astrList[i]}"
@@ -161,31 +188,55 @@ fi
 
 #~ for strLine in "${astrNewList[@]}";do
   #~ echo "$strLine"
-#~ done |sort -u >"$strTmpFile";
+#~ done |sort -u >"$strNewBkpTmpFile";
 #~ ## $nTime=[`date +"%Y-%m-%d %H:%M:%S" --date="@${nTime}"`] delHistIndex='history -d $((i/2+1))'
-#~ SECFUNCexecA -ce cat "$strTmpFile"
+#~ SECFUNCexecA -ce cat "$strNewBkpTmpFile"
 
 #~ ################ keep #############
 #~ exit 0 # uncomment for tests above ################################
 #~ ################ keep #############
 
 #~ # fix the final file
-#~ strSortUniqueTmp="`cat "$strBHL" |sort -u`"
-#~ echo "$strSortUniqueTmp" >"$strBHL"
+#~ strSortUniqueTmp="`cat "$strBkpFile" |sort -u`"
+#~ echo "$strSortUniqueTmp" >"$strBkpFile"
 
 #~ # only appends to the final file what is missint on it (next run will be sorted tho)
-#~ SECFUNCexecA -ce diff "$strBHL" "$strTmpFile" |grep "^> " |sed 's"^> ""' |tee -a "$strBHL"
+#~ SECFUNCexecA -ce diff "$strBkpFile" "$strNewBkpTmpFile" |grep "^> " |sed 's"^> ""' |tee -a "$strBkpFile"
 
-#~ SECFUNCexecA -ce cat "$strBHL"
+#~ SECFUNCexecA -ce cat "$strBkpFile"
 
-#SECFUNCexecA -ce meld <(cat "${strBHL}"|sort -u) <(cat "${strTmpFile}"|sort -u)&&:
+#SECFUNCexecA -ce meld <(cat "${strBkpFile}"|sort -u) <(cat "${strNewBkpTmpFile}"|sort -u)&&:
 
-if SECFUNCexecA -ce colordiff "${strBHL}" "${strTmpFile}";then
+if SECFUNCexecA -ce colordiff "${strBkpFile}" "${strNewBkpTmpFile}";then
   echoc --info "nothing changed!"
 else
-  SECFUNCexecA -ce cp -vf "${strBHL}" "${strBHL}.bkp"
-  SECFUNCtrash "${strBHL}.bkp"
-  SECFUNCexecA -ce cp -vf "${strTmpFile}" "${strBHL}"
+  nLnOld="`FUNCflInfo lines "${strBkpFile}"`"
+  nLnNew="`FUNCflInfo lines "${strNewBkpTmpFile}"`"
+  nSzOld="`FUNCflInfo size  "${strBkpFile}"`"
+  nSzNew="`FUNCflInfo size  "${strNewBkpTmpFile}"`"
+  #~ FUNCflInfo "${strBkpFile}"      ;nLnOld=$FUNCflInfo_nLn;nSzOld=$FUNCflInfo_nSz
+  #~ FUNCflInfo "${strNewBkpTmpFile}";nLnNew=$FUNCflInfo_nLn;nSzNew=$FUNCflInfo_nSz
+  #~ nLnOld="`cat "${strBkpFile}"|wc -l`"
+  #~ nLnNew="`cat "${strNewBkpTmpFile}"|wc -l`"
+#  if((nLnNew<nLnOld)) || ((`stat -c %s "${strNewBkpTmpFile}"`<`stat -c %s "${strBkpFile}"`));then
+  if((nLnNew<nLnOld)) || ((nSzNew<nSzOld));then
+    SECFUNCexecA -ce -m "extra safety" cp -vf "${strBkpFile}" "${strBkpFile}.Safe.bkp"
+    SECFUNCexecA -ce ls -l "${strNewBkpTmpFile}" "${strBkpFile}"
+    declare -p nLnOld nSzOld nLnNew nSzNew >&2
+    if ! echoc -q "the new backup is smaller than the old one`SECFUNCternary -e " (possibly due to maintenance mode)" "" $bMaint`, ignore and overwrite the backup (if not it will compare with meld)?";then
+      SECFUNCexecA -ce meld "${strBkpFile}" "${strNewBkpTmpFile}"
+      SECFUNCexecA -ce colordiff "${strBkpFile}" "${strNewBkpTmpFile}"&&:
+      if ! echoc -q "is everything correct?";then
+        echoc -p "backup not done."
+        exit 0
+      fi
+    fi
+  fi
+  SECFUNCexecA -ce cp -vf "${strBkpFile}" "${strBkpFile}.bkp"
+  SECFUNCtrash "${strBkpFile}.bkp"
+  SECFUNCexecA -ce cp -vf "${strNewBkpTmpFile}" "${strBkpFile}"
+  ls -l "${strBkpFile}"
+  wc -l "${strBkpFile}"
 fi
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
