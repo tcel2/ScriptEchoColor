@@ -44,10 +44,11 @@ function FUNCcheckWM() { #help <which|pgrep> [lstrCheck]
 		fi
 	else
 		local lstrWM;
-		for lstrWM in "${astrSuppertedWM[@]}";do
+		for lstrWM in "${astrSupportedWM[@]}";do
 			echo "try: $lstrCmd $lstrWM" >&2
 			if $lstrCmd $lstrWM 2>&1 >>/dev/null;then
 				lstrFoundWM="$lstrWM"
+        declare -p lstrFoundWM >&2
 				break;
 			fi
 		done
@@ -88,26 +89,30 @@ function FUNCcheckWM() { #help <which|pgrep> [lstrCheck]
 }
 
 
+: ${CFGstrUseSafeFallBackAlways:="metacity"}
+export CFGstrUseSafeFallBackAlways #help will force the use the specified one if installed in case there is no WM running, neither the last one used (as the current may have issues when starting it directly like wrong mouse positioning on compiz some times)
+
 #TODO check if jwm has --replace like feature
-astrSuppertedWM=( # default preference order
-	"compiz"
+astrSupportedWM=( # default preference order
 	"metacity"
+	"compiz"
 	"xfwm4"
 	"kwin"
 	"mutter"
-);export astrSuppertedWM;SECFUNCarraysExport
+);export astrSupportedWM;SECFUNCarraysExport
 strPreferedWM=""
 #####
-### this would disable current from being auto-preferred: strPreferedWM="${astrSuppertedWM[0]}"
+### this would disable current from being auto-preferred: strPreferedWM="${astrSupportedWM[0]}"
 #####
 
 bForceOnce=false
+SECFUNCcfgReadDB
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "Recovers window manager after it's crash, and helps easily replacing it."
-		SECFUNCshowHelp --colorize "The default auto-recovery window manager option (if not set) is the last detected. If none is detected, prefers in this order: compiz, metacity, xfwm4 (will check if they are installed)"
-		echo "WMs that support param '--replace':`SECFUNCarrayShow astrSuppertedWM`"
+		SECFUNCshowHelp --colorize "The default auto-recovery window manager option (if not set) is the last detected. If none is detected, prefers (if installed) in this order:"
+		echo "WMs that support param '--replace':`SECFUNCarrayShow astrSupportedWM`"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "-w" ]];then #help <strPreferedWM> force the default auto recovery option
@@ -144,6 +149,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	fi
 	shift&&:
 done
+SECFUNCcfgAutoWriteAllVars
+
+if [[ -n "$CFGstrUseSafeFallBackAlways" ]] && ! which "$CFGstrUseSafeFallBackAlways";then
+  echoc -p "CFGstrUseSafeFallBackAlways='$CFGstrUseSafeFallBackAlways' not installed, cleaning it"
+  CFGstrUseSafeFallBackAlways=""
+fi
 
 ## if not set, will be the current
 #strPreferedWM="`FUNCcheckWM which "$strPreferedWM"`"
@@ -171,29 +182,57 @@ while true;do
 		#~ strCurrent=""
 	#~ fi
 	
+  declare -p CFGstrUseSafeFallBackAlways >&2
+  
 	# set prefered window manager
 	if [[ -z "$strPreferedWM" ]];then
 		if [[ -n "$strCurrent" ]];then
 			strPreferedWM="$strCurrent"
+      echoc --info "defaulting preferred to current: strPreferedWM='$strPreferedWM'"
 		else
-			strPreferedWM="`FUNCcheckWM which`"
+      if [[ -n "$CFGstrUseSafeFallBackAlways" ]];then
+        strPreferedWM="$CFGstrUseSafeFallBackAlways"
+      else
+        strPreferedWM="`FUNCcheckWM which`"
+      fi
 		fi
-		echoc --info "defaulting preferred to current: strPreferedWM='$strPreferedWM'"
 	fi
 	
 	echoc --info "strPreferedWM='$strPreferedWM'"
 	
 	if $bForceOnce;then
-		if [[ "$strCurrent" != "$strPreferedWM" ]];then strCurrent="";fi
-		bForceOnce=false #just at 1st loop's iteration!
-	fi
-	
-	if [[ -z "$strCurrent" ]];then #mainly for crash recovery
-#		SECFUNCexecA -ce $strPreferedWM --replace >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
-		SECFUNCexecA -ce secXtermDetached.sh $strPreferedWM --replace
-		continue;
-	fi
-	
+    #if ! pgrep $strPreferedWM;then
+      SECFUNCexecA -ce secXtermDetached.sh $strPreferedWM --replace
+    #fi
+  else
+    if [[ -z "$strCurrent" ]];then #mainly for crash recovery !!!CRITICAL RESCUE!!!
+      if [[ -n "$CFGstrUseSafeFallBackAlways" ]];then
+        strPreferedWM=""
+        SECFUNCexecA -ce secXtermDetached.sh $CFGstrUseSafeFallBackAlways --replace
+      else
+        SECFUNCexecA -ce secXtermDetached.sh $strPreferedWM --replace
+      fi
+      echoc -w -t 3
+      continue;
+    fi
+  fi
+  
+	#~ if $bForceOnce;then
+		#~ if [[ "$strCurrent" != "$strPreferedWM" ]];then strCurrent="";fi
+		#~ bForceOnce=false #just at 1st loop's iteration!
+	#~ fi
+	#~ if [[ -z "$strCurrent" ]];then #mainly for crash recovery !!!CRITICAL RESCUE!!!
+#~ #		SECFUNCexecA -ce $strPreferedWM --replace >&2 & disown # stdout must be redirected or the terminal wont let it be disowned...
+    #~ declare -p CFGstrUseSafeFallBackAlways >&2
+    #~ if ! $bForceOnce && [[ -n "$CFGstrUseSafeFallBackAlways" ]];then
+      #~ SECFUNCexecA -ce secXtermDetached.sh $CFGstrUseSafeFallBackAlways --replace
+    #~ else
+      #~ SECFUNCexecA -ce secXtermDetached.sh $strPreferedWM --replace
+    #~ fi
+		#~ continue;
+	#~ fi
+  
+	bForceOnce=false
 	echoc -t 10 -Q "replace window manager@O
 		_compiz/
 		_metacity/

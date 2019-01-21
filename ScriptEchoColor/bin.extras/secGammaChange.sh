@@ -501,7 +501,7 @@ elif $bRandom;then
     local lnWId=0
     lnWId=`xdotool getmouselocation|grep -o "[[:digit:]]*$"`&&:
 #    declare -p lnWId >&2
-    if((lnWId==0)) || [[ -z "$lnWId" ]];then return 0;fi # when locked from metacity
+    if((lnWId==0)) || [[ -z "$lnWId" ]];then return 0;fi # when locked from metacity TODO or unable to grab the mouse when in menu mode too... this means random gamma in menu mode :P
     #declare -p lnWId;
     #xdotool getwindowname $lnWId;
     local lstrInfo="`xprop -id $lnWId`"

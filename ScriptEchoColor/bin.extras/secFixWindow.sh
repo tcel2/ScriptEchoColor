@@ -175,8 +175,9 @@ elif $bFixCompiz;then
 		fi
 	fi
 	
+  declare -p SECstrScriptSelfName >&2
 	FUNCxterm metacity --replace;
-	sleep 3; #this blind delay helps on properly fixing
+	sleep 3; #this blind delay helps on properly fixing or compiz may bugout
 	FUNCxterm compiz --replace
 	
   exit 0

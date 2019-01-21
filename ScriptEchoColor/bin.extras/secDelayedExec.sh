@@ -828,7 +828,7 @@ function FUNCrun(){
           
           export strFlSrcCfg="`SECFUNCcfgFileName --get "$strDevSrcFile"`"
  #         if [[ -f "$strFlSrcCfg" ]];then
-            astrBtnEdSrcCfg[0]=--field="Edit config file for `basename "$strDevSrcFile"`!!will open a text/source editor:FBTN"
+            astrBtnEdSrcCfg[0]=--field="Edit CONFIG file for `basename "$strDevSrcFile"`!!will open a text/source editor:FBTN"
             FUNCedSrcCfg(){
               source <(secinit)
               SECFUNCexecA -ce "${CFGastrSrcEditor[@]}" "$strFlSrcCfg" >&2
