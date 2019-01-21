@@ -59,6 +59,7 @@ strWorkWith=""
 bWorkWith=false
 bTrashMode=false
 bAddFiles=false
+bFindWorks=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -76,6 +77,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift
 		strWorkWith="${1-}"
     bWorkWith=true
+	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos
+    bFindWorks=true
 	elif [[ "$1" == "--trash" ]];then #help ~single tmp and new files maintenance (mainly for this script development)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -189,6 +192,21 @@ function FUNCworkFolders() {
   return 0
 }
 
+function FUNCisHevc() { # <lstrFile>
+  local lstrFile="$1"
+  if [[ -f "$lstrFile" ]];then
+    local lstrInfo
+    if ! lstrInfo="`mediainfo "$lstrFile"`";then SECFUNCechoErrA "is not a video file lstrFile='$lstrFile'";return 1;fi
+    local lstrFmt="`echo "$lstrInfo" |egrep "^Video$" -A 10 |egrep "Format *:"`" #TODO 10 lines after Video is a wild guess that may fail one day :(, seek for data sectors
+    echo "$lstrFmt: $lstrFile" >&2
+    #if echo "$lstrInfo" |grep -q "Format.*:.*HEVC";then
+    if [[ "$lstrFmt" =~ .*HEVC.* ]];then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 function FUNCvalidateOrigFiles() {
   local lbTrash=false;
   if [[ "${1-}" == "--clean" ]];then
@@ -204,7 +222,7 @@ function FUNCvalidateOrigFiles() {
       lbFound=true
       if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
     else
-      if mediainfo "$strFl" |grep "Format.*:.*HEVC";then
+      if FUNCisHevc "$strFl";then
         lbFound=true
         echo "Is already HEVC: '$strFl'" >&2
         if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
@@ -244,7 +262,30 @@ function FUNCnewFiles() {
 
 # Main code ######################################################################################
 
-if $bTrashMode;then
+if $bFindWorks;then
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\)" -not -iregex ".*\(HEVC\|x265\).*")&&:
+  astrCanWork=()
+  for strFile in "${astrFileList[@]}";do
+    echo -n .
+    strFileR="`realpath "$strFile"`"
+    if SECFUNCarrayContains CFGastrFileList "$strFileR";then continue;fi
+    
+    if FUNCisHevc "$strFile";then continue;fi #already is
+    #~ strInfo="`mediainfo "$1"`"
+    #~ if FUNCisHevc --info "$strInfo";then continue;fi
+    
+#    SECFUNCdrawLine --left " Checking: `basename "$strFile"` "
+#    echo "Can work with it!" >&2
+    echo "CanWorkWith: $strFileR"
+    astrCanWork+=( "$strFileR" )
+  done
+  
+  SECFUNCexecA -ce SECFUNCarrayShow astrCanWork
+  if echoc -q "add all the above?";then
+    $0 --add "${astrCanWork[@]}"
+  fi
+  exit 0
+elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
   if FUNCvalidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
@@ -350,7 +391,7 @@ if [[ ! -f "$strFileAbs" ]];then
   exit 1
 fi
 
-if mediainfo "$strFileAbs" |grep "Format.*:.*HEVC";then
+if FUNCisHevc "$strFileAbs";then
   echoc --info "Already HEVC format."
   #~ FUNCflCleanFromDB "$strFileAbs"
   exit 0

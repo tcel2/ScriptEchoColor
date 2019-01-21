@@ -735,9 +735,11 @@ function SECFUNCarrayWork() { #help
   
 	#set -x
 	#local lstrArrayAllElements="${lstrArrayId}[@]"
-	local lastrArrayCopyTmp #=("${!lstrArrayAllElements}")
-  declare -a lastrArrayCopyTmp="`declare -p $lstrArrayId |sed -r "$sedGetArrayValue"`"
-  
+	local lastrArrayCopyTmp #this loses the indexes =("${!lstrArrayAllElements}")
+#  local lstrAValTmp=`declare -p $lstrArrayId |sed -r "$sedGetArrayValue"`
+#  eval "declare -a lastrArrayCopyTmp=$lstrAValTmp"
+  declare -n lastrArrayCopyTmp="$lstrArrayId"
+  #declare -p $lstrArrayId lastrArrayCopyTmp >&2
 #  if $lbCleanMode;then
 #  elif $lbPrependMode;then
 #  elif $lbMergeMode;then
