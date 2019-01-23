@@ -274,7 +274,9 @@ function FUNCcompletedFiles() {
   for strFl in "${CFGastrFileList[@]}";do
     if $lbTrash;then SECFUNCdrawLine;fi
     strFlNEW="`FUNCflFinal "$strFl"`"
-    if ls -l "$strFl" "$strFlNEW";then
+    local lstrInfo
+    if lstrInfo="`ls -l "$strFl" "$strFlNEW" 2>&1`";then
+      echo "$lstrInfo"
       lbFound=true
       if $lbTrash;then
         echoc -w -t 5 "trashing OLD file..."
@@ -316,7 +318,7 @@ if $bFindWorks;then
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
-  if FUNCcompletedFiles && [[ "`echoc -S "trash all the OLD and completed files above? type 'YES'"`" == "YES" ]];then
+  if FUNCcompletedFiles && [[ "`echoc -S "trash all the OLD files above (keeps the completed ones)? type 'YES'"`" == "YES" ]];then
     FUNCcompletedFiles --trash
   fi
   
