@@ -364,6 +364,7 @@ elif $bContinue;then
       astrFinalWorkList=( "${CFGastrFileList[@]}" )
     fi
     
+    nCompletedCount=0
     for strFileAbs in "${astrFinalWorkList[@]}";do
       SECFUNCcfgReadDB
       
@@ -380,10 +381,25 @@ elif $bContinue;then
         continue;
       fi
       
+      strFinalChk="`FUNCflFinal "$strFileAbs"`"
+      if ls -l "$strFinalChk";then
+        echo "Completed(skipping): $strFileAbs"
+        if [[ "$CFGstrContinueWith" == "$strFileAbs" ]];then
+          SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
+        fi
+        ((nCompletedCount++))&&:
+        continue;
+      fi
+      
       SECFUNCcfgWriteVar -r CFGstrContinueWith="$strFileAbs" #this is intended if current work is interrupted by any reason
       FUNCworkWith "$strFileAbs"&&:
       SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
     done
+    if((nCompletedCount==${#astrFinalWorkList[@]}));then
+      SECFUNCarrayShow CFGastrFileList
+      echoc --info "All the above works completed!"
+      FUNCworkWith "${CFGastrFileList[0]}"&&: # just to let the interactive mode kick in #TODO RANDOM?
+    fi
   done
   
   exit 0
