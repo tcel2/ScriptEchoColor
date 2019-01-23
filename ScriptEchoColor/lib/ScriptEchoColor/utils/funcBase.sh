@@ -61,9 +61,18 @@ function SECFUNCrealFile(){ #help
 	echo "$lfile"
 }
 
+function _SECFUNCcheckCmdDep() { #help DEVSELFNOTE: do NOT create a package dependency based on it's usage as the user may simply not want to use the SECFUNC requiring it!
+  if ! which "$1";then
+    SECFUNCechoErrA "dependency not found, command missing: '$1'"
+    _SECFUNCcriticalForceExit
+    exit 1
+  fi
+}
+
 function SECFUNCtrash() { #help verbose but let only error/warn messages that are not too repetitive
   #TODO how to fix the "unsecure...sticky" condition? it should explain why it is unsecure so we would know what to fix...
   #TODO --quiet to remove -v, but... the whole point of this function is to be verbose and hide "useless" messages that repeat a lot messing the log "needlessly?" as there is no tip on how to fix the related "problems"
+  _SECFUNCcheckCmdDep trash
   SECFUNCexecA -ce trash -v "$@" 2>&1 \
     |egrep -v "trash: found unsecure [.]Trash dir \(should be sticky\):" \
     |egrep -v "found unusable [.]Trash dir" \

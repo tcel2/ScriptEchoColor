@@ -82,7 +82,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWorkWith=true
 	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos
     bFindWorks=true
-	elif [[ "$1" == "--trash" ]];then #help ~single tmp and new files maintenance (mainly for this script development)
+	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
@@ -263,6 +263,31 @@ function FUNCnewFiles() {
   return 0
 }
 
+function FUNCcompletedFiles() {
+  local lbTrash=false;
+  if [[ "${1-}" == "--trash" ]];then
+    lbTrash=true;
+    shift
+  fi
+  
+  local lbFound=false
+  for strFl in "${CFGastrFileList[@]}";do
+    if $lbTrash;then SECFUNCdrawLine;fi
+    strFlNEW="`FUNCflFinal "$strFl"`"
+    if ls -l "$strFl" "$strFlNEW";then
+      lbFound=true
+      if $lbTrash;then
+        echoc -w -t 5 "trashing OLD file..."
+        SECFUNCtrash "$strFl"
+      fi
+    fi
+  done
+
+  if ! $lbFound;then return 1;fi
+
+  return 0
+}
+
 # Main code ######################################################################################
 
 if $bFindWorks;then
@@ -291,6 +316,10 @@ if $bFindWorks;then
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
+  if FUNCcompletedFiles && [[ "`echoc -S "trash all the OLD and completed files above? type 'YES'"`" == "YES" ]];then
+    FUNCcompletedFiles --trash
+  fi
+  
   if FUNCvalidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
     FUNCvalidateOrigFiles --clean
   fi
@@ -299,7 +328,7 @@ elif $bTrashMode;then
     FUNCworkFolders --trash
   fi
   
-  if FUNCnewFiles && [[ "`echoc -S "trash all newly enconded files above? type 'YES'"`" == "YES" ]];then
+  if FUNCnewFiles && [[ "`echoc -S "trash all newly enconded files above (to let'em be recreated)? type 'YES'"`" == "YES" ]];then
     FUNCnewFiles --trash
   fi
   
