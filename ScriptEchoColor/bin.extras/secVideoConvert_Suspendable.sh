@@ -73,6 +73,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bAddFiles=true
 	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help ~daemon resume work list
 		bContinue=true
+	elif [[ "$1" == "-C" || "$1" == "--Continue" ]];then #help ~daemon like --continue but will clear the last work reference and start from the first on the list
+		bContinue=true
+    SECFUNCcfgWriteVar -r CFGstrContinueWith=""
 	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help ~single <strWorkWith> process a single file
 		shift
 		strWorkWith="${1-}"
@@ -263,7 +266,7 @@ function FUNCnewFiles() {
 # Main code ######################################################################################
 
 if $bFindWorks;then
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\)" -not -iregex ".*\(HEVC\|x265\).*")&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\).*")&&:
   astrCanWork=()
   for strFile in "${astrFileList[@]}";do
     echo -n .
@@ -319,7 +322,18 @@ elif $bContinue;then
     SECFUNCarrayShow CFGastrFileList
     if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
     
-    for strFileAbs in "${CFGastrFileList[@]}";do
+    astrFinalWorkList=()
+    
+    : ${bWorkWithSmallerFilesFirst:=true}
+    export bWorkWithSmallerFilesFirst #help will acomplish more works faster this way than by name sorting
+    if $bWorkWithSmallerFilesFirst;then
+      IFS=$'\n' read -d '' -r -a astrSmallFirstFileList < <(ls -1Sr "${CFGastrFileList[@]}")&&:
+      astrFinalWorkList=( "${astrSmallFirstFileList[@]}" )
+    else
+      astrFinalWorkList=( "${CFGastrFileList[@]}" )
+    fi
+    
+    for strFileAbs in "${astrFinalWorkList[@]}";do
       SECFUNCcfgReadDB
       
       while [[ -f "${CFGstrPriorityWork-}" ]];do

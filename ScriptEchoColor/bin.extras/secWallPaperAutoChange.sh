@@ -509,7 +509,7 @@ if $bDaemon;then
       "_reset timeout counter ($nSumSleep/$nChangeInterval)"
       "_set image index"
       "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)"
-      "fi_x wallpaper pic URI"
+      "fi_x wallpaper pic URI (lets you set outside here while not)"
       "toggle _zoom if possible (is `SECFUNCternary --onoff $CFGbZoom`)" #"$strOptZoom"
     )
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"

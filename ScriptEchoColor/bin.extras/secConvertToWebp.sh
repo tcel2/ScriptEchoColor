@@ -107,8 +107,8 @@ function FUNCconv() {
     strTmpFl=".${SECstrScriptSelfName}-TMP.webp"
     astrCmd=(nice -n 19 cwebp -q $fQuality "$lstrFile" -o "$strTmpFl")
     astrCmdMv=(mv -vf "$strTmpFl" "${lstrFileWebp}")
-    echo "CMD: ${astrCmd[@]}" >&2
-    echo "CMDMV: ${astrCmdMv[@]}" >&2
+    echo "ToExecCMD: ${astrCmd[@]}" >&2
+    echo "ToExecCMDMV: ${astrCmdMv[@]}" >&2
     if ! $bDryRun;then
       #cwebp is too fast... SECFUNCCcpulimit -r "cwebp" -l 50
       if SECFUNCexecA -ce "${astrCmd[@]}";then
@@ -124,13 +124,15 @@ function FUNCconv() {
 	fi
   
   if $bTrash;then
-    if ! $bDryRun;then
-      if [[ -f "$lstrFileWebp" ]];then
-        if ((`stat -c %s "$lstrFileWebp"`>0));then #webp is theoretically good
-          SECFUNCtrash "$lstrFile"
+    if [[ -f "$lstrFileWebp" ]];then
+      if ((`stat -c %s "$lstrFileWebp"`>0));then #webp is theoretically good
+        if $bDryRun;then
+          echo "WouldTrash: $lstrFile" >&2
         else
-          SECFUNCechoErrA "webp file size is 0 lstrFileWebp='$lstrFileWebp'"
+          SECFUNCtrash "$lstrFile"
         fi
+      else
+        SECFUNCechoErrA "webp file size is 0 lstrFileWebp='$lstrFileWebp'"
       fi
     fi
   fi

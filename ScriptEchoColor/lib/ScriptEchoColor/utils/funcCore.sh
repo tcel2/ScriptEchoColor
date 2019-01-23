@@ -411,17 +411,17 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 
 #	if ! declare -p "$lstrArrayId" >>/dev/null;then
 	if ! SECFUNCarrayCheck "$lstrArrayId";then
-		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
-		echo "0"
+		SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
+		echo "0" #just in case of it being acceptable
 		return 1
 	fi
 	
-	local sedGetVarModifiers="s@declare -([^[:blank:]]*) ${lstrArrayId}=.*@\1@"
-	if ! declare -p "${lstrArrayId}" |sed -r "$sedGetVarModifiers" |egrep -qo "[Aa]";then
-		SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
-		echo "0"
-		return 1
-	fi
+	#~ local sedGetVarModifiers="s@declare -([^[:blank:]]*) ${lstrArrayId}=.*@\1@"
+	#~ if ! declare -p "${lstrArrayId}" |sed -r "$sedGetVarModifiers" |egrep -qo "[Aa]";then
+		#~ SECFUNCechoWarnA "is not an array lstrArrayId='$lstrArrayId'"
+		#~ echo "0"
+		#~ return 1
+	#~ fi
 	
 #	if ! ${!lstrArrayId+false};then #this becomes false if unbound
 #		eval 'echo "${#'$lstrArrayId'[@]}"'
@@ -625,32 +625,12 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	local lstrArrayId="${1-}"
 	
 	# valid env var check
-#	if ! declare -p "$lstrArrayId" >>/dev/null 2>&1;then
   local lstrInfo
-  #declare -p lstrArrayId FUNCNAME $lstrArrayId >&2
-#	if ! lstrInfo="`declare -p "$lstrArrayId" >/dev/null 2>&1`";then
 	if ! lstrInfo="`declare -p "$lstrArrayId" 2>/dev/null`";then
-		# I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
-		SECFUNCechoDbgA "env var lstrArrayId='$lstrArrayId' not declared yet."
+		SECFUNCechoWarnA "env var lstrArrayId='$lstrArrayId' not declared yet." #TODO? I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
 		return 1;
 	fi
 	
-	# export it to easy tests below
-	# THIS DOES NOT WORK...: eval "declare -x $lstrArrayId"&&:
-	# THIS DOES NOT WORK...: declare -x $lstrArrayId&&:
-	#~ export "$lstrArrayId"&&: #eval "export $lstrArrayId"&&:
-	#~ if (($? != 0));then
-		#~ SECFUNCechoErrA "problem exporting env var related to lstrArrayId='$lstrArrayId'"
-		#~ return 1
-	#~ fi
-	
-	# declare is a much slower than export #local l_strTmp=`declare |grep "^$1=("`; 
-#	local lstrTmp="`export |egrep -q "^declare -[Aa]x ${lstrArrayId}='\("`";
-	#~ local lstrTmp="`export |egrep "^declare -[Aa]x ${lstrArrayId}='[(]"`";
- 	#~ if [[ -z "$lstrTmp" ]]; then
- 		#~ return 1;
- 	#~ fi;
- 	
   strMatch="^declare -[aA][^=]*='[(]";
   if [[ "$lstrInfo" =~ $strMatch ]];then
 #  if [[ "$lstrInfo" =~ ^declare\ -[Aa]x\ ${lstrArrayId}=\'(.* ]];then

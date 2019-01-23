@@ -48,7 +48,7 @@ bBkpFd=true
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--help" ]];then #help show this help
 		echo "Initialize environment variables sharing between bash scripts."
-		echo 'use like: eval `'`basename $0`'`'
+		echo 'use like: source <('`basename $0`')'
 		echo
 		source <(secinit);SECFUNCshowHelp --nosort; #grep "[#]help" "$0"
 		echo
