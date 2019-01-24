@@ -148,13 +148,13 @@ function FUNCconvert() {
 nDelayMsg=3
 nTotFiles=0
 strFilter=".*"
-bShowHidden=false
+: ${CFGbShowHidden:=false}
 function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#CFGastrFileList[@]}
 	if((nTotFiles==0)) || [[ "${1-}" == "--refill" ]];then
     # ignores hidden (even at hidden folders) and the tmp files
     grepIgnore="/[.]"
-    if $bShowHidden;then #never DISABLED ones tho
+    if $CFGbShowHidden;then #never DISABLED ones tho
       grepIgnore="/[.]DISABLED[.]"
     fi
 		IFS=$'\n' read -d '' -r -a CFGastrFileList < <(
@@ -502,7 +502,7 @@ if $bDaemon;then
       "_change image now"
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
       "_disable current"
-      "show _hidden toggle (`SECFUNCternary --onoff $bShowHidden`)"
+      "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
       "fi_lter(@s@y$strFilter@S)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
@@ -536,7 +536,8 @@ if $bDaemon;then
         bResetCounters=true
         ;;
       h)
-        SECFUNCtoggleBoolean bShowHidden
+        SECFUNCtoggleBoolean CFGbShowHidden
+        SECFUNCcfgWriteVar CFGbShowHidden
         FUNCchkUpdateFileList --refill
         bChangeImage=true
         bResetCounters=true
