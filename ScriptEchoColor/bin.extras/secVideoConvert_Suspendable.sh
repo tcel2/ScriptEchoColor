@@ -27,7 +27,7 @@ source <(secinit)
 : ${nShortDur:=$((60*1))}
 export nShortDur #help short duration limit check
 
-: ${CFGnCPUPerc:=50}
+: ${CFGnCPUPerc:=5} # as background as possible and still useful
 export CFGnCPUPerc #help overall CPUs percentage
 
 : ${bLossLessMode:=false}
@@ -489,9 +489,11 @@ function FUNCshortDurChk() {
 function FUNCavconvRaw() {
   if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc;fi
   (
-    strFlLog="${strAbsFileNmHashTmp}.$BASHPID.log"
+    nBPid=$BASHPID
+    strFlLog="${strAbsFileNmHashTmp}.${nBPid}.log"
+    echo "DBG: $$ $strFlLog" >&2
     echo -n >>"$strFlLog"
-    tail -F --pid=$$ "$strFlLog"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
+    tail -F --pid=$nBPid "$strFlLog" |egrep "^ *(Input|Output|Duration|Stream|frame=)"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
     SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
     cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
     if((nRet!=0));then
