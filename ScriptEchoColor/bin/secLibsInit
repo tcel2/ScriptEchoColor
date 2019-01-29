@@ -168,12 +168,19 @@ fi
 # DO NOT SKIP INITIALIZATION LIKE this, it break aliases :( -> #if ! ${SECinitialized-false};then
 # $PPID is the pid where the output of this script may have already been evaluated
 
-if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bForceReload option could override the previous validation...
-	if $bForceReload || ${SECinstallPath+false};then 
-		export SECinstallPath="`secGetInstallPath.sh`"; #to be faster #TODO deprecate this var name
-    export SECstrInstallPath="$SECinstallPath"
-		echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
-	fi;
+#~ if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bForceReload option could override the previous validation...
+	#~ if $bForceReload || ${SECinstallPath+false};then 
+		#~ export SECinstallPath="`secGetInstallPath.sh`"; #to be faster #TODO deprecate this var name
+    #~ export SECstrInstallPath="$SECinstallPath"
+		#~ echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
+	#~ fi;
+#~ fi
+if ${SECstrInstallPath+false};then # this simple test is fast and safe
+  if $bFast;then SECFUNCechoWarnA "SECstrInstallPath should have been set already, fixing it.";fi
+  export SECstrInstallPath="`secGetInstallPath.sh`/" ; #to be faster
+  echo "export SECstrInstallPath=\"$SECstrInstallPath\";"; #to user script run this
+  export SECinstallPath="$SECstrInstallPath"; #to be faster #TODO deprecate this var name, refactor all
+  echo "export SECinstallPath=\"$SECstrInstallPath\";"; #to user script run this
 fi
 
 if $bInheritParentPidLogFile;then
