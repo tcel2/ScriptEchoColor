@@ -1088,8 +1088,13 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	return 0
 }
 
-: ${CFGSECnVersionLastRun:="`cat "$SECstrInstallPath/lib/ScriptEchoColor/secPackageVersion.cfg"`"};
+: ${SECnVersionPackage:="`cat "$SECstrInstallPath/lib/ScriptEchoColor/secPackageVersion.cfg"`"};
+export SECnVersionPackage #TODO make it work readonly: declare -r SECnVersionPackage
+#declare -p SECnVersionPackage >&2
+
+: ${CFGSECnVersionLastRun:=$SECnVersionPackage};
 export CFGSECnVersionLastRun
+
 function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with specified prefix, default "CFG"
 	# var init here
 	local lstrPrefix="CFG"
@@ -1127,6 +1132,7 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
     if [[ ! -f "$SECcfgFileName" ]];then echo -n >>"$SECcfgFileName";fi
     SECFUNCfileLock "$SECcfgFileName"
 		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
+      if [[ "$lstrCfgVar" == "CFGSECnVersionLastRun" ]] && ((CFGSECnVersionLastRun==0));then continue;fi # development version shall not be stored
 			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVar
 			if $lbShowAll;then
 				echo "$lstrCfgVar='${!lstrCfgVar-}' #SECCFG" >&2
@@ -1143,6 +1149,25 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 #			SECFUNCechoWarnA "no cfg variables found..."
 #		fi
 #	fi
+}
+
+function SECFUNCchkLastRunVersion() { #help will fail in case the version is older than the last run one (may be compatible tho). --dev to require it to be development mode only.
+  if((SECnVersionPackage==0));then echo "ScriptEchoColor development environment is set." >&2;return 0;fi # development shall always prevail
+  
+  if [[ "${1-}" == "--dev" ]];then
+    if((SECnVersionPackage!=0));then
+      SECFUNCechoErrA "Must be run only in development mode."
+      return 1
+    fi
+  fi
+  
+  if((CFGSECnVersionLastRun>SECnVersionPackage));then
+    SECFUNCcfgFileName
+    SECFUNCechoErrA "CFGSECnVersionLastRun='$CFGSECnVersionLastRun' > SECnVersionPackage='$SECnVersionPackage', change in the file above if you think it is compatible"
+    return 1
+  fi
+  
+  return 0
 }
 
 function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh #TODO move this function to the extras package in some nice way, may be a lib there...

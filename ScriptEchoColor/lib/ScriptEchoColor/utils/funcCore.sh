@@ -2520,10 +2520,9 @@ function SECFUNCcheckActivateRunLog() { #help
         "${lastrLogCmd[@]}" "$SECstrRunLogFile"&
         
         #################
-				### IMPORTANT!!! this would make stdout unusable when capturing it: exec 2>&1 
+				### IMPORTANT!!! this would make stdout unusable when capturing it: exec 2>&1;exec >"$SECstrRunLogFile"
         ##########
-        exec 2>"$SECstrRunLogFile" # actually only dbg/warn/error messages really need to be logged
-        #exec >"$SECstrRunLogFile"
+        exec 2>"$SECstrRunLogFile" # actually only dbg/warn/error messages really need to be logged, and lowering the log size is good too
 				
 				# waits log cmd to properly start...
 				while ! SECnRunLogTeePid="`pgrep -fx "${lastrLogCmd[*]} $SECstrRunLogFile"`";do 

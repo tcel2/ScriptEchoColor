@@ -145,20 +145,32 @@ function FUNCstats() {
   local lType="$1";shift
   local nTotSz=0;
   IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]\(${lstrRgx}\)" -exec stat -c %s '{}' \;)&&:;
-  for nSz in "${anList[@]}";do 
-    ((nTotSz+=nSz))&&:;
-    echo -n "." >&2;
-  done;echo >&2
-  echo "$lType: Tot=${#anList[*]}  nTotSz.MB=`bc <<< "scale=2;$nTotSz/(1024*1024)"`" >&2
-  echo ${#anList[*]}
+  if SECFUNCarrayCheck -n anList;then
+    for nSz in "${anList[@]}";do 
+      ((nTotSz+=nSz))&&:;
+      echo -n "." >&2;
+    done;echo >&2
+    echo "$lType: Tot=${#anList[*]}  nTotSz.MB=`bc <<< "scale=2;$nTotSz/(1024*1024)"`" >&2
+    echo ${#anList[*]}
+  else
+    echoc --info "nothing found..." >&2
+    return 1
+  fi
+  
+  return 0
 }
-export nTotOld="`FUNCstats "$strRegexTypes" "Old"`"
+export nTotOld
+if ! nTotOld="`FUNCstats "$strRegexTypes" "Old"`";then
+  exit 1
+fi
 
 #~ nTotSzNew=0;
 #~ IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]webp" -exec stat -c %s '{}' \;)&&:;
 #~ for nSz in "${anList[@]}";do ((nTotSzNew+=nSz))&&:;echo -n "." >&2;done;
 #~ echo "TotNew=${#anList[*]}  nTotSzNew.MB=`bc <<< "scale=2;$nTotSzNew/(1024*1024)"`"
-FUNCstats "webp" "New"
+if ! FUNCstats "webp" "New";then
+  exit 1
+fi
 
 IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)")&&:
 export nCount=0
