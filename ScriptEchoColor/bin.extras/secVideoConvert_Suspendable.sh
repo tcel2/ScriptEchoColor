@@ -293,12 +293,14 @@ function FUNCcompletedFiles() {
 # Main code ######################################################################################
 
 if $bFindWorks;then
+  #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
   IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\).*")&&:
+  SECFUNCexecA -ce SECFUNCarrayShow -v astrFileList
   astrCanWork=()
   for strFile in "${astrFileList[@]}";do
     echo -n .
     strFileR="`realpath "$strFile"`"
-    if SECFUNCarrayContains CFGastrFileList "$strFileR";then continue;fi
+    if SECFUNCarrayContains CFGastrFileList "$strFileR";then echo "AlreadyAdded: '$strFileR'";continue;fi
     
     if FUNCisHevc "$strFile";then continue;fi #already is
     #~ strInfo="`mediainfo "$1"`"
@@ -309,10 +311,15 @@ if $bFindWorks;then
     echo "CanWorkWith: $strFileR"
     astrCanWork+=( "$strFileR" )
   done
+  echo
   
-  SECFUNCexecA -ce SECFUNCarrayShow astrCanWork
-  if echoc -q "add all the above?";then
-    $0 --add "${astrCanWork[@]}"
+  SECFUNCexecA -ce SECFUNCarrayShow -v astrCanWork
+  if SECFUNCarrayCheck -n astrCanWork;then
+    if echoc -q "add all the above?";then
+      $0 --add "${astrCanWork[@]}"
+    fi
+  else
+    echoc --info "nothing usable found..."
   fi
   exit 0
 elif $bTrashMode;then
@@ -350,7 +357,7 @@ elif $bContinue;then
   while true;do
     SECFUNCcfgReadDB
     echoc --info " Continue @s@{By}Loop@S: "
-    SECFUNCarrayShow CFGastrFileList
+    #SECFUNCarrayShow -v CFGastrFileList
     if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
     
     astrFinalWorkList=()
@@ -360,9 +367,11 @@ elif $bContinue;then
     if $bWorkWithSmallerFilesFirst;then
       IFS=$'\n' read -d '' -r -a astrSmallFirstFileList < <(ls -1Sr "${CFGastrFileList[@]}")&&:
       astrFinalWorkList=( "${astrSmallFirstFileList[@]}" )
+      echoc --info "Smaller first:"
     else
       astrFinalWorkList=( "${CFGastrFileList[@]}" )
     fi
+    SECFUNCarrayShow -v astrFinalWorkList
     
     nCompletedCount=0
     for strFileAbs in "${astrFinalWorkList[@]}";do

@@ -756,7 +756,7 @@ function SECFUNCarrayWork() { #help
       for lnIndex in "${!lastrArrayCopyTmp[@]}";do
 #      for lstrEntry in "${lastrArrayCopyTmp[@]}";do
         if $lbVerbose;then
-          echo "${lstrIndent}lstrArrayId[$lnIndex]=\"`printf "%q" "${lastrArrayCopyTmp[lnIndex]}"`\""
+          echo "${lstrIndent}${lstrArrayId}[$lnIndex]=\"`printf "%q" "${lastrArrayCopyTmp[lnIndex]}"`\""
         else
           echo "${lstrIndent}${lastrArrayCopyTmp[lnIndex]}"
         fi
