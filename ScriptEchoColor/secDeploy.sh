@@ -140,6 +140,7 @@ export pathLibPrefix=""
 export pathBinPrefix=""
 export pathDocPrefix=""
 export pathGoboPrefix=""
+export strSetVersion=""
 
 export bWait=false
 export bEcho=true
@@ -152,6 +153,9 @@ while [[ "${1:0:1}" == "-" ]];do
 	if [[ "$1" == "--prefix" ]];then #help <path> set the main path to install everything
 		shift
 		pathInstallPrefix="$1"
+	elif [[ "$1" == "--setversion" ]];then #help <strSetVersion> required
+		shift
+                strSetVersion="$1"
 	elif [[ "$1" == "--wait" ]];then #help wait before executing a command
 		bWait=true
 	elif [[ "$1" == "--no-echo" ]];then #help do NOT echo the command that will be executed
@@ -179,6 +183,10 @@ done
 ####### MAIN CODE #########################################################
 if((UID!=0));then #all sudo cmds on this script became redundant!
 	FUNCexit "must be run as root" 1	
+fi
+
+if [[ -z "$strSetVersion" ]];then
+	FUNCexit "version needs to be set" 1
 fi
 
 if [[ "$pathGoboPrefix" == "/" ]];then
@@ -236,6 +244,7 @@ if $bInstallMain;then
 	FUNCexecEcho FUNCfindCpChown "share/doc/ScriptEchoColor/" "$pathDocPrefix"; FUNCexitIfFail $?
 	FUNCexecEcho FUNCfindCpChown "lib/" "$pathLibPrefix"; FUNCexitIfFail $?
 	FUNCexecEcho FUNCfindCpChown "bin/" "$pathBinPrefix"; FUNCexitIfFail $?
+        echo "$strSetVersion" >"lib/ScriptEchoColor/secPackageVersion.cfg"; FUNCexitIfFail $? #TODO for extras and examples too?
 fi
 
 if $bInstallExtras;then

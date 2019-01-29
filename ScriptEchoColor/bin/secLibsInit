@@ -170,7 +170,8 @@ fi
 
 if ! $bFast;then # Fast option expects SECinstallPath to be already set, the bForceReload option could override the previous validation...
 	if $bForceReload || ${SECinstallPath+false};then 
-		export SECinstallPath="`secGetInstallPath.sh`"; #to be faster
+		export SECinstallPath="`secGetInstallPath.sh`"; #to be faster #TODO deprecate this var name
+    export SECstrInstallPath="$SECinstallPath"
 		echo "export SECinstallPath=\"$SECinstallPath\";"; #to user script run this
 	fi;
 fi

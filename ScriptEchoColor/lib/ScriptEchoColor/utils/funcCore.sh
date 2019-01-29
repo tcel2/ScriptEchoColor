@@ -1413,7 +1413,7 @@ function SECFUNCscriptSelfNameCheckAndSet() { #help check if equal, return 0, if
 		fi
 	fi
 	
-	SECFUNCdbgFuncOutA;if $lbScriptNameChanged;then return 1;fi
+	SECFUNCdbgFuncOutA;if $lbScriptNameChanged;then return 1;fi;return 0
 }
 
 function SECFUNCdtTimeForLogMessages() { #help useful to core functions only

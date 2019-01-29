@@ -1087,6 +1087,9 @@ function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config
 	
 	return 0
 }
+
+: ${CFGSECnVersionLastRun:="`cat "$SECstrInstallPath/lib/ScriptEchoColor/secPackageVersion.cfg"`"};
+export CFGSECnVersionLastRun
 function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with specified prefix, default "CFG"
 	# var init here
 	local lstrPrefix="CFG"
@@ -1142,8 +1145,14 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 #	fi
 }
 
-function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh
+function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon execution, this code fully depends on what is coded at secDaemonsControl.sh #TODO move this function to the extras package in some nice way, may be a lib there...
 	SECFUNCdbgFuncInA;
+  
+  if ! which secDaemonsControl.sh >/dev/null;then
+    SECFUNCechoErrA "extras package not installed, secDaemonsControl.sh is missing"
+    _SECFUNCcriticalForceExit
+  fi
+  
 	: ${SECbDaemonRegistered:=false}
 	if ! $SECbDaemonRegistered;then
 		secDaemonsControl.sh --register
@@ -1166,7 +1175,7 @@ function SECFUNCdaemonCheckHold() { #help used to fastly check and hold daemon e
 	#SECFUNCarraysExport;bash -c 'source <(secinit --base);_SECFUNCdaemonCheckHold_SubShell;'
 	SECFUNCexecOnSubShell 'source <(secinit --ilog --fast);_SECFUNCdaemonCheckHold_SubShell;' #--ilog to prevent creation of many temporary, and hard to track, log files.
 	
-	SECFUNCdbgFuncOutA;
+	SECFUNCdbgFuncOutA;return 0
 }
 
 function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child process waiting for other UNIQUE process match regex
