@@ -244,7 +244,7 @@ if $bInstallMain;then
 	FUNCexecEcho FUNCfindCpChown "share/doc/ScriptEchoColor/" "$pathDocPrefix"; FUNCexitIfFail $?
 	FUNCexecEcho FUNCfindCpChown "lib/" "$pathLibPrefix"; FUNCexitIfFail $?
 	FUNCexecEcho FUNCfindCpChown "bin/" "$pathBinPrefix"; FUNCexitIfFail $?
-        echo "$strSetVersion" >"lib/ScriptEchoColor/secPackageVersion.cfg"; FUNCexitIfFail $? #TODO for extras and examples too?
+        echo "$strSetVersion" >"${pathLibPrefix}/ScriptEchoColor/secPackageVersion.cfg"; FUNCexitIfFail $? #TODO for extras and examples too?
 fi
 
 if $bInstallExtras;then
