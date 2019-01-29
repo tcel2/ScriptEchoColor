@@ -44,6 +44,7 @@ export CFGnPartSeconds #help when splitting, parts will have around this length
 export nSlowQSleep #help every question will wait this seconds
 CFGnDefQSleep=$nSlowQSleep
 
+CFGstrKeepOriginalTag="KEEP_ORIGINAL"
 bUseCPUlimit=true
 astrVidExtList=(mp4 3gp flv avi mov mpeg)
 strExample="DefaultValue"
@@ -80,7 +81,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		shift
 		strWorkWith="${1-}"
     bWorkWith=true
-	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos
+	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos (will ignore videos in the final format and filenames containing CFGstrKeepOriginalTag)
     bFindWorks=true
 	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
@@ -294,7 +295,7 @@ function FUNCcompletedFiles() {
 
 if $bFindWorks;then
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\).*")&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
   SECFUNCexecA -ce SECFUNCarrayShow -v astrFileList
   astrCanWork=()
   for strFile in "${astrFileList[@]}";do
@@ -319,7 +320,7 @@ if $bFindWorks;then
       $0 --add "${astrCanWork[@]}"
     fi
   else
-    echoc --info "nothing usable found..."
+    echoc --info "nothing new/usable found..."
   fi
   exit 0
 elif $bTrashMode;then
