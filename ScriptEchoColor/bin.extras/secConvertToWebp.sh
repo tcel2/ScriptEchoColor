@@ -44,6 +44,9 @@ export fQuality=80.0 #fotos
 # export fQuality=0.001 #documentos
 ########################
 
+: ${CFGstrTagKeepOriginal:="KEEP_ORIGINAL"}
+export CFGstrTagKeepOriginal #help wont touch files with that on their names
+
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -92,14 +95,24 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # 10.0 #documents lets read hard/light things too
 ###
 
+function FUNCnewNm() { #<lstrFile>
+	local lstrFile="$1";shift
+	local lstrQual="`echo "$fQuality" |tr '.' '_'`"
+  strExt="`SECFUNCfileSuffix "$lstrFile"`"
+	local lstrFileWebp="${lstrFile%.$strExt}-q${lstrQual}.webp"
+  echo "$lstrFileWebp"
+}
+
 astrFileFailList=()
+astrFlOldSmaller=()
 function FUNCconv() {
   #source <(secinit --fast)
   
 	local lstrFile="$1"
-	local lstrQual="`echo "$fQuality" |tr '.' '_'`"
-  strExt="`SECFUNCfileSuffix "$lstrFile"`"
-	lstrFileWebp="${lstrFile%.$strExt}-q${lstrQual}.webp"
+	#~ local lstrQual="`echo "$fQuality" |tr '.' '_'`"
+  #~ strExt="`SECFUNCfileSuffix "$lstrFile"`"
+	#~ local lstrFileWebp="${lstrFile%.$strExt}-q${lstrQual}.webp"
+  local lstrFileWebp="`FUNCnewNm "$lstrFile"`"
 	if [[ ! -f "$lstrFileWebp" ]];then
 		echo
 		SECFUNCdrawLine --left ">>> working with $lstrFile <-> $lstrFileWebp "
@@ -110,7 +123,8 @@ function FUNCconv() {
     echo "ToExecCMD: ${astrCmd[@]}" >&2
     echo "ToExecCMDMV: ${astrCmdMv[@]}" >&2
     if ! $bDryRun;then
-      #cwebp is too fast... SECFUNCCcpulimit -r "cwebp" -l 50
+      #cwebp is too fast to this be useful at all: SECFUNCCcpulimit -r "cwebp" -l 50
+      if [[ -f "$strTmpFl" ]];then SECFUNCtrash "$strTmpFl";fi
       if SECFUNCexecA -ce "${astrCmd[@]}";then
         if SECFUNCexecA -ce "${astrCmdMv[@]}";then
           ls -l "$lstrFile" "$lstrFileWebp"
@@ -125,11 +139,18 @@ function FUNCconv() {
   
   if $bTrash;then
     if [[ -f "$lstrFileWebp" ]];then
-      if ((`stat -c %s "$lstrFileWebp"`>0));then #webp is theoretically good
-        if $bDryRun;then
-          echo "WouldTrash: $lstrFile" >&2
+      nSzNew=`stat -c %s "$lstrFileWebp"`
+      if ((nSzNew>0));then # this means webp is theoretically good TODO better integrity test? may be `identify`
+        nSzOld=`stat -c %s "$lstrFile"`
+        if((nSzOld<nSzNew));then
+          astrFlOldSmaller+=("$lstrFile")
+          SEC_WARN=true SECFUNCechoWarnA "old size smaller than new! $nSzOld < $nSzNew; eog '$lstrFile'&display '$lstrFileWebp'& wont trash old one! use tag $CFGstrTagKeepOriginal"
         else
-          SECFUNCtrash "$lstrFile"
+          if $bDryRun;then
+            echo "WouldTrash: $lstrFile" >&2
+          else
+            SECFUNCtrash "$lstrFile"
+          fi
         fi
       else
         SECFUNCechoErrA "webp file size is 0 lstrFileWebp='$lstrFileWebp'"
@@ -144,7 +165,13 @@ function FUNCstats() {
   local lstrRgx="$1";shift
   local lType="$1";shift
   local nTotSz=0;
-  IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]\(${lstrRgx}\)" -exec stat -c %s '{}' \;)&&:;
+  IFS=$'\n' read -d '' -r -a anList < <( \
+    find ./ \
+      -type f \
+      -iregex ".*[.]\(${lstrRgx}\)" \
+      -not -iregex ".*\(${CFGstrTagKeepOriginal}\).*" \
+      -exec stat -c %s '{}' \; \
+  )&&:;
   if SECFUNCarrayCheck -n anList;then
     for nSz in "${anList[@]}";do 
       ((nTotSz+=nSz))&&:;
@@ -160,7 +187,7 @@ function FUNCstats() {
   return 0
 }
 export nTotOld
-if ! nTotOld="`FUNCstats "$strRegexTypes" "Old"`";then
+if ! nTotOld="`FUNCstats "$strRegexTypes" "OldFormats"`";then
   exit 1
 fi
 
@@ -168,19 +195,45 @@ fi
 #~ IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]webp" -exec stat -c %s '{}' \;)&&:;
 #~ for nSz in "${anList[@]}";do ((nTotSzNew+=nSz))&&:;echo -n "." >&2;done;
 #~ echo "TotNew=${#anList[*]}  nTotSzNew.MB=`bc <<< "scale=2;$nTotSzNew/(1024*1024)"`"
-if ! FUNCstats "webp" "New";then
+if ! FUNCstats "webp" "NewFormat";then
   exit 1
 fi
 
-IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -type f -iregex ".*[.]\(${strRegexTypes}\)")&&:
+IFS=$'\n' read -d '' -r -a astrFileList < <( \
+  find ./ \
+    -type f \
+    -iregex ".*[.]\(${strRegexTypes}\)" \
+    -not -iregex ".*\(${CFGstrTagKeepOriginal}\).*" \
+)&&:
 export nCount=0
 for strFile in "${astrFileList[@]}";do
   FUNCconv "$strFile"
   ((nCount++))&&:
 done
 
-declare -p astrFileFailList
+if SECFUNCarrayCheck -n astrFlOldSmaller;then
+  echoc -p "The old size is smaller than new one for these:"
+  SECFUNCarrayShow -v astrFlOldSmaller
+  if echoc -q "Trash new and tag old with CFGstrTagKeepOriginal='$CFGstrTagKeepOriginal' ?";then
+    for strFileOld in "${astrFlOldSmaller[@]}";do 
+      SECFUNCdrawLine " $strFileOld "
+      strFlNew="`FUNCnewNm "$strFileOld"`"
+      
+      ls -l "$strFileOld" "$strFlNew"
+      echo "# eog '$strFileOld' & display '$strFlNew' & "
+      
+      SECFUNCtrash "$strFlNew"
+      
+      strExt="`SECFUNCfileSuffix "$strFileOld"`"
+      strFileTagged="${strFileOld%.$strExt}.${CFGstrTagKeepOriginal}.${strExt}"
+      SECFUNCexecA -ce mv -v "$strFileOld" "$strFileTagged"
+    done
+  fi
+fi
+
 if((${#astrFileFailList[*]}>0));then
+  declare -p astrFileFailList
+  echoc -p "These failed because of not valid image format?"
   for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";hexdump -C -n 48 "$strFileFail";done
   for strFileFail in "${astrFileFailList[@]}";do echo "$strFileFail";done
 fi

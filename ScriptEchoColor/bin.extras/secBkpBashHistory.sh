@@ -160,7 +160,7 @@ if $bMaint;then
   #history -d 1
   #history |tail
   declare -p LINENO
-  IFS=$'\n' read -d '' -r -a astrChosenList < <(yad --maximized --center --no-markup --title="`basename $0`" --list --checklist --column="DEL" --column "nTime" --column "Time" --column="comment" --column="command" "${astrMaintListDiag[@]}"&&:)&&:
+  IFS=$'\n' read -d '' -r -a astrChosenList < <(yad --maximized --center --no-markup --title="`basename $0` select items to be deleted" --list --checklist --column="DEL" --column "nTime" --column "Time" --column="comment" --column="command" "${astrMaintListDiag[@]}"&&:)&&:
   #~ declare -p LINENO
   if SECFUNCarrayCheck -n astrChosenList;then
     SECFUNCtrash "${CFGstrFlHist}.bkp"&&:

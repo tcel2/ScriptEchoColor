@@ -718,12 +718,15 @@ function FUNCrun(){
 			lstrTxt+="\n";
 		fi
 		
+    read nScreenWitdh nScreenHeight < <(xrandr |grep "primary" |sed -r 's".*primary ([[:digit:]]*)x([[:digit:]]*).*"\1 \2"')
     astrYadBasicOpts=(
       --title "SDE(`basename "${astrRunParams[0]}"`) - $SECstrScriptSelfName[$$]" 
       --separator="\n"
       --sticky
-      --center
       --selectable-labels
+#      --center
+      --posx=$(($RANDOM%(nScreenWitdh  -300)))
+      --posy=$(($RANDOM%(nScreenHeight -300)))
     )
     
     if ( $lbErr || $bAutoRetryAlways ) && ((nAutoRetryDelay>=0));then
@@ -876,10 +879,10 @@ function FUNCrun(){
         if ! $lbDevModeBeforeRun;then
           astrYadExecParams+=(
             --button="Retry:4"
-            --button="${strRetryFull}:5"
           )
         fi
         astrYadExecParams+=(
+          --button="${strRetryFull}:5"
           --button="Retry-DEV:2"
           --button="${strDumpRetryBtnTxt}:3" 
           --button="gtk-close:1" 

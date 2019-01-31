@@ -656,6 +656,7 @@ function SECFUNCarrayWork() { #help
   #local lbCleanMode=false
   #~ local lbPrependMode=false
   #~ local lbMergeMode=false
+  local lastrAllParamsAfterArrayId=()
 	local lastrRemainingParams=()
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
@@ -670,7 +671,9 @@ function SECFUNCarrayWork() { #help
     elif [[ "$1" == "--clean" ]];then #SECFUNCarrayWork_help <lstrArrayId> [value] helps on regex cleaning array elements. If value to match is empty, will clean empty elements (default behavior)
 #      lbCleanMode=true
       lstrMode="$1"
-    elif [[ "$1" == "--show" ]];then #SECFUNCarrayWork_help <lstrArrayId> [indentation] show one entry per line
+    elif [[ "$1" == "--cmd" ]];then #SECFUNCarrayWork_help <lstrArrayId> <cmd and params...> perform the specified full command for each array entry
+      lstrMode="$1"
+    elif [[ "$1" == "--show" ]];then #SECFUNCarrayWork_help <lstrArrayId> [indentation/prefix] show one entry per line
       lstrMode="$1"
     elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help ~recindex <lstrArrayId> <value>
    #   lbPrependMode=true
@@ -701,7 +704,9 @@ function SECFUNCarrayWork() { #help
 	
 	# code here
 	lstrArrayId="${1-}";shift&&:
-  local lbP1=false;if ! ${1+false};then lbP1=true;fi;lstrParam1="${1-}";shift&&:
+  local lbP1=false;if ! ${1+false};then lbP1=true;fi
+  if $lbP1;then lastrAllParamsAfterArrayId=("$@");fi
+  lstrParam1="${1-}";shift&&:
 	
 	if ! SECFUNCarrayCheck "$lstrArrayId";then
 		SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
@@ -713,17 +718,8 @@ function SECFUNCarrayWork() { #help
 	
   sedGetArrayValue="s/^[^=]*='(.*)'$/\1/" # sed gets the value part after =, this keeps the indexes values and gaps
   
-	#set -x
-	#local lstrArrayAllElements="${lstrArrayId}[@]"
-	local lastrArrayCopyTmp #this loses the indexes =("${!lstrArrayAllElements}")
-#  local lstrAValTmp=`declare -p $lstrArrayId |sed -r "$sedGetArrayValue"`
-#  eval "declare -a lastrArrayCopyTmp=$lstrAValTmp"
+	local lastrArrayCopyTmp #this loses the indexes -> =("${!lstrArrayAllElements}")
   declare -n lastrArrayCopyTmp="$lstrArrayId"
-  #declare -p $lstrArrayId lastrArrayCopyTmp >&2
-#  if $lbCleanMode;then
-#  elif $lbPrependMode;then
-#  elif $lbMergeMode;then
-#  fi
   case "$lstrMode" in
     --clean)
       local lstrMatch="$lstrParam1"
@@ -746,9 +742,19 @@ function SECFUNCarrayWork() { #help
 #        ((lnIndex++))&&:
       done
       ;;
+    --cmd)
+      local lstrEntry
+      local lastrCmd=("${lastrAllParamsAfterArrayId[@]}")
+      for lstrEntry in "${lastrArrayCopyTmp[@]}";do
+        # TODO continue next if some fail
+        # TODO let entry be positioned using some tag like `find` does with '{}' ?
+        SECFUNCexecA -ce "${lastrCmd[@]}" "$lstrEntry"
+      done
+      return 0
+      ;;
     --show)
       local lstrEntry
-      local lstrIndent="${lstrParam1}";if ! $lbP1;then lstrIndent="  ";fi
+      local lstrIndent="${lstrParam1}";if ! $lbP1;then lstrIndent="  ";fi # lbP1 is required as indent may be none ""
       #~ if $lbVerbose;then echo "lstrArrayId=(";fi
       #~ local lstrPliq="";if $lbVerbose;then lstrPliq="\"";fi
       local lnIndex
@@ -817,8 +823,12 @@ function SECFUNCarrayWork() { #help
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function SECFUNCarrayShow() {
+function SECFUNCarrayShow() { #help
   SECFUNCarrayWork --show "$@"
+}
+
+function SECFUNCarrayCmd() { #help
+  SECFUNCarrayWork --cmd "$@"
 }
 
 function SECFUNCarrayClean() { #help 

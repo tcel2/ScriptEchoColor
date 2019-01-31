@@ -1162,7 +1162,7 @@ function SECFUNCchkLastRunVersion() { #help will fail in case the version is old
   fi
   
   if((CFGSECnVersionLastRun>SECnVersionPackage));then
-    SECFUNCcfgFileName
+    SECFUNCcfgFileName --get
     SECFUNCechoErrA "CFGSECnVersionLastRun='$CFGSECnVersionLastRun' > SECnVersionPackage='$SECnVersionPackage', change in the file above if you think it is compatible"
     return 1
   fi
