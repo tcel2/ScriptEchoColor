@@ -763,7 +763,7 @@ function FUNCrun(){
 		
     strDumpRetryBtnTxt="dump;retry"
     
-    strRetryFull="RetrySelfFull-DEV"
+    strRetryFull="Retry-FullSDE-DEV"
 		if $bStay || $bStayForce || $lbErr;then
       astrEditDevSrcFileCmd=(secEnvDev.sh --devpath which "${astrRunParams[0]}");declare -p astrEditDevSrcFileCmd >&2;
 #      strDevSrcFile="`"${astrEditDevSrcFileCmd[@]}" 2>/dev/null`";declare -p strDevSrcFile >&2;

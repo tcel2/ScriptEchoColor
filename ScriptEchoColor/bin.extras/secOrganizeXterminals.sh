@@ -74,7 +74,7 @@ done
 
 function FUNCpidList() {
 	#ps -A -o pid,comm |grep "xterm\|rxvt" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
-	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|mrxvt\)" |grep -v "#skipOrganize" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
+	ps -A -o pid,comm,command |grep "^[ ]*[[:digit:]]* \(xterm\|mrxvt\)" |grep -iv "#skipOrganize" |sed -r "s;^([ ]*[[:digit:]]*) .*;\1;"
 }
 
 function FUNCwindowList() {
@@ -92,7 +92,7 @@ function FUNCwindowList() {
       
       local lbAddId=false
       if [[ -n "$windowPid" ]];then
-        if ! ps --no-headers -o command -p $windowPid |grep -q "#skipOrganize";then
+        if ! ps --no-headers -o command -p $windowPid |grep -iq "#skipOrganize";then
           lbAddId=true
         fi
       fi
@@ -266,7 +266,7 @@ function FUNCorganize() {
 		if [[ -z "$xtermCmd" ]];then
 			continue
 		fi
-		if echo "$xtermCmd" |grep -q "#skipOrganize";then
+		if echo "$xtermCmd" |grep -iq "#skipOrganize";then
 			echo "skipping $windowId cmd: $xtermCmd"
 			((countSkips++))&&:
 			continue
