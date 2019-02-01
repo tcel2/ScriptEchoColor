@@ -436,68 +436,68 @@ function SECFUNCarraySize() { #help <lstrArrayId> usefull to prevent unbound var
 	return 0
 }
 
-function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch...> return 0 if it contains any of the elements
-	# var init here
-	local lstrExample="DefaultValue"
-	local lastrRemainingParams=()
-	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
-		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
-		if [[ "$1" == "--help" ]];then #SECFUNCarrayContains_help show this help
-			SECFUNCshowHelp $FUNCNAME
-			return 0
-#		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayContains_help <lstrExample> MISSING DESCRIPTION
-#			shift
-#			lstrExample="${1-}"
-		elif [[ "$1" == "--" ]];then #SECFUNCarrayContains_help params after this are ignored as being these options, and stored at lastrRemainingParams
-			shift #lastrRemainingParams=("$@")
-			while ! ${1+false};do	# checks if param is set
-				lastrRemainingParams+=("$1")
-				shift #will consume all remaining params
-			done
-		else
-			SECFUNCechoErrA "invalid option '$1'"
-			$FUNCNAME --help
-			return 1
-#		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
-#			SECFUNCechoErrA "invalid option '$1'"
-#			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
-		fi
-		shift&&:
-	done
+#~ function SECFUNCarrayContains() { #help <lstrArrayIdA> <lstrElementToMatch...> return 0 if it contains any of the elements
+	#~ # var init here
+	#~ local lstrExample="DefaultValue"
+	#~ local lastrRemainingParams=()
+	#~ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
+		#~ #SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
+		#~ if [[ "$1" == "--help" ]];then #SECFUNCarrayContains_help show this help
+			#~ SECFUNCshowHelp $FUNCNAME
+			#~ return 0
+#~ #		elif [[ "$1" == "--exampleoption" || "$1" == "-e" ]];then #SECFUNCarrayContains_help <lstrExample> MISSING DESCRIPTION
+#~ #			shift
+#~ #			lstrExample="${1-}"
+		#~ elif [[ "$1" == "--" ]];then #SECFUNCarrayContains_help params after this are ignored as being these options, and stored at lastrRemainingParams
+			#~ shift #lastrRemainingParams=("$@")
+			#~ while ! ${1+false};do	# checks if param is set
+				#~ lastrRemainingParams+=("$1")
+				#~ shift #will consume all remaining params
+			#~ done
+		#~ else
+			#~ SECFUNCechoErrA "invalid option '$1'"
+			#~ $FUNCNAME --help
+			#~ return 1
+#~ #		else #USE THIS INSTEAD, ON PRIVATE FUNCTIONS
+#~ #			SECFUNCechoErrA "invalid option '$1'"
+#~ #			_SECFUNCcriticalForceExit #private functions can only be fixed by developer, so errors on using it are critical
+		#~ fi
+		#~ shift&&:
+	#~ done
 	
-	local lstrArrayIdA="${1-}"
+	#~ local lstrArrayIdA="${1-}"
   
-	while shift;do
-    local lstrElementToMatch="${1-}"
+	#~ while shift;do
+    #~ local lstrElementToMatch="${1-}"
     
-    if ! SECFUNCarrayCheck "$lstrArrayIdA";then
-      SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
-      return 1 #generic error indicating a problem that MUST be fixed by the user
-    fi
+    #~ if ! SECFUNCarrayCheck "$lstrArrayIdA";then
+      #~ SECFUNCechoErrA "invalid array lstrArrayIdA='$lstrArrayIdA'"
+      #~ return 1 #generic error indicating a problem that MUST be fixed by the user
+    #~ fi
     
-    if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
-  #		SECFUNCechoWarnA "empty array lstrArrayIdA='$lstrArrayIdA'"
-      ###
-      # SAY NOTHING!!! the contains check can return false (non 0) in case array is empty, is not even a warning...
-      ###
-      return 4 #empty array
-    fi
+    #~ if((`SECFUNCarraySize "$lstrArrayIdA"`==0));then
+  #~ #		SECFUNCechoWarnA "empty array lstrArrayIdA='$lstrArrayIdA'"
+      #~ ###
+      #~ # SAY NOTHING!!! the contains check can return false (non 0) in case array is empty, is not even a warning...
+      #~ ###
+      #~ return 4 #empty array
+    #~ fi
     
-    local lstrArrayIdValA="${lstrArrayIdA}[@]"
-    for lstrCheck in "${!lstrArrayIdValA}";do
-  #		echo "($lstrCheck) == ($lstrElementToMatch)" >&2
-      if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
-        return 0
-      fi
-    done
-  done
+    #~ local lstrArrayIdValA="${lstrArrayIdA}[@]"
+    #~ for lstrCheck in "${!lstrArrayIdValA}";do
+  #~ #		echo "($lstrCheck) == ($lstrElementToMatch)" >&2
+      #~ if [[ "$lstrCheck" == "$lstrElementToMatch" ]];then
+        #~ return 0
+      #~ fi
+    #~ done
+  #~ done
 	
-	#SECFUNCechoWarnA "element lstrElementToMatch='$lstrElementToMatch' not found."
-	###
-	# SAY NOTHING!!! the contains check can return false (non 0) in case element was not found, is not even a warning...
-	###
-	return 3 #a non conflicting return value indicating array does not contain element
-}
+	#~ #SECFUNCechoWarnA "element lstrElementToMatch='$lstrElementToMatch' not found."
+	#~ ###
+	#~ # SAY NOTHING!!! the contains check can return false (non 0) in case element was not found, is not even a warning...
+	#~ ###
+	#~ return 3 #a non conflicting return value indicating array does not contain element
+#~ }
 
 function SECFUNCarrayCmp() { #help <lstrArrayIdA> <lstrArrayIdB> return 0 if both arrays are identical
 	# var init here
@@ -676,7 +676,8 @@ function SECFUNCarrayWork() { #help
     elif [[ "$1" == "--show" ]];then #SECFUNCarrayWork_help <lstrArrayId> [indentation/prefix] show one entry per line
       lstrMode="$1"
     elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help ~recindex <lstrArrayId> <value>
-   #   lbPrependMode=true
+      lstrMode="$1"
+    elif [[ "$1" == "--contains" ]];then #SECFUNCarrayWork_help <lstrArrayIdA> <lstrElementsToMatch...> return 3 if it doesnt contains any of the elements
       lstrMode="$1"
     elif [[ "$1" == "--merge" ]];then #SECFUNCarrayWork_help ~recindex <lstrArrayId> <other array id> mix the values of 2 arrays on the 1st one, sort/order aphanumeric and eliminates dups
     #  lbMergeMode=true
@@ -741,6 +742,23 @@ function SECFUNCarrayWork() { #help
         fi
 #        ((lnIndex++))&&:
       done
+      ;;
+    --contains)
+      #declare -p lastrArrayCopyTmp >&2
+      if SECFUNCarrayCheck -n "${!lastrArrayCopyTmp}";then
+        local lstrEntry
+        local lstrCmp
+        local lastrCmp=("${lastrAllParamsAfterArrayId[@]}")
+        #declare -p lastrCmp >&2
+        for lstrCmp in "${lastrCmp[@]}";do
+          for lstrEntry in "${lastrArrayCopyTmp[@]}";do
+            if [[ "$lstrCmp" == "$lstrEntry" ]];then #TODO regex?
+              return 0
+            fi
+          done
+        done
+      fi
+      return 3 #a non conflicting return value indicating array does not contain the required elements, see `SECFUNCerrCodeExplained -a`
       ;;
     --cmd)
       local lstrEntry
@@ -821,6 +839,10 @@ function SECFUNCarrayWork() { #help
 	fi
 	
 	return 0 # important to have this default return value in case some non problematic command fails before returning
+}
+
+function SECFUNCarrayContains() { #help
+  SECFUNCarrayWork --contains "$@"
 }
 
 function SECFUNCarrayShow() { #help

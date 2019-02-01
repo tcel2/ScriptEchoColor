@@ -54,6 +54,7 @@ CFGstrTest="Test"
 astrRemainingParams=()
 CFGastrTmpWorkPathList=()
 CFGastrFileList=()
+CFGastrFailedList=()
 astrAllParams=("${@-}") # this may be useful
 sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
@@ -131,6 +132,13 @@ function FUNCflTmpWorkPath() {
   echo "`FUNCflOrigPath "$1"`/.${SECstrScriptSelfName}.tmp/"
 }
 
+function FUNCflAddFailedToDB() {
+  SECFUNCcfgReadDB;
+  CFGastrFailedList+=("$1");
+  SECFUNCarrayWork --uniq CFGastrFailedList
+  SECFUNCcfgWriteVar CFGastrFailedList
+}
+
 function FUNCflCleanFromDB() {
   local lstrFl="$1"
   
@@ -163,7 +171,7 @@ function FUNCworkWith() {
   return 0
 }
 
-function FUNCworkFolders() {
+function FUNCmaintWorkFolders() {
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -211,7 +219,7 @@ function FUNCisHevc() { # <lstrFile>
   return 1
 }
 
-function FUNCvalidateOrigFiles() {
+function FUNCmaintValidateOrigFiles() {
   local lbTrash=false;
   if [[ "${1-}" == "--clean" ]];then
     lbTrash=true;
@@ -239,7 +247,7 @@ function FUNCvalidateOrigFiles() {
   return 0
 }
 
-function FUNCnewFiles() {
+function FUNCmaintNewFiles() {
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -264,7 +272,7 @@ function FUNCnewFiles() {
   return 0
 }
 
-function FUNCcompletedFiles() {
+function FUNCmaintCompletedFiles() {
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -291,7 +299,13 @@ function FUNCcompletedFiles() {
   return 0
 }
 
-# Main code ######################################################################################
+##################################################################################################
+##################################################################################################
+##################################################################################################
+### Main code ####################################################################################
+##################################################################################################
+##################################################################################################
+##################################################################################################
 
 if $bFindWorks;then
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
@@ -326,20 +340,26 @@ if $bFindWorks;then
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
-  if FUNCcompletedFiles && [[ "`echoc -S "trash all the OLD files above (keeps the completed ones)? type 'YES'"`" == "YES" ]];then
-    FUNCcompletedFiles --trash
+  if FUNCmaintCompletedFiles && [[ "`echoc -S "trash all the OLD files above (keeps the completed ones)? type 'YES'"`" == "YES" ]];then
+    FUNCmaintCompletedFiles --trash
   fi
   
-  if FUNCvalidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
-    FUNCvalidateOrigFiles --clean
+  if FUNCmaintValidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
+    FUNCmaintValidateOrigFiles --clean
   fi
   
-  if FUNCworkFolders && [[ "`echoc -S "trash all temp folders above? type 'YES'"`" == "YES" ]];then
-    FUNCworkFolders --trash
+  if FUNCmaintWorkFolders && [[ "`echoc -S "trash all temp folders above? type 'YES'"`" == "YES" ]];then
+    FUNCmaintWorkFolders --trash
   fi
   
-  if FUNCnewFiles && [[ "`echoc -S "trash all newly enconded files above (to let'em be recreated)? type 'YES'"`" == "YES" ]];then
-    FUNCnewFiles --trash
+  if FUNCmaintNewFiles && [[ "`echoc -S "trash all newly enconded files above (to let'em be recreated)? type 'YES'"`" == "YES" ]];then
+    FUNCmaintNewFiles --trash
+  fi
+
+  SECFUNCarrayShow -v CFGastrFailedList
+  if [[ "`echoc -S "clear failed works list? type 'YES'"`" == "YES" ]];then
+    CFGastrFailedList=()
+    SECFUNCcfgWriteVar CFGastrFailedList
   fi
   
   exit 0
@@ -355,26 +375,34 @@ elif $bWorkWith;then
   
   strFileAbs="$strWorkWith"
 elif $bContinue;then
+  #~ astrFinalWorkListPrevious=()
   while true;do
     SECFUNCcfgReadDB
     echoc --info " Continue @s@{By}Loop@S: "
     #SECFUNCarrayShow -v CFGastrFileList
     if((`SECFUNCarraySize CFGastrFileList`==0));then echoc -w -t $CFGnDefQSleep "Waiting new job requests";continue;fi #break;fi
     
-    astrFinalWorkList=()
+    #~ astrFinalWorkList=()
     
+    SECFUNCarrayShow -v CFGastrFileList
     : ${bWorkWithSmallerFilesFirst:=true}
     export bWorkWithSmallerFilesFirst #help will acomplish more works faster this way than by name sorting
+    astrLsCmd=(ls -1)
     if $bWorkWithSmallerFilesFirst;then
-      IFS=$'\n' read -d '' -r -a astrSmallFirstFileList < <(ls -1Sr "${CFGastrFileList[@]}")&&:
-      astrFinalWorkList=( "${astrSmallFirstFileList[@]}" )
-      echoc --info "Smaller first:"
-    else
-      astrFinalWorkList=( "${CFGastrFileList[@]}" )
+      astrLsCmd+=(-S -r)
+      #~ IFS=$'\n' read -d '' -r -a astrSmallFirstFileList < <(ls -1Sr "${CFGastrFileList[@]}"&&:)&&: #this also cleans missing files from the list
+      #~ astrFinalWorkList=( "${astrSmallFirstFileList[@]}" )
+      echoc --info "Smallers first!"
+    #~ else
+      #~ astrFinalWorkList=( "${CFGastrFileList[@]}" )
+      #~ IFS=$'\n' read -d '' -r -a astrFinalWorkList < <(ls -1 "${CFGastrFileList[@]}"&&:)&&: #this also cleans missing files from the list
     fi
+    IFS=$'\n' read -d '' -r -a astrFinalWorkList < <("${astrLsCmd[@]}" "${CFGastrFileList[@]}"&&:)&&: #this also cleans missing files from the list
     SECFUNCarrayShow -v astrFinalWorkList
+    SECFUNCarrayShow -v CFGastrFailedList
     
     nCompletedCount=0
+    nIgnoredCount=0
     for strFileAbs in "${astrFinalWorkList[@]}";do
       SECFUNCcfgReadDB
       
@@ -388,6 +416,12 @@ elif $bContinue;then
       
       if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
         echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
+        continue;
+      fi
+      
+      if SECFUNCarrayContains CFGastrFailedList "$strFileAbs";then
+        echo "!!!FAILED(skipping): $strFileAbs" >&2
+        ((nIgnoredCount++))&&:
         continue;
       fi
       
@@ -405,10 +439,20 @@ elif $bContinue;then
       FUNCworkWith "$strFileAbs"&&:
       SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
     done
-    if((nCompletedCount==${#astrFinalWorkList[@]}));then
+    if(( (nCompletedCount+nIgnoredCount) == ${#astrFinalWorkList[@]} ));then
       SECFUNCarrayShow CFGastrFileList
       echoc --info "All the above works completed!"
-      FUNCworkWith "${CFGastrFileList[0]}"&&: # just to let the interactive mode kick in #TODO RANDOM?
+      
+      if SECFUNCarrayCheck -n CFGastrFailedList;then
+        SECFUNCarrayShow CFGastrFailedList
+        echoc -p "Unable to work with the above files!"
+      fi
+      
+      echoc -w -t 3600 "sleeping..."
+      
+      # just to let the interactive mode kick in
+      SECFUNCcfgWriteVar -r CFGstrContinueWith=""
+      FUNCworkWith "${astrFinalWorkList[0]}"&&: #TODO RANDOM file?
     fi
   done
   
@@ -607,15 +651,33 @@ function FUNCflSizeBytes() { # in bytes
 }
 
 function FUNCflDurationMillis() {
-  if SECFUNCarrayContains astrVidExtList "`SECFUNCfileSuffix "$1"`";then
-    mediainfo -f "$1" |egrep "Duration .*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"
+  local lstrFl="$1";shift
+  local lstrExt="`SECFUNCfileSuffix "$lstrFl"`"
+  local -i lnDur=0 #TODO -1 as an indicator of failure despite 0 is already..
+  if SECFUNCarrayContains astrVidExtList "$lstrExt";then
+    lnDur="`mediainfo -f "$lstrFl" |egrep "Duration .*: [[:digit:]]*$" |head -n 1 |grep -o "[[:digit:]]*"`"
   else
-    echo "0" #TODO -1 as an indicator?
+    SECFUNCarrayShow -v astrVidExtList >&2
+    SEC_WARN=true SECFUNCechoWarnA "lstrExt='$lstrExt' not supported yet, lstrFl='$lstrFl'"
   fi
-  return 0
+  
+  echo "$lnDur"
+  if((lnDur>0));then return 0;fi
+  
+  SECFUNCechoErrA "invalid lnDur='$lnDur' for lstrFl='$lstrFl'"
+  exit 1
 }
 function FUNCflDurationSec() {
-  echo $((`FUNCflDurationMillis "$1"`/1000))&&:
+  local lstrFl="$1";shift
+  local -i lnDurMill="`FUNCflDurationMillis "$lstrFl"`"
+  local -i lnDuration=$((lnDurMill/1000))&&:
+  #echo $((`FUNCflDurationMillis "$1"`/1000))&&:
+  if((lnDuration<=0));then
+     SECFUNCechoErrA "lnDuration=0 for lstrFl='$lstrFl' (lnDurMill='$lnDurMill')" #TODO less than 1s is not an error/problem tho...
+    exit 1
+  fi
+  
+  echo "$lnDuration"
   return 0
 }
 
@@ -777,7 +839,7 @@ function FUNCfinalMenuChk() {
           echo
         done
 
-        FUNCworkFolders
+        FUNCmaintWorkFolders
         ;;
       p)
         SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
@@ -872,6 +934,7 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   
   if((nTotKeyFrames<2));then
     echoc -p "unable to properly split strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
+    FUNCflAddFailedToDB "$strFileAbs"
     exit 1
   fi
   
