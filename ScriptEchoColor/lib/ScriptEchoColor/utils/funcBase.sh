@@ -684,7 +684,9 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
   local bVerboseEchoRequested=false;
   local lnTimeout=0
   local lstrComment=""
+  local lastrParms=("$@")
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
+    #echo "DBG: $1" >&2
 		SECFUNCsingleLetterOptionsA;
 		if [[ "$1" == "--help" ]];then #SECFUNCexec_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
@@ -763,7 +765,7 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 		elif [[ "$1" == "--envvarset" || "$1" == "-v" ]];then #SECFUNCexec_help will basically prepend the command with `declare -g`
 			lbEnvVar=true;
 		else
-			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option $1"
+			SECFUNCechoErrA "lstrCaller=${lstrCaller}: invalid option '$1' (`declare -p lastrParms`)"
 			return 1
 		fi
 		shift
@@ -1179,6 +1181,14 @@ function SECFUNCexec() { #help prefer using SECFUNCexecA\n\t[command] [command p
 	
   return $lnSECFUNCexecReturnValue
 }
+
+#~ function SECFUNCexecIfVerbose() { #help mainly to provide conditional echo
+  #~ if $SECbExecVerboseEchoAllowed;then
+    #~ SECFUNCexecA -m "VerboseMode" -ce "$@"&&:
+    #~ return $?
+  #~ fi
+  #~ return 0
+#~ }
 
 function SECFUNCexecShowElapsed() { #help 
 	SECFUNCexec --elapsed "$@"
