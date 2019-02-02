@@ -103,6 +103,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+: ${bWriteCfgVars:=true} #help false to speedup if writing them is unnecessary
 : ${strEnvVarUserCanModify:="test"}
 export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
 export strEnvVarUserCanModify2 #help test
@@ -144,7 +145,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
-SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 
 # Main code
 if SECFUNCarrayCheck -n astrRemainingParams;then :;fi

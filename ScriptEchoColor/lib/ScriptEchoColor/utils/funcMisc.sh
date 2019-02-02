@@ -1137,9 +1137,9 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 			if $lbShowAll;then
         if SECFUNCarrayCheck "$lstrCfgVarId";then
           declare -n lstrCfgVarRef="$lstrCfgVarId"
-          echo "Array $lstrCfgVarId size ${#lstrCfgVarRef[*]}" >&2
+          echo "Array $lstrCfgVarId size ${#lstrCfgVarRef[*]} #SECCFG" >&2
         else
-          declare -p "$lstrCfgVarId" >&2
+          echo "`declare -p "$lstrCfgVarId"` #SECCFG" >&2
         fi
         #~ declare -n lstrCfgVarRef="$lstrCfgVarId"
         #~ if [[ -n "${lstrCfgVarRef[@]-}" ]] && ((${#lstrCfgVarRef[@]}>1));then
@@ -1402,6 +1402,7 @@ function SECFUNCternary() { #help <boolValue|conditional command ...> [ ? <acmdT
 	local lastrAllParams=("${@-}") # this may be useful
   local lstrEchoTrue="ON"
   local lstrEchoFalse="OFF"
+  local lbVerbose=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCternary_help show this help
@@ -1409,14 +1410,16 @@ function SECFUNCternary() { #help <boolValue|conditional command ...> [ ? <acmdT
 			SECFUNCdbgFuncOutA;return 0
     elif [[ "$1" == "-o" || "$1" == "--onoff" ]];then #SECFUNCternary_help simple echo ON or OFF
       lbEchoTrueFalse=true
-    elif [[ "$1" == "-e" || "$1" == "--echotf" ]];then #SECFUNCternary_help <lstrEchoTrue> <lstrEchoFalse>
+    elif [[ "$1" == "-e" || "$1" == "--echotf" ]];then #SECFUNCternary_help you can specify the echo <lstrEchoTrue> <lstrEchoFalse>
       shift;lstrEchoTrue="${1}"
       shift;lstrEchoFalse="${1}"
       lbEchoTrueFalse=true
-    elif [[ "$1" == "--tf" ]];then #SECFUNCternary_help
+    elif [[ "$1" == "--tf" ]];then #SECFUNCternary_help will echo "true" or "false"
       lstrEchoTrue="true"
       lstrEchoFalse="false"
       lbEchoTrueFalse=true
+    elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #SECFUNCternary_help
+      lbVerbose=true;
 		elif [[ "$1" == "--" ]];then #SECFUNCternary_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -1462,7 +1465,9 @@ function SECFUNCternary() { #help <boolValue|conditional command ...> [ ? <acmdT
     "${lacmdTrue[@]}"
   else
     if [[ "${lacmdCond[0]}" != "false" ]];then
-      echo "DBG:$FUNCNAME: ${lacmdCond[@]} ? ${lacmdTrue[@]} : ${lacmdFalse[@]}" >&2 #TODO the error may be due to 'command not found' but that may also be the user choice! anyway show some log to help #TODO show this only in verbose mode?
+      if $lbVerbose;then
+        echo "DBG:$FUNCNAME: ${lacmdCond[@]} ? ${lacmdTrue[@]} : ${lacmdFalse[@]}" >&2 #TODO the error may be due to 'command not found' but that may also be the user choice! anyway show some log to help #TODO show this only in verbose mode?
+      fi
     fi
     "${lacmdFalse[@]}"
   fi

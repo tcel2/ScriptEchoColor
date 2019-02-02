@@ -44,17 +44,20 @@ export CFGnPartSeconds #help when splitting, parts will have around this length
 export nSlowQSleep #help every question will wait this seconds
 CFGnDefQSleep=$nSlowQSleep
 
+: ${bWriteCfgVars:=true} #help false to speedup if writing them is unnecessary
+: ${bMaintCompletedMode:=false} #help
+
 CFGstrKeepOriginalTag="KEEP_ORIGINAL"
 bUseCPUlimit=true
 astrVidExtList=(mp4 3gp flv avi mov mpeg)
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
-bContinue=false
+bDaemonContinueMode=false
 CFGstrTest="Test"
 astrRemainingParams=()
 CFGastrTmpWorkPathList=()
-CFGastrFileList=()
-CFGastrFailedList=()
+CFGastrFileList=();export CFGastrFileList
+CFGastrFailedList=();export CFGastrFailedList
 astrAllParams=("${@-}") # this may be useful
 sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
@@ -75,9 +78,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "-a" || "$1" == "--add" ]];then #help ~single add one or more files
 		bAddFiles=true
 	elif [[ "$1" == "-c" || "$1" == "--continue" ]];then #help ~daemon resume work list
-		bContinue=true
+		bDaemonContinueMode=true
 	elif [[ "$1" == "-C" || "$1" == "--Continue" ]];then #help ~daemon like --continue but will clear the last work reference and start from the first on the list
-		bContinue=true
+		bDaemonContinueMode=true
     SECFUNCcfgWriteVar -r CFGstrContinueWith=""
 	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help ~single <strWorkWith> process a single file
 		shift
@@ -109,7 +112,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
-SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 
 function FUNCflFinal() { #help <lstrFl>
   local lstrFl="$1"
@@ -172,7 +175,7 @@ function FUNCworkWith() {
     return 1
   fi
   return 0
-}
+};export -f FUNCworkWith
 
 function FUNCmaintWorkFolders() {
   local lbTrash=false;
@@ -310,7 +313,8 @@ function FUNCmaintCompletedFiles() {
 ##################################################################################################
 ##################################################################################################
 
-if $bFindWorks;then
+function MAIN() { :; } #source editor tag trick
+if $bFindWorks;then 
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
   IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
   SECFUNCexecA -ce SECFUNCarrayShow -v astrFileList
@@ -341,23 +345,92 @@ if $bFindWorks;then
   fi
   exit 0
 elif $bCompletedMaintenanceMode;then
-  astrMaintListDiag=()
-  echoc --info "Preparing List"
-  for nIndex in "${!CFGastrFileList[@]}";do # grant nothing is missing
-    echo -en "."
-    strFl="${CFGastrFileList[nIndex]}"
-    strFlC="`FUNCflFinal "$strFl"`"
-    if [[ -f "$strFlC" ]];then
-      astrMaintListDiag+=(false "$nIndex" "`basename "$strFlC"`" "$strFlC");
-    fi
+  declare -i nSelectedIndex=-1
+  while true;do
+    astrMaintListDiag=()
+    echoc --info "Preparing List"
+    SECFUNCcfgReadDB
+    bSelOk=false
+    for nIndex in "${!CFGastrFileList[@]}";do
+      echo -en "."
+      strFl="${CFGastrFileList[nIndex]}"
+      strFlC="`FUNCflFinal "$strFl"`"
+      if [[ -f "$strFlC" ]];then
+        if((nSelectedIndex==-1));then nSelectedIndex=$nIndex;fi
+        bSel=false;if ! $bSelOk && ((nIndex>=nSelectedIndex));then bSel=true;bSelOk=true;fi
+#        astrMaintListDiag+=("`SECFUNCternary --tf test $nIndex = $nSelectedIndex`" "$nIndex" "`basename "$strFlC"`" "$strFlC");
+        astrMaintListDiag+=(
+          #~ "`SECFUNCternary --tf $bSel`" 
+          "$nIndex" 
+          "`basename "$strFlC"`" 
+          "$strFlC");
+      fi
+    done
+    
+    function FUNCCMMmain() {
+      local lnSelectedIndex="$1" # yad list index column
+      
+      SECFUNCarraysRestore #source <(secinit) #to restore arrays
+      echo "(${FUNCNAME[@]}) params: `SECFUNCparamsToEval "$@"`" >&2
+      local lstrFlSel="${CFGastrFileList[$lnSelectedIndex]}"
+      declare -p lnSelectedIndex lstrFlSel >&2
+      if [[ -f "$lstrFlSel" ]];then
+        bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false \
+          SECFUNCexecA -ce secTerm.sh --focus -- -e \
+            "$SECstrScriptSelfName" --onlyworkwith "$lstrFlSel"
+      else
+        SECFUNCechoErrA "file not found lstrFlSel='$lstrFlSel'"
+      fi
+      
+      #~ local lstrFl="$4"
+      #~ function FUNCCMMplay() {
+        #~ SECFUNCexecA -ce smplayer -ontop "$1"
+      #~ }
+      #~ astrYadCmdFl=(
+        #~ yad
+        #~ --on-top
+        #~ --form 
+        #~ --center 
+        #~ --field="FILE: $lstrFl"
+        #~ --field="play Final file!!:FBTN"
+        #~ "bash -c FUNCCMMplay"
+        #~ "smplayer -ontop '$lstrFl'"
+      #~ )
+      #~ "${astrYadCmdFl[@]}"
+    };export -f FUNCCMMmain
+    
+    astrYadCmd=(
+      yad 
+      --button="gtk-close:1" 
+      --button="RefreshList:2"
+      --maximized 
+      --center 
+      --no-markup 
+      --title="$(basename $0) maintain completed jobs" 
+      --list 
+      #~ --radiolist 
+      --dclick-action="bash -c 'FUNCCMMmain %s'"
+      #~ --column="@" 
+      --column "Index" --column "basename" --column "full path" 
+      "${astrMaintListDiag[@]}"
+    )
+    SECFUNCarraysExport
+    SECFUNCexecA -ce "${astrYadCmd[@]}"&&:;nRet=$?;declare -p nRet
+    if((nRet!=2));then exit 0;fi
+    #~ strSel="`SECFUNCexecA -ce "${astrYadCmd[@]}"`"&&:
+    #~ if [[ -n "$strSel" ]];then
+      #~ strSelIndex="`echo "$strSel" |cut -d '|' -f 2`";
+      #~ if SECFUNCisNumber -dn "$strSelIndex";then
+        #~ nSelectedIndex="$strSelIndex"
+        #~ strFlSel="${CFGastrFileList[$nSelectedIndex]}"
+        #~ strFlSelFinal="`FUNCflFinal "${CFGastrFileList[$nSelectedIndex]}"`"
+        #~ declare -p strSel nSelectedIndex strFlSel strFlSelFinal >&2
+        #~ FUNCworkWith "$strFlSel"
+      #~ fi
+    #~ fi
+    #~ echoc -p "WIP"
   done
-  strSel="$(yad --maximized --center --no-markup --title="$(basename $0) maintain completed jobs" --list --radiolist --column="@" --column "Index" --column "basename" --column "full path" "${astrMaintListDiag[@]}")"&&:
-  nSelectedIndex="`echo "$strSel" |cut -d '|' -f 2`";
-  strFlSel="${CFGastrFileList[$nSelectedIndex]}"
-  strFlSelFinal="`FUNCflFinal "${CFGastrFileList[$nSelectedIndex]}"`"
-  declare -p strSel nSelectedIndex strFlSel strFlSelFinal >&2
-  echoc -p "WIP"
-  exit 0
+  exit 0 #~single
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
@@ -395,7 +468,7 @@ elif $bWorkWith;then
   fi
   
   strFileAbs="$strWorkWith"
-elif $bContinue;then
+elif $bDaemonContinueMode;then
   #~ astrFinalWorkListPrevious=()
   while true;do
     SECFUNCcfgReadDB
@@ -715,6 +788,16 @@ function FUNCrecreateRaw() {
 }
 
 function FUNCrecreate() {
+  #~ local lstrFl="${1-}"
+  
+  #~ local lstrFlFinal
+  #~ if [[ -n "$lstrFl" ]];then
+    #~ lstrFlFinal="`FUNCflFinal "$strFl"`"
+  #~ else #default
+    #~ lstrFl="$strFileAbs"
+    #~ lstrFlFinal="$strOrigPath/$strFinalFileBN"
+  #~ fi
+  #~ FUNCrecreateRaw FUNCavconvConv --io "$lstrFl" "$lstrFlFinal"
   if [[ -n "${1-}" ]];then       
     SECFUNCechoErrA "use FUNCrecreateRaw instead: $*"
     _SECFUNCcriticalForceExit
@@ -792,34 +875,56 @@ function FUNCfinalMenuChk() {
     astrOpt=(
       "apply patrol _cycle `SECFUNCternary -e "(@s@yALREADY DID@S) " "" $lbIsGifCycle`reverse gif effect on original file? #gif"
       "_diff old from new media info? #ready"
-      "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep}"
-      "_list all probably useful details?"
+      "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep} #timeout"
+      "_list all files with (probably) useful details?"
+      "play the _old file?"
       "_play the new file? #ready"
       "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
       "_s `SECFUNCternary -e "skip this @s@{yn}COMPLETED@S file for now?" "continue working on current file now?" $lbReady`"
       "_trash tmp and original video files?"
       "_use cpulimit (`SECFUNCternary --onoff $bUseCPUlimit`)?"
       "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
-      "set a new video to _work with?"
+      "set a new video to _work with? #daemon"
     )
     #############
     ### removed option keys will be ignored and `echoc -Q` will just return 0 for them and any other non set keys
     #############
     if ! $lbReady;then
-      SECFUNCarrayClean astrOpt ".*[#]ready$"
+      SECFUNCarrayClean astrOpt ".*[#]ready.*"
     fi
+    
     if [[ "$strSuffix" != "gif" ]];then
-      SECFUNCarrayClean astrOpt ".*[#]gif$"
+      SECFUNCarrayClean astrOpt ".*[#]gif.*"
     fi
-    echoc -t $CFGnDefQSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
+    
+    if $bMaintCompletedMode;then 
+      SECFUNCarrayClean astrOpt ".*[#]daemon.*"
+    fi
+    
+    astrEchocCmd=(echoc)
+    : ${bMenuTimeout:=true};export bMenuTimeout #help
+    if $bMenuTimeout;then 
+      astrEchocCmd+=(-t $CFGnDefQSleep);
+    else
+      SECFUNCarrayClean astrOpt ".*[#]timeout.*"
+    fi
+    
+    "${astrEchocCmd[@]}" -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
       c)
         local lstrFlNewCycleGif="${strFileAbs%.${strSuffix}}${lstrGifCycleSuffix}"
-        SECFUNCCcpulimit -r "convert" -l $CFGnCPUPerc
+        #~ SECFUNCCcpulimit -r "convert" -l $CFGnCPUPerc
         if SECFUNCexecA -ce convert "$strFileAbs" -coalesce -duplicate 1,-2-1 -verbose -layers OptimizePlus -loop 0 "$lstrFlNewCycleGif";then
           FUNCflAddToDB "$lstrFlNewCycleGif"
           FUNCflCleanFromDB "$strFileAbs"
           SECFUNCtrash "$strFileAbs" "$strOrigPath/$strFinalFileBN"&&:
           SECFUNCcfgWriteVar -r CFGstrPriorityWork="$lstrFlNewCycleGif"
+          if $bMaintCompletedMode;then 
+            SECFUNCuniqueLock --release # safe as will exit right after
+            FUNCworkWith "$lstrFlNewCycleGif"
+          fi
+          #~ if $bDaemonContinueMode;then 
+            #~ exit 0 #continue daemon mode
+          #~ fi
           exit 0
         fi
         ;;
@@ -862,8 +967,11 @@ function FUNCfinalMenuChk() {
 
         FUNCmaintWorkFolders
         ;;
+      o)
+        SECFUNCexecA -ce smplayer -ontop "$strFileAbs"&&:
+        ;;
       p)
-        SECFUNCexecA -ce smplayer "$strOrigPath/$strFinalFileBN"&&:
+        SECFUNCexecA -ce smplayer -ontop "$strOrigPath/$strFinalFileBN"&&:
         ;;
       r)
         if ! FUNCrecreateExtChk;then
@@ -882,6 +990,9 @@ function FUNCfinalMenuChk() {
         SECFUNCtrash "$strFileAbs"&&:
         
         FUNCflCleanFromDB "$strFileAbs"
+        
+        if ! $bMenuTimeout;then echoc -w "waiting you review the trashing's log";fi
+        
         exit 0 # to work with the next one
         ;;
       u)

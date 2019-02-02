@@ -32,6 +32,7 @@ source <(secinit)
 #~ SECFUNCshowHelp --colorize "\t\tCan be used as \`source <(secTerm.sh --getcmd)\`"
 #~ SECFUNCshowHelp --colorize "\t\t\`declare -p SECastrFullTermCmd\`"
 
+: ${bWriteCfgVars:=true} #help false to speedup if writing them is unnecessary
 bJustOutput=false
 bDisown=false
 : ${strEnvVarUserCanModify:="test"}
@@ -40,6 +41,8 @@ export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bExample=false
 CFGstrTest="Test"
+bRaise=false
+bOnTop=false
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
@@ -53,6 +56,10 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
   elif [[ "$1" == "--getcmd" ]];then #help if used as first option it will just output the full command and exit. Can be used as ex.:\n\t\tsource <(secTerm.sh --getcmd -- -e sleep 10).\n\t\tdeclare -p SECastrFullTermCmd.\n\t\t"${SECastrFullTermCmd[@]}"
     bJustOutput=true
+  elif [[ "$1" == "--ontop" ]];then #help 
+    bOnTop=true
+  elif [[ "$1" == "--focus" ]];then #help activate/focus/raise
+    bRaise=true
   elif [[ "$1" == "--disown" ]];then #help 
     bDisown=true
 	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
@@ -80,7 +87,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	shift&&:
 done
 # IMPORTANT validate CFG vars here before writing them all...
-SECFUNCcfgAutoWriteAllVars #this will also show all config vars
+if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 
 # Main code
 astrXTermParms=( "${astrRemainingParams[@]}" )
@@ -106,16 +113,17 @@ SECastrFullTermCmd=()
   #~ fi
 #~ };export -f FUNCrun238746478
 
+strConcatParms="${astrXTermParms[@]-}"
+strTitle="SECTerm_`SECFUNCfixId --justfix -- "$strConcatParms"`"
 if which mrxvt >/dev/null 2>&1;then
   # mrxvt chosen because of: 
   #  low memory usage; 
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  strConcatParms="${astrXTermParms[@]-}"
   SECastrFullTermCmd+=(mrxvt -sl 1000 -aht +showmenu) #max -sl is 65535
   if [[ -n "$strConcatParms" ]];then
-    SECastrFullTermCmd+=(-title "`SECFUNCfixId --justfix -- "$strConcatParms"`" "${astrXTermParms[@]}")
+    SECastrFullTermCmd+=(-title "$strTitle" "${astrXTermParms[@]}")
   fi
   #SECastrFullTermCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" bash -c "FUNCrun238746478")
 else
@@ -130,6 +138,8 @@ if $bJustOutput;then exit 0;fi
 ########### RUNS BELOW HERE ###########
 
 SECFUNCarraysExport #important for exported arrays before calling/reaching this script
+if $bOnTop;then SECFUNCCwindowOnTop "$strTitle";fi
+if $bRaise;then SECFUNCCwindowCmd --focus "$strTitle";fi
 if $bDisown;then
   ( "${SECastrFullTermCmd[@]}"&disown )&disown &&:
 else
