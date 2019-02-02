@@ -62,6 +62,7 @@ bWorkWith=false
 bTrashMode=false
 bAddFiles=false
 bFindWorks=false
+bCompletedMaintenanceMode=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -84,6 +85,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     bWorkWith=true
 	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos (will ignore videos in the final format and filenames containing CFGstrKeepOriginalTag)
     bFindWorks=true
+	elif [[ "$1" == "-m" || "$1" == "--maintcompl" ]];then #help ~single maintain completed works like finish&cleanup, play or cancel&trash WIP
+		bCompletedMaintenanceMode=true
 	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -336,6 +339,24 @@ if $bFindWorks;then
   else
     echoc --info "nothing new/usable found..."
   fi
+  exit 0
+elif $bCompletedMaintenanceMode;then
+  astrMaintListDiag=()
+  echoc --info "Preparing List"
+  for nIndex in "${!CFGastrFileList[@]}";do # grant nothing is missing
+    echo -en "."
+    strFl="${CFGastrFileList[nIndex]}"
+    strFlC="`FUNCflFinal "$strFl"`"
+    if [[ -f "$strFlC" ]];then
+      astrMaintListDiag+=(false "$nIndex" "`basename "$strFlC"`" "$strFlC");
+    fi
+  done
+  strSel="$(yad --maximized --center --no-markup --title="$(basename $0) maintain completed jobs" --list --radiolist --column="@" --column "Index" --column "basename" --column "full path" "${astrMaintListDiag[@]}")"&&:
+  nSelectedIndex="`echo "$strSel" |cut -d '|' -f 2`";
+  strFlSel="${CFGastrFileList[$nSelectedIndex]}"
+  strFlSelFinal="`FUNCflFinal "${CFGastrFileList[$nSelectedIndex]}"`"
+  declare -p strSel nSelectedIndex strFlSel strFlSelFinal >&2
+  echoc -p "WIP"
   exit 0
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run

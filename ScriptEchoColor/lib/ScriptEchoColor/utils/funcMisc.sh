@@ -1131,11 +1131,22 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
     if [[ ! -f "$SECcfgFileName" ]];then echo -n >>"$SECcfgFileName";fi
     SECFUNCfileLock "$SECcfgFileName"
-		for lstrCfgVar in "${lastrAllCfgVars[@]}";do
-      if [[ "$lstrCfgVar" == "CFGSECnVersionLastRun" ]] && ((CFGSECnVersionLastRun==0));then continue;fi # development version shall not be stored
-			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVar
+		for lstrCfgVarId in "${lastrAllCfgVars[@]}";do
+      if [[ "$lstrCfgVarId" == "CFGSECnVersionLastRun" ]] && ((CFGSECnVersionLastRun==0));then continue;fi # development version shall not be stored
+			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVarId
 			if $lbShowAll;then
-				echo "$lstrCfgVar='${!lstrCfgVar-}' #SECCFG" >&2
+        if SECFUNCarrayCheck "$lstrCfgVarId";then
+          declare -n lstrCfgVarRef="$lstrCfgVarId"
+          echo "Array $lstrCfgVarId size ${#lstrCfgVarRef[*]}" >&2
+        else
+          declare -p "$lstrCfgVarId" >&2
+        fi
+        #~ declare -n lstrCfgVarRef="$lstrCfgVarId"
+        #~ if [[ -n "${lstrCfgVarRef[@]-}" ]] && ((${#lstrCfgVarRef[@]}>1));then
+          #~ echo "$lstrCfgVarId='${#lstrCfgVarRef[@]}' #SECCFG" >&2
+        #~ else
+          #~ echo "$lstrCfgVarId='${lstrCfgVarRef-}' #SECCFG" >&2
+        #~ fi
 			fi
 		done
     SECFUNCfileLock --unlock "$SECcfgFileName"
