@@ -165,13 +165,22 @@ function FUNCstats() {
   local lstrRgx="$1";shift
   local lType="$1";shift
   local nTotSz=0;
-  IFS=$'\n' read -d '' -r -a anList < <( \
-    find ./ \
-      -type f \
-      -iregex ".*[.]\(${lstrRgx}\)" \
-      -not -iregex ".*\(${CFGstrTagKeepOriginal}\).*" \
-      -exec stat -c %s '{}' \; \
-  )&&:;
+  local lastrFindCmd=(
+    find ./ 
+    -type f 
+    -iregex ".*[.]\(${lstrRgx}\)" 
+    -not -iregex ".*\(${CFGstrTagKeepOriginal}\).*" 
+    -exec stat -c %s '{}' \; 
+  )
+  echo "DBG lastrFindCmd: `SECFUNCparamsToEval "${lastrFindCmd[@]}"`" >&2
+  IFS=$'\n' read -d '' -r -a anList < <("${lastrFindCmd[@]}")&&:;
+  #~ IFS=$'\n' read -d '' -r -a anList < <( \
+    #~ find ./ \
+      #~ -type f \
+      #~ -iregex ".*[.]\(${lstrRgx}\)" \
+      #~ -not -iregex ".*\(${CFGstrTagKeepOriginal}\).*" \
+      #~ -exec stat -c %s '{}' \; \
+  #~ )&&:;
   if SECFUNCarrayCheck -n anList;then
     for nSz in "${anList[@]}";do 
       ((nTotSz+=nSz))&&:;
@@ -195,9 +204,7 @@ fi
 #~ IFS=$'\n' read -d '' -r -a anList < <(find ./ -type f -iregex ".*[.]webp" -exec stat -c %s '{}' \;)&&:;
 #~ for nSz in "${anList[@]}";do ((nTotSzNew+=nSz))&&:;echo -n "." >&2;done;
 #~ echo "TotNew=${#anList[*]}  nTotSzNew.MB=`bc <<< "scale=2;$nTotSzNew/(1024*1024)"`"
-if ! FUNCstats "webp" "NewFormat";then
-  exit 1
-fi
+FUNCstats "webp" "NewFormat"&&:
 
 IFS=$'\n' read -d '' -r -a astrFileList < <( \
   find ./ \

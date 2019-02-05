@@ -201,6 +201,298 @@ function _FUNCrm_deprecated(){
   SECFUNCdbgFuncOutA;return 0;
 }
 
+: ${bDbgMode:=false};export bDbgMode #help
+function FUNCexecIfDbg() { if $bDbgMode;then local nLn=$1;shift;SECFUNCexecA -ce -m "Ln$nLn:ExecInDbgMode" "$@";fi; };alias FUNCexecIfDbgA='FUNCexecIfDbg $LINENO '
+
+function FUNCcheckFS() {
+  SECFUNCdbgFuncInA
+  
+  ################################################# Validations
+  if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
+    strTrashFolder="$strMountedFS"
+  else
+    strTrashFolder="$strMountedFS/.Trash-$UID/files/"
+  fi
+  SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
+  if ! echo "$strTrashFolder" |grep -qi "trash";then 
+    # minimal dumb :( safety check ...
+    SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
+    SECFUNCdbgFuncOutA;return 0 #continue;
+  fi
+#		ls -ld "$strTrashFolder"&&:
+  if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
+  strTrashFolder="`realpath -ezs "$strTrashFolder"`"
+  declare -p strTrashFolder
+
+  SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
+  
+  nFSTotalSizeMB="`df --block-size=1MiB --output=size . |tail -n 1 |awk '{print $1}'`"
+  nGoal5Perc=$((nFSTotalSizeMB/20)) # goal as 5% of FS total size
+  nThisFSAvailGoalMB=$nFSSizeAvailGoalMB
+  if $bRunOnce && $bAskedCustomGoal && [[ -n "$strFilterRegex" ]];then
+    echoc --info "Special condition: has filter, is run once, asked custom goal. Will keep the specified goal for these conditions"
+  else
+    if((nGoal5Perc<nThisFSAvailGoalMB));then
+      nThisFSAvailGoalMB=$nGoal5Perc
+      echoc --info "Using 5% goal"
+    fi
+  fi
+#			if [[ -z "$strFilterRegex" ]] && ! $bRunOnce && ((nGoal5Perc<nThisFSAvailGoalMB));then
+#			if((nGoal5Perc<nThisFSAvailGoalMB));then
+#				nThisFSAvailGoalMB=$nGoal5Perc
+#			fi
+  
+  nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
+  nAvailMB="`FUNCavailMB "$strTrashFolder"`"
+  echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+  if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
+  
+  ############################################## Remove files
+  if $bTest1 || ((${nAvailMB}<nThisFSAvailGoalMB));then
+#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
+#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
+  
+    if false;then # KEEP AS INFO!!! BAD.. will not consider the file trashing time...
+      IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+        find "./" -type f -printf '%T+\t%p\n' \
+          |sort \
+          |head -n $nFileCountPerStep)&&:
+    fi
+    
+    if false;then # KEEP AS INFO!!! BAD... too many files on the list, will fail cmd param size limit...
+      IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+        egrep "^DeletionDate=" -H ../info/*.trashinfo \
+          |sed -r 's"(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+          |sort \
+          |head -n $nFileCountPerStep)&&:
+    fi
+    
+    if false;then # KEEP AS INFO!!! Good and precise but too slow if there are too many files...
+      IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+        find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
+          |sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
+          |sort \
+          |head -n $nFileCountPerStep)&&:
+    fi
+    
+    ###########################################################################
+    ## It has to be `ls` because it sorts by datetime! TODO `find` cant do it too?
+    ## This will use the trashinfo file datetime as reference, probably 100% precise! 
+    ## `grep` is important to make it sure it will remove really trashed files by it's info that ends with '.trashinfo' !!!!!!!!
+    ## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
+    ##########################################################################
+    while true;do
+      astrFileTIList=()
+#          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"' |sort -u`)&&:
+      astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sort -u`)&&:;FUNCexecIfDbgA SECFUNCarrayShow astrHexaChars >&2
+      bAllOk=true
+      if((`SECFUNCarraySize astrHexaChars`>0));then
+        for strPHexa in "${astrHexaChars[@]}";do 
+          strHexa="0x${strPHexa#%}"
+          if((strHexa>=0x20 && strHexa<=0x7E));then 
+            :
+          else
+            SECFUNCdrawLine " $strPHexa "
+            pwd
+            IFS=$'\n' read -d '' -r -a astrFileTIListPart < <(egrep "$strPHexa" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
+            astrFileTIList+=( "${astrFileTIListPart[@]}" )
+            egrep "$strPHexa" ../info/*.trashinfo
+            bAllOk=false
+          fi;
+        done
+      fi
+      
+      if $bAllOk;then 
+        break;
+      else
+        #egrep "%.." ../info/*.trashinfo
+        echoc --alert --say "invalid trash file names"
+        #~ while ! echoc -t 600 -q "there are files with non supported names (by this script) on the trash! they have to be cleaned manually for now @s@g:@r(@S, try to remove them all now and retry normal work?";do #TODO inodes?
+          #~ echoc --alert --say "invalid trash file names"
+        #~ done
+        
+        SECFUNCarrayWork --uniq astrFileTIList
+        #~ SECFUNCarrayShow astrFileTIList "rm -vf " # as re-usable commands
+        function FUNCweirdRealNm() { basename "${strFileWeirdoTI%.trashinfo}"; }
+        for strFileWeirdoTI in "${astrFileTIList[@]}";do 
+          # report as re-usable commands
+          echo " rm -vf \"`pwd`/`printf %q "$strFileWeirdoTI"`\";";
+          echo " rm -vf \"`pwd`/`printf %q "$(FUNCweirdRealNm "$strFileWeirdoTI")"`\";";
+        done 
+        if echoc -t $nSleepDelay -q "the files above have non supported names (by this script) on the trash! they have to be cleaned manually for now @s@g:@r(@S, try to remove them all now and retry normal work?";then
+          #sedUrlDecoder='s % \\\\x g'
+          #IFS=$'\n' read -d '' -r -a astrList < <(egrep "%EF" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
+          declare -p astrFileTIList
+          for strFileWeirdoTI in "${astrFileTIList[@]}";do 
+            declare -p strFileWeirdoTI
+            strFileWeirdo="`FUNCweirdRealNm "$strFileWeirdoTI"`"
+            if SECFUNCexecA -ce ls -l "$strFileWeirdo" "$strFileWeirdoTI";then
+              if ! SECFUNCexecA -ce rm -i -vf "$strFileWeirdo";then
+                echoc -p "unable to remove: '$strFileWeirdo'"
+              fi
+              if ! SECFUNCexecA -ce rm -i -vf "$strFileWeirdoTI";then
+                echoc -p "unable to remove: '$strFileWeirdoTI'"
+              fi
+            fi
+          done
+          FUNCexecIfDbgA echo "IMPORTANT!!! will check again if all is ok after the allowed fix attempt" >&2
+        else
+          SECFUNCdbgFuncOutA;return 1
+        fi
+      fi
+    done
+    
+    #######################################################################################
+    ### The real filenames are based on entries that come from the '*.trashinfo' files. ###
+    #######################################################################################
+    sedStripDatetimeAndFilename='s"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"'
+    IFS=$'\n' read -d '' -r -a astrEntryList < <( \
+      ls -altr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
+        |egrep ".trashinfo$" \
+        |head -n $((nFileCountPerStep+1)) \
+        |sed -r -e "$sedStripDatetimeAndFilename" -e 's".trashinfo$""' )&&:
+  
+    if((`SECFUNCarraySize astrEntryList`>0));then #has files on trash to be deleted
+      FUNCexecIfDbgA echo "astrEntryList size = ${#astrEntryList[*]}" >&2
+      nRmCount=0
+      nRmSizeTotalB=0
+      nAvailSizeB4RmB=$((${nAvailMB}*n1MB))&&: # from M to B
+      # has date and filename
+      for strEntry in "${astrEntryList[@]}";do
+        strFileDT="`echo "$strEntry" |cut -f1`"
+        strFile="`echo "$strEntry" |cut -f2`"
+#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
+        
+        bSymlink=false
+        bDirectory=false
+        
+        bRmTrashInfo=true
+        strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"&&:
+        if [[ ! -f "$strRmTrashInfoFile" ]];then bRmTrashInfo=false;fi
+        
+        bRmFileOrPath=true
+        strRPExist="e" #only allow existing target
+        
+        if [[ "$strFile" == "." ]];then bRmFileOrPath=false;fi # there was a file "../info/..trashinfo", how it happened? IDK... but it would make this code remove the "Trash/files" folder itself in full :P
+        
+        if [[ -L "$strFile" ]];then  # symlinks are ok to be removed directly. SYMLINK TEST above/before all others IS MANDATORY to not consider it as a directory!
+          bSymlink=true;
+          strRPExist="m" #allow not existing target
+        fi 
+        
+        if ! $bSymlink;then
+          if [[ -d "$strFile" ]];then 
+            bDirectory=true;
+          elif [[ ! -f "$strFile" ]];then 
+            SECFUNCechoWarnA "Missing real file strFile='$strFile', just removing trashinfo for it."
+            bRmFileOrPath=false
+          fi 
+        fi
+        
+        nFileSizeB=0
+        nFileSizeMB=0
+        if $bRmFileOrPath;then
+          if $bDirectory;then
+            nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
+          else
+            nFileSizeB="`stat -c "%s" "./$strFile"`"
+          fi
+          nFileSizeMB=$((nFileSizeB/n1MB))&&:
+          ((nRmCount++))&&:
+        
+          strReport=""
+          strReport+="nRmCount='$nRmCount',"
+          strReport+="strFile='$strFile',"
+          strReport+="nFileSizeB='$nFileSizeB',"
+          strReport+="strFileDT='$strFileDT',"
+          strReport+="AvailMB='`FUNCavailMB "$strTrashFolder"`'," #avail after each rm
+          strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
+          echo "$strReport" >&2
+        fi
+      
+        if ! $bDummyRun;then
+          
+          ################ file/path
+          if $bRmFileOrPath;then
+            if ! strWorkFile="`realpath -${strRPExist}zs "$strTrashFolder/$strFile"`";then
+              SECFUNCechoWarnA "what happened? strTrashFolder='$strTrashFolder' strFile='$strFile' strWorkFile='$strWorkFile'" 
+            fi
+            strRmOpt="-vf"
+            
+            if $bSymlink;then
+#                  strWorkFile="`realpath -z --strip "$strTrashFolder/$strFile"`"
+              echo "Removing symlink: '$strWorkFile'"
+            else
+#                  strWorkFile="`readlink -en "$strWorkFile"`" # canonical for normal file/path, just to make it double sure...
+            
+              # CHMOD only real files and paths and NOT to where symlinks are pointing!
+              if $bDirectory;then
+                if ! SECFUNCexecA -ce chmod -Rc +w "$strWorkFile/";then
+                  SECFUNCechoWarnA "failed to chmod at dir strWorkFile='$strWorkFile'"
+                fi
+                
+                strRmOpt+="r"
+              else
+                if ! SECFUNCexecA -ce chmod -c +w "$strWorkFile";then
+                  SECFUNCechoWarnA "failed to chmod at strWorkFile='$strWorkFile'"
+                fi
+              fi
+            fi
+            
+            if ! SECFUNCexecA -ce rm $strRmOpt --one-file-system --preserve-root "$strWorkFile" >"$strRmLogTmp" 2>&1;then #################### FILE/PATH REMOVAL
+              SECFUNCechoWarnA "failed to rm strWorkFile='$strWorkFile'"
+            fi
+            cat "$strRmLogTmp" |tee -a "$strRmLog" # using tee directly on the command will not return the command exit value...
+            
+            ########### CRITICAL DOUBLE CHECK. 
+            ### Despite all checks already performed, make it sure nothing wrong was removed! 
+            ### But... this is quite useless tho...
+            ### it is mainly to make it sure the script isnt broken...
+            ### but the related file(s) will already be lost...
+            ### TODO may be, find a way to restore the removed files, using inodes?
+            ###########
+            strTrashFolderRP="`realpath -ezs "/$strTrashFolder/"`"
+            strTrashFolderRPRegex="`echo "$strTrashFolderRP" |sed -r -e "s@[(]@\\\(@g" -e "s@[)]@\\\)@g"`"
+            strCriticalCheckRmLog="[\"']$strTrashFolderRPRegex" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
+            #echo test >>"$strRmLogTmp"
+            strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
+            if [[ -n "$strWrong" ]];then
+              echoc --say "sec trash cleaner error"
+              echoc -p "below should not have happened..."
+              declare -p strWrong
+              _SECFUNCcriticalForceExit
+            fi
+          fi
+          
+          ################ trashinfo ##################################################################
+          if $bRmTrashInfo;then rm -vf "$strRmTrashInfoFile"&&:;fi ############### TRASH INFO REMOVAL #
+        fi
+      
+        ((nRmSizeTotalB+=nFileSizeB))&&:
+    
+        if $bTest1;then break;fi # to work at only with one file
+        # FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nThisFSAvailGoalMB));then
+        if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nThisFSAvailGoalMB*n1MB) ));then
+          break;
+        fi
+      done
+    else
+      echoc --info "trash is empty"
+      
+      if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
+        parmSay=""
+        if(( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
+          parmSay="--say"
+          nAlertSpeechLastTime=$SECONDS
+        fi
+        echoc -p $parmSay "unable to free disk space!"&&:
+      fi
+    fi
+  fi
+  
+  SECFUNCdbgFuncOutA;return 0
+};export -f FUNCcheckFS
+
 strRmLog="$SECstrUserScriptCfgPath/rm.log"
 mv -vf "${strRmLog}.2" "${strRmLog}.3"&&: # these are to keep logs for old runs but not eternally.
 mv -vf "${strRmLog}.1" "${strRmLog}.2"&&:
@@ -218,272 +510,7 @@ while true;do
 			if ! [[ "$strMountedFS" =~ $strFilterRegex ]];then continue;fi
 		fi
 		
-		function FUNCcheckFS() {
-      SECFUNCdbgFuncInA
-      
-			# Validations
-			if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
-				strTrashFolder="$strMountedFS"
-			else
-				strTrashFolder="$strMountedFS/.Trash-$UID/files/"
-			fi
-			SECFUNCdrawLine --left "=== Check: '$strTrashFolder' " "="
-			if ! echo "$strTrashFolder" |grep -qi "trash";then 
-				# minimal dumb :( safety check ...
-				SECFUNCechoWarnA "not a valid trash folder strTrashFolder='$strTrashFolder'"
-				SECFUNCdbgFuncOutA;return 0 #continue;
-			fi
-	#		ls -ld "$strTrashFolder"&&:
-			if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
-			strTrashFolder="`realpath -ezs "$strTrashFolder"`"
-      declare -p strTrashFolder
-		
-			SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
-			
-			nFSTotalSizeMB="`df --block-size=1MiB --output=size . |tail -n 1 |awk '{print $1}'`"
-			nGoal5Perc=$((nFSTotalSizeMB/20)) # goal as 5% of FS total size
-			nThisFSAvailGoalMB=$nFSSizeAvailGoalMB
-			if $bRunOnce && $bAskedCustomGoal && [[ -n "$strFilterRegex" ]];then
-				echoc --info "Special condition: has filter, is run once, asked custom goal. Will keep the specified goal for these conditions"
-			else
-				if((nGoal5Perc<nThisFSAvailGoalMB));then
-					nThisFSAvailGoalMB=$nGoal5Perc
-					echoc --info "Using 5% goal"
-				fi
-			fi
-#			if [[ -z "$strFilterRegex" ]] && ! $bRunOnce && ((nGoal5Perc<nThisFSAvailGoalMB));then
-#			if((nGoal5Perc<nThisFSAvailGoalMB));then
-#				nThisFSAvailGoalMB=$nGoal5Perc
-#			fi
-			
-			nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
-			nAvailMB="`FUNCavailMB "$strTrashFolder"`"
-			echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
-			if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
-			
-			# Remove files
-			if $bTest1 || ((${nAvailMB}<nThisFSAvailGoalMB));then
-	#			nTrashSizeMB="`du -sh ./ |cut -d'M' -f1`"
-	#			echoc --info "nTrashSizeMB='$nTrashSizeMB'"
-			
-				if false;then # BAD.. will not consider the file trashing time...
-					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-						find "./" -type f -printf '%T+\t%p\n' \
-							|sort \
-							|head -n $nFileCountPerStep)&&:
-				fi
-				if false;then # BAD... too many files on the list, will fail cmd param size limit...
-					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-						egrep "^DeletionDate=" -H ../info/*.trashinfo \
-							|sed -r 's"(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
-							|sort \
-							|head -n $nFileCountPerStep)&&:
-				fi
-				if false;then # Good and precise but too slow if there are too many files...
-					IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-						find "../info/" -iname "*.trashinfo" -exec egrep "^DeletionDate=" -H '{}' \; \
-							|sed -r 's"^[.][.]/info/(.*).trashinfo:DeletionDate=(.*)"\2\t\1"' \
-							|sort \
-							|head -n $nFileCountPerStep)&&:
-				fi
-				#####
-				## It has to be `ls` because it sorts by datetime! TODO `find` cant do it too?
-				## This will use the trashinfo file datetime as reference, probably 100% precise! 
-				## `grep` is important to make it sure it will remove really trashed files by it's info that ends with '.trashinfo' !!!!!!!!
-				## A token '&' is used to help on precisely parsing the `ls` output making it easier to be used with `sed`.
-				#####
-        while true;do
-          astrFileTIList=()
-#          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sed 's"%"0x"' |sort -u`)&&:
-          astrHexaChars=(`egrep -oh "%.." ../info/*.trashinfo |sort -u`)&&:
-          bAllOk=true
-          if((`SECFUNCarraySize astrHexaChars`>0));then
-            for strPHexa in "${astrHexaChars[@]}";do 
-              strHexa="0x${strPHexa#%}"
-              if((strHexa>=0x20 && strHexa<=0x7E));then 
-                :
-              else
-                SECFUNCdrawLine " $strPHexa "
-                pwd
-                IFS=$'\n' read -d '' -r -a astrFileTIListPart < <(egrep "$strPHexa" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
-                astrFileTIList+=( "${astrFileTIListPart[@]}" )
-                egrep "$strPHexa" ../info/*.trashinfo
-                bAllOk=false
-              fi;
-            done
-          fi
-          
-          if $bAllOk;then 
-            break;
-          else
-            declare -p astrFileTIList
-            #egrep "%.." ../info/*.trashinfo
-            while ! echoc -t 600 -q "there are files with non supported names (by this script) on the trash! they have to be cleaned manually for now @s@g:@r(@S, try to remove them all now and retry normal work?";do #TODO inodes?
-              echoc --alert --say "invalid trash file names"
-            done
-            #sedUrlDecoder='s % \\\\x g'
-            #IFS=$'\n' read -d '' -r -a astrList < <(egrep "%EF" ../info/*.trashinfo -c |grep -v :0 |sed -r 's"(.*):[[:digit:]]*$"\1"')&&:; 
-            declare -p astrFileTIList
-            for strFileWeirdoTI in "${astrFileTIList[@]}";do 
-              declare -p strFileWeirdoTI
-              strFileWeirdo="`basename "${strFileWeirdoTI%.trashinfo}"`"
-              if SECFUNCexecA -ce ls -l "$strFileWeirdo" "$strFileWeirdoTI";then
-                SECFUNCexecA -ce rm -vf "$strFileWeirdo" "$strFileWeirdoTI"
-              fi
-            done
-          fi
-        done
-        
-        #######################################################################################
-        ### The real filenames are based on entries that come from the '*.trashinfo' files. ###
-        #######################################################################################
-				sedStripDatetimeAndFilename='s"^[^&]*&([^[:blank:]]*)[[:blank:]]*(.*)"\1\t\2"'
-				IFS=$'\n' read -d '' -r -a astrEntryList < <( \
-					ls -altr --time-style='+&%Y%m%d+%H%M%S.%N' "../info/" \
-						|egrep ".trashinfo$" \
-						|head -n $((nFileCountPerStep+1)) \
-						|sed -r -e "$sedStripDatetimeAndFilename" -e 's".trashinfo$""' )&&:
-			
-				if((`SECFUNCarraySize astrEntryList`>0));then #has files on trash to be deleted
-					nRmCount=0
-					nRmSizeTotalB=0
-					nAvailSizeB4RmB=$((${nAvailMB}*n1MB))&&: # from M to B
-					# has date and filename
-					for strEntry in "${astrEntryList[@]}";do
-						strFileDT="`echo "$strEntry" |cut -f1`"
-						strFile="`echo "$strEntry" |cut -f2`"
-	#					echo "strEntry='$strEntry',strFileDT='$strFileDT',strFile='$strFile',"
-            
-            bSymlink=false
-						bDirectory=false
-            
-						bRmTrashInfo=true
-            strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"&&:
-            if [[ ! -f "$strRmTrashInfoFile" ]];then bRmTrashInfo=false;fi
-            
-						bRmFileOrPath=true
-            strRPExist="e" #only allow existing target
-            
-            if [[ "$strFile" == "." ]];then bRmFileOrPath=false;fi # there was a file "../info/..trashinfo", how it happened? IDK... but it would make this code remove the "Trash/files" folder itself in full :P
-            
-            if [[ -L "$strFile" ]];then  # symlinks are ok to be removed directly. SYMLINK TEST above/before all others IS MANDATORY to not consider it as a directory!
-              bSymlink=true;
-              strRPExist="m" #allow not existing target
-            fi 
-            
-            if ! $bSymlink;then
-              if [[ -d "$strFile" ]];then 
-                bDirectory=true;
-              elif [[ ! -f "$strFile" ]];then 
-                SECFUNCechoWarnA "Missing real file strFile='$strFile', just removing trashinfo for it."
-                bRmFileOrPath=false
-              fi 
-            fi
-            
-            nFileSizeB=0
-            nFileSizeMB=0
-            if $bRmFileOrPath;then
-              if $bDirectory;then
-                nFileSizeB="`du -bs "./$strFile/" |cut -f1`"
-              else
-                nFileSizeB="`stat -c "%s" "./$strFile"`"
-              fi
-              nFileSizeMB=$((nFileSizeB/n1MB))&&:
-              ((nRmCount++))&&:
-            
-              strReport=""
-              strReport+="nRmCount='$nRmCount',"
-              strReport+="strFile='$strFile',"
-              strReport+="nFileSizeB='$nFileSizeB',"
-              strReport+="strFileDT='$strFileDT',"
-              strReport+="AvailMB='`FUNCavailMB "$strTrashFolder"`'," #avail after each rm
-              strReport+="(prev)nRmSizeTotalB='$nRmSizeTotalB',"
-              echo "$strReport" >&2
-            fi
-					
-						if ! $bDummyRun;then
-              
-              ################ file/path
-              if $bRmFileOrPath;then
-                if ! strWorkFile="`realpath -${strRPExist}zs "$strTrashFolder/$strFile"`";then
-                  SECFUNCechoWarnA "what happened? strTrashFolder='$strTrashFolder' strFile='$strFile' strWorkFile='$strWorkFile'" 
-                fi
-                strRmOpt="-vf"
-                
-                if $bSymlink;then
-#                  strWorkFile="`realpath -z --strip "$strTrashFolder/$strFile"`"
-                  echo "Removing symlink: '$strWorkFile'"
-                else
-#                  strWorkFile="`readlink -en "$strWorkFile"`" # canonical for normal file/path, just to make it double sure...
-                
-                  # CHMOD only real files and paths and NOT to where symlinks are pointing!
-                  if $bDirectory;then
-                    if ! SECFUNCexecA -ce chmod -Rc +w "$strWorkFile/";then
-                      SECFUNCechoWarnA "failed to chmod at dir strWorkFile='$strWorkFile'"
-                    fi
-                    
-                    strRmOpt+="r"
-                  else
-                    if ! SECFUNCexecA -ce chmod -c +w "$strWorkFile";then
-                      SECFUNCechoWarnA "failed to chmod at strWorkFile='$strWorkFile'"
-                    fi
-                  fi
-                fi
-                
-                if ! SECFUNCexecA -ce rm $strRmOpt --one-file-system --preserve-root "$strWorkFile" >"$strRmLogTmp" 2>&1;then #################### FILE/PATH REMOVAL
-                  SECFUNCechoWarnA "failed to rm strWorkFile='$strWorkFile'"
-                fi
-                cat "$strRmLogTmp" |tee -a "$strRmLog" # using tee directly on the command will not return the command exit value...
-                
-                ########### CRITICAL DOUBLE CHECK. 
-                ### Despite all checks already performed, make it sure nothing wrong was removed! 
-                ### But... this is quite useless tho...
-                ### it is mainly to make it sure the script isnt broken...
-                ### but the related file(s) will already be lost...
-                ### TODO may be, find a way to restore the removed files, using inodes?
-                ###########
-                strTrashFolderRP="`realpath -ezs "/$strTrashFolder/"`"
-                strTrashFolderRPRegex="`echo "$strTrashFolderRP" |sed -r -e "s@[(]@\\\(@g" -e "s@[)]@\\\)@g"`"
-                strCriticalCheckRmLog="[\"']$strTrashFolderRPRegex" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
-                #echo test >>"$strRmLogTmp"
-                strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
-                if [[ -n "$strWrong" ]];then
-                  echoc --say "sec trash cleaner error"
-                  echoc -p "below should not have happened..."
-                  declare -p strWrong
-                  _SECFUNCcriticalForceExit
-                fi
-              fi
-              
-              ################ trashinfo ##################################################################
-							if $bRmTrashInfo;then rm -vf "$strRmTrashInfoFile"&&:;fi ############### TRASH INFO REMOVAL #
-						fi
-					
-						((nRmSizeTotalB+=nFileSizeB))&&:
-				
-						if $bTest1;then break;fi # to work at only with one file
-						# FS seems to not get updated so fast, so this fails:	if ((`FUNCavailMB $strTrashFolder`>nThisFSAvailGoalMB));then
-						if (( (nAvailSizeB4RmB+nRmSizeTotalB) > (nThisFSAvailGoalMB*n1MB) ));then
-							break;
-						fi
-					done
-				else
-					echoc --info "trash is empty"
-					
-					if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
-            parmSay=""
-            if(( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
-              parmSay="--say"
-              nAlertSpeechLastTime=$SECONDS
-            fi
-            echoc -p $parmSay "unable to free disk space!"&&:
-					fi
-				fi
-			fi
-			
-			SECFUNCdbgFuncOutA;return 0
-		};export -f FUNCcheckFS
-		(FUNCcheckFS) # to make the "pid using FS detection system" unlink with this script
+		(if ! FUNCcheckFS;then echoc -p "unable to work on this filesystem: strMountedFS='$strMountedFS'";fi) # to make the "pid using FS detection system" unlink with this script
 		
 		#if $bTest1;then break;fi # to work at only the user default trash folder
 		
