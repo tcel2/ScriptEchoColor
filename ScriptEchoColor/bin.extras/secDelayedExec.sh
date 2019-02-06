@@ -522,6 +522,7 @@ if $bCheckIfAlreadyRunning;then
       while true;do
         nTot=10;for((i=0;i<nTot;i++));do echo $((i*(100/nTot)));sleep 1;done \
           |yad --auto-close --progress ----percentage=0 --question --title "$strTitle" \
+            --selectable-labels \
             --text "$strFullSelfCmd\n\nnPidSelf=$$;\nKILL THE OTHER PID nPidOther='$nPidOther'?" \
             --button="OK:2" \
             --button="Cancel:1" &&:;nRet=$?

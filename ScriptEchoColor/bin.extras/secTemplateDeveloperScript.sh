@@ -147,6 +147,10 @@ done
 # IMPORTANT validate CFG vars here before writing them all...
 if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 
+### collect required named params
+# strParam1="$1";shift
+# strParam2="$1";shift
+
 # Main code
 if SECFUNCarrayCheck -n astrRemainingParams;then :;fi
 
