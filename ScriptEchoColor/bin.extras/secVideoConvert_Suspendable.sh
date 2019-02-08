@@ -47,9 +47,10 @@ CFGnDefQSleep=$nSlowQSleep
 : ${bWriteCfgVars:=true} #help false to speedup if writing them is unnecessary
 : ${bMaintCompletedMode:=false} #help
 
-CFGstrKeepOriginalTag="KEEP_ORIGINAL"
+CFGstrKeepOriginalTag="KEEP_ORIGINAL" #help
 bUseCPUlimit=true
-astrVidExtList=(mp4 3gp flv avi mov mpeg)
+astrVidExtList=(3gp avi flv gif mkv mov mp4 mpeg)
+strVidExtListToGrep="`echo "${astrVidExtList[@]}" |sed -r 's" "\\|"g'`"
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
 bDaemonContinueMode=false
@@ -118,6 +119,12 @@ function FUNCflFinal() { #help <lstrFl>
   local lstrFl="$1"
   local lstrSuffix="`SECFUNCfileSuffix "$lstrFl"`"
   echo "${lstrFl%.$lstrSuffix}.${strNewFormatSuffix}.mp4"
+}
+
+function FUNCflKeep() { #help <lstrFl>
+  local lstrFl="$1"
+  local lstrSuffix="`SECFUNCfileSuffix "$lstrFl"`"
+  echo "${lstrFl%.$lstrSuffix}.${CFGstrKeepOriginalTag}.${lstrSuffix}"
 }
 
 function FUNCflBNHash() {
@@ -316,7 +323,8 @@ function FUNCmaintCompletedFiles() {
 function MAIN() { :; } #source editor tag trick
 if $bFindWorks;then 
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
+#  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(${strVidExtListToGrep}\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
   SECFUNCexecA -ce SECFUNCarrayShow -v astrFileList
   astrCanWork=()
   for strFile in "${astrFileList[@]}";do
@@ -367,7 +375,7 @@ elif $bCompletedMaintenanceMode;then
       fi
     done
     
-    function FUNCCMMmain() {
+    function FUNCCompletedMaintenanceMode() {
       local lnSelectedIndex="$1" # yad list index column
       
       SECFUNCarraysRestore #source <(secinit) #to restore arrays
@@ -397,7 +405,7 @@ elif $bCompletedMaintenanceMode;then
         #~ "smplayer -ontop '$lstrFl'"
       #~ )
       #~ "${astrYadCmdFl[@]}"
-    };export -f FUNCCMMmain
+    };export -f FUNCCompletedMaintenanceMode
     
     astrYadCmd=(
       yad 
@@ -409,7 +417,7 @@ elif $bCompletedMaintenanceMode;then
       --title="$(basename $0) maintain completed jobs" 
       --list 
       #~ --radiolist 
-      --dclick-action="bash -c 'FUNCCMMmain %s'"
+      --dclick-action="bash -c 'FUNCCompletedMaintenanceMode %s'"
       #~ --column="@" 
       --column "Index" --column "basename" --column "full path" 
       "${astrMaintListDiag[@]}"
@@ -632,7 +640,9 @@ function FUNCavconvRaw() {
     echo "DBG: $$ $strFlLog" >&2
     echo -n >>"$strFlLog"
     tail -F --pid=$nBPid "$strFlLog" |egrep "^ *(Input|Output|Duration|Stream|frame=)"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
-    SECFUNCexecA -ce nice -n 19 avconv "$@" >"$strFlLog" 2>&1 ; nRet=$?
+    astrExecCmd=(nice -n 19 avconv "$@")
+    echo "EXEC: `SECFUNCparamsToEval "${astrExecCmd[@]}"`" >&2
+    SECFUNCexecA -ce "${astrExecCmd[@]}" >"$strFlLog" 2>&1 ; nRet=$?
     cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
     if((nRet!=0));then
       SECFUNCechoErrA "failed nRet=$nRet"
@@ -726,6 +736,7 @@ function FUNCextDirectConv() {
         local laOpts=()
         laOpts+=(-movflags faststart -pix_fmt yuv420p) # options for better browsers compatibility and performance
         laOpts+=(-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2") # fix to valid size that must be mult of 2
+        laOpts+=(-crf 10) # gifs lose too much quality, this is important to provide an acceptable alternative with good quality but much bigger size
         #avconv -i "$strFileAbs" "${laCompat[@]}" -vf "$lstrFixToValidSize" "$strFl3gpAsMp4"
         FUNCrecreateRaw FUNCavconvConv --mute --io "$strFileAbs" "$strFl3gpAsMp4" -- "${laOpts[@]}"
         #echo -n >"${strAbsFileNmHashTmp}.recreated" # the small file fully created is equivalent to recreate function
@@ -807,33 +818,42 @@ function FUNCrecreate() {
 }
 
 function FUNCvalidateFinal() {
-  local lnRet=0
+  #local lnRet=0
   local lstrAtt="@YATTENTION!!!@-n "
+  local lstrErrMsg=""
   
   if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The individual parts processing encountered the problematic the warnings above!"
-    lnRet=1
+    lstrErrMsg+=" $LINENO" # lnRet=1
   fi
 
   if SECFUNCexecA -ce egrep "Non-monotonous DTS in output stream .* previous: .*, current: .*; changing to .*. This may result in incorrect timestamps in the output file." "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The parts joining encountered problematic the warnings above!"
-    lnRet=2
+    lstrErrMsg+=" $LINENO" # lnRet=2
   fi
+  
+  #~ if((`FUNCflSizeBytes "$strFileAbs"` < `FUNCflSizeBytes "$strOrigPath/$strFinalFileBN"`));then
+    #~ echoc --alert "${lstrAtt}The final file size is BIGGER than the original one! pointless..."
+    #~ lstrErrMsg+=" $LINENO"
+  #~ fi
   
   if [[ -f "$strOrigPath/$strFinalFileBN" ]];then
     if((`FUNCflSizeBytes "$strOrigPath/$strFinalFileBN"` > `FUNCflSizeBytes "$strFileAbs"`));then
       echoc --alert "${lstrAtt}the new file is BIGGER than old one!"
-      lnRet=3
+      lstrErrMsg+=" $LINENO" # lnRet=3
     fi
     
-    nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
-    nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
-    nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
-    if((nMargin==0));then nMargin=1;fi
-    declare -p nDurSecOld nDurSecNew nMargin
-    if ! SECFUNCisSimilar $nDurSecOld $nDurSecNew $nMargin;then
-      echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
-      lnRet=4
+    if [[ "`SECFUNCfileSuffix "$strFileAbs"`" != "gif" ]];then
+      nDurSecOld="`FUNCflDurationSec "$strFileAbs"`"
+      nDurSecNew="`FUNCflDurationSec "$strOrigPath/$strFinalFileBN"`"
+      nMargin=$((nDurSecOld*5/100)) #TODO could just be a few seconds like 3 or 10 right? but small videos will not work like that...
+      declare -p nDurSecOld nDurSecNew nMargin strFileAbs
+      if((nMargin==0));then nMargin=1;fi
+      declare -p nDurSecOld nDurSecNew nMargin
+      if ! SECFUNCisSimilar "$nDurSecOld" "$nDurSecNew" "$nMargin";then
+        echoc --alert "${lstrAtt}the new duration nDurSecNew='$nDurSecNew' is weird! nDurSecOld='$nDurSecOld'"
+        lstrErrMsg+=" $LINENO" # lnRet=4
+      fi
     fi
   else
     SECFUNCechoErrA "The validation REQUIRES the final file '$strOrigPath/$strFinalFileBN' to be READY!"
@@ -842,9 +862,14 @@ function FUNCvalidateFinal() {
     #~ lnRet=5
   fi
   
-  if((lnRet!=0));then echo "$FUNCNAME lnRet=$lnRet";fi
+  if [[ -n "$lstrErrMsg" ]];then 
+    echo "$FUNCNAME lstrErrMsg='$lstrErrMsg'"
+    return 1
+  fi
+#  if((lnRet!=0));then echo "$FUNCNAME lnRet=$lnRet";fi
   
-  return $lnRet
+  #return $lnRet
+  return 0
 }
 
 function FUNCrecreateExtChk() {
@@ -864,6 +889,7 @@ function FUNCfinalMenuChk() {
     local lstrReco=""
     if [[ -f "${strAbsFileNmHashTmp}.recreated" ]];then # even if re-created before this current run
       lstrReco="(already did tho) "
+      ls -l "${strAbsFileNmHashTmp}.recreated"
     else
       if $lbReady && ! FUNCvalidateFinal;then
         lstrReco="@s@n!RECOMMENDED!@S "
@@ -873,9 +899,10 @@ function FUNCfinalMenuChk() {
     local lstrGifCycleSuffix="-Cycle.gif"
     local lbIsGifCycle=false;if [[ "$strFileAbs" =~ $lstrGifCycleSuffix ]];then lbIsGifCycle=true;fi
     astrOpt=(
-      "apply patrol _cycle `SECFUNCternary -e "(@s@yALREADY DID@S) " "" $lbIsGifCycle`reverse gif effect on original file? #gif"
+      "apply patrol _cycle (reverse gif effect) `SECFUNCternary -e "(@s@yALREADY DID@S) " "" $lbIsGifCycle` on original file? #gif"
       "_diff old from new media info? #ready"
       "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep} #timeout"
+      "_keep original (trash the new one) and apply tag on it's filename?"
       "_list all files with (probably) useful details?"
       "play the _old file?"
       "_play the new file? #ready"
@@ -938,6 +965,18 @@ function FUNCfinalMenuChk() {
           CFGnDefQSleep=$nSlowQSleep
         fi
         SECFUNCcfgWriteVar -r CFGnDefQSleep
+        ;;
+      k)
+        SECFUNCexecA -ce mv -v "$strFileAbs" "`FUNCflKeep "$strFileAbs"`"
+        
+        SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+        SECFUNCtrash "$strOrigPath/$strFinalFileBN"
+        
+        FUNCflCleanFromDB "$strFileAbs"
+        
+        if ! $bMenuTimeout;then echoc -w "waiting you review the trashing's log";fi
+        
+        exit 0 # to work with the next one
         ;;
       l)
         SECFUNCcfgReadDB

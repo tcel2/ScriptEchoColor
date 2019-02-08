@@ -70,6 +70,7 @@ if $SEC_ShortFuncsAliases; then
 fi
 
 declare -Ax SECastrDebugFunctionPerFile #must be here as arrays arent exported by bash
+#DO NOT DO SOMETHING LIKE THIS :P ! -> SECstrBashSourceIdDefault="UNDEFINED"
 SECastrDebugFunctionPerFile[SECstrBashSourceIdDefault]="Undefined" # SECstrBashSourceIdDefault is NOT a variable, it is an array ID. #TODO I couldnt find a way to show the script filename yet...
 #this is slow -> export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`.${FUNCNAME-}@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceIdDefault}]-undefined}(),L$LINENO;p$$[$(ps --no-headers -o comm -p $$)];bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID[$(ps --no-headers -o comm -p $PPID)]' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
 #export _SECmsgCallerPrefix='`SECFUNCbashSourceFiles`(${FUNCNAME[*]-})@${SECastrDebugFunctionPerFile[${FUNCNAME-SECstrBashSourceIdDefault}]-undefined},L$LINENO;p$$;bp$BASHPID;bss$BASH_SUBSHELL;pp$PPID' #TODO see "undefined", because I wasnt able yet to show something properly to the script filename there...
@@ -95,7 +96,7 @@ alias SECFUNCreturnOnFailDbgA='if(($?!=0));then SECFUNCdbgFuncOutA;return 1;fi'
 
 # SECFUNCtrapErr defined at Core 
 #trap 'SECnRetTrap=$?;if ! SECFUNCtrapErr "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR:Exiting..." >&2;exit 1;fi' ERR
-trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR(trap):Exiting..." >&2;exit 1;fi' ERR
+trap 'if ! SECFUNCtrapErr "$?" "${FUNCNAME[*]-}" "${LINENO-}" "${BASH_COMMAND-}" "${BASH_SOURCE[@]-}";then echo "SECERROR(trap):Exiting..." >&2;exit 1;fi' ERR
 
 function _SECFUNCcheckIfIsArrayAndInit() { #help only simple array, not associative -A arrays...
 	#echo ">>>>>>>>>>>>>>>>${1}" >&2
@@ -128,15 +129,34 @@ function SECFUNCarraysRestore() { #help restore all exported arrays
 	
 	# restore the exported arrays
 	# first, set the variable value WITHOUT export. Exporting with value will fail for some associative arrays (namely: SECastrDebugFunctionPerFile)
-	local lstrEvalRest="`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+#	local lstrEvalRest="`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%\1=\2;%;tfound;d;:found"`"
+	#local lstrEvalRest="`declare |sed -r "s%^${SECstrExportedArrayPrefix}[[:alnum:]_]*=\"(.*)\"$%\1;%;tfound;d;:found"`"
+  local lastrRestoreList;IFS=$'\n' read -d '' -r -a lastrRestoreList < <(declare |sed -r "s'^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)=.*'\1';tfound;d;:found")&&:;
+  #local lstrEvalRest="$(declare |sed -r "s%^${SECstrExportedArrayPrefix}[[:alnum:]_]*=[\"']*(.*)[\"']*$%\1;%;tfound;d;:found")"
 	if $SECbFuncArraysRestoreVerbose;then
 		echo "SECINFO: $FUNCNAME" >&2
-		echo "$lstrEvalRest" >&2
+		#echo "$lstrEvalRest" >&2
+    declare -p lastrRestoreList >&2
 	fi
-	eval "$lstrEvalRest"
+  #local lstrFullRest=""
+  local lstrRestore;for lstrRestore in "${lastrRestoreList[@]}";do
+    if $SECbFuncArraysRestoreVerbose;then echo "$lstrRestore: ${!lstrRestore}" >&2;fi
+    local lstrEval="$(echo "${!lstrRestore}" |sed -r 's"(declare -)([[:alpha:]]*)( .*)"\1\2g\3"')" # sed puts -g on the declare command, is the only way to let'em be recognize outside this function
+    eval "$lstrEval"
+    #eval "${!lstrRestore}"
+    #lstrFullRest+="${!lstrRestore};" #declare -p $lstrRestore >&2;"
+  done
+  #if $SECbFuncArraysRestoreVerbose;then declare -p lstrFullRest >&2;fi
+  #eval "$lstrFullRest"
+	#eval "$lstrEvalRest"
+  
 	# second, do re-export in a simple way, the env var id alone (without the value)
 	eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%export \1;%;tfound;d;:found"`"
 	
+  #~ if $SECbFuncArraysRestoreVerbose;then
+    #~ eval "`declare |sed -r "s%^${SECstrExportedArrayPrefix}([[:alnum:]_]*)='(.*)'$%declare -p \1 >&2;%;tfound;d;:found"`"
+  #~ fi
+  
 	# remove the temporary variables representing exported arrays
 	eval "`declare |sed -r "s%^(${SECstrExportedArrayPrefix}[[:alnum:]_]*)='(.*)'$%unset \1;%;tfound;d;:found"`"
 }

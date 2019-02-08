@@ -39,10 +39,12 @@ strCfg="$HOME/.$strBN.cfg"
 strSECDEVPath="`cat "$strCfg"`"
 strSECDEVPath="`realpath -e "$strSECDEVPath"`"
 declare -p strSECDEVPath >&2
-if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
+while [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];do
   echo "dev path not set at '$strCfg'" >&2
-  exit 1
-fi
+  read -p "Paste it: " strSECDEVPath
+done
+echo "$strSECDEVPath" >"$strCfg"
+cat "$strCfg"
 
 strPATHtmp=""
 strPATHtmp+="$strSECDEVPath/bin:"
@@ -271,8 +273,9 @@ SECFUNCexecA -ce cat "$strRCFileTmp" >&2
 SECFUNCexecA -ce ls -l /proc/$$/fd/ >&2
 #type FUNCrunAtom&&:
 #yad --info --text "$0:$LINENO"
-SECFUNCarraysExport # must re-export if needed for whatever exported arrays that are available
-#echo -n "LINENO=$LINENO."
+echo -n "LINENO=$LINENO."
+SECFUNCarraysExport -v # must re-export if needed for whatever exported arrays that are available
+echo -n "LINENO=$LINENO."
 
 #########################################################################################
 ############################# sec env cleaned after here !!! ############################

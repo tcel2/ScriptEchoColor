@@ -1127,19 +1127,24 @@ function SECFUNCcfgAutoWriteAllVars(){ #help will only match vars beggining with
 	#declare -p lstrAllCfgVars
 	local lastrAllCfgVars;IFS=$'\n' read -d'' -r -a lastrAllCfgVars < <(echo "$lstrAllCfgVars")&&:
 	#declare -p lastrAllCfgVars
+  local lstrScriptText="`cat "$0"`" #SECstrScriptSelfName"`"
+  #~ declare -p SECstrScriptSelfName
 	
 	if((`SECFUNCarraySize lastrAllCfgVars`>0));then
     if [[ ! -f "$SECcfgFileName" ]];then echo -n >>"$SECcfgFileName";fi
     SECFUNCfileLock "$SECcfgFileName"
+    local lstrMsg="SECCFG auto write"
 		for lstrCfgVarId in "${lastrAllCfgVars[@]}";do
       if [[ "$lstrCfgVarId" == "CFGSECnVersionLastRun" ]] && ((CFGSECnVersionLastRun==0));then continue;fi # development version shall not be stored
+      local lstrMatchCfgVarId=".*${lstrCfgVarId}.*"
+      if ! [[ "$lstrScriptText" =~ $lstrMatchCfgVarId ]];then continue;fi
 			SECFUNCcfgWriteVar --dontchecklock --keeplock $lstrCfgVarId
 			if $lbShowAll;then
         if SECFUNCarrayCheck "$lstrCfgVarId";then
           declare -n lstrCfgVarRef="$lstrCfgVarId"
-          echo "Array $lstrCfgVarId size ${#lstrCfgVarRef[*]} #SECCFG" >&2
+          echo "Array $lstrCfgVarId size ${#lstrCfgVarRef[*]} #$lstrMsg" >&2
         else
-          echo "`declare -p "$lstrCfgVarId"` #SECCFG" >&2
+          echo "`declare -p "$lstrCfgVarId"` #$lstrMsg" >&2
         fi
         #~ declare -n lstrCfgVarRef="$lstrCfgVarId"
         #~ if [[ -n "${lstrCfgVarRef[@]-}" ]] && ((${#lstrCfgVarRef[@]}>1));then

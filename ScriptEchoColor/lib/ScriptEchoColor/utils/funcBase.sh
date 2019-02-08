@@ -152,18 +152,30 @@ function SECFUNCarraysExport() { #help export all arrays marked to be exported '
 		fi
 		
 		# associative arrays MUST BE DECLARED like: declare -A arrayVarName; previously to having its values attributted, or it will break the code...
+		
 		if declare -p "$lstrArrayName" |grep -q "^declare -A";then
+			local lstrDeclareAG="declare -Ag"
 			if [[ -z "$SECcmdExportedAssociativeArrays" ]];then
-				SECcmdExportedAssociativeArrays="declare -Ag "
+				SECcmdExportedAssociativeArrays="$lstrDeclareAG "
 			fi
 			#export "${SECstrExportedArrayPrefix}_ASSOCIATIVE_${lstrArrayName}=true"
 			SECcmdExportedAssociativeArrays+="${lstrArrayName} "
+#			local lstrExpArrayId="${SECstrExportedArrayPrefix}${lstrArrayName}"
+#			local lstrToDeclareAG="${lstrDeclareAG} ${lstrExpArrayId}"
+#			if $lbVerbose;then echo "ToEval: $lstrToDeclareAG" >&2;fi
+#			eval "$lstrToDeclareAG"
+#			if $lbVerbose;then declare -p "${lstrExpArrayId}" >&2;fi
 		fi
 		
 		# creates the variable to be restored on a child shell
-		local lstrToExport="export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
-		if $lbVerbose;then echo "$lstrToExport" >&2;fi
-		eval "$lstrToExport"
+		if $lbVerbose;then declare -p $lstrArrayName >&2;fi
+		local lstrExpArrayId="${SECstrExportedArrayPrefix}${lstrArrayName}"
+#		local lstrToExport="export `declare -p $lstrArrayName |sed -r 's"declare -[[:alpha:]]* (.*)"'${SECstrExportedArrayPrefix}'\1"'`"
+#		local lstrToExport="export ${lstrExpArrayId}=\"$(printf %q "$(declare -p $lstrArrayName)")\""
+		#~ local lstrToExport="export ${lstrExpArrayId}=\"$(declare -p $lstrArrayName)\""
+		#~ if $lbVerbose;then echo "ToEval: $lstrToExport" >&2;fi
+    export ${lstrExpArrayId}="$(declare -p ${lstrArrayName})"
+		#~ eval "$lstrToExport"
 		
 		export SECbHasExportedArrays=true
 	done

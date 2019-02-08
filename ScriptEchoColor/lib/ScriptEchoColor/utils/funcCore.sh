@@ -116,6 +116,8 @@ function SECFUNCtrapErr() { #help <"${FUNCNAME-}"> <"${LINENO-}"> <"${BASH_COMMA
 	_SECFUNCtrapErr_addLine "strSECFUNCtrapErrCustomMsg='${strSECFUNCtrapErrCustomMsg-}';"
 	_SECFUNCtrapErr_addLine "SECstrRunLogFile='${SECstrRunLogFile-}';"
 	_SECFUNCtrapErr_addLine "SECastrFunctionStack='${SECastrFunctionStack[@]-}.${lstrFuncName-},LINENO=${lstrLineNo-}';"
+#DONT DO THIS, it is a param:	_SECFUNCtrapErr_addLine "SECastrFunctionStack='(${FUNCNAME[@]-})';"
+#DONT DO THIS, it is a param:	_SECFUCtrapErr_addLine "Line='${LINENO-}';"
 #	_SECFUNCtrapErr_addLine "BASH_COMMAND='`tr '\n' ';' <<< "${lstrBashCommand-}"`';"
 	_SECFUNCtrapErr_addLine "BASH_COMMAND='${lstrBashCommand-}';"
 	_SECFUNCtrapErr_addLine "BASH_SOURCE[@]='(${lstrBashSourceListTrap-})';"
@@ -1320,10 +1322,14 @@ function SECFUNCshowFunctionsHelp() { #help [script filename] show functions spe
 #	fi
 #}
 
-function SECFUNCisSimilar() { #help <lnValueA> <lnValueB> <lnMargin>
-  local lnValueA="$1";shift
-  local lnValueB="$1";shift
-  local lnMargin="$1";shift
+function SECFUNCisSimilar() { #help <lnValueA> <lnValueB> <lnMargin> decimals only for now
+  local lnValueA="${1-}";shift
+  local lnValueB="${1-}";shift
+  local lnMargin="${1-}";shift
+  if ! SECFUNCisNumber -d "$lnValueA" || ! SECFUNCisNumber -d "$lnValueB" || ! SECFUNCisNumber -d "$lnMargin";then
+    SECFUNCechoErr "one or more not valid: lnValueA='$lnValueA' lnValueB='$lnValueB' lnMargin='$lnMargin'"
+    _SECFUNCcriticalForceExit # must force exit as this func returned error value may not be considered by the caller about the difference between 1 and 3 :( #return 3 # 3 to differ from simple check, see `SECFUNCerrCodeExplained -a`
+  fi
   if((lnValueA==lnValueB));then return 0;fi
   if((lnValueA>lnValueB && lnValueA<=(lnValueB+lnMargin) ));then return 0;fi
   if((lnValueB>lnValueA && lnValueB<=(lnValueA+lnMargin) ));then return 0;fi
