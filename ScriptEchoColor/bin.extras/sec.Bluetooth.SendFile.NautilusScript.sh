@@ -47,8 +47,11 @@ function FUNCrescan() {
 	fi
 
 	#bkpIFS="$IFS";IFS=$'\n';readarray astrDevices < <(echo "$strDevices");IFS="$bkpIFS";
-	IFS=$'\n' read -d '' -r -a astrDevices < <(echo "$strDevices")
-	echo "astrDevices[@]=(${astrDevices[@]-})" >&2
+  astrDevices=()
+  SECFUNCarrayWork --fill astrDevices echo "$strDevices"
+	#IFS=$'\n' read -d '' -r -a astrDevices < <(echo "$strDevices")
+  declare -p astrDevices >&2
+	#~ echo "astrDevices[@]=(${astrDevices[@]-})" >&2
 	if((`SECFUNCarraySize astrDevices`>0));then
 		for strDevice in "${astrDevices[@]}";do 
 			if [[ -n "$strDevice" ]];then
@@ -173,8 +176,9 @@ if $bInteractive;then
 		
 			strDeviceId=$(yad --title "$SECstrScriptSelfName" --list --radiolist \
 				--text="Select one Bluetooth device." \
+        --print-column=2 --separator="" \
 				--column="Index" --column="ID" --column="Name" \
-				"${astrZenityValues[@]}")&&:
+				"${astrZenityValues[@]}")&&: # column 2 is the ID
 
 			if [[ -n "$strDeviceId" ]];then
 				SECFUNCcfgWriteVar strDeviceIdLastChosen="$strDeviceId"

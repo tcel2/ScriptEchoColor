@@ -675,6 +675,8 @@ function SECFUNCarrayWork() { #help
       lstrMode="$1"
     elif [[ "$1" == "--cmd" ]];then #SECFUNCarrayWork_help <lstrArrayId> <cmd and params...> perform the specified full command for each array entry
       lstrMode="$1"
+    elif [[ "$1" == "--fill" ]];then #SECFUNCarrayWork_help <lstrArrayId> <cmd and params...> append to an array one entry per line of the command output
+      lstrMode="$1"
     elif [[ "$1" == "--show" ]];then #SECFUNCarrayWork_help <lstrArrayId> [indentation/prefix] show one entry per line
       lstrMode="$1"
     elif [[ "$1" == "--prepend" ]];then #SECFUNCarrayWork_help ~recindex <lstrArrayId> <value>
@@ -770,6 +772,16 @@ function SECFUNCarrayWork() { #help
         # TODO let entry be positioned using some tag like `find` does with '{}' ?
         SECFUNCexecA -ce "${lastrCmd[@]}" "$lstrEntry"
       done
+      return 0
+      ;;
+    --fill)
+      local lstrEntry
+      local lastrCmd=("${lastrAllParamsAfterArrayId[@]}")
+      local lastrFill=()
+      IFS=$'\n' read -d '' -r -a lastrFill < <("${lastrCmd[@]}"&&:)&&: # as a `find` may always return 1, TODO why?
+      if SECFUNCarrayCheck -n lastrFill;then
+        lastrArrayCopyTmp+=("${lastrFill[@]}")
+      fi
       return 0
       ;;
     --show)

@@ -369,14 +369,17 @@ elif $bCompletedMaintenanceMode;then
 #        astrMaintListDiag+=("`SECFUNCternary --tf test $nIndex = $nSelectedIndex`" "$nIndex" "`basename "$strFlC"`" "$strFlC");
         astrMaintListDiag+=(
           #~ "`SECFUNCternary --tf $bSel`" 
+          false
           "$nIndex" 
+          "`SECFUNCfileSuffix "$strFl"`"
           "`basename "$strFlC"`" 
-          "$strFlC");
+          "$strFlC"
+        );
       fi
     done
     
     function FUNCCompletedMaintenanceMode() {
-      local lnSelectedIndex="$1" # yad list index column
+      local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified
       
       SECFUNCarraysRestore #source <(secinit) #to restore arrays
       echo "(${FUNCNAME[@]}) params: `SECFUNCparamsToEval "$@"`" >&2
@@ -389,54 +392,53 @@ elif $bCompletedMaintenanceMode;then
       else
         SECFUNCechoErrA "file not found lstrFlSel='$lstrFlSel'"
       fi
-      
-      #~ local lstrFl="$4"
-      #~ function FUNCCMMplay() {
-        #~ SECFUNCexecA -ce smplayer -ontop "$1"
-      #~ }
-      #~ astrYadCmdFl=(
-        #~ yad
-        #~ --on-top
-        #~ --form 
-        #~ --center 
-        #~ --field="FILE: $lstrFl"
-        #~ --field="play Final file!!:FBTN"
-        #~ "bash -c FUNCCMMplay"
-        #~ "smplayer -ontop '$lstrFl'"
-      #~ )
-      #~ "${astrYadCmdFl[@]}"
     };export -f FUNCCompletedMaintenanceMode
     
     astrYadCmd=(
       yad 
       --button="gtk-close:1" 
-      --button="RefreshList:2"
+      --button="TrashSelectedFinal!!Trash the final new generated files selected:2"
+      --button="RefreshList:3"
       --maximized 
       --center 
       --no-markup 
-      --title="$(basename $0) maintain completed jobs" 
+      --title="$(basename $0) maintain completed jobs (double click for specific entry actions)" 
       --list 
-      #~ --radiolist 
+      --checklist 
       --dclick-action="bash -c 'FUNCCompletedMaintenanceMode %s'"
-      #~ --column="@" 
-      --column "Index" --column "basename" --column "full path" 
+      
+      --column "Action" 
+      --column "Index" 
+      --column "OrigExt" 
+      --column "basename" 
+      --column "full path" 
+      
       "${astrMaintListDiag[@]}"
     )
     SECFUNCarraysExport
-    SECFUNCexecA -ce "${astrYadCmd[@]}"&&:;nRet=$?;declare -p nRet
-    if((nRet!=2));then exit 0;fi
-    #~ strSel="`SECFUNCexecA -ce "${astrYadCmd[@]}"`"&&:
-    #~ if [[ -n "$strSel" ]];then
-      #~ strSelIndex="`echo "$strSel" |cut -d '|' -f 2`";
-      #~ if SECFUNCisNumber -dn "$strSelIndex";then
-        #~ nSelectedIndex="$strSelIndex"
-        #~ strFlSel="${CFGastrFileList[$nSelectedIndex]}"
-        #~ strFlSelFinal="`FUNCflFinal "${CFGastrFileList[$nSelectedIndex]}"`"
-        #~ declare -p strSel nSelectedIndex strFlSel strFlSelFinal >&2
-        #~ FUNCworkWith "$strFlSel"
-      #~ fi
-    #~ fi
-    #~ echoc -p "WIP"
+    strSelectedEntries="`SECFUNCexecA -ce "${astrYadCmd[@]}"`"&&:;nRet=$?;declare -p nRet
+    if((nRet==1 || nRet==252));then exit 0;fi
+    
+    IFS=$'\n' read -d '' -r -a anSelectedIndexList < <(echo "$strSelectedEntries" |egrep "^TRUE" |tr "|" " " |awk '{print $2}')&&:
+    if SECFUNCarrayCheck -n anSelectedIndexList;then
+      echoc --info "Selected files:"
+      case $nRet in
+        2)
+          astrToTrashList=()
+          for nSel in "${anSelectedIndexList[@]}";do
+            strFlFinal="`FUNCflFinal "${CFGastrFileList[$nSel]}"`"
+            astrToTrashList+=( "$strFlFinal" )
+          done
+          SECFUNCarrayShow astrToTrashList
+          ls -l "${astrToTrashList[@]}"
+          if echoc -q "Trash the above files?";then
+            for strToTrash in "${astrToTrashList[@]}";do
+              SECFUNCtrash "$strToTrash"
+            done
+          fi
+          ;;
+      esac
+    fi
   done
   exit 0 #~single
 elif $bTrashMode;then
