@@ -47,6 +47,7 @@ astrAllParams=("${@-}") # this may be useful
 nFreeCpuPercToAllow=25
 strFilter=""
 bListOnly=false
+bFilterMultiMatch=false
 bRunAll=false
 #~ bDev=false
 #SECFUNCfdReport;SECFUNCrestoreDefaultOutputs;SECFUNCfdReport;strLogFile="`secDelayedExec.sh --getgloballogfile`";SECFUNCfdReport;declare -p strLogFile;exit 0
@@ -70,6 +71,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
     shift
 		strFilter="${1-}"
     declare -p strFilter
+	elif [[ "$1" == "-F" || "$1" == "--filtermulti" ]];then #help <strFilter> do the work only if entry matches regex filter, allow many matches
+    shift
+		strFilter="${1-}"
+    declare -p strFilter
+    bFilterMultiMatch=true
 	elif [[ "$1" == "-l" || "$1" == "--listonly" ]];then #help cmds
 		bListOnly=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help MISSING DESCRIPTION
@@ -187,7 +193,7 @@ if [[ -n "$strFilter" ]];then
     fi
   done
   
-  if((nFilterMatchCount>1));then
+  if ! $bFilterMultiMatch && ((nFilterMatchCount>1));then
     echoc -p "filter matched more than once"
     exit 1
   fi
