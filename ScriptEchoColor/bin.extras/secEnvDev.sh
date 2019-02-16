@@ -36,12 +36,22 @@ strBN="`basename "$0"`"
 strCfg="$HOME/.$strBN.cfg"
 
 #~ : ${SECbDevelopmentMode:=false};export SECbDevelopmentMode
-strSECDEVPath="`cat "$strCfg"`"
-strSECDEVPath="`realpath -e "$strSECDEVPath"`"
-declare -p strSECDEVPath >&2
-while [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];do
-  echo "dev path not set at '$strCfg'" >&2
-  read -p "Paste it: " strSECDEVPath
+while true;do
+  strSECDEVPath="`cat "$strCfg"`"
+  strSECDEVPath="`realpath -e "$strSECDEVPath"`"
+  declare -p strSECDEVPath >&2
+  if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
+    echo "dev path not set at '$strCfg'" >&2
+    if SECFUNCisShellInteractive;then
+      echoc -p "dev path not set at '$strCfg'" >&2
+      read -p "Paste it: " strSECDEVPath
+    else
+      strSECDEVPath="$(yad --title "$strBN" --text "dev path not set at '$strCfg'\nPaste it:" --entry)" # THIS WOULD MESS IN NON INTERACTIVE MODE -> read -p "Paste it: " strSECDEVPath 
+    fi
+    sleep 1 # safety as logs were becoming huge in non interactive mode (expectedly wont happen anymore...)
+    continue
+  fi
+  break;
 done
 echo "$strSECDEVPath" >"$strCfg"
 cat "$strCfg"
