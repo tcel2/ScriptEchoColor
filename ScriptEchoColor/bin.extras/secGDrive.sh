@@ -179,8 +179,7 @@ function FUNCflKchkGrive() { # [--prot] <CFGstr...FlKRealAt> <CFGstr...FlK> the 
   fi
 }
 
-: ${bUseGRIVE:=false};export bUseGRIVE #help 
-if $bUseGRIVE;then
+function FUNCgriveWork() { #TODO zombie
   FUNCupdFileList "$HOME/Google Drive/${strFlGriveCfg}_state"
 
   CFGstrGriveFlK="$strWorkPath/${strFlGriveCfg}"
@@ -214,474 +213,490 @@ if $bUseGRIVE;then
   fi
 
   FUNCflKchkGrive --prot CFGstrGriveFlKRealAt CFGstrGriveFlK
-else ########################## GDrive
-  CFGstrGDriveFlK="$HOME/.gdrive/token_v2.json"
-  
-  CFGstrFlRemoteFileInfo="$HOME/.gdrive/${SECstrScriptSelfName}.RemoteFilesInfo.txt"
-  
-  CFGstrFlLastUpload="$HOME/.gdrive/${SECstrScriptSelfName}.LastUploadDtTm.cfg"
-  CFGstrFlLastUploadBkpBN="$(basename "$CFGstrFlLastUpload")"
-  
-  FUNCupdFileList "$CFGstrFlLastUpload"
-  
-  function FUNCflKchkGDrive() {
-    declare -p CFGstrGDriveFlKRealAt&&: >&2
-    if [[ ! -a "$CFGstrGDriveFlK" ]];then
-      echoc -p "missing '$CFGstrGDriveFlK'"
-      exit 1
-    else
-      if [[ ! -L "$CFGstrGDriveFlK" ]];then
-        ls -l "$CFGstrGDriveFlK"
-        echoc --alert "was not protected@-n '$CFGstrGDriveFlK' move it elsewere and create a symlink!"
-        if [[ -f "$CFGstrGDriveFlKRealAt" ]];then
-          echoc --info "auto-fixing it as CFGstrGDriveFlKRealAt='$CFGstrGDriveFlKRealAt'"
-          FUNCprotRm "$CFGstrGDriveFlK" #TODO put something at `trap '...' EXIT`
-          SECFUNCexecA -ce ln -vs "$CFGstrGDriveFlKRealAt" "`dirname "$CFGstrGDriveFlK"`/"
-          SECFUNCexecA -ce ls --color -l "$CFGstrGDriveFlK"
-        else
-          exit 1
-        fi
+}
+: ${bUseGRIVE:=false};export bUseGRIVE #help 
+if $bUseGRIVE;then
+  FUNCgriveWork
+  exit 0
+fi
+
+##############################################################################
+##############################################################################
+##############################################################################
+########################## GDrive #########################
+##############################################################################
+##############################################################################
+##############################################################################
+
+CFGstrGDriveFlK="$HOME/.gdrive/token_v2.json"
+
+CFGstrFlRemoteFileInfo="$HOME/.gdrive/${SECstrScriptSelfName}.RemoteFilesInfo.txt"
+
+CFGstrFlLastUpload="$HOME/.gdrive/${SECstrScriptSelfName}.LastUploadDtTm.cfg"
+CFGstrFlLastUploadBkpBN="$(basename "$CFGstrFlLastUpload")"
+
+FUNCupdFileList "$CFGstrFlLastUpload"
+
+function FUNCflKchkGDrive() {
+  declare -p CFGstrGDriveFlKRealAt&&: >&2
+  if [[ ! -a "$CFGstrGDriveFlK" ]];then
+    echoc -p "missing '$CFGstrGDriveFlK'"
+    exit 1
+  else
+    if [[ ! -L "$CFGstrGDriveFlK" ]];then
+      ls -l "$CFGstrGDriveFlK"
+      echoc --alert "was not protected@-n '$CFGstrGDriveFlK' move it elsewere and create a symlink!"
+      if [[ -f "$CFGstrGDriveFlKRealAt" ]];then
+        echoc --info "auto-fixing it as CFGstrGDriveFlKRealAt='$CFGstrGDriveFlKRealAt'"
+        FUNCprotRm "$CFGstrGDriveFlK" #TODO put something at `trap '...' EXIT`
+        SECFUNCexecA -ce ln -vs "$CFGstrGDriveFlKRealAt" "`dirname "$CFGstrGDriveFlK"`/"
+        SECFUNCexecA -ce ls --color -l "$CFGstrGDriveFlK"
       else
-        CFGstrGDriveFlKRealAt="$(readlink "$CFGstrGDriveFlK")"
-        SECFUNCcfgWriteVar --report CFGstrGDriveFlKRealAt
-      fi
-      
-      if ! grep -q "access" "$CFGstrGDriveFlK";then
-        echoc -p "invalid '$CFGstrGDriveFlK' contents"
         exit 1
       fi
+    else
+      CFGstrGDriveFlKRealAt="$(readlink "$CFGstrGDriveFlK")"
+      SECFUNCcfgWriteVar --report CFGstrGDriveFlKRealAt
     fi
-  }
-  FUNCflKchkGDrive
-
-  CFGstrFlKnownIDs="$HOME/.gdrive/${SECstrScriptSelfName}.KnownIDs.cfg"
-  if [[ -f "$CFGstrFlKnownIDs" ]];then 
-    SECFUNCtrash "${CFGstrFlKnownIDs}.7z"&&:
-    SECFUNCexecA -ce 7z a "${CFGstrFlKnownIDs}.7z" "${CFGstrFlKnownIDs}"
-    SECFUNCexecA -ce ls -l "${CFGstrFlKnownIDs}"
-  else
-    echo -n >"$CFGstrFlKnownIDs";
+    
+    if ! grep -q "access" "$CFGstrGDriveFlK";then
+      echoc -p "invalid '$CFGstrGDriveFlK' contents"
+      exit 1
+    fi
   fi
-  
-  CFGstrFlSessionDoneJobs="$HOME/.gdrive/${SECstrScriptSelfName}.DoneUploads.cfg"
-  if [[ ! -f "$CFGstrFlSessionDoneJobs" ]];then echo -n >"$CFGstrFlSessionDoneJobs";fi
-  if((`cat "$CFGstrFlSessionDoneJobs" |wc -l`>0));then echoc --info "continuing from last session.";fi
-  SECFUNCexecA -ce cat "$CFGstrFlSessionDoneJobs"
-  
-  function FUNCupdLastUpl() { 
-    date +%s >"$CFGstrFlLastUpload"; 
-    cp -v "$CFGstrFlLastUpload" "$strWorkPath/$CFGstrFlLastUploadBkpBN"
-    ls -l "$CFGstrFlLastUpload" "$strWorkPath/$CFGstrFlLastUploadBkpBN";  
-  }
-  if [[ ! -f "$CFGstrFlLastUpload" ]];then FUNCupdLastUpl;fi
-  
-  bTrashSessionCfg=true
-  
-  function FUNCaddKnownIDs() {
+}
+FUNCflKchkGDrive
+
+CFGstrFlKnownIDs="$HOME/.gdrive/${SECstrScriptSelfName}.KnownIDs.cfg"
+if [[ -f "$CFGstrFlKnownIDs" ]];then 
+  SECFUNCtrash "${CFGstrFlKnownIDs}.7z"&&:
+  SECFUNCexecA -ce 7z a "${CFGstrFlKnownIDs}.7z" "${CFGstrFlKnownIDs}"
+  SECFUNCexecA -ce ls -l "${CFGstrFlKnownIDs}"
+else
+  echo -n >"$CFGstrFlKnownIDs";
+fi
+
+CFGstrFlSessionDoneJobs="$HOME/.gdrive/${SECstrScriptSelfName}.DoneUploads.cfg"
+if [[ ! -f "$CFGstrFlSessionDoneJobs" ]];then echo -n >"$CFGstrFlSessionDoneJobs";fi
+if((`cat "$CFGstrFlSessionDoneJobs" |wc -l`>0));then echoc --info "continuing from last session.";fi
+SECFUNCexecA -ce cat "$CFGstrFlSessionDoneJobs"
+
+function FUNCupdLastUpl() { 
+  date +%s >"$CFGstrFlLastUpload"; 
+  cp -v "$CFGstrFlLastUpload" "$strWorkPath/$CFGstrFlLastUploadBkpBN"
+  ls -l "$CFGstrFlLastUpload" "$strWorkPath/$CFGstrFlLastUploadBkpBN";  
+}
+if [[ ! -f "$CFGstrFlLastUpload" ]];then FUNCupdLastUpl;fi
+
+bTrashSessionCfg=true
+
+function FUNCaddKnownIDs() {
 #    if [[ "$1" =~ ^Failed\ to\ get\ file.*$ ]];then
-    local lstrID="$(echo "$1" |awk '{print $1}')"
-    if((${#lstrID}!=33)) || [[ ! "$1" =~ ^.*\ \ \ (bin|dir)\ \ \ .*$ ]];then
-      SECFUNCechoErrA "invalid id text entry '$1'"
-      _SECFUNCcriticalForceExit
-    fi
-    echo "$1" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
-  }
+  local lstrID="$(echo "$1" |awk '{print $1}')"
+  if((${#lstrID}!=33)) || [[ ! "$1" =~ ^.*\ \ \ (bin|dir)\ \ \ .*$ ]];then
+    SECFUNCechoErrA "invalid id text entry '$1'"
+    _SECFUNCcriticalForceExit
+  fi
+  echo "$1" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
+}
+
+strFUNClistFromRemoteOutputRO=""
+function FUNClistFromRemote() { # [--folder] <lstrBN>
+  local lstrFolderChk="!=";if [[ "$1" == "--folder" ]];then lstrFolderChk="=";shift;fi
+  local lstrBN="$(basename "$1")";shift # grants BN
   
-  strFUNClistFromRemoteOutputRO=""
-  function FUNClistFromRemote() { # [--folder] <lstrBN>
-    local lstrFolderChk="!=";if [[ "$1" == "--folder" ]];then lstrFolderChk="=";shift;fi
-    local lstrBN="$(basename "$1")";shift # grants BN
+  local lastrCmdGDrList=(
+    list 
+    --max $nMax 
+    --order modifiedTime 
+    --no-header --bytes 
+    --name-width 0 
+    --absolute 
+    --query
+  )
+  lastrCmdGDrList+=("name = \"${lstrBN}\" and mimeType ${lstrFolderChk} 'application/vnd.google-apps.folder'")
+  #~ SECFUNCexecA -ce "${astrCmdGDrList[@]}" "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
+  #~ SECFUNCexecA -ce "$CFGstrExecGDrive" list \
+    #~ --max $nMax \
+    #~ --order modifiedTime \
+    #~ --no-header \
+    #~ --bytes \
+    #~ --name-width 0 \
+    #~ --absolute \
+    #~ --query "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
+  #~ if ! SECFUNCexecA -ce "${lastrCmdGDrList[@]}";then
+    #~ echoc -p "nRet='$nRet' gdrive failed to work."
+    #~ bTrashSessionCfg=false
+    #~ exit 1
+  #~ fi
+  
+  declare -g strFUNClistFromRemoteOutputRO="`FUNCrunGDrive "${lastrCmdGDrList[@]}"`"&&:;local lnRet=$?;
+  if((lnRet==0));then
+    if [[ -z "$strFUNClistFromRemoteOutputRO" ]];then 
+      echo "INFO: lstrBN='$lstrBN' not found remotely." >&2
+    else
+      FUNCaddKnownIDs "$strFUNClistFromRemoteOutputRO"
+    fi
+    return 0
+  fi
+  #~ if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
+  #~ if((lnRet!=0));then # gdrive may return 0 and still error out with a message :(
+    #~ echoc -p "lnRet='$lnRet' gdrive failed to run"
+    #~ bTrashSessionCfg=false
+    #~ exit 1
+  #~ fi
+  
+  return 1
+}
+
+#~ function FUNCgetExactOutputLine() { # <lstrFile> <lstrOutput> <lstrType>
+  #~ local lstrFile="$1";shift
+  #~ local lstrOutput="$1";shift
+  #~ local lstrType="$1";shift
+  
+  #~ #only the ID for the file on the correct path!
+  #~ if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFile} *${lstrType} "`";then 
+    #~ lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
+    #~ if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
+    #~ echo "$lstrOutput"
+    #~ return 0
+  #~ fi
+  #~ return 1
+#~ }
+
+function FUNCgetIDfromOutput() { # <lstrFile> <lstrOutput> <lstrType>
+  local lstrFile="$1";shift
+  local lstrOutput="$1";shift
+  local lstrType="$1";shift
+  
+  #only the ID for the file on the correct path!
+  if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFile} *${lstrType} "`";then 
+    lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
+    if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
     
-    local lastrCmdGDrList=(
-      list 
-      --max $nMax 
-      --order modifiedTime 
-      --no-header --bytes 
-      --name-width 0 
-      --absolute 
-      --query
-    )
-    lastrCmdGDrList+=("name = \"${lstrBN}\" and mimeType ${lstrFolderChk} 'application/vnd.google-apps.folder'")
-    #~ SECFUNCexecA -ce "${astrCmdGDrList[@]}" "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
-    #~ SECFUNCexecA -ce "$CFGstrExecGDrive" list \
-      #~ --max $nMax \
-      #~ --order modifiedTime \
-      #~ --no-header \
-      #~ --bytes \
-      #~ --name-width 0 \
-      #~ --absolute \
-      #~ --query "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
-    #~ if ! SECFUNCexecA -ce "${lastrCmdGDrList[@]}";then
-      #~ echoc -p "nRet='$nRet' gdrive failed to work."
-      #~ bTrashSessionCfg=false
-      #~ exit 1
-    #~ fi
-    
-    declare -g strFUNClistFromRemoteOutputRO="`FUNCrunGDrive "${lastrCmdGDrList[@]}"`"&&:;local lnRet=$?;
-    if((lnRet==0));then
-      if [[ -z "$strFUNClistFromRemoteOutputRO" ]];then 
-        echo "INFO: lstrBN='$lstrBN' not found remotely." >&2
-      else
-        FUNCaddKnownIDs "$strFUNClistFromRemoteOutputRO"
-      fi
+  #~ if lstrOutput="`FUNCgetExactOutputLine "$lstrFile" "$lstrOutput"`";then
+    if((`echo "$lstrOutput" |wc -l`==1));then
+      lstrFileID="`echo "$lstrOutput" | awk '{print $1}'`"
+      if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;declare -p lstrFileID >&2;fi
+      echo "$lstrFileID"
       return 0
     fi
-    #~ if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
-    #~ if((lnRet!=0));then # gdrive may return 0 and still error out with a message :(
-      #~ echoc -p "lnRet='$lnRet' gdrive failed to run"
-      #~ bTrashSessionCfg=false
-      #~ exit 1
-    #~ fi
-    
-    return 1
-  }
+  #~ fi
+  fi
+  
+  return 1
+}
 
-  #~ function FUNCgetExactOutputLine() { # <lstrFile> <lstrOutput> <lstrType>
-    #~ local lstrFile="$1";shift
-    #~ local lstrOutput="$1";shift
-    #~ local lstrType="$1";shift
-    
-    #~ #only the ID for the file on the correct path!
-    #~ if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFile} *${lstrType} "`";then 
-      #~ lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
-      #~ if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
-      #~ echo "$lstrOutput"
+#~ function FUNCgetKnownID() { # <lstrFile> <lstrType>
+  #~ local lstrFile="$1";shift
+  #~ local lstrType="$1";shift
+  #~ FUNCgetIDfromOutput "$lstrFile" "`cat "$CFGstrFlKnownIDs"`" "$lstrType"
+#~ }
+#~ function FUNCgetKnownID() { # <lstrFile>
+  #~ local lstrFile="$1";shift
+  #~ local lstrOutput
+  #~ if lstrOutput="`cat "$CFGstrFlKnownIDs" |egrep "$strFile"`";then
+    #~ if((`echo "$lstrOutput" |wc -l`>=1));then
+      #~ lstrOutput="`echo "$lstrOutput" |tail -n 1`"
+      #~ local lstrFileID="`echo "$lstrOutput" |awk '{print $1}'`"
+#~        echoc --info "ID is known already!" >&2
+      #~ if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;declare -p strFileID >&2;fi
+      #~ echo "$lstrFileID"
       #~ return 0
     #~ fi
-    #~ return 1
-  #~ }
-  
-  function FUNCgetIDfromOutput() { # <lstrFile> <lstrOutput> <lstrType>
-    local lstrFile="$1";shift
-    local lstrOutput="$1";shift
-    local lstrType="$1";shift
-    
-    #only the ID for the file on the correct path!
-    if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFile} *${lstrType} "`";then 
-      lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
-      if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
-      
-    #~ if lstrOutput="`FUNCgetExactOutputLine "$lstrFile" "$lstrOutput"`";then
-      if((`echo "$lstrOutput" |wc -l`==1));then
-        lstrFileID="`echo "$lstrOutput" | awk '{print $1}'`"
-        if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;declare -p lstrFileID >&2;fi
-        echo "$lstrFileID"
-        return 0
-      fi
-    #~ fi
-    fi
-    
-    return 1
-  }
+  #~ fi
+  #~ return 1
+#~ }
 
-  #~ function FUNCgetKnownID() { # <lstrFile> <lstrType>
-    #~ local lstrFile="$1";shift
-    #~ local lstrType="$1";shift
-    #~ FUNCgetIDfromOutput "$lstrFile" "`cat "$CFGstrFlKnownIDs"`" "$lstrType"
-  #~ }
-  #~ function FUNCgetKnownID() { # <lstrFile>
-    #~ local lstrFile="$1";shift
-    #~ local lstrOutput
-    #~ if lstrOutput="`cat "$CFGstrFlKnownIDs" |egrep "$strFile"`";then
-      #~ if((`echo "$lstrOutput" |wc -l`>=1));then
-        #~ lstrOutput="`echo "$lstrOutput" |tail -n 1`"
-        #~ local lstrFileID="`echo "$lstrOutput" |awk '{print $1}'`"
-#~        echoc --info "ID is known already!" >&2
-        #~ if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;declare -p strFileID >&2;fi
-        #~ echo "$lstrFileID"
-        #~ return 0
-      #~ fi
-    #~ fi
-    #~ return 1
-  #~ }
+function FUNCgetID() { # <lstrFile> <lstrType>
+  local lstrFile="$1";shift
+  local lstrType="$1";shift
   
-  function FUNCgetID() { # <lstrFile> <lstrType>
-    local lstrFile="$1";shift
-    local lstrType="$1";shift
-    
-    local lstrID
-    # check if ID is stored locally at cfg file
-    if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$(cat "$CFGstrFlKnownIDs")" "$lstrType")";then
-      echoc --info "$lstrType ID is known already!" >&2
-    else # gets the ID from the remote
-      local lstrOptFolder="";if [[ "$lstrType" == "dir" ]];then lstrOptFolder="--folder";fi
-      if FUNClistFromRemote $lstrOptFolder "$lstrFile";then local lstrOutput="$strFUNClistFromRemoteOutputRO"
-        if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$lstrOutput" "$lstrType")";then
-          echoc --info "ID found remotely!" >&2
-        else
-          declare -p lstrOutput >&2
-          SEC_WARN=true SECFUNCechoWarnA "remote output above has not the ID for lstrFile='$lstrFile'"
-          return 1
-        fi
+  local lstrID
+  # check if ID is stored locally at cfg file
+  if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$(cat "$CFGstrFlKnownIDs")" "$lstrType")";then
+    echoc --info "$lstrType ID is known already!" >&2
+  else # gets the ID from the remote
+    local lstrOptFolder="";if [[ "$lstrType" == "dir" ]];then lstrOptFolder="--folder";fi
+    if FUNClistFromRemote $lstrOptFolder "$lstrFile";then local lstrOutput="$strFUNClistFromRemoteOutputRO"
+      if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$lstrOutput" "$lstrType")";then
+        echoc --info "ID found remotely!" >&2
       else
-        SEC_WARN=true SECFUNCechoWarnA "remote listing failed for lstrFile='$lstrFile'"
+        declare -p lstrOutput >&2
+        SEC_WARN=true SECFUNCechoWarnA "remote output above has not the ID for lstrFile='$lstrFile'"
         return 1
       fi
-    fi
-    
-    echo "$lstrID"
-    return 0
-  }
-  
-  function FUNCaddToSessionDoneJobs() {
-    ls -l "$1" >>"$CFGstrFlSessionDoneJobs"
-  }
-
-  function FUNCwriteSimulatedKnownID() { # <lstrUploadedID> <lstrFile> <lstrType>
-    local lstrUploadedID="$1";shift
-    local lstrFile="$1";shift
-    local lstrType="$1";shift
-    
-    # 3 spaces at least between each part 
-    #TODO put trailing creation time? w/e...
-    echo "$lstrUploadedID   $lstrFile   $lstrType   #LocallySimulatedKnownIDentry" >>"$CFGstrFlKnownIDs"
-    tail -n 1 "$CFGstrFlKnownIDs" >&2
-  }
-  
-  function FUNCrunGDrive() { # <params...>
-    local lastrCmd=( "$CFGstrExecGDrive" )
-    lastrCmd+=( "$@" )
-    
-    local lstrOutput="$(SECFUNCexecA -ce "${lastrCmd[@]}")"&&:;local lnRet=$?
-    if ((lnRet!=0)) || [[ "$lstrOutput" =~ Failed.* ]];then # gdrive may return 0 and still error out with a message :(
-      bTrashSessionCfg=false
-      SECFUNCechoErrA "lnRet='$lnRet', invalid lstrOutput='$lstrOutput'"
-      _SECFUNCcriticalForceExit
-    fi
-    
-    if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
-    
-    echo "$lstrOutput"
-  }
-  
-  function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
-    local lstrPath="$1";shift
-    
-    local lstrPathID=""
-    if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
-      echo "$lstrPathID"
-      return 0
-    fi
-    
-    local lastrPathParts=()
-    IFS=$'\n' read -d '' -r -a lastrPathParts < <( echo "$lstrPath" |tr "/" "\n" )&&:
-    
-    local lstrPathID=""
-    local lstrLastFoundParentPathID=""
-    local lstrFoundPathTree=""
-    for lstrPathPart in "${lastrPathParts[@]}";do
-      #~ local lbWriteNewFolderID=false
-      local lstrJustCreatedFolderID=""
-      
-      if lstrPathPartID="$(FUNCgetID "$lstrPathPart" dir)";then
-        lstrLastFoundParentPathID="$lstrPathPartID"
-        declare -p lstrLastFoundParentPathID lstrPathPart >&2
-      else
-        local lastrCmdMkdir=( mkdir )
-        if [[ -n "$lstrLastFoundParentPathID" ]];then # emtpy is root
-          lastrCmdMkdir+=( -p "$lstrLastFoundParentPathID" )
-        fi
-        lastrCmdMkdir+=( "$lstrPathPart" )
-        
-        local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")"
-        
-        declare -p lastrCmdMkdir lstrMkdirOutput >&2
-        
-        if [[ "$lstrMkdirOutput" =~ ^Directory\ .*\ created$ ]];then
-          lstrJustCreatedFolderID="$(echo "$lstrMkdirOutput" |awk '{print $2}')"
-          #~ lbWriteNewFolderID=true
-          lstrLastFoundParentPathID="$lstrJustCreatedFolderID"
-          declare -p lstrLastFoundParentPathID lstrJustCreatedFolderID >&2
-        else
-          echoc -p "invalid remote mkdir output" >&2
-          exit 1
-        fi
-      fi
-      
-      if [[ -n "$lstrFoundPathTree" ]];then lstrFoundPathTree+="/";fi
-      lstrFoundPathTree+="$lstrPathPart"
-      
-      if [[ -n "$lstrJustCreatedFolderID" ]];then
-        FUNCwriteSimulatedKnownID "$lstrJustCreatedFolderID" "$lstrFoundPathTree" "dir"
-      fi
-    done
-    
-    if [[ -z "$lstrLastFoundParentPathID" ]];then
-      echoc -p "unable to get remote path ID" >&2
-      exit 1
-    fi
-    
-    echo "$lstrLastFoundParentPathID"
-  }
-  
-
-  function FUNCcreateRemoteFile() { # <lstrFile>
-    local lstrFile="$1";shift
-    
-    local lastrCmd=( upload )
-    
-    local lstrPath="$(dirname "$lstrFile")";declare -p lstrPath >&2
-    local lstrPathID=""
-    if [[ "$lstrPath" != "." ]];then
-      if lstrPathID="$(FUNCchkOrCreateRemotePathTreeAndGetID "$lstrPath")";then
-        declare -p lstrPathID >&2
-        lastrCmd+=(--parent "$lstrPathID")
-      else
-        exit 1
-      fi
-      #~ if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
-        #~ declare -p lstrPathID >&2
-        #~ lastrCmd+=(--parent "$lstrPathID")
-      #~ else
-        #~ FUNCcreatePathTree "$lstrPath"
-        #~ #echoc -p "TODO: create remote path lstrPath='$lstrPath' for lstrFile='$lstrFile'"
-        #~ #TODO "$CFGstrExecGDrive" mkdir -p "$lstrDNParentID" "$lstrPathBN"
-        #~ exit 1 #TODO as is it
-      #~ fi
-      #FUNClistFromRemote --folder "$lstrPath"
-    fi
-    
-    local lstrCreateOutput
-    if lstrCreateOutput="$(FUNCrunGDrive "${lastrCmd[@]}" "$lstrFile")";then
-      if lstrCreateOutput="$(echo "$lstrCreateOutput" |egrep "^Uploaded .*")";then
-        if [[ "$lstrCreateOutput" =~ ^Uploaded\ .* ]];then
-          local lstrUploadedID="$(echo "$lstrCreateOutput" |awk '{print $2}')"
-          FUNCwriteSimulatedKnownID "$lstrUploadedID" "$lstrFile" "bin"
-          #~ echo "$lstrUploadedID   $lstrFile   bin   #LocallySimulatedKnownIDentry" >>"$CFGstrFlKnownIDs"
-          #~ tail -n 1 "$CFGstrFlKnownIDs" >&2
-          
-          FUNCaddToSessionDoneJobs "$strFile"
-          return 0
-        fi
-      fi
-      
-      declare -p lstrCreateOutput >&2
-      echoc -p "uploaded output result was not recognized"
     else
-      echoc -p "upload cmd failed"
+      SEC_WARN=true SECFUNCechoWarnA "remote listing failed for lstrFile='$lstrFile'"
+      return 1
     fi
-    
-    echoc -p "uploading lstrFile='$lstrFile' failed"
-    return 1
-  }
-  
-  bSmallFlow=true
-  if $bSmallFlow;then
-    SECFUNCarrayShow -v astrFileList
-    if SECFUNCarrayWork --contains astrFileList "$CFGstrFlLastUploadBkpBN";then
-      SECFUNCechoErrA "the list should not contain the control file yet!"
-      _SECFUNCcriticalForceExit
-    fi
-    astrFileList+=( "$CFGstrFlLastUploadBkpBN" )
-    #~ if ! SECFUNCarrayCheck -n astrFileList;then
-      #~ echoc --info "empty list"
-    #~ fi
-    #~ if((`SECFUNCarraySize astrFileList`==1)) && [[ "${astrFileList[0]}" == "$CFGstrFlLastUploadBkpBN" ]];then
-      #~ echoc --info "nothing to upload (skipping control file)"
-      #~ exit 0
-    #~ fi
-    #~ if SECFUNCarrayWork --contains astrFileList "$CFGstrFlLastUploadBkpBN";then
-      #~ SECFUNCarrayWork --clean astrFileList "$CFGstrFlLastUploadBkpBN" #to grant it will be the last one!
-      #~ astrFileList+=( "$CFGstrFlLastUploadBkpBN" )
-    #~ fi
-    #~ SECFUNCarrayShow -v astrFileList
-    
-    for strFile in "${astrFileList[@]}";do
-      SECFUNCdrawLine " $strFile "
-      
-      strPath="`dirname "${strFile}"`"
-      strBN="`basename "${strFile}"`"
-      
-      strFileID=""
-      
-      if cat "$CFGstrFlSessionDoneJobs" |egrep "^`ls -l "$strFile"`$";then
-        echoc --info "already uploaded on this session."
-        continue
-      fi
-      
-      if [[ "$strFile" == "$CFGstrFlLastUploadBkpBN" ]];then
-        if $bTrashSessionCfg;then # only finishes the session if everything is ok!
-          FUNCupdLastUpl
-        fi
-      fi
-      
-      if ! strFileID="`FUNCgetID "$strFile" bin`";then
-        if ! FUNCcreateRemoteFile "$strFile";then
-          bTrashSessionCfg=false
-        fi
-      else
-        # updates the remote file
-        if [[ -n "$strFileID" ]];then
-          if FUNCrunGDrive update "$strFileID" "$strFile";then
-            FUNCaddToSessionDoneJobs "$strFile"
-
-            #~ echo "$strOutput" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
-            #FUNCaddKnownIDs "$strOutput"
-            
-            : ${bVerboseGetInfo:=false};#help
-            if $bVerboseGetInfo;then
-              SECFUNCexecA -ce ls -l "$strFile"
-              while true;do
-                if strInfo="`FUNCrunGDrive info --bytes "$strFileID"`";then
-                  if ! echo "$strInfo" |egrep --color -e "^" -e "^Size: `stat -c %s "$strFile"` B$";then #exact size matching highlight only
-                    echoc -t 60 -w -p "failed to make sure the upload size did match local's" #TODO do not ignore one day
-                    bTrashSessionCfg=false
-                  fi
-                  break
-                else
-                  if ! echoc -t 60 -q "retry get info?";then
-                    break;
-                  fi
-                fi
-              done
-            fi
-            echoc --info "success!"
-          else
-            echoc -p "failed while uploading the file!"
-            bTrashSessionCfg=false
-            exit 1
-          fi
-        fi
-        
-        if [[ -z "$strFileID" ]];then
-          echoc -p "failed to get file ID for strFile='$strFile' #TODO file may not exist remotely"
-          bTrashSessionCfg=false
-        fi
-      fi
-      
-      if $bVerbose;then echoc -w -t 60;fi
-      
-      : ${bExitAfter1st:=false};if $bExitAfter1st;then exit 0;fi;#help
-    done
-    
-    if $bTrashSessionCfg;then # only finishes the session if everything is ok!
-      #FUNCupdLastUpl
-      SECFUNCtrash "$CFGstrFlSessionDoneJobs"
-    else
-      echoc --info "session work have not completed yet..."
-    fi
-    
-    FUNCflKchkGDrive #TODO should be on a `trap '' EXIT` 
-  else
-    echoc --alert "TODO: BIG FLOW NOT READY (may never be...)";exit 1
-    
-    # BIG FLOW ONE DAY
-    # get all files from remote
-    if [[ -f "${CFGstrFlRemoteFileInfo}" ]];then
-      if SECFUNCexecA -ce 7z a "${CFGstrFlRemoteFileInfo}-`SECFUNCdtFmt --filename`.7z" "${CFGstrFlRemoteFileInfo}";then
-        SECFUNCtrash "${CFGstrFlRemoteFileInfo}"
-      fi
-    fi
-    FUNCrunGDrive list --no-header --bytes --max $nMax --name-width 0 --absolute --query "mimeType = 'application/vnd.google-apps.folder' and trashed = false" |tee -a "$CFGstrFlRemoteFileInfo"
-
-    astrFolderIdList=() #TODO from initial list
-    for strFolderId in "${astrFolderIdList[@]}";do
-      FUNCrunGDrive list --no-header --bytes --max $nMax --name-width 0 --absolute --query "mimeType != 'application/vnd.google-apps.folder' and '${strFolderId}' in parents and trashed = false" |tee -a "$CFGstrFlRemoteFileInfo"
-    done
-    
-    #TODO
   fi
   
+  echo "$lstrID"
+  return 0
+}
+
+function FUNCaddToSessionDoneJobs() {
+  ls -l "$1" >>"$CFGstrFlSessionDoneJobs"
+}
+
+function FUNCwriteSimulatedKnownID() { # <lstrUploadedID> <lstrFile> <lstrType>
+  local lstrUploadedID="$1";shift
+  local lstrFile="$1";shift
+  local lstrType="$1";shift
+  
+  # 3 spaces at least between each part 
+  #TODO put trailing creation time? w/e...
+  echo "$lstrUploadedID   $lstrFile   $lstrType   #LocallySimulatedKnownIDentry" >>"$CFGstrFlKnownIDs"
+  tail -n 1 "$CFGstrFlKnownIDs" >&2
+}
+
+function FUNCrunGDrive() { # <params...>
+  local lastrCmd=( "$CFGstrExecGDrive" )
+  lastrCmd+=( "$@" )
+  
+  local lstrOutput="$(SECFUNCexecA -ce "${lastrCmd[@]}")"&&:;local lnRet=$?
+  if ((lnRet!=0)) || [[ "$lstrOutput" =~ Failed.* ]];then # gdrive may return 0 and still error out with a message :(
+    bTrashSessionCfg=false
+    SECFUNCechoErrA "lnRet='$lnRet', invalid lstrOutput='$lstrOutput'"
+    _SECFUNCcriticalForceExit
+  fi
+  
+  if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
+  
+  echo "$lstrOutput"
+}
+
+function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
+  local lstrPath="$1";shift
+  
+  local lstrPathID=""
+  if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
+    echo "$lstrPathID"
+    return 0
+  fi
+  
+  local lastrPathParts=()
+  IFS=$'\n' read -d '' -r -a lastrPathParts < <( echo "$lstrPath" |tr "/" "\n" )&&:
+  
+  local lstrPathID=""
+  local lstrLastFoundParentPathID=""
+  local lstrFoundPathTree=""
+  for lstrPathPart in "${lastrPathParts[@]}";do
+    #~ local lbWriteNewFolderID=false
+    local lstrJustCreatedFolderID=""
+    
+    if lstrPathPartID="$(FUNCgetID "$lstrPathPart" dir)";then
+      lstrLastFoundParentPathID="$lstrPathPartID"
+      declare -p lstrLastFoundParentPathID lstrPathPart >&2
+    else
+      local lastrCmdMkdir=( mkdir )
+      if [[ -n "$lstrLastFoundParentPathID" ]];then # emtpy is root
+        lastrCmdMkdir+=( -p "$lstrLastFoundParentPathID" )
+      fi
+      lastrCmdMkdir+=( "$lstrPathPart" )
+      
+      local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")"
+      
+      declare -p lastrCmdMkdir lstrMkdirOutput >&2
+      
+      if [[ "$lstrMkdirOutput" =~ ^Directory\ .*\ created$ ]];then
+        lstrJustCreatedFolderID="$(echo "$lstrMkdirOutput" |awk '{print $2}')"
+        #~ lbWriteNewFolderID=true
+        lstrLastFoundParentPathID="$lstrJustCreatedFolderID"
+        declare -p lstrLastFoundParentPathID lstrJustCreatedFolderID >&2
+      else
+        echoc -p "invalid remote mkdir output" >&2
+        exit 1
+      fi
+    fi
+    
+    if [[ -n "$lstrFoundPathTree" ]];then lstrFoundPathTree+="/";fi
+    lstrFoundPathTree+="$lstrPathPart"
+    
+    if [[ -n "$lstrJustCreatedFolderID" ]];then
+      FUNCwriteSimulatedKnownID "$lstrJustCreatedFolderID" "$lstrFoundPathTree" "dir"
+    fi
+  done
+  
+  if [[ -z "$lstrLastFoundParentPathID" ]];then
+    echoc -p "unable to get remote path ID" >&2
+    exit 1
+  fi
+  
+  echo "$lstrLastFoundParentPathID"
+}
+
+
+function FUNCcreateRemoteFile() { # <lstrFile>
+  local lstrFile="$1";shift
+  
+  local lastrCmd=( upload )
+  
+  local lstrPath="$(dirname "$lstrFile")";declare -p lstrPath >&2
+  local lstrPathID=""
+  if [[ "$lstrPath" != "." ]];then
+    if lstrPathID="$(FUNCchkOrCreateRemotePathTreeAndGetID "$lstrPath")";then
+      declare -p lstrPathID >&2
+      lastrCmd+=(--parent "$lstrPathID")
+    else
+      exit 1
+    fi
+    #~ if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
+      #~ declare -p lstrPathID >&2
+      #~ lastrCmd+=(--parent "$lstrPathID")
+    #~ else
+      #~ FUNCcreatePathTree "$lstrPath"
+      #~ #echoc -p "TODO: create remote path lstrPath='$lstrPath' for lstrFile='$lstrFile'"
+      #~ #TODO "$CFGstrExecGDrive" mkdir -p "$lstrDNParentID" "$lstrPathBN"
+      #~ exit 1 #TODO as is it
+    #~ fi
+    #FUNClistFromRemote --folder "$lstrPath"
+  fi
+  
+  local lstrCreateOutput
+  if lstrCreateOutput="$(FUNCrunGDrive "${lastrCmd[@]}" "$lstrFile")";then
+    if lstrCreateOutput="$(echo "$lstrCreateOutput" |egrep "^Uploaded .*")";then
+      if [[ "$lstrCreateOutput" =~ ^Uploaded\ .* ]];then
+        local lstrUploadedID="$(echo "$lstrCreateOutput" |awk '{print $2}')"
+        FUNCwriteSimulatedKnownID "$lstrUploadedID" "$lstrFile" "bin"
+        #~ echo "$lstrUploadedID   $lstrFile   bin   #LocallySimulatedKnownIDentry" >>"$CFGstrFlKnownIDs"
+        #~ tail -n 1 "$CFGstrFlKnownIDs" >&2
+        
+        FUNCaddToSessionDoneJobs "$strFile"
+        return 0
+      fi
+    fi
+    
+    declare -p lstrCreateOutput >&2
+    echoc -p "uploaded output result was not recognized"
+  else
+    echoc -p "upload cmd failed"
+  fi
+  
+  echoc -p "uploading lstrFile='$lstrFile' failed"
+  return 1
+}
+
+function _FUNCbigListingDownloadsFlow() { #TODO zombie
+  echoc --alert "TODO: BIG FLOW NOT READY (may never be...)";exit 1
+  
+  # BIG FLOW ONE DAY
+  # get all files from remote
+  if [[ -f "${CFGstrFlRemoteFileInfo}" ]];then
+    if SECFUNCexecA -ce 7z a "${CFGstrFlRemoteFileInfo}-`SECFUNCdtFmt --filename`.7z" "${CFGstrFlRemoteFileInfo}";then
+      SECFUNCtrash "${CFGstrFlRemoteFileInfo}"
+    fi
+  fi
+  FUNCrunGDrive list --no-header --bytes --max $nMax --name-width 0 --absolute --query "mimeType = 'application/vnd.google-apps.folder' and trashed = false" |tee -a "$CFGstrFlRemoteFileInfo"
+
+  astrFolderIdList=() #TODO from initial list
+  for strFolderId in "${astrFolderIdList[@]}";do
+    FUNCrunGDrive list --no-header --bytes --max $nMax --name-width 0 --absolute --query "mimeType != 'application/vnd.google-apps.folder' and '${strFolderId}' in parents and trashed = false" |tee -a "$CFGstrFlRemoteFileInfo"
+  done
+  
+  #TODO
+}
+bSmallFlow=true
+if ! $bSmallFlow;then
+  _FUNCbigListingDownloadsFlow
+  exit 0
 fi
+
+SECFUNCarrayShow -v astrFileList
+if SECFUNCarrayWork --contains astrFileList "$CFGstrFlLastUploadBkpBN";then
+  SECFUNCechoErrA "the list should not contain the control file yet!"
+  _SECFUNCcriticalForceExit
+fi
+astrFileList+=( "$CFGstrFlLastUploadBkpBN" )
+#~ if ! SECFUNCarrayCheck -n astrFileList;then
+  #~ echoc --info "empty list"
+#~ fi
+#~ if((`SECFUNCarraySize astrFileList`==1)) && [[ "${astrFileList[0]}" == "$CFGstrFlLastUploadBkpBN" ]];then
+  #~ echoc --info "nothing to upload (skipping control file)"
+  #~ exit 0
+#~ fi
+#~ if SECFUNCarrayWork --contains astrFileList "$CFGstrFlLastUploadBkpBN";then
+  #~ SECFUNCarrayWork --clean astrFileList "$CFGstrFlLastUploadBkpBN" #to grant it will be the last one!
+  #~ astrFileList+=( "$CFGstrFlLastUploadBkpBN" )
+#~ fi
+#~ SECFUNCarrayShow -v astrFileList
+
+for strFile in "${astrFileList[@]}";do
+  SECFUNCdrawLine " $strFile "
+  
+  strPath="`dirname "${strFile}"`"
+  strBN="`basename "${strFile}"`"
+  
+  strFileID=""
+  
+  if cat "$CFGstrFlSessionDoneJobs" |egrep "^`ls -l "$strFile"`$";then
+    echoc --info "already uploaded on this session."
+    continue
+  fi
+  
+  if [[ "$strFile" == "$CFGstrFlLastUploadBkpBN" ]];then
+    if $bTrashSessionCfg;then # only finishes the session if everything is ok!
+      FUNCupdLastUpl
+    fi
+  fi
+  
+  if ! strFileID="`FUNCgetID "$strFile" bin`";then
+    if ! FUNCcreateRemoteFile "$strFile";then
+      bTrashSessionCfg=false
+    fi
+  else
+    # updates the remote file
+    if [[ -n "$strFileID" ]];then
+      if FUNCrunGDrive update "$strFileID" "$strFile";then
+        FUNCaddToSessionDoneJobs "$strFile"
+
+        #~ echo "$strOutput" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
+        #FUNCaddKnownIDs "$strOutput"
+        
+        : ${bVerboseGetInfo:=false};#help
+        if $bVerboseGetInfo;then
+          SECFUNCexecA -ce ls -l "$strFile"
+          while true;do
+            if strInfo="`FUNCrunGDrive info --bytes "$strFileID"`";then
+              if ! echo "$strInfo" |egrep --color -e "^" -e "^Size: `stat -c %s "$strFile"` B$";then #exact size matching highlight only
+                echoc -t 60 -w -p "failed to make sure the upload size did match local's" #TODO do not ignore one day
+                bTrashSessionCfg=false
+              fi
+              break
+            else
+              if ! echoc -t 60 -q "retry get info?";then
+                break;
+              fi
+            fi
+          done
+        fi
+        echoc --info "success!"
+      else
+        echoc -p "failed while uploading the file!"
+        bTrashSessionCfg=false
+        exit 1
+      fi
+    fi
+    
+    if [[ -z "$strFileID" ]];then
+      echoc -p "failed to get file ID for strFile='$strFile' #TODO file may not exist remotely"
+      bTrashSessionCfg=false
+    fi
+  fi
+  
+  if $bVerbose;then echoc -w -t 60;fi
+  
+  : ${bExitAfter1st:=false};if $bExitAfter1st;then exit 0;fi;#help
+done
+
+if $bTrashSessionCfg;then # only finishes the session if everything is ok!
+  #FUNCupdLastUpl
+  SECFUNCtrash "$CFGstrFlSessionDoneJobs"
+else
+  echoc --info "session work have not completed yet..."
+fi
+
+FUNCflKchkGDrive #TODO should be on a `trap '' EXIT` 
 
 exit 0 # important to have this default exit value in case some non problematic command fails before exiting
