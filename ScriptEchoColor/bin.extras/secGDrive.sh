@@ -291,13 +291,16 @@ if [[ ! -f "$CFGstrFlLastUpload" ]];then FUNCupdLastUpl;fi
 bTrashSessionCfg=true
 
 function FUNCaddKnownIDs() {
-#    if [[ "$1" =~ ^Failed\ to\ get\ file.*$ ]];then
-  local lstrID="$(echo "$1" |awk '{print $1}')"
-  if((${#lstrID}!=33)) || [[ ! "$1" =~ ^.*\ \ \ (bin|dir)\ \ \ .*$ ]];then
-    SECFUNCechoErrA "invalid id text entry '$1'"
-    _SECFUNCcriticalForceExit
-  fi
-  echo "$1" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
+  local lastrKnIDs=();IFS=$'\n' read -d '' -r -a lastrKnIDs < <(echo "$1")&&:
+  local lstrKnID;for lstrKnID in "${lastrKnIDs[@]}";do
+  #    if [[ "$1" =~ ^Failed\ to\ get\ file.*$ ]];then
+    local lstrID="$(echo "$lstrKnID" |awk '{print $1}')"
+    if((${#lstrID}!=33)) || [[ ! "$lstrKnID" =~ ^.*\ \ \ (bin|dir)\ \ \ .*$ ]];then
+      SECFUNCechoErrA "invalid id text entry '$lstrKnID' ${#lstrID}"
+      _SECFUNCcriticalForceExit
+    fi
+    echo "$lstrKnID" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
+  done
 }
 
 strFUNClistFromRemoteOutputRO=""
@@ -685,7 +688,7 @@ for strFile in "${astrFileList[@]}";do
     fi
   fi
   
-  if $bVerbose;then echoc -w -t 60;fi
+  : ${bWaitBetweenEachWork:=false};if $bWaitBetweenEachWork;then echoc -w -t 60;fi #help
   
   : ${bExitAfter1st:=false};if $bExitAfter1st;then exit 0;fi;#help
 done
