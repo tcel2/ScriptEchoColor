@@ -450,13 +450,27 @@ if $bDaemon;then
       strTxt+="$strBNCurrent"
       
       # pseudo outline at 4 corners
-      FUNCconvert "${strTmpFilePreparing}" -gravity South -pointsize $nFontSize \
-        -fill red    -annotate +0+2 "$strTxt" \
-        -fill green  -annotate +2+0 "$strTxt" \
-        -fill blue   -annotate +0+0 "$strTxt" \
-        -fill purple -annotate +2+2 "$strTxt" \
-        -fill white  -annotate +1+1 "$strTxt" \
-        "jpeg:${strTmpFilePreparing}2"
+      strTxtColor="white";#if $CFGbShowHidden;then strTxtColor="red";fi
+      astrOutlineColors=(red green blue purple) # dark colors
+      if $CFGbShowHidden;then strTxtColor="yellow"; astrOutlineColors=(red red red red);fi
+      astrCmdWrTx=(
+        -pointsize $nFontSize
+        -fill ${astrOutlineColors[0]} -annotate +0+2 "$strTxt" # outline top left
+        -fill ${astrOutlineColors[1]} -annotate +2+0 "$strTxt" # outline bottom right
+        -fill ${astrOutlineColors[2]} -annotate +0+0 "$strTxt" # outline bottom left
+        -fill ${astrOutlineColors[3]} -annotate +2+2 "$strTxt" # outline top right
+        -fill $strTxtColor  -annotate +1+1 "$strTxt" # final text
+      )
+      astrCmdWriteTxt=(
+        FUNCconvert "${strTmpFilePreparing}" 
+          -gravity South "${astrCmdWrTx[@]}"
+          -gravity North "${astrCmdWrTx[@]}"
+      )
+      #~ if $CFGbShowHidden;then
+        #~ astrCmdWriteTxt+=( -fill red -annotate +0+0 "$strTxt" )
+      #~ fi
+      astrCmdWriteTxt+=( "jpeg:${strTmpFilePreparing}2" )
+      "${astrCmdWriteTxt[@]}"
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi
     

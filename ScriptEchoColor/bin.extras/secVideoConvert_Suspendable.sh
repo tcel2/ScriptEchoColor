@@ -373,6 +373,7 @@ elif $bCompletedMaintenanceMode;then
           "$nIndex" 
           "`SECFUNCfileSuffix "$strFl"`"
           "`basename "$strFlC"`" 
+          "`FUNCflBNHash "$strFl"`"
           "$strFlC"
         );
       fi
@@ -402,6 +403,7 @@ elif $bCompletedMaintenanceMode;then
       --maximized 
       --center 
       --no-markup 
+      --selectable-labels
       --title="$(basename $0) maintain completed jobs (double click for specific entry actions)" 
       --list 
       --checklist 
@@ -411,6 +413,7 @@ elif $bCompletedMaintenanceMode;then
       --column "Index" 
       --column "OrigExt" 
       --column "basename" 
+      --column "TmpBNHash"
       --column "full path" 
       
       "${astrMaintListDiag[@]}"
@@ -518,8 +521,10 @@ elif $bDaemonContinueMode;then
         SECFUNCcfgReadDB
       done
       
+      #echoc --info "Seeking '$CFGstrContinueWith'" >&2
       if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
-        echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
+        #echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
+        echo "Skipping '$strFileAbs'" >&2
         continue;
       fi
       
@@ -635,17 +640,28 @@ function FUNCshortDurChk() {
 }
 
 function FUNCavconvRaw() {
+  local lstrPartID=""
+  if [[ "$1" == "--PartID" ]];then 
+    shift;lstrPartID=".${1}";
+    shift; 
+  fi
+  
   if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc;fi
   (
     nBPid=$BASHPID
-    strFlLog="${strAbsFileNmHashTmp}.${nBPid}.log"
+    strFlLog="${strAbsFileNmHashTmp}${lstrPartID}.pid${nBPid}.log"
     echo "DBG: $$ $strFlLog" >&2
     echo -n >>"$strFlLog"
     tail -F --pid=$nBPid "$strFlLog" |egrep "^ *(Input|Output|Duration|Stream|frame=)"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
     astrExecCmd=(nice -n 19 avconv "$@")
     echo "EXEC: `SECFUNCparamsToEval "${astrExecCmd[@]}"`" >&2
     SECFUNCexecA -ce "${astrExecCmd[@]}" >"$strFlLog" 2>&1 ; nRet=$?
+    
+    echo >>"${strAbsFileNmHashTmp}.log"
+    echo "=================================================" >>"${strAbsFileNmHashTmp}.log"
+    echo "LOGFILE=$strFlLog" >>"${strAbsFileNmHashTmp}.log"
     cat "$strFlLog" >>"${strAbsFileNmHashTmp}.log"
+    
     if((nRet!=0));then
       SECFUNCechoErrA "failed nRet=$nRet"
     fi
@@ -666,16 +682,18 @@ function FUNCavconvConv() { #help
 	local lastrAllParams=("${@-}") # this may be useful
   local lstrIn=""
   local lstrOut=""
+  local lstrPartID=""
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #FUNCavconvConv_help show this help
 			SECFUNCshowHelp $FUNCNAME
 			SECFUNCdbgFuncOutA;return 0
-		elif [[ "$1" == "--io" ]];then #FUNCavconvConv_help <lstrExample> MISSING DESCRIPTION
+		elif [[ "$1" == "--io" ]];then #FUNCavconvConv_help <lstrIn> <lstrOut>
 			shift;lstrIn="$1"
       shift;lstrOut="$1"
-    elif [[ "$1" == "-p" || "$1" == "--part" ]];then #FUNCavconvConv_help MISSING DESCRIPTION
+    elif [[ "$1" == "-p" || "$1" == "--part" ]];then #FUNCavconvConv_help <lstrPartID>
       lbPart=true
+      shift;lstrPartID="$1"
     elif [[ "$1" == "-m" || "$1" == "--mute" ]];then #FUNCavconvConv_help MISSING DESCRIPTION
       lbMute=true
     elif [[ "$1" == "-m" || "$1" == "--mute" ]];then #FUNCavconvConv_help MISSING DESCRIPTION
@@ -707,7 +725,7 @@ function FUNCavconvConv() { #help
   
   local lstrFlTmp="${lstrOut}.TEMP_INCOMPLETE.mp4"
   SECFUNCtrash "$lstrFlTmp"&&:
-  if FUNCavconvRaw -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFlTmp";then
+  if FUNCavconvRaw --PartID "$lstrPartID" -i "$lstrIn" "${lastrPartParms[@]}" "$lstrFlTmp";then
     SECFUNCexecA -ce mv -vf "$lstrFlTmp" "$lstrOut"
   else
     SECFUNCtrash "$lstrFlTmp"&&:
@@ -1149,6 +1167,11 @@ for strFilePart in "${astrFilePartList[@]}";do
   SECFUNCcfgReadDB # dynamic updates functionalities like cpulimit
   
   strFilePartNS="${strFilePart%.mp4}"
+  
+  strPartID="$(basename "$strFilePartNS")"
+  strPartID="${strPartID#${strFileBNHash}.}";
+  declare -p strPartID >&2
+  
   strPartTmp="${strAbsFileNmHashTmp}.NewPart.${strNewFormatSuffix}.TEMP.mp4"
   strFilePartNew="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
   #~ strFilePartNewUnsafeName="${strFilePartNS}.NewPart.${strNewFormatSuffix}.mp4"
@@ -1179,7 +1202,7 @@ for strFilePart in "${astrFilePartList[@]}";do
       declare -p nNewPartsCurSizeKB nEstimFinalSzKB nFileSzKB
     fi
     echoc --info "PROGRESS: $nCount/${#astrFilePartList[*]}, ${nPerc}% (EstComp=${nPercComp}%) for '$strFileAbs'"
-    if FUNCavconvConv --part --io "$strFilePart" "$strPartTmp";then
+    if FUNCavconvConv --part "$strPartID" --io "$strFilePart" "$strPartTmp";then
     #if SECFUNCexecA -ce nice -n 19 avconv -i "$strFilePart" -c:v libx265 -c:a libmp3lame -fflags +genpts "$strPartTmp";then # libx265 -x265-params lossless=1
       SECFUNCexecA -ce mv -vf "$strPartTmp" "$strFilePartNew"
       #SECFUNCtrash "$strFilePart"
