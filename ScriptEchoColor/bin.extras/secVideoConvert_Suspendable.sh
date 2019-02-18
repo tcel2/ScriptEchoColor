@@ -646,7 +646,8 @@ function FUNCavconvRaw() {
     shift; 
   fi
   
-  if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv" -l $CFGnCPUPerc;fi
+  if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv.*${lstrPartID}" -l $CFGnCPUPerc;fi #TODO difficult to get the params to avconv to match here...
+  
   (
     nBPid=$BASHPID
     strFlLog="${strAbsFileNmHashTmp}${lstrPartID}.pid${nBPid}.log"
@@ -667,7 +668,9 @@ function FUNCavconvRaw() {
     fi
     exit $nRet # subshell
   );local lnRet=$?;
+  
   declare -p FUNCNAME lnRet
+  
   return $lnRet
 }
 
