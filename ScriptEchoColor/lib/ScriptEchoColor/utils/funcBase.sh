@@ -62,7 +62,7 @@ function SECFUNCrealFile(){ #help
 }
 
 function _SECFUNCcheckCmdDep() { #help DEVSELFNOTE: do NOT create a package dependency based on it's usage as the user may simply not want to use the SECFUNC requiring it!
-  if ! which "$1";then
+  if ! which "$1" >>/dev/null;then
     SECFUNCechoErrA "dependency not found, command missing: '$1'"
     _SECFUNCcriticalForceExit
     exit 1

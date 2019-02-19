@@ -37,7 +37,7 @@ n1MB=$((1024*1024))
 : ${CFGnPartMinMB:=1}
 #export CFGnPartMinMB #help when splitting, parts will have this minimum MB size if possible
 
-: ${CFGnPartSeconds:=30}; # from tests, max bitrate encoding perf is reached around 5s to 10s so 30s may overall speedup TODO confirm this is a good tip or not
+: ${CFGnPartSeconds:=60}; # from tests, max bitrate encoding perf is reached around 5s to 10s so 30s may overall speedup, but 60s may provide better conversion results regarding sound TODO confirm this is a good tip or not
 export CFGnPartSeconds #help when splitting, parts will have around this length
 
 : ${nSlowQSleep:=60}

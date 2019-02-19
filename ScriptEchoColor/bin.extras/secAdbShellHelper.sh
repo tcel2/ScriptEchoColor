@@ -38,14 +38,14 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		SECFUNCshowHelp --colorize "helper for android shell"
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "--addrule" || "$1" == "-a" ]];then #help <strDeviceFilter> at lsusb, use this filter to generate the permission rule data required by adb server
+	elif [[ "$1" == "--addrule" || "$1" == "-a" ]];then #help <strDeviceFilter> run `lsusb` and choose a single match filter to generate the permission rule data required by adb server
 		shift
 		strDeviceFilter="${1-}"
 		
 		bAddRule=true
 	elif [[ "$1" == "--restart" || "$1" == "-r" ]];then #help restart adb server
 		bRestart=true
-	elif [[ "$1" == "--rut" ]];then #help reversed usb tethering tip and commands
+	elif [[ "$1" == "--rut" ]];then #help reversed USB tethering tip and commands (as in smartphone uses PC's internet connection thru USB?)
 		bReversedUsbTethering=true
 	elif [[ "$1" == "--rutInterface" ]];then #help <strUsbInterface> the usb network tethered interface
 		strUsbInterface="${1-}"
@@ -65,7 +65,7 @@ if $bAddRule;then
 	
 	strDeviceUsbData="`lsusb |grep "$strDeviceFilter"`"&&:
 	if [[ -z "$strDeviceUsbData" ]] || ((`echo "$strDeviceUsbData" |wc -l`!=1));then
-		echoc -p "invalid strDeviceFilter='$strDeviceFilter'"
+		echoc -p "invalid single match for strDeviceFilter='$strDeviceFilter'"
 		lsusb
 		exit 1
 	fi
