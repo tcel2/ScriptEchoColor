@@ -318,20 +318,6 @@ function FUNClistFromRemote() { # [--folder] <lstrBN>
     --query
   )
   lastrCmdGDrList+=("name = \"${lstrBN}\" and mimeType ${lstrFolderChk} 'application/vnd.google-apps.folder'")
-  #~ SECFUNCexecA -ce "${astrCmdGDrList[@]}" "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
-  #~ SECFUNCexecA -ce "$CFGstrExecGDrive" list \
-    #~ --max $nMax \
-    #~ --order modifiedTime \
-    #~ --no-header \
-    #~ --bytes \
-    #~ --name-width 0 \
-    #~ --absolute \
-    #~ --query "name = \"${lstrBN}\" and mimeType != 'application/vnd.google-apps.folder'"
-  #~ if ! SECFUNCexecA -ce "${lastrCmdGDrList[@]}";then
-    #~ echoc -p "nRet='$nRet' gdrive failed to work."
-    #~ bTrashSessionCfg=false
-    #~ exit 1
-  #~ fi
   
   declare -g strFUNClistFromRemoteOutputRO="`FUNCrunGDrive "${lastrCmdGDrList[@]}"`"&&:;local lnRet=$?;
   if((lnRet==0));then
@@ -342,12 +328,6 @@ function FUNClistFromRemote() { # [--folder] <lstrBN>
     fi
     return 0
   fi
-  #~ if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
-  #~ if((lnRet!=0));then # gdrive may return 0 and still error out with a message :(
-    #~ echoc -p "lnRet='$lnRet' gdrive failed to run"
-    #~ bTrashSessionCfg=false
-    #~ exit 1
-  #~ fi
   
   return 1
 }
@@ -454,16 +434,29 @@ function FUNCwriteSimulatedKnownID() { # <lstrUploadedID> <lstrFile> <lstrType>
   tail -n 1 "$CFGstrFlKnownIDs" >&2
 }
 
+: ${nMaxRetries:=3};#help
 function FUNCrunGDrive() { # <params...>
   local lastrCmd=( "$CFGstrExecGDrive" )
   lastrCmd+=( "$@" )
   
-  local lstrOutput="$(SECFUNCexecA -ce "${lastrCmd[@]}")"&&:;local lnRet=$?
-  if ((lnRet!=0)) || [[ "$lstrOutput" =~ Failed.* ]];then # gdrive may return 0 and still error out with a message :(
-    bTrashSessionCfg=false
-    SECFUNCechoErrA "lnRet='$lnRet', invalid lstrOutput='$lstrOutput'"
-    _SECFUNCcriticalForceExit
-  fi
+  local li
+  for((li=0;li<nMaxRetries;li++));do
+    local lstrOutput="$(SECFUNCexecA -ce "${lastrCmd[@]}")"&&:;local lnRet=$?
+    if ((lnRet!=0)) || [[ "$lstrOutput" =~ ^Failed.* ]];then # gdrive may return 0 and still error out with a message :(
+      if(( li < (nMaxRetries-1) ));then # will use the critical message if this is the last retry
+        if [[ "$lstrOutput" == "Failed to list files: googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded" ]];then
+          echoc -w -t 10 "waiting remote 'calm down?' :) b4 retrying ($li/$nMaxRetries)..." >&2
+          continue
+        fi
+      fi
+      
+      bTrashSessionCfg=false
+      SECFUNCechoErrA "lnRet='$lnRet', invalid lstrOutput='$lstrOutput'"
+      _SECFUNCcriticalForceExit
+    else
+      break
+    fi
+  done
   
   if $bVerbose;then echo "$LINENO:strFUNClistFromRemoteOutputRO='$strFUNClistFromRemoteOutputRO'" >&2;fi
   
