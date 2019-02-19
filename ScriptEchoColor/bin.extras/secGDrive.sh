@@ -442,9 +442,15 @@ function FUNCrunGDrive() { # <params...>
   local li
   for((li=0;li<nMaxRetries;li++));do
     local lstrOutput="$(SECFUNCexecA -ce "${lastrCmd[@]}")"&&:;local lnRet=$?
-    if ((lnRet!=0)) || [[ "$lstrOutput" =~ ^Failed.* ]];then # gdrive may return 0 and still error out with a message :(
+    # !!!IMPORTANT!!! !!!!the output MAY have more than ONE LINE!!!! and "Failed" may be on the second line!!!!!!!
+    if ((lnRet!=0)) || [[ "$lstrOutput" =~ .*Failed\ to.* ]];then # gdrive may return 0 and still error out with a message :(
       if(( li < (nMaxRetries-1) ));then # will use the critical message if this is the last retry
-        if [[ "$lstrOutput" == "Failed to list files: googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded" ]];then
+        local lbRetry=false
+        if echo "$lstrOutput" |egrep -q "Failed to (list|upload) file[s]*: googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded";then
+          lbRetry=true;
+        fi
+        if $lbRetry;then
+          declare -p lstrOutput >&2
           echoc -w -t 10 "waiting remote 'calm down?' :) b4 retrying ($li/$nMaxRetries)..." >&2
           continue
         fi
@@ -492,7 +498,7 @@ function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
       fi
       lastrCmdMkdir+=( "$lstrPathPart" )
       
-      local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")"
+      local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")" #TODO there is a success message output, catch and confirm based on it
       
       declare -p lastrCmdMkdir lstrMkdirOutput >&2
       
@@ -644,7 +650,7 @@ for strFile in "${astrFileList[@]}";do
   else
     # updates the remote file
     if [[ -n "$strFileID" ]];then
-      if FUNCrunGDrive update "$strFileID" "$strFile";then
+      if FUNCrunGDrive update "$strFileID" "$strFile";then  #TODO there is a success message output, catch and confirm based on it
         FUNCaddToSessionDoneJobs "$strFile"
 
         #~ echo "$strOutput" >>"$CFGstrFlKnownIDs" #TODO make unique latest per ID
