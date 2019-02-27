@@ -446,7 +446,7 @@ function FUNCrunGDrive() { # <params...>
     if ((lnRet!=0)) || [[ "$lstrOutput" =~ .*Failed\ to.* ]];then # gdrive may return 0 and still error out with a message :(
       if(( li < (nMaxRetries-1) ));then # will use the critical message if this is the last retry
         local lbRetry=false
-        if echo "$lstrOutput" |egrep -q "Failed to (list|upload) file[s]*: googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded";then
+        if echo "$lstrOutput" |egrep -q "Failed to (list|upload|get) file[s]*: googleapi: Error 403: Rate Limit Exceeded, rateLimitExceeded";then
           lbRetry=true;
         fi
         if $lbRetry;then
