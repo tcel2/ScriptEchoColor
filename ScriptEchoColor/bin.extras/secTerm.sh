@@ -121,7 +121,7 @@ if which mrxvt >/dev/null 2>&1;then
   #  `xdotool getwindowpid` works on it;
   #  TODO rxvt does not kill some child proccesses when it is closed, if so, which ones?
   #  anyway none will kill(or hup) if the child was started with sudo!
-  SECastrFullTermCmd+=(mrxvt -sl 1000 -aht +showmenu) #max -sl is 65535
+  SECastrFullTermCmd+=(mrxvt -hold 0 -sl 1000 -aht +showmenu) #max -sl is 65535
   if [[ -n "$strConcatParms" ]];then
     SECastrFullTermCmd+=(-title "$strTitle" "${astrXTermParms[@]}")
   fi
