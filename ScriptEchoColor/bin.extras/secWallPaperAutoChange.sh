@@ -200,6 +200,7 @@ if $bDaemon;then
   nChosen=0
   bPlay=true
   bDisableCurrent=false
+  bWasHidden=false;
   : ${CFGstrCurrentFile:=""}
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
@@ -230,8 +231,8 @@ if $bDaemon;then
       SECFUNCarrayShow CFGastrFileList
       declare -p nChosen nTotFiles
       
-      strFileBase="${CFGastrFileList[$nChosen]-}"
-      CFGstrCurrentFile="`pwd`/$strFileBase";
+      strFlRelative="${CFGastrFileList[$nChosen]-}"
+      CFGstrCurrentFile="`pwd`/$strFlRelative";
       declare -p CFGstrCurrentFile
       bInvalidFile=false
       strMsgWarn=""
@@ -261,12 +262,18 @@ if $bDaemon;then
         continue
       fi
       
+      bWasHidden=false;if [[ "$strFlRelative" =~ .*/[.].* ]];then bWasHidden=true;fi # full path may contain "/./" that would break this check
+      
       #TODO auto download wallpapers one new per loop
       
       SECFUNCcfgWriteVar CFGstrCurrentFile
       nSetIndex=-1 # because as it was already changed, CFGstrCurrentFile will remain the same, and this grants the next auto-change will be random/suffle again!
     fi
 		
+    #declare -p CFGstrCurrentFile >&2
+    #bWasHidden=false;if [[ "$CFGstrCurrentFile" =~ .*/[.].* ]];then bWasHidden=true;fi
+    #declare -p bWasHidden >&2
+    
     strTmpFilePreparing="${strTmpFile}.TMP" #this is important because the file may be incomplete when the OS tried to apply the new one
     SECFUNCexecA -cE cp -v "$CFGstrCurrentFile" "${strTmpFilePreparing}"
     
@@ -441,7 +448,8 @@ if $bDaemon;then
     
     if $bWriteFilename;then
       nFontSize=15
-      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}${strTxtZoom}(RGB:$nAddR,$nAddG,$nAddB)"
+      strTxHid="";if $bWasHidden;then strTxHid="[HID]";fi
+      strTxt="oSz:${strOrigSzTxt}${strFixSzTxt}${strFlipTxt}${strFlopTxt}${strXbrz}${strTxtZoom}(RGB:$nAddR,$nAddG,$nAddB)${strTxHid}"
       
       # if filename is too big, trunc it
       nColsLim=150 #TODO calc based on average font width and nResW with 15% error margin to less
@@ -450,9 +458,18 @@ if $bDaemon;then
       strTxt+="$strBNCurrent"
       
       # pseudo outline at 4 corners
-      strTxtColor="white";#if $CFGbShowHidden;then strTxtColor="red";fi
-      astrOutlineColors=(red green blue purple) # dark colors
-      if $CFGbShowHidden;then strTxtColor="yellow"; astrOutlineColors=(red red red red);fi
+      astrOutlineColors=(red green blue purple) # dark outline colors
+      #light readable color #if $CFGbShowHidden;then strTxtColor="red";fi
+      strTxtColor="white";if $CFGbShowHidden;then strTxtColor="yellow";fi
+        #strTxtColor="yellow";
+        ##astrOutlineColors=(red red red red);
+        ##if $bWasHidden;then
+          ##strTxtColor="yellow";
+          ##astrOutlineColors=(purple purple purple purple);
+        ##else
+          ##strTxtColor="yellow"; astrOutlineColors=(red red red red);
+        ##fi
+      #fi
       astrCmdWrTx=(
         -pointsize $nFontSize
         -fill ${astrOutlineColors[0]} -annotate +0+2 "$strTxt" # outline top left
