@@ -347,13 +347,15 @@ function FUNClistFromRemote() { # [--folder] <lstrBN>
   #~ return 1
 #~ }
 
+sedRegexPreciseMatch='s"(.)"[\1]"g'
 function FUNCgetIDfromOutput() { # <lstrFile> <lstrOutput> <lstrType>
   local lstrFile="$1";shift
   local lstrOutput="$1";shift
   local lstrType="$1";shift
   
   #only the ID for the file on the correct path!
-  if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFile} *${lstrType} "`";then 
+  local lstrFilePM="`echo "$lstrFile" |sed -r "$sedRegexPreciseMatch"`"
+  if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFilePM} *${lstrType} "`";then 
     lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
     if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
     
@@ -398,7 +400,7 @@ function FUNCgetID() { # <lstrFile> <lstrType>
   local lstrID
   # check if ID is stored locally at cfg file
   if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$(cat "$CFGstrFlKnownIDs")" "$lstrType")";then
-    echoc --info "$lstrType ID is known already!" >&2
+    echoc --info "$lstrType ID is known already! for '$lstrFile'" >&2
   else # gets the ID from the remote
     local lstrOptFolder="";if [[ "$lstrType" == "dir" ]];then lstrOptFolder="--folder";fi
     if FUNClistFromRemote $lstrOptFolder "$lstrFile";then local lstrOutput="$strFUNClistFromRemoteOutputRO"
@@ -430,11 +432,11 @@ function FUNCwriteSimulatedKnownID() { # <lstrUploadedID> <lstrFile> <lstrType>
   
   # 3 spaces at least between each part 
   #TODO put trailing creation time? w/e...
-  echo "$lstrUploadedID   $lstrFile   $lstrType   #LocallySimulatedKnownIDentry" >>"$CFGstrFlKnownIDs"
+  echo "$lstrUploadedID   $lstrFile   $lstrType   #LocallySimulatedKnownIDentry at `SECFUNCdtFmt --logmessages`" >>"$CFGstrFlKnownIDs"
   tail -n 1 "$CFGstrFlKnownIDs" >&2
 }
 
-: ${nMaxRetries:=3};#help
+: ${nMaxRetries:=20};#help
 function FUNCrunGDrive() { # <params...>
   local lastrCmd=( "$CFGstrExecGDrive" )
   lastrCmd+=( "$@" )
@@ -451,7 +453,7 @@ function FUNCrunGDrive() { # <params...>
         fi
         if $lbRetry;then
           declare -p lstrOutput >&2
-          echoc -w -t 10 "waiting remote 'calm down?' :) b4 retrying ($li/$nMaxRetries)..." >&2
+          echoc -w -t 10 "waiting remote 'calm down?' :) b4 retrying ($((li+1))/$nMaxRetries)..." >&2
           continue
         fi
       fi
@@ -497,10 +499,12 @@ function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
         lastrCmdMkdir+=( -p "$lstrLastFoundParentPathID" )
       fi
       lastrCmdMkdir+=( "$lstrPathPart" )
+      declare -p lastrCmdMkdir >&2
+      
+      echoc -w -t 60 "going to create remote directory" #important to be able to read the long in case of some bug here...
       
       local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")" #TODO there is a success message output, catch and confirm based on it
-      
-      declare -p lastrCmdMkdir lstrMkdirOutput >&2
+      declare -p lstrMkdirOutput >&2
       
       if [[ "$lstrMkdirOutput" =~ ^Directory\ .*\ created$ ]];then
         lstrJustCreatedFolderID="$(echo "$lstrMkdirOutput" |awk '{print $2}')"
@@ -533,20 +537,20 @@ function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
 function FUNCcreateRemoteFile() { # <lstrFile>
   local lstrFile="$1";shift
   
-  local lastrCmd=( upload )
+  local lastrCmdCreateFl=( upload )
   
   local lstrPath="$(dirname "$lstrFile")";declare -p lstrPath >&2
   local lstrPathID=""
   if [[ "$lstrPath" != "." ]];then
     if lstrPathID="$(FUNCchkOrCreateRemotePathTreeAndGetID "$lstrPath")";then
       declare -p lstrPathID >&2
-      lastrCmd+=(--parent "$lstrPathID")
+      lastrCmdCreateFl+=(--parent "$lstrPathID")
     else
       exit 1
     fi
     #~ if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
       #~ declare -p lstrPathID >&2
-      #~ lastrCmd+=(--parent "$lstrPathID")
+      #~ lastrCmdCreateFl+=(--parent "$lstrPathID")
     #~ else
       #~ FUNCcreatePathTree "$lstrPath"
       #~ #echoc -p "TODO: create remote path lstrPath='$lstrPath' for lstrFile='$lstrFile'"
@@ -557,7 +561,7 @@ function FUNCcreateRemoteFile() { # <lstrFile>
   fi
   
   local lstrCreateOutput
-  if lstrCreateOutput="$(FUNCrunGDrive "${lastrCmd[@]}" "$lstrFile")";then
+  if lstrCreateOutput="$(FUNCrunGDrive "${lastrCmdCreateFl[@]}" "$lstrFile")";then
     if lstrCreateOutput="$(echo "$lstrCreateOutput" |egrep "^Uploaded .*")";then
       if [[ "$lstrCreateOutput" =~ ^Uploaded\ .* ]];then
         local lstrUploadedID="$(echo "$lstrCreateOutput" |awk '{print $2}')"
