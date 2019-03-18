@@ -26,6 +26,10 @@
 
 source <(secinit)
 
+#export SEC_DEBUG=true
+#export SEC_DEBUGX=true
+#export SEC_WARN=true
+
 #~ SECFUNCshowHelp --colorize "\tRun this like you would xterm or mrxvt, so to exec something requires -e param."
 #~ SECFUNCshowHelp --colorize ""
 #~ SECFUNCshowHelp --colorize "\tIf first option is --getcmd it will just output the full command and exit."
@@ -136,7 +140,6 @@ declare -p SECastrFullTermCmd # to be reused must be evaluated outside here or i
 if $bJustOutput;then exit 0;fi
 
 ########### RUNS BELOW HERE ###########
-
 SECFUNCarraysExport #important for exported arrays before calling/reaching this script
 if $bOnTop;then SECFUNCCwindowOnTop "$strTitle";fi
 if $bRaise;then SECFUNCCwindowCmd --focus "$strTitle";fi

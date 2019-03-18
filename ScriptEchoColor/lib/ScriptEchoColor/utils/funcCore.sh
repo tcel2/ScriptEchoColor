@@ -855,38 +855,29 @@ function SECFUNCarrayWork() { #help
 	return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
-function SECFUNCarrayContains() { #help
-  SECFUNCarrayWork --contains "$@"
-}
-
-function SECFUNCarrayShow() { #help
-  SECFUNCarrayWork --show "$@"
+function SECFUNCarrayClean() { #help 
+  SECFUNCarrayWork --clean "$@"
 }
 
 function SECFUNCarrayCmd() { #help
   SECFUNCarrayWork --cmd "$@"
 }
 
-function SECFUNCarrayClean() { #help 
-  SECFUNCarrayWork --clean "$@"
+function SECFUNCarrayContains() { #help
+  SECFUNCarrayWork --contains "$@"
 }
 
 function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
   SECFUNCarrayWork --prepend "$@"
 }
-#~ function SECFUNCarrayPrepend() { #help <lstrArrayId> <lstrValue>
-	#~ lstrArrayId="${1-}";shift
-	#~ lstrValue="${1-}";shift
-  
-	#~ if ! SECFUNCarrayCheck "$lstrArrayId";then
-		#~ SECFUNCechoErrA "invalid lstrArrayId='$lstrArrayId'"
-		#~ echo "0"
-		#~ return 1
-	#~ fi
-  
-  #~ return 0
-#~ }
 
+function SECFUNCarrayShow() { #help
+  SECFUNCarrayWork --show "$@"
+}
+
+function SECFUNCarrayUniq() { #help
+  SECFUNCarrayWork --uniq "$@"
+}
 
 : ${SECstrBashSourceFiles:=}
 export SECstrBashSourceFiles
@@ -1749,7 +1740,8 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 	###### options
 	local lstrCaller=""
 	local SEClstrFuncCaller=""
-	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
+  local lbAlways=false
+	while ! ${1+false} && [[ "${1:0:1}" == "-" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCechoWarn_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
@@ -1760,6 +1752,8 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 			shift
 			SEClstrFuncCaller="${1}"
 			#local SEClstrFuncCaller=""
+		elif [[ "$1" == "-a" ]];then #SECFUNCechoWarn_help always outout the message ignoring SEC_WARN value
+      lbAlways=true
 		else
 			SECFUNCechoErrA "invalid option '$1'"
 			return 1
@@ -1771,9 +1765,12 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 #		rm "${SECstrFileMessageToggle}.WARN.$$" 2>/dev/null
 #		if $SEC_WARN;then SEC_WARN=false;	else SEC_WARN=true; fi
 #	fi
+  #declare -p lbAlways >&2
 	SECFUNCmsgCtrl WARN
-	if [[ "$SEC_WARN" != "true" ]];then # to not lose time
-		return 0
+	if ! $lbAlways;then
+    if [[ "$SEC_WARN" != "true" ]];then # to not lose time and mess the output
+      return 0
+    fi
 	fi
 	
 	###### main code
@@ -1784,6 +1781,8 @@ function SECFUNCechoWarn() { #help warn messages will only show if SEC_WARN is t
 	else
 		echo "${l_output}" >&2
 	fi
+  
+  return 0
 }
 
 function SECFUNCechoBugtrack() { #help bugtrack messages will only show if SEC_BUGTRACK is true

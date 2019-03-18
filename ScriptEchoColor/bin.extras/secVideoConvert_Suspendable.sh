@@ -185,6 +185,8 @@ function FUNCworkWith() {
 };export -f FUNCworkWith
 
 function FUNCmaintWorkFolders() {
+  echoc --info "FuncStak: ${FUNCNAME[@]}" >&2
+  
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -233,34 +235,57 @@ function FUNCisHevc() { # <lstrFile>
 }
 
 function FUNCmaintValidateOrigFiles() {
+  echoc --info "FuncStak: ${FUNCNAME[@]}" >&2
+  
   local lbTrash=false;
   if [[ "${1-}" == "--clean" ]];then
     lbTrash=true;
     shift
   fi
   
-  local lbFound=false
+  local lbFoundIssue=false
+  local -i liTotalMissing=0
+  local -i liTotalAlreadyConv=0
+  local lastrMissingPaths=()
   for strFl in "${CFGastrFileList[@]}";do
     if $lbTrash;then SECFUNCdrawLine;fi
     
     if ! ls -l "$strFl" >/dev/null;then # will only output on failure
-      lbFound=true
-      if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
+      local lstrDir="$(dirname "$strFl")" #declare -p lstrDir >&2
+      if [[ -d "$lstrDir" ]];then
+        lbFoundIssue=true # here it means that some maintenance action can be performed as the file is missing
+        ((liTotalMissing++))&&:
+        if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
+        SECFUNCechoWarnA -a "Missing File: '$strFl'" >&2
+      else
+        lastrMissingPaths+=( "$lstrDir" )
+      fi
     else
       if FUNCisHevc "$strFl";then
-        lbFound=true
-        echo "Is already HEVC: '$strFl'" >&2
+        lbFoundIssue=true
+        ((liTotalAlreadyConv++))&&:
+        SECFUNCechoWarnA -a "Is already HEVC: '$strFl'" >&2
         if $lbTrash;then FUNCflCleanFromDB "$strFl";fi
       fi
     fi
   done
   
-  if ! $lbFound;then return 1;fi
+  if SECFUNCarrayCheck -n lastrMissingPaths;then
+    echoc -p "these paths are not available, were their medias mounted?"
+    SECFUNCarrayUniq lastrMissingPaths
+    SECFUNCarrayShow lastrMissingPaths >&2
+  fi
+
+  if ! $lbFoundIssue;then return 1;fi
+  
+  declare -p liTotalMissing liTotalAlreadyConv >&2
   
   return 0
 }
 
 function FUNCmaintNewFiles() {
+  echoc --info "FuncStak: ${FUNCNAME[@]}" >&2
+  
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -286,6 +311,8 @@ function FUNCmaintNewFiles() {
 }
 
 function FUNCmaintCompletedFiles() {
+  echoc --info "FuncStak: ${FUNCNAME[@]}" >&2
+  
   local lbTrash=false;
   if [[ "${1-}" == "--trash" ]];then
     lbTrash=true;
@@ -382,17 +409,24 @@ elif $bCompletedMaintenanceMode;then
     function FUNCCompletedMaintenanceMode() {
       local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified
       
-      SECFUNCarraysRestore #source <(secinit) #to restore arrays
+      declare -p FUNCNAME >&2
+      SECFUNCarraysRestore #TODO (w/o this aliases wont expand preventing using ex.: SECFUNCexecA) why this fails and prevents this function from being run? -> source <(secinit) #to restore arrays
       echo "(${FUNCNAME[@]}) params: `SECFUNCparamsToEval "$@"`" >&2
       local lstrFlSel="${CFGastrFileList[$lnSelectedIndex]}"
       declare -p lnSelectedIndex lstrFlSel >&2
       if [[ -f "$lstrFlSel" ]];then
-        bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false \
-          SECFUNCexecA -ce secTerm.sh --focus -- -e \
-            "$SECstrScriptSelfName" --onlyworkwith "$lstrFlSel"
+        local lastrCmd=( secTerm.sh --focus -- -e "$SECstrScriptSelfName" --onlyworkwith "$lstrFlSel" )
+        #bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false \
+          #SECFUNCexecA -ce secTerm.sh --focus -- -e \
+            #"$SECstrScriptSelfName" --onlyworkwith "$lstrFlSel"
+        declare -p lastrCmd >&2
+        bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false "${lastrCmd[@]}"
       else
         SECFUNCechoErrA "file not found lstrFlSel='$lstrFlSel'"
       fi
+      #declare -p LINENO >&2
+      
+      return 0
     };export -f FUNCCompletedMaintenanceMode
     
     astrYadCmd=(
@@ -404,9 +438,10 @@ elif $bCompletedMaintenanceMode;then
       --center 
       --no-markup 
       --selectable-labels
-      --title="$(basename $0) maintain completed jobs (double click for specific entry actions)" 
+      --title="$(basename $0) (double click for specific entry actions) maintain completed jobs" 
       --list 
       --checklist 
+#      --dclick-action="bash -c 'source <(secinit --force);FUNCCompletedMaintenanceMode %s'"
       --dclick-action="bash -c 'FUNCCompletedMaintenanceMode %s'"
       
       --column "Action" 
@@ -447,11 +482,11 @@ elif $bCompletedMaintenanceMode;then
 elif $bTrashMode;then
   SECFUNCuniqueLock --waitbecomedaemon #to prevent simultaneous run
   
-  if FUNCmaintCompletedFiles && [[ "`echoc -S "trash all the OLD files above (keeps the completed ones)? type 'YES'"`" == "YES" ]];then
+  if FUNCmaintCompletedFiles && [[ "`echoc -S "Above are shown the old (original) and new (completed) files. To trash all (and only) the OLD files, type 'YES'"`" == "YES" ]];then
     FUNCmaintCompletedFiles --trash
   fi
   
-  if FUNCmaintValidateOrigFiles && [[ "`echoc -S "clean from DB invalid file requests as above? type 'YES'"`" == "YES" ]];then
+  if FUNCmaintValidateOrigFiles && [[ "`echoc -S "clean from DB invalid file (missing or no conversion needed) requests as above? type 'YES'"`" == "YES" ]];then
     FUNCmaintValidateOrigFiles --clean
   fi
   
@@ -524,7 +559,8 @@ elif $bDaemonContinueMode;then
       #echoc --info "Seeking '$CFGstrContinueWith'" >&2
       if [[ -f "${CFGstrContinueWith-}" ]] && [[ "${CFGstrContinueWith}" != "$strFileAbs" ]];then 
         #echo "Seeking '$CFGstrContinueWith' (skipping '$strFileAbs')" >&2
-        echo "Skipping '$strFileAbs'" >&2
+        echo "Seeking continue work (skipping '$strFileAbs')" >&2
+        ((nIgnoredCount++))&&:
         continue;
       fi
       
@@ -548,6 +584,8 @@ elif $bDaemonContinueMode;then
       FUNCworkWith "$strFileAbs"&&:
       SECFUNCcfgWriteVar -r CFGstrContinueWith="" #this grants consistency in case the work is not on the list #TODO re-add it?
     done
+    
+    declare -p nCompletedCount nIgnoredCount >&2
     if(( (nCompletedCount+nIgnoredCount) == ${#astrFinalWorkList[@]} ));then
       SECFUNCarrayShow CFGastrFileList
       echoc --info "All the above works completed!"
@@ -563,6 +601,8 @@ elif $bDaemonContinueMode;then
       SECFUNCcfgWriteVar -r CFGstrContinueWith=""
       FUNCworkWith "${astrFinalWorkList[0]}"&&: #TODO RANDOM file?
     fi
+    
+    echoc -w -t 10 "sleeping a bit..."
   done
   
   exit 0
@@ -617,7 +657,7 @@ fi
 
 if FUNCisHevc "$strFileAbs";then
   echoc --info "Already HEVC format."
-  #~ FUNCflCleanFromDB "$strFileAbs"
+  #FUNCflCleanFromDB "$strFileAbs"
   exit 0
 fi
 
@@ -931,7 +971,7 @@ function FUNCfinalMenuChk() {
       "_play the new file? #ready"
       "_recreate ${lstrReco}the new file now using it's full length (ignore split parts)?"
       "_s `SECFUNCternary -e "skip this @s@{yn}COMPLETED@S file for now?" "continue working on current file now?" $lbReady`"
-      "_trash tmp and original video files?"
+      "_trash files (more options on next prompt)?"
       "_use cpulimit (`SECFUNCternary --onoff $bUseCPUlimit`)?"
       "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
       "set a new video to _work with? #daemon"
@@ -1048,10 +1088,22 @@ function FUNCfinalMenuChk() {
         fi
         ;;
       t)
-        SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
-        SECFUNCtrash "$strFileAbs"&&:
+        declare -p strTmpWorkPath strFileBNHash
+        if echoc -q "trash original and TMP files (and exit): '$strFileAbs'?";then
+          SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+          SECFUNCtrash "$strFileAbs"&&:
+          FUNCflCleanFromDB "$strFileAbs"
+          exit 0
+        fi
         
-        FUNCflCleanFromDB "$strFileAbs"
+        strFlFinalToTrash="$(FUNCflFinal "$strFileAbs")"
+        if echoc -q "trash completed final new file (allows recreating it directly from existing TMP parts): '$strFlFinalToTrash'?";then
+          SECFUNCtrash "$strFlFinalToTrash"&&:
+        fi
+        
+        if echoc -q "trash related TMP files (to generate them again)?";then
+          SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+        fi
         
         if ! $bMenuTimeout;then echoc -w "waiting you review the trashing's log";fi
         
