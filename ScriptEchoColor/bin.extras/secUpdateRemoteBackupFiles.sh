@@ -437,7 +437,7 @@ function FUNCzenitySelectAndAddFiles() {
 	local lastrFilesToAdd=();IFS=$'\n' read -d '' -r -a lastrFilesToAdd < <(FUNCzenitySelectFiles "file to add" "$@")&&:
 	if [[ -n "${lastrFilesToAdd[@]-}" ]];then
 		echoc --info "Adding requested files: ${lastrFilesToAdd[@]}"
-		eval $0 --skipnautilus --addfiles "${lastrFilesToAdd[@]}"
+		$0 --skipnautilus --addfiles "${lastrFilesToAdd[@]}"
 	else
 		echoc --info "no files selected"
 	fi
