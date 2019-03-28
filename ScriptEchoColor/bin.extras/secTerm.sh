@@ -145,6 +145,7 @@ if $bOnTop;then SECFUNCCwindowOnTop "$strTitle";fi
 if $bRaise;then SECFUNCCwindowCmd --focus "$strTitle";fi
 if $bDisown;then
   ( "${SECastrFullTermCmd[@]}"&disown )&disown &&:
+  sleep 1 # just to be more sure...
 else
   "${SECastrFullTermCmd[@]}";nRet=$?
    

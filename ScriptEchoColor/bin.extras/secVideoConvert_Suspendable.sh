@@ -66,6 +66,7 @@ bWorkWith=false
 bTrashMode=false
 bAddFiles=false
 bFindWorks=false
+bRetryFailed=false
 bCompletedMaintenanceMode=false
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
@@ -83,14 +84,16 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "-C" || "$1" == "--Continue" ]];then #help ~daemon like --continue but will clear the last work reference and start from the first on the list
 		bDaemonContinueMode=true
     SECFUNCcfgWriteVar -r CFGstrContinueWith=""
-	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help ~single <strWorkWith> process a single file
-		shift
-		strWorkWith="${1-}"
-    bWorkWith=true
 	elif [[ "$1" == "-f" || "$1" == "--findworks" ]];then #help ~single search for convertable videos (will ignore videos in the final format and filenames containing CFGstrKeepOriginalTag)
     bFindWorks=true
 	elif [[ "$1" == "-m" || "$1" == "--maintcompl" ]];then #help ~single maintain completed works like finish&cleanup, play or cancel&trash WIP
 		bCompletedMaintenanceMode=true
+	elif [[ "$1" == "-o" || "$1" == "--onlyworkwith" ]];then #help ~single <strWorkWith> process a single file
+		shift
+		strWorkWith="${1-}"
+    bWorkWith=true
+	elif [[ "$1" == "-r" || "$1" == "--retryfailed" ]];then #help ~single list failed to let one be retried
+		bRetryFailed=true
 	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
@@ -379,6 +382,18 @@ if $bFindWorks;then
     echoc --info "nothing new/usable found..."
   fi
   exit 0
+elif $bRetryFailed;then
+  SECFUNCarrayShow CFGastrFailedList
+
+  strNewWork="`echoc -S "paste the abs filename to work on it now"`"
+  if [[ -f "$strNewWork" ]];then
+    strRegexPreciseMatch="^`echo "$strNewWork" |sed -r "$sedRegexPreciseMatch"`$"
+    SECFUNCarrayClean CFGastrFailedList "$strRegexPreciseMatch"
+    SECFUNCcfgWriteVar CFGastrFailedList
+    #SECFUNCcfgWriteVar -r CFGstrPriorityWork="$strNewWork"
+    $0 --onlyworkwith "$strNewWork"&&:
+  fi
+  exit 0
 elif $bCompletedMaintenanceMode;then
   declare -i nSelectedIndex=-1
   while true;do
@@ -420,7 +435,8 @@ elif $bCompletedMaintenanceMode;then
           #SECFUNCexecA -ce secTerm.sh --focus -- -e \
             #"$SECstrScriptSelfName" --onlyworkwith "$lstrFlSel"
         declare -p lastrCmd >&2
-        bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false "${lastrCmd[@]}"
+#        bMaintCompletedMode=true bWriteCfgVars=false bMenuTimeout=false "${lastrCmd[@]}"
+        bMaintCompletedMode=true bWriteCfgVars=false "${lastrCmd[@]}"
       else
         SECFUNCechoErrA "file not found lstrFlSel='$lstrFlSel'"
       fi
@@ -432,20 +448,21 @@ elif $bCompletedMaintenanceMode;then
     astrYadCmd=(
       yad 
       --button="gtk-close:1" 
-      --button="TrashSelectedFinal!!Trash the final new generated files selected:2"
+      --button="(selected)TrashFinal!!Trash the final new generated files selected:2"
       --button="RefreshList:3"
       --maximized 
       --center 
       --no-markup 
       --selectable-labels
-      --title="$(basename $0) (double click for specific entry actions) maintain completed jobs" 
+      --title="$(basename $0) maintain completed jobs" 
+      --text="double click for specific entry actions"
       --list 
       --checklist 
 #      --dclick-action="bash -c 'source <(secinit --force);FUNCCompletedMaintenanceMode %s'"
       --dclick-action="bash -c 'FUNCCompletedMaintenanceMode %s'"
       
       --column "Action" 
-      --column "Index" 
+      --column "Index:NUM" 
       --column "OrigExt" 
       --column "basename" 
       --column "TmpBNHash"
@@ -499,7 +516,7 @@ elif $bTrashMode;then
   fi
 
   SECFUNCarrayShow -v CFGastrFailedList
-  if [[ "`echoc -S "clear failed works list? type 'YES'"`" == "YES" ]];then
+  if [[ "`echoc -S "clear failed works (skipper) list? type 'YES'"`" == "YES" ]];then
     CFGastrFailedList=()
     SECFUNCcfgWriteVar CFGastrFailedList
   fi
@@ -880,10 +897,20 @@ function FUNCrecreate() {
   FUNCrecreateRaw FUNCavconvConv --io "$strFileAbs" "$strOrigPath/$strFinalFileBN"
 }
 
-function FUNCvalidateFinal() {
+function FUNCvalidateFinal() { #[--ignoreFinalIfDoesntExist]
+  local lbIgnFinal=false
+  if [[ -n "${1-}" ]];then
+    if [[ "$1" == "--ignoreFinalIfDoesntExist" ]];then
+      lbIgnFinal=true
+      shift
+    fi
+  fi
+  
   #local lnRet=0
   local lstrAtt="@YATTENTION!!!@-n "
   local lstrErrMsg=""
+  
+  SECFUNCexecA -ce -m "failed if == 0" egrep "nTotKeyFrames" "${strAbsFileNmHashTmp}.log"&&:
   
   if SECFUNCexecA -ce egrep "Past duration .* too large" "${strAbsFileNmHashTmp}.log";then
     echoc --alert "${lstrAtt}The individual parts processing encountered the problematic the warnings above!"
@@ -919,10 +946,12 @@ function FUNCvalidateFinal() {
       fi
     fi
   else
-    SECFUNCechoErrA "The validation REQUIRES the final file '$strOrigPath/$strFinalFileBN' to be READY!"
-    _SECFUNCcriticalForceExit
-    #~ SEC_WARN=true SECFUNCechoWarnA "final file '$strOrigPath/$strFinalFileBN' is not ready yet"
-    #~ lnRet=5
+    if ! $lbIgnFinal;then
+      SECFUNCechoErrA "The validation REQUIRES the final file '$strOrigPath/$strFinalFileBN' to be READY!"
+      _SECFUNCcriticalForceExit
+      #~ SEC_WARN=true SECFUNCechoWarnA "final file '$strOrigPath/$strFinalFileBN' is not ready yet"
+      #~ lnRet=5
+    fi
   fi
   
   if [[ -n "$lstrErrMsg" ]];then 
@@ -964,6 +993,7 @@ function FUNCfinalMenuChk() {
     astrOpt=(
       "apply patrol _cycle (reverse gif effect) `SECFUNCternary -e "(@s@yALREADY DID@S) " "" $lbIsGifCycle` on original file? #gif"
       "_diff old from new media info? #ready"
+      "list fail_ed?"
       "_fast mode? current CFGnDefQSleep=${CFGnDefQSleep} #timeout"
       "_keep original (trash the new one) and apply tag on it's filename?"
       "_list all files with (probably) useful details?"
@@ -974,7 +1004,7 @@ function FUNCfinalMenuChk() {
       "_trash files (more options on next prompt)?"
       "_use cpulimit (`SECFUNCternary --onoff $bUseCPUlimit`)?"
       "re-_validate `SECFUNCternary -e "logs and final file?" "existing incomplete logs?" $lbReady`"
-      "set a new video to _work with? #daemon"
+      "set a new video to _work with? #daemon" # this only works when in daemon loop as is used on next loop
     )
     #############
     ### removed option keys will be ignored and `echoc -Q` will just return 0 for them and any other non set keys
@@ -982,17 +1012,19 @@ function FUNCfinalMenuChk() {
     if ! $lbReady;then
       SECFUNCarrayClean astrOpt ".*[#]ready.*"
     fi
-    
     if [[ "$strSuffix" != "gif" ]];then
       SECFUNCarrayClean astrOpt ".*[#]gif.*"
     fi
-    
-    if $bMaintCompletedMode;then 
+    #if $bMaintCompletedMode;then 
+      #SECFUNCarrayClean astrOpt ".*[#]maintcompl.*"
+    #fi
+    if ! $bDaemonContinueMode;then
       SECFUNCarrayClean astrOpt ".*[#]daemon.*"
     fi
     
     astrEchocCmd=(echoc)
-    : ${bMenuTimeout:=true};export bMenuTimeout #help
+    #: ${bMenuTimeout:=true};export bMenuTimeout #help
+    bMenuTimeout=false;if $bDaemonContinueMode;then bMenuTimeout=true;fi
     if $bMenuTimeout;then 
       astrEchocCmd+=(-t $CFGnDefQSleep);
     else
@@ -1020,6 +1052,9 @@ function FUNCfinalMenuChk() {
         ;;
       d)
         SECFUNCexecA -ce colordiff -y <(mediainfo "$strFileAbs") <(mediainfo "$strOrigPath/$strFinalFileBN") &&:
+        ;;
+      e)
+        SECFUNCarrayShow CFGastrFailedList
         ;;
       f)
         if((CFGnDefQSleep>5));then
@@ -1113,14 +1148,21 @@ function FUNCfinalMenuChk() {
         SECFUNCtoggleBoolean --show bUseCPUlimit
         ;;
       v)
-        FUNCvalidateFinal&&:
+        FUNCvalidateFinal --ignoreFinalIfDoesntExist &&:
         ;;
       w)
         local lstrNewWork="`echoc -S "paste the abs filename to work on it now"`"
         if [[ -f "$lstrNewWork" ]];then
-          #$0 --onlyworkwith "$lstrNewWork"
+          #if $bMaintCompletedMode;then #this is like changing the current selected work
+            ##(secTerm.sh $0 --onlyworkwith "$lstrNewWork")&
+            #secTerm.sh --disown --focus -- -e "$SECstrScriptSelfName" --onlyworkwith "$lstrNewWork"
+            #exit 0 # to end this one in favor of new term
+          #else #this is to prevent proc nesting daemon clash
+            #SECFUNCcfgWriteVar -r CFGstrPriorityWork="$lstrNewWork"
+            #exit 0 # to let it be processed on next run/loop
+          #fi
           SECFUNCcfgWriteVar -r CFGstrPriorityWork="$lstrNewWork"
-          exit 0 # to let it be processed on next run
+          exit 0 # to let it be processed on next run/loop
         else
           SECFUNCechoErrA "not found lstrNewWork='$lstrNewWork'"
         fi
@@ -1177,6 +1219,7 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   
   nTotKeyFrames="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |wc -l`"
   declare -p nTotKeyFrames >&2
+  declare -p nTotKeyFrames >>"${strAbsFileNmHashTmp}.log"
   
   if((nTotKeyFrames<2));then
     echoc -p "unable to properly split strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
