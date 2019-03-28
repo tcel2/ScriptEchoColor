@@ -36,6 +36,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help
 		SECFUNCshowHelp --colorize "helper for android shell"
+		SECFUNCshowHelp --colorize "Some useful adb commands:"
+    echo " adb shell pm list packages"
+    echo " adb shell pm path <PackageNameHere>"
+    echo " adb pull <useThePathFromAboveCmd> #will generate a local .apk file with correct pkg name"
+    echo " adb shell pm uninstall -k --user 0 <PackageNameHere>"
 		SECFUNCshowHelp
 		exit 0
 	elif [[ "$1" == "--addrule" || "$1" == "-a" ]];then #help <strDeviceFilter> run `lsusb` and choose a single match filter to generate the permission rule data required by adb server
