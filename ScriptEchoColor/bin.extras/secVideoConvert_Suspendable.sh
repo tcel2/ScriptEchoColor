@@ -1221,6 +1221,17 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   
   nTotKeyFrames="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |wc -l`"
   declare -p nTotKeyFrames >&2
+  
+  if((nTotKeyFrames<2));then
+    echoc -p "unable to fastly determine the frame count for strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
+    if echoc -q -t $CFGnDefQSleep "try again (slower method)?";then
+      nTotKeyFrames="$(SECFUNCexecA -ce ffprobe "$strFileAbs" -show_entries frame=key_frame,pict_type,pkt_pts_time -select_streams v -of compact -v 0 |grep key_frame=1 |wc -l)"
+      declare -p nTotKeyFrames >&2
+      
+      #echoc -w "IMPORTANT! the splitting may not work correctly providing a useless huge single part..."
+    fi
+  fi
+  
   declare -p nTotKeyFrames >>"${strAbsFileNmHashTmp}.log"
   
   if((nTotKeyFrames<2));then
@@ -1257,6 +1268,12 @@ SECFUNCexecA -ce ls -l "${strAbsFileNmHashTmp}."* #|sort -n
 
 IFS=$'\n' read -d '' -r -a astrFilePartList < <(ls -1 "${strAbsFileNmHashTmp}."?????".mp4" |sort -n)&&:
 declare -p astrFilePartList |tr "[" "\n" >&2
+
+nTotParts=`SECFUNCarraySize astrFilePartList`
+if((nTotParts<2));then
+  echoc -p "nTotParts=$nTotParts < 2"
+  exit 1
+fi
 
 #nCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
 

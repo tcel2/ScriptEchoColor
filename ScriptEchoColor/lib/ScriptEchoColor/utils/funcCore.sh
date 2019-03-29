@@ -728,7 +728,7 @@ function SECFUNCarrayWork() { #help
   case "$lstrMode" in
     --clean)
       local lstrMatch="$lstrParam1"
-      declare -p lstrMatch >&2
+      #declare -p lstrMatch >&2
       local lnIndex=0
 #      for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
       for lnIndex in "${!lastrArrayCopyTmp[@]}";do
