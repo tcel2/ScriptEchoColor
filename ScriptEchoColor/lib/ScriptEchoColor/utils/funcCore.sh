@@ -738,7 +738,7 @@ function SECFUNCarrayWork() { #help
           if [[ -z "$strTmp" ]];then
             lbUnset=true
           fi
-        elif eval '[[ "$strTmp" =~ '$lstrMatch' ]]';then # IMPORTANT: this eval is necessary in case lstrMatch has literal parts enclosed in double quotes!
+        elif eval '[[ "$strTmp" =~ '"$lstrMatch"' ]]';then # IMPORTANT: this eval is necessary in case lstrMatch has literal parts enclosed in double quotes!
           lbUnset=true
         fi
         
