@@ -728,6 +728,7 @@ function SECFUNCarrayWork() { #help
   case "$lstrMode" in
     --clean)
       local lstrMatch="$lstrParam1"
+      declare -p lstrMatch >&2
       local lnIndex=0
 #      for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
       for lnIndex in "${!lastrArrayCopyTmp[@]}";do
@@ -737,7 +738,7 @@ function SECFUNCarrayWork() { #help
           if [[ -z "$strTmp" ]];then
             lbUnset=true
           fi
-        elif [[ "$strTmp" =~ $lstrMatch ]];then
+        elif eval '[[ "$strTmp" =~ '$lstrMatch' ]]';then # IMPORTANT: this eval is necessary in case lstrMatch has literal parts enclosed in double quotes!
           lbUnset=true
         fi
         

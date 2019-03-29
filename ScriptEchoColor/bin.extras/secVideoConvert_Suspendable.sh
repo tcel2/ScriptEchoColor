@@ -60,7 +60,7 @@ CFGastrTmpWorkPathList=()
 CFGastrFileList=();export CFGastrFileList
 CFGastrFailedList=();export CFGastrFailedList
 astrAllParams=("${@-}") # this may be useful
-sedRegexPreciseMatch='s"(.)"[\1]"g'
+#sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
 bWorkWith=false
 bTrashMode=false
@@ -166,8 +166,9 @@ function FUNCflCleanFromDB() {
   SECFUNCcfgReadDB
   SECFUNCarrayWork --merge CFGastrFileList lastrFileListBKP
   # clean final list from current file
-  local lstrRegexPreciseMatch="^`echo "$lstrFl" |sed -r "$sedRegexPreciseMatch"`$"
-  SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
+  #local lstrRegexPreciseMatch="^`echo "$lstrFl" |sed -r "$sedRegexPreciseMatch"`$"
+  #SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
+  SECFUNCarrayClean CFGastrFileList "^\"$lstrFl\"$"
   SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
   declare -p FUNCNAME lstrFl lstrRegexPreciseMatch
   #SECFUNCarrayShow CFGastrFileList
@@ -387,8 +388,9 @@ elif $bRetryFailed;then
 
   strNewWork="`echoc -S "paste the abs filename to work on it now"`"
   if [[ -f "$strNewWork" ]];then
-    strRegexPreciseMatch="^`echo "$strNewWork" |sed -r "$sedRegexPreciseMatch"`$"
-    SECFUNCarrayClean CFGastrFailedList "$strRegexPreciseMatch"
+    #strRegexPreciseMatch="^`echo "$strNewWork" |sed -r "$sedRegexPreciseMatch"`$"
+    #SECFUNCarrayClean CFGastrFailedList "$strRegexPreciseMatch"
+    SECFUNCarrayClean CFGastrFailedList "^\"$strNewWork\"$"
     SECFUNCcfgWriteVar CFGastrFailedList
     #SECFUNCcfgWriteVar -r CFGstrPriorityWork="$strNewWork"
     $0 --onlyworkwith "$strNewWork"&&:
