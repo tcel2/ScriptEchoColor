@@ -68,6 +68,11 @@ bAddFiles=false
 bFindWorks=false
 bRetryFailed=false
 bCompletedMaintenanceMode=false
+strFlRmSubtCC=""
+#: ${astrOpenCloseCC[0]:="["};#help
+#: ${astrOpenCloseCC[1]:="]"};#help
+#declare -p astrOpenCloseCC >&2
+: ${strOpenCloseCC:="[]"};#help
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
@@ -96,6 +101,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bRetryFailed=true
 	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
+  elif [[ "$1" == "--rmSubtCC" ]];then #help ~single <strFlRmSubtCC> remove CC from subtitle file. Prior to calling, set this if needed: [strOpenCloseCC]
+    shift;strFlRmSubtCC="$1"
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -352,7 +359,23 @@ function FUNCmaintCompletedFiles() {
 ##################################################################################################
 
 function MAIN() { :; } #source editor tag trick
-if $bFindWorks;then 
+if [[ -n "$strFlRmSubtCC" ]];then
+  strSubtSfx="`SECFUNCfileSuffix "$strFlRmSubtCC"`"
+  strFlSubtNew="${strFlRmSubtCC%.$strSubtSfx}.NoCC.${strSubtSfx}"
+  strMatchCC="^([${strOpenCloseCC:0:1}].*[${strOpenCloseCC:1:1}])$";declare -p strMatchCC >&2
+  nTot="`cat "$strFlRmSubtCC" |tr -d "\r" |egrep "${strMatchCC}" |wc -l`";declare -p nTot >&2
+  if((nTot>0));then
+    if [[ -f "$strFlSubtNew" ]];then SECFUNCtrash "$strFlSubtNew";fi
+    cat "$strFlRmSubtCC" |tr -d "\r" |sed -r "s/${strMatchCC}/./" >"$strFlSubtNew"
+    if echoc -t 10 -q "see diff?";then
+      SECFUNCexecA -ce `SECFUNCternary which meld ? echo meld : echo colordiff` "$strFlRmSubtCC" "$strFlSubtNew"
+    fi
+  else
+    echoc --info "no CC found on it..."
+  fi
+  
+  exit 0
+elif $bFindWorks;then 
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
 #  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
   IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(${strVidExtListToGrep}\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
