@@ -562,6 +562,8 @@ elif $bWorkWith;then
   
   strFileAbs="$strWorkWith"
 elif $bDaemonContinueMode;then
+  export bMenuTimeout=true
+  export bShowDaemonOpts=true
   #~ astrFinalWorkListPrevious=()
   while true;do
     SECFUNCcfgReadDB
@@ -1046,18 +1048,20 @@ function FUNCfinalMenuChk() {
     #if $bMaintCompletedMode;then 
       #SECFUNCarrayClean astrOpt ".*[#]maintcompl.*"
     #fi
-    if ! $bDaemonContinueMode;then
+    : ${bShowDaemonOpts:=false}
+    if ! $bShowDaemonOpts;then
       SECFUNCarrayClean astrOpt ".*[#]daemon.*"
     fi
     
     astrEchocCmd=(echoc)
     #: ${bMenuTimeout:=true};export bMenuTimeout #help
-    bMenuTimeout=false;if $bDaemonContinueMode;then bMenuTimeout=true;fi
+    : ${bMenuTimeout:=false} #;if $bDaemonContinueMode;then bMenuTimeout=true;fi
     if $bMenuTimeout;then 
       astrEchocCmd+=(-t $CFGnDefQSleep);
     else
       SECFUNCarrayClean astrOpt ".*[#]timeout.*"
     fi
+    #declare -p bDaemonContinueMode bMenuTimeout >&2
     
     "${astrEchocCmd[@]}" -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n@Ds"&&:;nRet=$?;case "`secascii $nRet`" in 
       c)
@@ -1255,7 +1259,7 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   if((nTotKeyFrames<2));then
     echoc -p "unable to fastly determine the frame count for strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
 #    if echoc -q -t `SECFUNCternary $bRetryFailedMode ? echo 3600 : echo $CFGnDefQSleep` "try again (slower method)?";then
-    if echoc -q -t $CFGnDefQSleep "try again (slower method)?";then
+    if echoc -q -t $CFGnDefQSleep "try again (slower method)?@Dy";then
       nTotKeyFrames="$(SECFUNCexecA -ce ffprobe "$strFileAbs" -show_entries frame=key_frame,pict_type,pkt_pts_time -select_streams v -of compact -v 0 |grep key_frame=1 |tee /dev/stderr |wc -l)"
       declare -p nTotKeyFrames >&2
       
