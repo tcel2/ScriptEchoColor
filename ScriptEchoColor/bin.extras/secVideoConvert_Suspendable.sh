@@ -66,7 +66,8 @@ bWorkWith=false
 bTrashMode=false
 bAddFiles=false
 bFindWorks=false
-bRetryFailed=false
+#: ${bRetryFailedMode:=false};export 
+bRetryFailedMode=false
 bCompletedMaintenanceMode=false
 strFlRmSubtCC=""
 #: ${astrOpenCloseCC[0]:="["};#help
@@ -98,7 +99,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		strWorkWith="${1-}"
     bWorkWith=true
 	elif [[ "$1" == "-r" || "$1" == "--retryfailed" ]];then #help ~single list failed to let one be retried
-		bRetryFailed=true
+		bRetryFailedMode=true
 	elif [[ "$1" == "--trash" ]];then #help ~single files maintenance (mainly for this script development)
 		bTrashMode=true
   elif [[ "$1" == "--rmSubtCC" ]];then #help ~single <strFlRmSubtCC> remove CC from subtitle file. Prior to calling, set this if needed: [strOpenCloseCC]
@@ -406,7 +407,7 @@ elif $bFindWorks;then
     echoc --info "nothing new/usable found..."
   fi
   exit 0
-elif $bRetryFailed;then
+elif $bRetryFailedMode;then
   SECFUNCarrayShow CFGastrFailedList
 
   strNewWork="`echoc -S "paste the abs filename to work on it now"`"
@@ -416,7 +417,9 @@ elif $bRetryFailed;then
     SECFUNCarrayClean CFGastrFailedList "^\"$strNewWork\"$"
     SECFUNCcfgWriteVar CFGastrFailedList
     #SECFUNCcfgWriteVar -r CFGstrPriorityWork="$strNewWork"
-    $0 --onlyworkwith "$strNewWork"&&:
+    SECFUNCcfgWriteVar -r CFGnDefQSleep=3600
+#    nSlowQSleep=3600 $0 --onlyworkwith "$strNewWork"&&:
+    bCleanTmpRelatedFiles=true $0 --onlyworkwith "$strNewWork"&&:
   fi
   exit 0
 elif $bCompletedMaintenanceMode;then
@@ -1239,16 +1242,21 @@ fi
 ############################
 
 ###################################### SPLIT ORIGINAL ##############################
+: ${bCleanTmpRelatedFiles:=false};if $bCleanTmpRelatedFiles;then
+  SECFUNCtrash "${strAbsFileNmHashTmp}."*
+fi
 if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   echoc --info "Splitting" >&2
   
-  nTotKeyFrames="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |wc -l`"
+  #strOutputTotKF="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |wc -l`"
+  nTotKeyFrames="`SECFUNCexecA -ce ffprobe -select_streams v:0 -skip_frame nokey -of csv=print_section=0 -show_entries frame=pkt_pts_time -loglevel error "$strFileAbs" |egrep "^[[:digit:]]*[.][[:digit:]]*$" |tee /dev/stderr |wc -l`"
   declare -p nTotKeyFrames >&2
   
   if((nTotKeyFrames<2));then
     echoc -p "unable to fastly determine the frame count for strFileAbs='$strFileAbs' nTotKeyFrames='$nTotKeyFrames'"
+#    if echoc -q -t `SECFUNCternary $bRetryFailedMode ? echo 3600 : echo $CFGnDefQSleep` "try again (slower method)?";then
     if echoc -q -t $CFGnDefQSleep "try again (slower method)?";then
-      nTotKeyFrames="$(SECFUNCexecA -ce ffprobe "$strFileAbs" -show_entries frame=key_frame,pict_type,pkt_pts_time -select_streams v -of compact -v 0 |grep key_frame=1 |wc -l)"
+      nTotKeyFrames="$(SECFUNCexecA -ce ffprobe "$strFileAbs" -show_entries frame=key_frame,pict_type,pkt_pts_time -select_streams v -of compact -v 0 |grep key_frame=1 |tee /dev/stderr |wc -l)"
       declare -p nTotKeyFrames >&2
       
       #echoc -w "IMPORTANT! the splitting may not work correctly providing a useless huge single part..."
@@ -1281,7 +1289,7 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   ###  declare -p nDurationSeconds nFileSzBytes nMinPartSzBytes nParts CFGnPartSeconds
   ############
   
-  FUNCavconvRaw -i "$strFileAbs" -c copy -flags +global_header -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
+  FUNCavconvRaw -flags +global_header -fflags +genpts -i "$strFileAbs" -c copy -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
   #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
 fi
 

@@ -54,7 +54,7 @@ while true;do
   break;
 done
 echo "$strSECDEVPath" >"$strCfg"
-cat "$strCfg"
+cat "$strCfg" >&2
 
 strPATHtmp=""
 strPATHtmp+="$strSECDEVPath/bin:"
