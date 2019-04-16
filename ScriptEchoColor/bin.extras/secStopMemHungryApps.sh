@@ -183,7 +183,7 @@ while true;do
           (
             astrText=(
               "BaseCmd: $strComm"
-              '!!! CONTINUE RUNNING THIS PID ? and ignore memory hungryness... !!!\n'
+              '!!! ?CONTINUE?RUNNING? THIS PID ? and ignore memory hungryness... !!!\n'
               "\n"
               "This memory hungry app was stopped:\n"
               "Pid=$nPid\n"

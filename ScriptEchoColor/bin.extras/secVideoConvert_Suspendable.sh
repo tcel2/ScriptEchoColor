@@ -50,7 +50,7 @@ CFGnDefQSleep=$nSlowQSleep
 CFGstrKeepOriginalTag="KEEP_ORIGINAL" #help
 bUseCPUlimit=true
 astrVidExtList=(3gp avi flv gif mkv mov mp4 mpeg)
-strVidExtListToGrep="`echo "${astrVidExtList[@]}" |sed -r 's" "\\|"g'`"
+strVidExtListToGrep="`echo "${astrVidExtList[@]}" |sed -r 's" "\\\|"g'`";declare -p strVidExtListToGrep >&2
 strExample="DefaultValue"
 strNewFormatSuffix="x265-HEVC"
 bDaemonContinueMode=false
@@ -379,7 +379,13 @@ if [[ -n "$strFlRmSubtCC" ]];then
 elif $bFindWorks;then 
   #~ SECFUNCexecA -ce SECFUNCarrayShow -v CFGastrFileList
 #  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(mp4\|avi\|mkv\|mpeg\|gif\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find -iregex ".*[.]\(${strVidExtListToGrep}\)" -not -iregex ".*\(HEVC\|x265\|${CFGstrKeepOriginalTag}\).*")&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(\
+    SECFUNCexecA -ce find \
+      -iregex ".*[.]\(${strVidExtListToGrep}\)" \
+      -not -iregex ".*\(HEVC\|x265\|$(basename $(FUNCflTmpWorkPath))\|${CFGstrKeepOriginalTag}\).*"\
+  )&&:
+  if ! SECFUNCarrayCheck -n astrFileList;then echoc --info "nothing found...";exit 0;fi
+  
   SECFUNCexecA -ce SECFUNCarrayShow -v astrFileList
   astrCanWork=()
   for strFile in "${astrFileList[@]}";do
