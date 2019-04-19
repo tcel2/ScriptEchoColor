@@ -108,6 +108,7 @@ function FUNCupdFileList() { # <lstrRefDtTm> find local updated files based on r
     n1MB=$((1024*1024))
     declare -p nTotSize;
     #echo -w -t 60 --info "total `bc <<< "scale=1;$nTotSize/$n1MB"`MB"
+    SECFUNCexecA -ce ls -lc "${astrFileList[@]}"
     SECFUNCexecA -ce ls -lSr "${astrFileList[@]}"
     echoc --info -w -t 60 "@{C}total `SECFUNCbcPrettyCalcA "scale=1;$nTotSize/$n1MB"`MB"
     if(( nTotSize > 2*n1MB ));then
