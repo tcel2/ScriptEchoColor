@@ -24,6 +24,8 @@
 
 source <(secinit)
 
+trap 'if echoc -q -t 10 "@s@{R}ERROR:@S waiting you review the log. DO NOT EXIT ON TIMEOUT?";then read;fi' ERR
+
 : ${nShortDur:=$((60*1))}
 export nShortDur #help short duration limit check
 
@@ -60,7 +62,6 @@ CFGastrTmpWorkPathList=()
 CFGastrFileList=();export CFGastrFileList
 CFGastrFailedList=();export CFGastrFailedList
 astrAllParams=("${@-}") # this may be useful
-#sedRegexPreciseMatch='s"(.)"[\1]"g'
 strWorkWith=""
 bWorkWith=false
 bTrashMode=false
@@ -132,6 +133,10 @@ function FUNCflFinal() { #help <lstrFl>
   echo "${lstrFl%.$lstrSuffix}.${strNewFormatSuffix}.mp4"
 }
 
+function FUNCflSizeBytes() { # in bytes
+  stat -c "%s" "$1"
+}
+
 function FUNCflKeep() { #help <lstrFl>
   local lstrFl="$1"
   local lstrSuffix="`SECFUNCfileSuffix "$lstrFl"`"
@@ -174,11 +179,9 @@ function FUNCflCleanFromDB() {
   SECFUNCcfgReadDB
   SECFUNCarrayWork --merge CFGastrFileList lastrFileListBKP
   # clean final list from current file
-  #local lstrRegexPreciseMatch="^`echo "$lstrFl" |sed -r "$sedRegexPreciseMatch"`$"
-  #SECFUNCarrayClean CFGastrFileList "$lstrRegexPreciseMatch"
   SECFUNCarrayClean CFGastrFileList "^\"$lstrFl\"$"
   SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-  declare -p FUNCNAME lstrFl lstrRegexPreciseMatch
+  declare -p FUNCNAME lstrFl
   #SECFUNCarrayShow CFGastrFileList
 }
 
@@ -418,8 +421,6 @@ elif $bRetryFailedMode;then
 
   strNewWork="`echoc -S "paste the abs filename to work on it now"`"
   if [[ -f "$strNewWork" ]];then
-    #strRegexPreciseMatch="^`echo "$strNewWork" |sed -r "$sedRegexPreciseMatch"`$"
-    #SECFUNCarrayClean CFGastrFailedList "$strRegexPreciseMatch"
     SECFUNCarrayClean CFGastrFailedList "^\"$strNewWork\"$"
     SECFUNCcfgWriteVar CFGastrFailedList
     #SECFUNCcfgWriteVar -r CFGstrPriorityWork="$strNewWork"
@@ -448,6 +449,7 @@ elif $bCompletedMaintenanceMode;then
           false
           "$nIndex" 
           "`SECFUNCfileSuffix "$strFl"`"
+          "`FUNCflSizeBytes "$strFl"`"
           "`basename "$strFlC"`" 
           "`FUNCflBNHash "$strFl"`"
           "$strFlC"
@@ -456,7 +458,7 @@ elif $bCompletedMaintenanceMode;then
     done
     
     function FUNCCompletedMaintenanceMode() {
-      local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified
+      local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified as they will be ignored on return yad's value!
       
       declare -p FUNCNAME >&2
       SECFUNCarraysRestore #TODO (w/o this aliases wont expand preventing using ex.: SECFUNCexecA) why this fails and prevents this function from being run? -> source <(secinit) #to restore arrays
@@ -495,9 +497,10 @@ elif $bCompletedMaintenanceMode;then
 #      --dclick-action="bash -c 'source <(secinit --force);FUNCCompletedMaintenanceMode %s'"
       --dclick-action="bash -c 'FUNCCompletedMaintenanceMode %s'"
       
-      --column "Action" 
-      --column "Index:NUM" 
-      --column "OrigExt" 
+      --column "Action" # keep as first column!
+      --column "Index:NUM" # keep as 2nd column! modify columns at will below here! xD
+      --column "OrigExt"
+      --column "OrigSz:NUM" 
       --column "basename" 
       --column "TmpBNHash"
       --column "full path" 
@@ -867,10 +870,6 @@ function FUNCextDirectConv() {
   return 0
 }
 
-function FUNCflSizeBytes() { # in bytes
-  stat -c "%s" "$1"
-}
-
 function FUNCflDurationMillis() {
   local lstrFl="$1";shift
   local lstrExt="`SECFUNCfileSuffix "$lstrFl"`"
@@ -1103,14 +1102,16 @@ function FUNCfinalMenuChk() {
         SECFUNCcfgWriteVar -r CFGnDefQSleep
         ;;
       k)
-        SECFUNCexecA -ce mv -v "$strFileAbs" "`FUNCflKeep "$strFileAbs"`"
+        if SECFUNCexecA -ce mv -v "$strFileAbs" "`FUNCflKeep "$strFileAbs"`";then
+          SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"* &&:
+          SECFUNCtrash "$strOrigPath/$strFinalFileBN" &&:
+          
+          FUNCflCleanFromDB "$strFileAbs"
+        fi
         
-        SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
-        SECFUNCtrash "$strOrigPath/$strFinalFileBN"
-        
-        FUNCflCleanFromDB "$strFileAbs"
-        
+        #SECFUNCexecA -ce sleep 3;date;declare -p bMenuTimeout #TODO @@@rm
         if ! $bMenuTimeout;then echoc -w "waiting you review the trashing's log";fi
+        #SECFUNCexecA -ce sleep 30;date #TODO @@@rm
         
         exit 0 # to work with the next one
         ;;
@@ -1166,16 +1167,15 @@ function FUNCfinalMenuChk() {
           SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
           SECFUNCtrash "$strFileAbs"&&:
           FUNCflCleanFromDB "$strFileAbs"
-          exit 0
-        fi
-        
-        strFlFinalToTrash="$(FUNCflFinal "$strFileAbs")"
-        if echoc -q "trash completed final new file (allows recreating it directly from existing TMP parts): '$strFlFinalToTrash'?";then
-          SECFUNCtrash "$strFlFinalToTrash"&&:
-        fi
-        
-        if echoc -q "trash related TMP files (to generate them again)?";then
-          SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+        else
+          strFlFinalToTrash="$(FUNCflFinal "$strFileAbs")"
+          if echoc -q "trash completed final new file (allows recreating it directly from existing TMP parts): '$strFlFinalToTrash'?";then
+            SECFUNCtrash "$strFlFinalToTrash"&&:
+          fi
+          
+          if echoc -q "trash related TMP files (to generate them again)?";then
+            SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+          fi
         fi
         
         if ! $bMenuTimeout;then echoc -w "waiting you review the trashing's log";fi
