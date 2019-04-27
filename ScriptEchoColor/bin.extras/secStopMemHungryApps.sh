@@ -167,10 +167,10 @@ while true;do
     
     if [[ "$strState" == "T" ]];then 
       if $bShowHeader;then
-        SECFUNCdrawLine --left " nPid nResKB strState strCmd "
+        SECFUNCdrawLine --left " nResKB nPid strState strCmd "
         bShowHeader=false
       fi
-      echo $nPid $nResKB $strState $strCmd |sed -r "s@(.{$nMaxCols}).*@\1@"
+      echo $nResKB $nPid $strState $strCmd |sed -r "s@(.{$nMaxCols}).*@\1@"
       #~ if ! SECFUNCarrayContains anPidManaged $nPid;then
         #~ anPidManaged+=($nPid)
       #~ fi
