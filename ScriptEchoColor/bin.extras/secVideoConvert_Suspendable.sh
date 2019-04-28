@@ -161,6 +161,19 @@ function FUNCflTmpWorkPath() {
   echo "`FUNCflOrigPath "$1"`/.${SECstrScriptSelfName}.tmp/"
 }
 
+function FUNCacceptFinalFile() { # <lstrFileAbs>
+  local lstrFileAbs="$1"
+  
+  local lstrFlTmpWorkPath="$(FUNCflTmpWorkPath "$lstrFileAbs")"
+  
+  local lstrFileBN="$(basename "$lstrFileAbs")"
+  local lstrFlBNHash="$(FUNCflBNHash "$lstrFileBN")"
+  
+  SECFUNCtrash "${lstrFlTmpWorkPath}/${lstrFlBNHash}"*
+  SECFUNCtrash "$lstrFileAbs"
+  FUNCflCleanFromDB "$lstrFileAbs"
+}
+
 function FUNCflAddFailedToDB() {
   SECFUNCcfgReadDB;
   CFGastrFailedList+=("$1");
@@ -489,7 +502,8 @@ elif $bCompletedMaintenanceMode;then
     astrYadCmd=(
       yad 
       --button="gtk-close:1" 
-      --button="(selected)TrashFinal!!Trash the final new generated files selected:2"
+      --button="TrashFinal!!Trash the FINAL new generated files selected:2"
+      --button="AcceptFinal!!Trash the ORIGINAL OLD files selected:4"
       --button="RefreshList:3"
       --maximized 
       --center 
@@ -521,7 +535,7 @@ elif $bCompletedMaintenanceMode;then
     if SECFUNCarrayCheck -n anSelectedIndexList;then
       echoc --info "Selected files:"
       case $nRet in
-        2)
+        2) #TrashFinal, this was used to recode gif conversion easily. TODO To continue being useful, let it trash also the tmp files.
           astrToTrashList=()
           for nSel in "${anSelectedIndexList[@]}";do
             strFlFinal="`FUNCflFinal "${CFGastrFileList[$nSel]}"`"
@@ -532,6 +546,19 @@ elif $bCompletedMaintenanceMode;then
           if echoc -q "Trash the above files?";then
             for strToTrash in "${astrToTrashList[@]}";do
               SECFUNCtrash "$strToTrash"
+            done
+          fi
+          ;;
+        4) #AcceptFinal
+          astrFlList=()
+          for nSel in "${anSelectedIndexList[@]}";do
+            astrFlList+=( "${CFGastrFileList[$nSel]}" )
+          done
+          SECFUNCarrayShow astrFlList
+          ls -l "${astrFlList[@]}"
+          if echoc -q "Accept the final files for the above files?";then
+            for strChosen in "${astrFlList[@]}";do
+              FUNCacceptFinalFile "$strChosen"
             done
           fi
           ;;
@@ -1170,9 +1197,10 @@ function FUNCfinalMenuChk() {
       t)
         declare -p strTmpWorkPath strFileBNHash
         if echoc -q "trash original and TMP files (and exit): '$strFileAbs'?";then
-          SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
-          SECFUNCtrash "$strFileAbs"&&:
-          FUNCflCleanFromDB "$strFileAbs"
+          FUNCacceptFinalFile "$strFileAbs"
+          #SECFUNCtrash "${strTmpWorkPath}/${strFileBNHash}"*
+          #SECFUNCtrash "$strFileAbs"&&:
+          #FUNCflCleanFromDB "$strFileAbs"
         else
           strFlFinalToTrash="$(FUNCflFinal "$strFileAbs")"
           if echoc -q "trash completed final new file (allows recreating it directly from existing TMP parts): '$strFlFinalToTrash'?";then
