@@ -136,7 +136,7 @@ function SECFUNCarraysExport() { #help export all arrays marked to be exported '
 		for lstrArrayNameToSkip in ${lastrArraysToSkip[@]};do
 			if [[ "$lstrArrayName" == "$lstrArrayNameToSkip" ]];then
 #				lbSkip=true
-				if $lbVerbose;then echo "SKIP: $lstrArrayName" >&2;fi
+				if $lbVerbose;then echo "SKIP:Ln$LINENO: $lstrArrayName" >&2;fi
 				continue 2; #continues outer loop
 #				break; # breaks this inner loop
 			fi
@@ -151,8 +151,8 @@ function SECFUNCarraysExport() { #help export all arrays marked to be exported '
 #		if ! declare -p "$lstrArrayName" |head -c 20 |grep -q "^declare -.x";then
 #		if ! echo "${lstrArrayCfg:0:20}" |egrep -q "^declare [-][aA]x";then
 #		if [[ "${lstrArrayCfg:0:20}" =~ ^declare\ [-][aA]x ]];then
-		if [[ "`declare -p "$lstrArrayName"`" =~ ^declare\ [-][aA]x ]];then
-			if $lbVerbose;then echo "SKIP: $lstrArrayName" >&2;fi
+		if ! [[ "`declare -p "$lstrArrayName"`" =~ ^declare\ [-][aA]x ]];then
+			if $lbVerbose;then echo "SKIP:Ln$LINENO: $lstrArrayName" >&2;fi
 			continue
 		fi
 		

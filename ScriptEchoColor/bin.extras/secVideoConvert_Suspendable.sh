@@ -478,9 +478,14 @@ elif $bCompletedMaintenanceMode;then
     function FUNCCompletedMaintenanceMode() {
       local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified as they will be ignored on return yad's value!
       
-      declare -p FUNCNAME >&2
+      local lastrParms=("$@")
+      declare -p FUNCNAME lnSelectedIndex lastrParms >&2
+      
+      #SECbFuncArraysRestoreVerbose=true 
       SECFUNCarraysRestore #TODO (w/o this aliases wont expand preventing using ex.: SECFUNCexecA) why this fails and prevents this function from being run? -> source <(secinit) #to restore arrays
       echo "(${FUNCNAME[@]}) params: `SECFUNCparamsToEval "$@"`" >&2
+      echo "CFGastrFileList tot = ${#CFGastrFileList[@]}" >&2
+      declare -p CFGastrFileList |head -c 100 >&2
       local lstrFlSel="${CFGastrFileList[$lnSelectedIndex]}"
       declare -p lnSelectedIndex lstrFlSel >&2
       if [[ -f "$lstrFlSel" ]];then
@@ -527,7 +532,8 @@ elif $bCompletedMaintenanceMode;then
       
       "${astrMaintListDiag[@]}"
     )
-    SECFUNCarraysExport
+    declare -p CFGastrFileList |head -c 100 >&2;echo >&2
+    SECFUNCarraysExport -v
     SECFUNCarrayShow astrYadCmd #TODO why it is too much (errors out) for SECFUNCexecA as `SECFUNCexecA -ce "${astrYadCmd[@]}"` ?
     strSelectedEntries="`"${astrYadCmd[@]}"`"&&:;nRet=$?;declare -p nRet
     declare -p strSelectedEntries
