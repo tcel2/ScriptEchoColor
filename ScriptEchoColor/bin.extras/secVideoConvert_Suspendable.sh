@@ -436,6 +436,7 @@ elif $bCompletedMaintenanceMode;then
     echoc --info "Preparing List"
     SECFUNCcfgReadDB
     bSelOk=false
+    nTotReady=0
     for nIndex in "${!CFGastrFileList[@]}";do
       echo -en "."
       strFl="${CFGastrFileList[nIndex]}"
@@ -454,8 +455,10 @@ elif $bCompletedMaintenanceMode;then
           "`FUNCflBNHash "$strFl"`"
           "$strFlC"
         );
+        ((nTotReady++))&&:
       fi
     done
+    echo "$nTotReady"
     
     function FUNCCompletedMaintenanceMode() {
       local lnSelectedIndex="$2" # yad list index column, important to let the other columns be more easily modified as they will be ignored on return yad's value!
@@ -744,7 +747,7 @@ function FUNCavconvRaw() {
   
   if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv.*${lstrPartID}" -l $CFGnCPUPerc;fi #TODO difficult to get the params to avconv to match here...
   
-  (
+  ( # subshell to let `tail` use the right pid TODO right?
     nBPid=$BASHPID
     strFlLog="${strAbsFileNmHashTmp}${lstrPartID}.pid${nBPid}.log"
     echo "DBG: $$ $strFlLog" >&2
@@ -815,8 +818,8 @@ function FUNCavconvConv() { #help
 	
 	# work here
   local lastrPartParms=()
-  lastrPartParms=(-c:v libx265);if $lbLossless;then lastrPartParms+=(-x265-params lossless=1);fi
-  if ! $lbMute;then lastrPartParms+=(-c:a libmp3lame);fi
+  lastrPartParms=(-c:v libx265 -map 0:v);if $lbLossless;then lastrPartParms+=(-x265-params lossless=1);fi
+  if ! $lbMute;then lastrPartParms+=(-c:a libmp3lame -map 0:a);fi
   if   $lbPart;then lastrPartParms+=(-fflags +genpts);fi
   if((`SECFUNCarraySize lastrRemainingParams`>0));then
     lastrPartParms+=( "${lastrRemainingParams[@]}" )
@@ -1299,7 +1302,8 @@ if [[ ! -f "${strAbsFileNmHashTmp}.00000.mp4" ]];then
   ###  declare -p nDurationSeconds nFileSzBytes nMinPartSzBytes nParts CFGnPartSeconds
   ############
   
-  FUNCavconvRaw -flags +global_header -fflags +genpts -i "$strFileAbs" -c copy -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
+  # subtitles will be ignored to let it work, by the missing option: -map 0:s
+  FUNCavconvRaw -flags +global_header -fflags +genpts -i "$strFileAbs" -c copy -map 0:v -map 0:a -segment_time $CFGnPartSeconds -f segment "${strAbsFileNmHashTmp}."%05d".mp4" #|tee -a "${strAbsFileNmHashTmp}.log"
   #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
 fi
 
@@ -1313,6 +1317,7 @@ declare -p astrFilePartList |tr "[" "\n" >&2
 nTotParts=`SECFUNCarraySize astrFilePartList`
 if((nTotParts<2));then
   echoc -p "nTotParts=$nTotParts < 2"
+  FUNCflAddFailedToDB "$strFileAbs"
   exit 1
 fi
 
