@@ -164,10 +164,10 @@ function FUNCflTmpWorkPath() {
 function FUNCacceptFinalFile() { # <lstrFileAbs>
   local lstrFileAbs="$1"
   
-  local lstrFlTmpWorkPath="$(FUNCflTmpWorkPath "$lstrFileAbs")"
+  local lstrFlTmpWorkPath="$(FUNCflTmpWorkPath "$lstrFileAbs")";declare -p lstrFlTmpWorkPath
   
-  local lstrFileBN="$(basename "$lstrFileAbs")"
-  local lstrFlBNHash="$(FUNCflBNHash "$lstrFileBN")"
+  local lstrFileBN="$(basename "$lstrFileAbs")";declare -p lstrFileBN
+  local lstrFlBNHash="$(FUNCflBNHash "$lstrFileBN")";declare -p lstrFlBNHash
   
   SECFUNCtrash "${lstrFlTmpWorkPath}/${lstrFlBNHash}"*
   SECFUNCtrash "$lstrFileAbs"
@@ -188,13 +188,13 @@ function FUNCflCleanFromDB() {
   ## Database consistency:
   #####
   # merge current list with possible new values
-  local lastrFileListBKP=( "${CFGastrFileList[@]}" ); 
-  SECFUNCcfgReadDB
-  SECFUNCarrayWork --merge CFGastrFileList lastrFileListBKP
+  local lastrFileListBKP=( "${CFGastrFileList[@]}" );echo "$LINENO: `date` ${FUNCNAME[@]} $lstrFl"
+  SECFUNCcfgReadDB;echo "$LINENO: `date`"
+  SECFUNCarrayWork --merge CFGastrFileList lastrFileListBKP;echo "$LINENO: `date`"
   # clean final list from current file
-  SECFUNCarrayClean CFGastrFileList "^\"$lstrFl\"$"
-  SECFUNCcfgWriteVar CFGastrFileList #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
-  declare -p FUNCNAME lstrFl
+  SECFUNCarrayClean CFGastrFileList "^\"$lstrFl\"$";echo "$LINENO: `date`"
+  SECFUNCcfgWriteVar CFGastrFileList;echo "$LINENO: `date`" #SECFUNCarrayClean CFGastrFileList "$CFGstrFileAbs"
+  echo "$LINENO: `date`"
   #SECFUNCarrayShow CFGastrFileList
 }
 
@@ -455,7 +455,7 @@ elif $bCompletedMaintenanceMode;then
       strFl="${CFGastrFileList[nIndex]}"
       strFlC="`FUNCflFinal "$strFl"`"
       #echo "(( (`FUNCflSizeBytes "$strFlC"` * 100) / `FUNCflSizeBytes "$strFl"` ))"
-      if [[ -f "$strFlC" ]];then
+      if [[ -f "$strFl" ]] && [[ -f "$strFlC" ]];then
         if((nSelectedIndex==-1));then nSelectedIndex=$nIndex;fi
         bSel=false;if ! $bSelOk && ((nIndex>=nSelectedIndex));then bSel=true;bSelOk=true;fi
 #        astrMaintListDiag+=("`SECFUNCternary --tf test $nIndex = $nSelectedIndex`" "$nIndex" "`basename "$strFlC"`" "$strFlC");
@@ -528,8 +528,11 @@ elif $bCompletedMaintenanceMode;then
       "${astrMaintListDiag[@]}"
     )
     SECFUNCarraysExport
-    strSelectedEntries="`SECFUNCexecA -ce "${astrYadCmd[@]}"`"&&:;nRet=$?;declare -p nRet
-    if((nRet==1 || nRet==252));then exit 0;fi
+    SECFUNCarrayShow astrYadCmd #TODO why it is too much (errors out) for SECFUNCexecA as `SECFUNCexecA -ce "${astrYadCmd[@]}"` ?
+    strSelectedEntries="`"${astrYadCmd[@]}"`"&&:;nRet=$?;declare -p nRet
+    declare -p strSelectedEntries
+    if((nRet==126));then SECFUNCechoErrA "some error happened nRet='$nRet'";exit 1;fi
+    if((nRet==1 || nRet==252)) || [[ -z "$strSelectedEntries" ]];then exit 0;fi
     
     IFS=$'\n' read -d '' -r -a anSelectedIndexList < <(echo "$strSelectedEntries" |egrep "^TRUE" |tr "|" " " |awk '{print $2}')&&:
     if SECFUNCarrayCheck -n anSelectedIndexList;then
