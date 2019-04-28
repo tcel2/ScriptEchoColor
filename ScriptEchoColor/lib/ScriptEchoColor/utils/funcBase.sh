@@ -145,8 +145,13 @@ function SECFUNCarraysExport() { #help export all arrays marked to be exported '
 #			continue;
 #		fi
 		
-		# only export already exported arrays...
-		if ! declare -p "$lstrArrayName" |grep -q "^declare -.x";then
+		# Only export already exported arrays...
+#    ##local lstrArrayCfg="`declare -p "$lstrArrayName"`"
+#    #echo "${lstrArrayCfg:0:20}" >&2
+#		if ! declare -p "$lstrArrayName" |head -c 20 |grep -q "^declare -.x";then
+#		if ! echo "${lstrArrayCfg:0:20}" |egrep -q "^declare [-][aA]x";then
+#		if [[ "${lstrArrayCfg:0:20}" =~ ^declare\ [-][aA]x ]];then
+		if [[ "`declare -p "$lstrArrayName"`" =~ ^declare\ [-][aA]x ]];then
 			if $lbVerbose;then echo "SKIP: $lstrArrayName" >&2;fi
 			continue
 		fi
