@@ -441,6 +441,7 @@ elif $bCompletedMaintenanceMode;then
       echo -en "."
       strFl="${CFGastrFileList[nIndex]}"
       strFlC="`FUNCflFinal "$strFl"`"
+      #echo "(( (`FUNCflSizeBytes "$strFlC"` * 100) / `FUNCflSizeBytes "$strFl"` ))"
       if [[ -f "$strFlC" ]];then
         if((nSelectedIndex==-1));then nSelectedIndex=$nIndex;fi
         bSel=false;if ! $bSelOk && ((nIndex>=nSelectedIndex));then bSel=true;bSelOk=true;fi
@@ -451,6 +452,7 @@ elif $bCompletedMaintenanceMode;then
           "$nIndex" 
           "`SECFUNCfileSuffix "$strFl"`"
           "`FUNCflSizeBytes "$strFl"`"
+          "$(( (`FUNCflSizeBytes "$strFlC"` * 100) / `FUNCflSizeBytes "$strFl"` ))"
           "`basename "$strFlC"`" 
           "`FUNCflBNHash "$strFl"`"
           "$strFlC"
@@ -504,6 +506,7 @@ elif $bCompletedMaintenanceMode;then
       --column "Index:NUM" # keep as 2nd column! modify columns at will below here! xD
       --column "OrigExt"
       --column "OrigSz:NUM" 
+      --column "%:NUM" 
       --column "basename" 
       --column "TmpBNHash"
       --column "full path" 
