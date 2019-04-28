@@ -554,11 +554,15 @@ elif $bCompletedMaintenanceMode;then
           ;;
         4) #AcceptFinal
           astrFlList=()
+          astrFlFinalList=()
           for nSel in "${anSelectedIndexList[@]}";do
             astrFlList+=( "${CFGastrFileList[$nSel]}" )
+            
+            strFlFinal="`FUNCflFinal "${CFGastrFileList[$nSel]}"`"
+            astrFlFinalList+=( "$strFlFinal" )
           done
           SECFUNCarrayShow astrFlList
-          ls -l "${astrFlList[@]}"
+          ls -l "${astrFlList[@]}" "${astrFlFinalList[@]}"
           if echoc -q "Accept the final files for the above files?";then
             for strChosen in "${astrFlList[@]}";do
               FUNCacceptFinalFile "$strChosen"

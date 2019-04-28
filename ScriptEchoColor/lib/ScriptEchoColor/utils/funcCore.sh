@@ -721,10 +721,10 @@ function SECFUNCarrayWork() { #help
 #	echo "TST:$lstrArrayId" >&2
 #	declare -p $lstrArrayId >&2
 	
-  sedGetArrayValue="s/^[^=]*='(.*)'$/\1/" # sed gets the value part after =, this keeps the indexes values and gaps
+#  sedGetArrayValue="s/^[^=]*='(.*)'$/\1/" # sed gets the value part after =, this keeps the indexes values and gaps
   
-	local lastrArrayCopyTmp #this loses the indexes -> =("${!lstrArrayAllElements}")
-  declare -n lastrArrayCopyTmp="$lstrArrayId"
+#	#local lastrArrayCopyTmp #this to the right would lose the indexes -> =("${!lstrArrayAllElements}")
+  local -n lastrArrayCopyTmp="$lstrArrayId" #this to the right would lose the indexes -> =("${!lstrArrayAllElements}")
   case "$lstrMode" in
     --clean)
       local lstrMatch="$lstrParam1"
@@ -821,8 +821,9 @@ function SECFUNCarrayWork() { #help
         return 1
       fi
       #~ local lstrArrayAllElementsOther="${lstrArrayIdOther}[@]"
-      local lastrArrayCopyTmpOther #=("${!lstrArrayAllElementsOther}")
-      declare -a lastrArrayCopyTmpOther="`declare -p $lstrArrayIdOther |sed -r "$sedGetArrayValue"`"
+      #local lastrArrayCopyTmpOther #=("${!lstrArrayAllElementsOther}")
+      #declare -a lastrArrayCopyTmpOther="`declare -p $lstrArrayIdOther |sed -r "$sedGetArrayValue"`"
+      local -n lastrArrayCopyTmpOther="$lstrArrayIdOther"
       
       local lastrTmp=("${lastrArrayCopyTmp[@]}" "${lastrArrayCopyTmpOther[@]}")
       local lastrList
