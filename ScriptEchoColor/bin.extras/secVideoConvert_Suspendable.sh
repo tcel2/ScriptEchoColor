@@ -565,6 +565,7 @@ elif $bCompletedMaintenanceMode;then
           ls -l "${astrFlList[@]}" "${astrFlFinalList[@]}"
           if echoc -q "Accept the final files for the above files?";then
             for strChosen in "${astrFlList[@]}";do
+              SECFUNCdrawLine --left "$(basename "$strChosen")"
               FUNCacceptFinalFile "$strChosen"
             done
           fi

@@ -728,6 +728,11 @@ function SECFUNCarrayWork() { #help
   case "$lstrMode" in
     --clean)
       local lstrMatch="$lstrParam1"
+      #declare -p lstrMatch >&2;echo "lstrMatch=$lstrMatch" >&2
+#      lstrMatch="$(echo "$lstrMatch" |sed -r "s@'@'\\\''@g")" # this will fix any pliq to not break the eval below wich value is already between pliqs
+      lstrMatch="$(echo "$lstrMatch" |sed -r -e "s@'@\\\'@g" -e "s@ @\\\ @g")" # this will fix any pliq and space to not break the eval below wich value is already between pliqs
+#      lstrMatch="$(echo "$lstrMatch" |sed -r "s@ @\\\ @g")" # this will fix any pliq to not break the eval below wich value is already between pliqs
+      #declare -p lstrMatch >&2;echo "lstrMatch=$lstrMatch" >&2
       #declare -p lstrMatch >&2
       local lnIndex=0
 #      for strTmp in "${lastrArrayCopyTmp[@]}";do #for strTmp in "${!lstrArrayAllElements}";do
@@ -738,8 +743,10 @@ function SECFUNCarrayWork() { #help
           if [[ -z "$strTmp" ]];then
             lbUnset=true
           fi
-        elif eval '[[ "$strTmp" =~ '"$lstrMatch"' ]]';then # IMPORTANT: this eval is necessary in case lstrMatch has literal parts enclosed in double quotes!
-          lbUnset=true
+        else
+          if eval '[[ "$strTmp" =~ '"$lstrMatch"' ]]';then # IMPORTANT: this eval is necessary in case lstrMatch has literal parts enclosed in double quotes!
+            lbUnset=true
+          fi
         fi
         
         if $lbUnset;then
