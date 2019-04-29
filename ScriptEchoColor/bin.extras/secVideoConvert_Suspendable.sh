@@ -1446,7 +1446,7 @@ declare -p astrFilePartNewList |tr "[" "\n" >&2
 
   strFinalFlHashNmTmp="${strAbsFileNmHashTmp}.${strNewFormatSuffix}-TMP.mp4"
   SECFUNCtrash "$strFinalFlHashNmTmp"&&:
-  if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -fflags +genpts "$strFinalFlHashNmTmp";then
+  if FUNCavconvRaw -f concat -i "$strFileJoin" -c copy -map 0:v -map 0:a -fflags +genpts "$strFinalFlHashNmTmp";then
     #~ cat "$SECstrRunLogFile" >>"${strAbsFileNmHashTmp}.log"
     
     SECFUNCexecA -ce mv -vf "$strFinalFlHashNmTmp" "$strFinalFileBN" #rename from hashedNm to correct final name
