@@ -199,6 +199,7 @@ if $bDaemon;then
   nSetIndex=-1
   nChosen=0
   bPlay=true
+  bRandomColoring=true
   bDisableCurrent=false
   bWasHidden=false;
   : ${CFGstrCurrentFile:=""}
@@ -418,7 +419,7 @@ if $bDaemon;then
       if $bFlop && ((RANDOM%2==0));then bFlopKeep=true;fi
     fi
   
-    if((nChangeHue!=0));then #TODO to not use hue to let everything else work... :P
+    if $bRandomColoring && ((nChangeHue!=0));then #TODO to not use hue to let everything else work... :P
       nAddR=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddG=$((RANDOM%(nChangeHue*2)-nChangeHue))
       nAddB=$((RANDOM%(nChangeHue*2)-nChangeHue))
@@ -534,8 +535,9 @@ if $bDaemon;then
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
       "_disable current"
       "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
-      "fi_lter(@s@y$strFilter@S)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
+      "fi_lter(@s@y$strFilter@S)"
+      "toggle ra_ndom coloring"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
       "_reset timeout counter ($nSumSleep/$nChangeInterval)"
       "_set image index"
@@ -573,6 +575,10 @@ if $bDaemon;then
         bChangeImage=true
         bResetCounters=true
         ;;
+      i)
+        SECFUNCtoggleBoolean bFlipKeep
+        bResetCounters=true
+        ;; 
       l)
         FUNCchkUpdateFileList --refill
         SECFUNCarrayShow CFGastrFileList
@@ -591,10 +597,9 @@ if $bDaemon;then
           FUNCchkUpdateFileList --refill
         fi
         ;;
-      i)
-        SECFUNCtoggleBoolean bFlipKeep
-        bResetCounters=true
-        ;; 
+      n)
+        SECFUNCtoggleBoolean bRandomColoring
+        ;;
       o)
         SECFUNCtoggleBoolean bFlopKeep
         bResetCounters=true
