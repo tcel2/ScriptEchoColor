@@ -40,10 +40,14 @@ export strEnvVarUserCanModify2 #help test
 : ${CFGbZoom:=false};
 export CFGbZoom #help set initial zoom mode toggle
 
+: ${CFGstrFilter:=".*"}
+export CFGstrFilter #help
+
 strExample="DefaultValue"
 CFGstrTest="Test"
 strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
 strWallPPath="$HOME/Pictures/Wallpapers/"
+#strTmpPath="/dev/shm"
 strTmpFile="$strWallPPath/$strBaseTmpFileName"
 strPicURI="file://$strTmpFile"
 astrRemainingParams=()
@@ -147,7 +151,6 @@ function FUNCconvert() {
 
 nDelayMsg=3
 nTotFiles=0
-strFilter=".*"
 : ${CFGbShowHidden:=false}
 function FUNCchkUpdateFileList() { #[--refill]
 	nTotFiles=${#CFGastrFileList[@]}
@@ -161,7 +164,7 @@ function FUNCchkUpdateFileList() { #[--refill]
       find -iregex "$strFindRegex" \
         |egrep -v "${grepIgnore}" \
         |grep -v "$strBaseTmpFileName" \
-        |egrep "$strFilter" \
+        |egrep "$CFGstrFilter" \
         |sort \
     ) &&: # re-fill
 		if [[ -z "${1-}" ]];then
@@ -184,6 +187,8 @@ function FUNCsetPicURI() {
   SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "$strPicURI";
 }
 
+trap 'if $CFGbShowHidden;then gsettings set org.gnome.desktop.background picture-uri "";fi' EXIT # to help before reboot
+
 if $bDaemon;then
   SECFUNCuniqueLock --daemonwait
 	nTotFiles=0
@@ -193,7 +198,6 @@ if $bDaemon;then
   nSumSleep=0
   bChangeImage=true
   nChHueFastModeCount=0
-  FUNCsetPicURI
   bFlipKeep=false;
   bFlopKeep=false;
   nSetIndex=-1
@@ -203,6 +207,15 @@ if $bDaemon;then
   bDisableCurrent=false
   bWasHidden=false;
   : ${CFGstrCurrentFile:=""}
+  
+  if $CFGbShowHidden;then 
+    gsettings set org.gnome.desktop.background picture-uri ""; # to help just after starting
+    echoc --say "wall paper auto changer starting in 10 minutes" # :)
+    echoc -w -t 600 "showing hidden in 10min"
+  fi
+  
+  FUNCsetPicURI
+  
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
@@ -536,7 +549,7 @@ if $bDaemon;then
       "_disable current"
       "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
-      "fi_lter(@s@y$strFilter@S)"
+      "fi_lter(@s@y$CFGstrFilter@S)"
       "toggle ra_ndom coloring"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
       "_reset timeout counter ($nSumSleep/$nChangeInterval)"
@@ -582,18 +595,19 @@ if $bDaemon;then
       l)
         FUNCchkUpdateFileList --refill
         SECFUNCarrayShow CFGastrFileList
-        declare -p strFilter
+        declare -p CFGstrFilter
         #TODO for some inexplicable (?) reason, while 's' option will collect text and work fine many times, after this option is selected nothing will output anymore on text prompts `echoc -S`... scary... 8-( ), could be cuz of the @D default option? or even the '(' ')' test more later...
-        strFilter="`echoc -S "Type a regex filter (can be a subfolder name)@D${strFilter}"`"
-        declare -p strFilter
+        CFGstrFilter="`echoc -S "Type a regex filter (can be a subfolder name)@D${CFGstrFilter}"`"
+        declare -p CFGstrFilter
         FUNCchkUpdateFileList --refill
         if((`SECFUNCarraySize CFGastrFileList`>0));then
           SECFUNCarrayShow CFGastrFileList
           bChangeImage=true;
           bResetCounters=true
+          SECFUNCcfgWriteVar CFGstrFilter
         else
           echoc -p "invalid filter, no matches"
-          strFilter=".*"
+          CFGstrFilter=".*"
           FUNCchkUpdateFileList --refill
         fi
         ;;
@@ -627,6 +641,7 @@ if $bDaemon;then
         ;;
       z)
         SECFUNCtoggleBoolean --show CFGbZoom
+        SECFUNCcfgWriteVar CFGbZoom
         ;;
       *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;;
     esac
