@@ -47,9 +47,7 @@ strExample="DefaultValue"
 CFGstrTest="Test"
 strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
 strWallPPath="$HOME/Pictures/Wallpapers/"
-#strTmpPath="/dev/shm"
-strTmpFile="$strWallPPath/$strBaseTmpFileName"
-strPicURI="file://$strTmpFile"
+: ${strTmpPath:="/dev/shm"}
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export CFGastrFileList=()
@@ -125,6 +123,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 # Main code
 cd $strWallPPath;
 
+
 fResRatio="`FUNCratio $strScreenSize`"
 eval `echo "$strScreenSize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
 declare -p strScreenSize fResRatio
@@ -170,7 +169,7 @@ function FUNCchkUpdateFileList() { #[--refill]
 		if [[ -z "${1-}" ]];then
 			FUNCchkUpdateFileList --noNest #dummy recognition param, but works. This call will update tot files var
 			if((nTotFiles==0));then
-				echoc -w -t $nDelayMsg -p "no files found at '`pwd`'"
+				if echoc -w -t $nDelayMsg -p "no files found at '`pwd`', reset filter CFGstrFilter='$CFGstrFilter'?";then CFGstrFilter=".*";fi
 				return 1
 			else
 				echoc -w -t $nDelayMsg "updated files list"
@@ -184,8 +183,15 @@ function FUNCchkUpdateFileList() { #[--refill]
 }
 
 function FUNCsetPicURI() {
+  if $CFGbShowHidden;then
+    declare -g strTmpFile="$strTmpPath/$strBaseTmpFileName"
+  else
+    declare -g strTmpFile="$strWallPPath/$strBaseTmpFileName"
+  fi
+  strPicURI="file://$strTmpFile"
   SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "$strPicURI";
 }
+FUNCsetPicURI
 
 trap 'if $CFGbShowHidden;then gsettings set org.gnome.desktop.background picture-uri "";fi' EXIT # to help before reboot
 
@@ -206,12 +212,25 @@ if $bDaemon;then
   bRandomColoring=true
   bDisableCurrent=false
   bWasHidden=false;
+  bResetCounters=false;
   : ${CFGstrCurrentFile:=""}
+  
+  FUNChiddenToggle() {
+    SECFUNCtoggleBoolean CFGbShowHidden
+    SECFUNCcfgWriteVar CFGbShowHidden
+    FUNCsetPicURI
+    FUNCchkUpdateFileList --refill
+    bChangeImage=true
+    bResetCounters=true
+  }      
   
   if $CFGbShowHidden;then 
     gsettings set org.gnome.desktop.background picture-uri ""; # to help just after starting
     echoc --say "wall paper auto changer starting in 10 minutes" # :)
-    echoc -w -t 600 "showing hidden in 10min"
+    if echoc -q -t 600 "disable hidden now?";then 
+      FUNChiddenToggle;
+      gsettings set org.gnome.desktop.background picture-uri ""
+    fi
   fi
   
   FUNCsetPicURI
@@ -538,7 +557,6 @@ if $bDaemon;then
     #~ fi
     
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$CFGstrCurrentFile";
-    bResetCounters=false;
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
     #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $CFGbZoom ? echo ON : echo OFF`)\n";fi
@@ -582,11 +600,7 @@ if $bDaemon;then
         bResetCounters=true
         ;;
       h)
-        SECFUNCtoggleBoolean CFGbShowHidden
-        SECFUNCcfgWriteVar CFGbShowHidden
-        FUNCchkUpdateFileList --refill
-        bChangeImage=true
-        bResetCounters=true
+        FUNChiddenToggle
         ;;
       i)
         SECFUNCtoggleBoolean bFlipKeep
