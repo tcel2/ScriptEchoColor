@@ -133,6 +133,7 @@ declare -p x y screen window; >&2
 ### the user may have changed his/her mind, so double check for the mouse postion being at the edge! (the 1st check is the Window Manager edge action)
 : ${nEdgeDist:=3} #help
 if((x > nEdgeDist)) && ((x < (nSW-nEdgeDist) ));then FUNCexit 0;fi
+if((y < nEdgeDist*3)) || ((y > (nSW-nEdgeDist*3) ));then FUNCexit 0;fi # this one is to protect the corners
 
 ##### move it
 nNewX=$((x + $nRelativeMoveX))
