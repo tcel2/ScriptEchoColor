@@ -42,11 +42,13 @@ while true;do
   declare -p strSECDEVPath >&2
   if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
     echo "dev path not set at '$strCfg'" >&2
+    nTmOut=10
+    strMsg="($@) dev path not set at '$strCfg', (waiting ${nTmOut}s) Paste it: "
     if SECFUNCisShellInteractive;then
-      echoc -p "dev path not set at '$strCfg'" >&2
-      read -p "Paste it: " strSECDEVPath
+      echoc -p "$strMsg" >&2
+      read -t $nTmOut -p "$strMsg" strSECDEVPath
     else
-      strSECDEVPath="$(yad --title "$strBN" --text "dev path not set at '$strCfg'\nPaste it:" --entry)" # THIS WOULD MESS IN NON INTERACTIVE MODE -> read -p "Paste it: " strSECDEVPath 
+      strSECDEVPath="$(yad --timeout=$nTmOut --title "$strBN" --text "$strMsg" --entry)" # THIS WOULD MESS IN NON INTERACTIVE MODE -> read -p "Paste it: " strSECDEVPath 
     fi
     sleep 1 # safety as logs were becoming huge in non interactive mode (expectedly wont happen anymore...)
     continue
