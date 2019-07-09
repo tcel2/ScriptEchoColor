@@ -252,6 +252,7 @@ function FUNCsetFastMedia() {
 		fi
 	fi
 	
+  SECFUNCtrash "$fastMedia"
 	bOk=true
 	if $bOk && ! mkdir -v "$fastMediaRealPath";then
 		bOk=false

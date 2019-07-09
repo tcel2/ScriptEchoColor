@@ -229,8 +229,6 @@ fi
 ##############################################################################
 ##############################################################################
 
-CFGstrGDriveFlK="$HOME/.gdrive/token_v2.json"
-
 CFGstrFlRemoteFileInfo="$HOME/.gdrive/${SECstrScriptSelfName}.RemoteFilesInfo.txt"
 
 CFGstrFlLastUpload="$HOME/.gdrive/${SECstrScriptSelfName}.LastUploadDtTm.cfg"
@@ -238,6 +236,7 @@ CFGstrFlLastUploadBkpBN="$(basename "$CFGstrFlLastUpload")"
 
 FUNCupdFileList "$CFGstrFlLastUpload"
 
+CFGstrGDriveFlK="$HOME/.gdrive/token_v2.json"
 function FUNCflKchkGDrive() {
   declare -p CFGstrGDriveFlKRealAt&&: >&2
   if [[ ! -a "$CFGstrGDriveFlK" ]];then

@@ -1156,25 +1156,12 @@ function GAMEFUNCgetWPRegexPID() { #help <lstrRegex> uses the current WINEPREFIX
   
   local lanList=()
   local lnPid
-  #~ IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}")&&:
-  #~ if((`SECFUNCarraySize lanList`==0));then
-  #~ if ! IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f "C:.*${lstrRegex}");then
-    #~ if ! IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*//${lstrRegex}");then # was a relative path
-      #~ :
-    #~ fi
-  #~ fi
-  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*\\${lstrRegex}"&&:)&&: # this works also with relative paths
+  IFS=$'\n' read -d '' -r -a lanList < <(pgrep -f ".*[\/]${lstrRegex}"&&:)&&: # this works also with relative paths
   if((`SECFUNCarraySize lanList`>0));then
-    #declare -p lanList
+    declare -p lanList >&2
     local lstrRegexWINEPREFIX="`realpath "$WINEPREFIX"`/drive_c/.*"
     for lnPid in "${lanList[@]}";do
       local bMatch=false
-      
-  #~ #    if [[ "`readlink /proc/$lnPid/cwd`" == "`realpath "$WINEPREFIX"`/drive_c/windows/system32" ]];then
-      #~ local strExecRealPath="`readlink /proc/$lnPid/cwd`" #will not work for WINEPREFIX in case the new instance application final path is a symlink to the real one to save HD space
-      #~ if [[ "$strExecRealPath" =~ $lstrRegexWINEPREFIX ]];then
-        #~ bMatch=true;
-      #~ fi
       
       local strExecWP="`strings /proc/$lnPid/environ |egrep "^WINEPREFIX"`"
       if [[ "$strExecWP" == "WINEPREFIX=$WINEPREFIX" ]];then
