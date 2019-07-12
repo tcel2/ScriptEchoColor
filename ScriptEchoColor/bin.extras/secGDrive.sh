@@ -306,7 +306,13 @@ function FUNCaddKnownIDs() {
 strFUNClistFromRemoteOutputRO=""
 function FUNClistFromRemote() { # [--folder] <lstrBN>
   local lstrFolderChk="!=";if [[ "$1" == "--folder" ]];then lstrFolderChk="=";shift;fi
+  local lstrParentID="$1";shift
   local lstrBN="$(basename "$1")";shift # grants BN
+  
+  local lstrParentQuery=""
+  if [[ "$lstrParentID" != "0" ]];then 
+    lstrParentQuery=" and '${lstrParentID}' in parents "
+  fi
   
   local lastrCmdGDrList=(
     list 
@@ -317,7 +323,7 @@ function FUNClistFromRemote() { # [--folder] <lstrBN>
     --absolute 
     --query
   )
-  lastrCmdGDrList+=("name = \"${lstrBN}\" and mimeType ${lstrFolderChk} 'application/vnd.google-apps.folder'")
+  lastrCmdGDrList+=("name = \"${lstrBN}\" and mimeType ${lstrFolderChk} 'application/vnd.google-apps.folder' ${lstrParentQuery} and trashed = false")
   
   declare -g strFUNClistFromRemoteOutputRO="`FUNCrunGDrive "${lastrCmdGDrList[@]}"`"&&:;local lnRet=$?;
   if((lnRet==0));then
@@ -352,12 +358,16 @@ function FUNCgetIDfromOutput() { # <lstrFile> <lstrOutput> <lstrType>
   local lstrFile="$1";shift
   local lstrOutput="$1";shift
   local lstrType="$1";shift
+  local lstrParentID="$1";shift
+  
+  if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrFile $lstrType $lstrParentID" >&2;fi
   
   #only the ID for the file on the correct path!
-  local lstrFilePM="`echo "$lstrFile" |sed -r "$sedRegexPreciseMatch"`"
-  if lstrOutput="`echo "$lstrOutput" |egrep " ${lstrFilePM} *${lstrType} "`";then 
+  local lstrFilePM="`echo "$lstrFile" |sed -r "$sedRegexPreciseMatch"`";#declare -p lstrFilePM >&2
+#  if lstrOutput="`echo "$lstrOutput" |egrep "[ /]${lstrFilePM} *${lstrType} "`";then 
+  if lstrOutput="`echo "$lstrOutput" |egrep "   ${lstrFilePM} *${lstrType} "`";then 
     lstrOutput="`echo "$lstrOutput" |tail -n 1`" #if there are many IDs with the same identical abs file path names, will update the newest one at least!
-    if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi
+    if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrOutput" >&2;fi # THIS OUTPUT WAS FILTERED ALREADY!!!!!!!!!!! YEY!!!!!!!!
     
   #~ if lstrOutput="`FUNCgetExactOutputLine "$lstrFile" "$lstrOutput"`";then
     if((`echo "$lstrOutput" |wc -l`==1));then
@@ -396,15 +406,19 @@ function FUNCgetIDfromOutput() { # <lstrFile> <lstrOutput> <lstrType>
 function FUNCgetID() { # <lstrFile> <lstrType>
   local lstrFile="$1";shift
   local lstrType="$1";shift
+  local lstrParentID="$1";shift
+  
+  if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrFile $lstrType $lstrParentID" >&2;fi
   
   local lstrID
   # check if ID is stored locally at cfg file
-  if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$(cat "$CFGstrFlKnownIDs")" "$lstrType")";then
+  if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$(cat "$CFGstrFlKnownIDs")" "$lstrType" "$lstrParentID")";then
     echoc --info "$lstrType ID is known already! for '$lstrFile'" >&2
   else # gets the ID from the remote
     local lstrOptFolder="";if [[ "$lstrType" == "dir" ]];then lstrOptFolder="--folder";fi
-    if FUNClistFromRemote $lstrOptFolder "$lstrFile";then local lstrOutput="$strFUNClistFromRemoteOutputRO"
-      if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$lstrOutput" "$lstrType")";then
+    local lstrFileBN="$(basename "$lstrFile")"
+    if FUNClistFromRemote $lstrOptFolder "$lstrParentID" "$lstrFileBN";then local lstrOutput="$strFUNClistFromRemoteOutputRO"
+      if lstrID="$(FUNCgetIDfromOutput "$lstrFile" "$lstrOutput" "$lstrType" "$lstrParentID")";then
         echoc --info "ID found remotely!" >&2
       else
         declare -p lstrOutput >&2
@@ -471,11 +485,13 @@ function FUNCrunGDrive() { # <params...>
   echo "$lstrOutput"
 }
 
-function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
+function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath> RETURNS OUTPUT TOO!!!
   local lstrPath="$1";shift
   
+  if $bVerbose;then echo "${FUNCNAME[@]}:$LINENO: $lstrPath" >&2;fi
+  
   local lstrPathID=""
-  if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
+  if lstrPathID="$(FUNCgetID "$lstrPath" dir 0)";then
     echo "$lstrPathID"
     return 0
   fi
@@ -484,24 +500,27 @@ function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
   IFS=$'\n' read -d '' -r -a lastrPathParts < <( echo "$lstrPath" |tr "/" "\n" )&&:
   
   local lstrPathID=""
-  local lstrLastFoundParentPathID=""
+  local lstrLastFoundParentPathID="0"
   local lstrFoundPathTree=""
   for lstrPathPart in "${lastrPathParts[@]}";do
     #~ local lbWriteNewFolderID=false
     local lstrJustCreatedFolderID=""
     
-    if lstrPathPartID="$(FUNCgetID "$lstrPathPart" dir)";then
+    local lstrFPT="";if [[ -n "$lstrFoundPathTree" ]];then lstrFPT="${lstrFoundPathTree}/";fi
+    if lstrPathPartID="$(FUNCgetID "${lstrFPT}${lstrPathPart}" dir "${lstrLastFoundParentPathID}")";then
       lstrLastFoundParentPathID="$lstrPathPartID"
       declare -p lstrLastFoundParentPathID lstrPathPart >&2
     else
       local lastrCmdMkdir=( mkdir )
-      if [[ -n "$lstrLastFoundParentPathID" ]];then # emtpy is root
+      if [[ "$lstrLastFoundParentPathID" != "0" ]];then # 0 means no ID therefore is root
         lastrCmdMkdir+=( -p "$lstrLastFoundParentPathID" )
       fi
       lastrCmdMkdir+=( "$lstrPathPart" )
       declare -p lastrCmdMkdir >&2
-      
-      echoc -w -t 60 "going to create remote directory" #important to be able to read the long in case of some bug here...
+      #declare -p LINENO >&2
+      #echo "going to create remote directory (waiting 60s)" >&2 #TODO echoc output below is broken, why?
+      echoc -w -t 60 "going to create remote directory" >&2 #important to be able to read the long in case of some bug here...
+      #declare -p LINENO >&2
       
       local lstrMkdirOutput="$(FUNCrunGDrive "${lastrCmdMkdir[@]}")" #TODO there is a success message output, catch and confirm based on it
       declare -p lstrMkdirOutput >&2
@@ -525,7 +544,7 @@ function FUNCchkOrCreateRemotePathTreeAndGetID() { # <lstrPath>
     fi
   done
   
-  if [[ -z "$lstrLastFoundParentPathID" ]];then
+  if [[ "$lstrLastFoundParentPathID" == "0" ]];then
     echoc -p "unable to get remote path ID" >&2
     exit 1
   fi
@@ -548,7 +567,7 @@ function FUNCcreateRemoteFile() { # <lstrFile>
     else
       exit 1
     fi
-    #~ if lstrPathID="$(FUNCgetID "$lstrPath" dir)";then
+    #~ if lstrPathID="$(FUNCgetID "$lstrPath" dir 0)";then
       #~ declare -p lstrPathID >&2
       #~ lastrCmdCreateFl+=(--parent "$lstrPathID")
     #~ else
@@ -647,7 +666,7 @@ for strFile in "${astrFileList[@]}";do
     fi
   fi
   
-  if ! strFileID="`FUNCgetID "$strFile" bin`";then
+  if ! strFileID="`FUNCgetID "$strFile" bin 0`";then
     if ! FUNCcreateRemoteFile "$strFile";then
       bTrashSessionCfg=false
     fi
