@@ -72,8 +72,8 @@ function GAMEFUNCwaitGameStartRunning() { #help <lstrFileExecutable>
 	done
 }
 
-function GAMEFUNCwaitGameExit() { #help <lstrFileExecutable>
-	local lstrFileExecutable="$1"
+function GAMEFUNCwaitGameExit() { #help [lstrFileExecutable-CFGstrFileExecutable]
+	local lstrFileExecutable="${1-CFGstrFileExecutable}"
 	while true;do
 		echoc --info "waiting lstrFileExecutable='$lstrFileExecutable' stop running..."
 		sleep 3
