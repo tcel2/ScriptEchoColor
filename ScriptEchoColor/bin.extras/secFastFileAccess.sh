@@ -72,7 +72,7 @@ function FUNCaddFile() {
 		if [[ -f "${1}.${cfgExt}" ]];then
 			echoc -x "grep \"`basename "$1"`\" \"$cfgManagedFiles\""
 			echoc -x "ls -l \"${1}.${cfgExt}\""
-			echoc --info "file '$1' seems to be already managed..."
+			echoc --info "file '$1' seems to be (is at fast media?) already managed..."
 			exit
 		else
 			echoc -p "file '$1' is a symlink, must be a real file"
@@ -92,7 +92,7 @@ function FUNCaddFile() {
 	# this only happens if the fast media is offline/unmounted and files have been restored
 	if grep -q "^${fileToAdd}$" $cfgManagedFiles;then
 		echoc --info "file '$fileToAdd' already managed."
-		exit
+		return 0
 	fi
 	
 	local lnSize=`du -b "$fileToAdd" |grep -o "^[[:digit:]]*"`
@@ -108,6 +108,8 @@ function FUNCaddFile() {
 		echoc -p "file is too big '$lnSize', wont fit in the fast media.."
 		exit 1
 	fi
+  
+  return 0
 }
 
 function FUNCprepareFileAtFastMedia() {
@@ -292,9 +294,12 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		exit 0
 	elif [[ "$1" == "--daemon" ]];then #help checks if configured files exist in the setup fast media (memory/SSD/etc) and copies them there; otherwise if that midia is not available, removes all symlinks and renames the real files to their original names.
 		bDaemon=true
-	elif [[ "$1" == "--add" ]];then #help adds a file to be speed up
+	elif [[ "$1" == "--add" ]];then #help adds one or more file to be speed up
 		shift
-		FUNCaddFile "$1"
+    while ! ${1+false};do
+      FUNCaddFile "$1"
+      shift
+    done
 	elif [[ "$1" == "--setfastmedia" ]];then #help set fast media to copy files to
 		shift
 		FUNCsetFastMedia "$1"
@@ -315,11 +320,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	elif [[ "$1" == "--reenablefastmedia" ]];then #help restore fast media functionality
 		varset bForceDisableFastMedia=false
 		varset bForceValidationOnce=true
-	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
-		shift
-		strExample="${1-}"
-	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
-		bExample=true
+	#elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+		#shift
+		#strExample="${1-}"
+	#elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
+		#bExample=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
