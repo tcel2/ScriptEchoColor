@@ -437,6 +437,7 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|recreateCfgFromInstallation|
 		echoc -p "path not found!"
 		exit 1
 	fi
+  pwd
 	
 	bIsMultiLayer=false;if secOverrideMultiLayerMountPoint.sh --is "`pwd`";then bIsMultiLayer=true;fi
 	#TODO filter out files not at CFGstrPluginsFile
@@ -507,12 +508,14 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|recreateCfgFromInstallation|
 		astrLoadOrderEntryList[i]="`_GAMEFUNCtimestampLoadOrder_FUNCclearEndLineComment "${astrLoadOrderEntryList[i]}"`"
 	done
 #	declare -p astrLoadOrderEntryList;exit 1
+  declare -p astrLoadOrderEntryList
 	
 	echoc --info "strLoadOrderFile='$strLoadOrderFile'"
 	
 	if [[ "${1-}" == "check" ]];then
 		_GAMEFUNCtimestampLoadOrder_FUNCchk
 	elif [[ "${1-}" == "fix" ]];then
+    pwd
 		echoc --alert "ATTENTION!!!"
 		echoc --info "this will also update the plugins file"
 		if echoc -q "this will update all plugins time based on the loadorder file, continue?";then
@@ -535,13 +538,15 @@ function GAMEFUNCtimestampLoadOrder(){ #help <check|recreateCfgFromInstallation|
 #					IFS=$'\n' read -d '' -r -a astrFileList < <(str="`find "../" -iname "$strLoadOrderEntry"`"&&:;echo "$str")&&:
 #					IFS=$'\n' read -d '' -r -a astrFileList < <(find "../" -iname "$strLoadOrderEntry"&&:;exit 0)
 #					IFS=$'\n' read -d '' -r -a astrFileList < <(find "../" -type f -iname "$strLoadOrderEntry"&&:)&&:
-					IFS=$'\n' read -d '' -r -a astrFileList < <(find "../" -type d ! -perm -a+r -prune -o -type f -iname "$strLoadOrderEntry" -print&&:)&&:
+#					IFS=$'\n' read -d '' -r -a astrFileList < <(find "../" -type d ! -perm -a+r -prune -o -type f -iname "$strLoadOrderEntry" -print&&:)&&:
+					IFS=$'\n' read -d '' -r -a astrFileList < <(find "../" -type d ! -perm -a+r -prune -o \( -type f -or -type l \) -iname "$strLoadOrderEntry" -print&&:)&&:
 #					find "../" -type d ! -perm -a+r -prune -o -type f -iname "$strLoadOrderEntry" -print&&:
 #					declare -p astrFileList
 #					exit 1
 				fi
-				declare -p astrFileList
 				pwd
+				declare -p astrFileList
+        if((`SECFUNCarraySize astrFileList`==0));then echoc -p "empty file list";return 1;fi
 				
 				for strFile in "${astrFileList[@]}";do
 					if $bIsMultiLayer;then 
@@ -696,6 +701,8 @@ function WINEFUNCcommonOptions {
 		: ${strLogFileHint:=};
 		: ${nMaxMemKB:=0} #will wait til this amount in KB is reached b4 continuing
     : ${nWaitSeconds:=1} #will wait at least 1s
+    : ${bAutoMinimize:=true} #initially
+    : ${bAutoStop:=true} #initially
     shift&&:;astrAppParams=("$@")
 		
 	#	export WINEPREFIX="$WINEPREFIX/.WinePrefix.win64.NewInstanceForQuickRestart/"
@@ -770,7 +777,9 @@ function WINEFUNCcommonOptions {
 			done
 		fi
 		
-    SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`" && :
+    if $bAutoMinimize;then
+      SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`" && :
+    fi
     
 		# wait mem fill
 		if [[ -n "$nMaxMemKB" ]];then
@@ -789,10 +798,12 @@ function WINEFUNCcommonOptions {
 			done
 		fi
 		
-    echoc -w -t $nWaitSeconds "waiting specified delay before stopping the app"
-    
-    SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`"
-		kill -SIGSTOP $nPidNI
+    if $bAutoStop;then
+      echoc -w -t $nWaitSeconds "waiting specified delay before stopping the app"
+      
+      SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`"
+      kill -SIGSTOP $nPidNI
+    fi
 		
 		WINEFUNCcommonOptions hookOnPidStopCont $nPidNI
 	elif [[ "${1-}" == "hookOnPidStopCont" ]];then #help <nPid> hook on pid to monitor it and  stop/continue

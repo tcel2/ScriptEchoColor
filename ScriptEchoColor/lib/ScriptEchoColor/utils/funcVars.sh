@@ -1131,7 +1131,7 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 			eval "`egrep $l_paramInvert "^declare [^ ]* ${l_filter}=" "$SECvarFile"`" >/dev/null 2>&1
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
-				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"
+				SECFUNCechoErrA "(lnRetFromEval=$lnRetFromEval) at config file SECvarFile='$SECvarFile'"
 				SECFUNCfixCorruptFile "$SECvarFile"
 			else
 				break
@@ -1142,7 +1142,7 @@ function SECFUNCvarReadDB() { #help [varName] filter to load only the specified 
 			eval "`cat "$SECvarFile"`" >/dev/null 2>&1
 			local lnRetFromEval=$?
 			if((lnRetFromEval!=0));then
-				SECFUNCechoErrA "at config file SECvarFile='$SECvarFile'"
+				SECFUNCechoErrA "(lnRetFromEval=$lnRetFromEval) at config file SECvarFile='$SECvarFile'"
 				SECFUNCfixCorruptFile "$SECvarFile"
 			else
 				break

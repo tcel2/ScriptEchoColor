@@ -1004,7 +1004,7 @@ function SECFUNCcfgReadDB() { #help read the cfg file and apply all its env vars
 }
 function pSECFUNCprepareEnvVarsToWriteDB() { #private: store in a way that when being read will be considered global by adding -g
 	#declare -p "$@" |sed -r "s'^(declare )([^ ]*) '\1\2g '"
-	declare -p "$@" |sed -r "s'^(declare )([^ ]*)( .*)'\1\2g\3;'"
+	declare -p "$@" |sed -r -e "s'^declare -- 'declare - '" -e "s'^(declare )([^ ]*)( .*)'\1\2g\3;'"
 }
 function SECFUNCcfgWriteVar() { #help <var>[=<value>] write a variable to config file
 	#TODO make SECFUNCvarSet use this and migrate all from there to here?

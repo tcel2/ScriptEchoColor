@@ -31,7 +31,7 @@ nFSSizeAvailGoalMB=1500 #1.5GB
 nFileCountPerStep=100
 : ${nAlertSpeechCoolDownTimeout:=3600}
 export nAlertSpeechCoolDownTimeout #help this variable will be accepted if modified by user before calling this script
-nAlertSpeechLastTime=$SECONDS
+nAlertSpeechLastTime=0
 : ${nSleepDelay:=30}
 export nSleepDelay #help .
 
@@ -206,6 +206,7 @@ function FUNCexecIfDbg() { if $bDbgMode;then local nLn=$1;shift;SECFUNCexecA -ce
 
 function FUNCcheckFS() {
   SECFUNCdbgFuncInA
+  SECFUNCvarReadDB
   
   ################################################# Validations
   if [[ "$strMountedFS" == "$strTrashFolderUser" ]];then
@@ -481,10 +482,14 @@ function FUNCcheckFS() {
       
       if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
         parmSay=""
-        if(( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
+        #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
+        if((nAlertSpeechLastTime==0)) || (( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
           parmSay="--say"
           nAlertSpeechLastTime=$SECONDS
+          SECFUNCvarWriteDB nAlertSpeechLastTime
+          #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
         fi
+        #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
         echoc -p $parmSay "unable to free disk space!"&&:
       fi
     fi
