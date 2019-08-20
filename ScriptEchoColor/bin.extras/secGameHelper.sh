@@ -703,6 +703,8 @@ function WINEFUNCcommonOptions {
     : ${nWaitSeconds:=1} #will wait at least 1s
     : ${bAutoMinimize:=true} #initially
     : ${bAutoStop:=true} #initially
+    : ${bToggleWindowDecorations:=fase}
+    : ${strMoveWindowXY:=""}
     shift&&:;astrAppParams=("$@")
 		
 	#	export WINEPREFIX="$WINEPREFIX/.WinePrefix.win64.NewInstanceForQuickRestart/"
@@ -798,13 +800,40 @@ function WINEFUNCcommonOptions {
 			done
 		fi
 		
+    local lnWID="$(GAMEFUNCgetFinalWID $nPidNI)"
+    
+    function FUNCmvWnd() {
+      if [[ -n "$strMoveWindowXY" ]];then
+        sleep 0.5
+        SECFUNCexecA -ce xdotool windowmove $lnWID "$(echo "$strMoveWindowXY" |cut -d"," -f 1)" "$(echo "$strMoveWindowXY" |cut -d"," -f 2)"
+      fi
+    }
+    if $bToggleWindowDecorations;then
+      # TODO find a way to detect if it is working (no help with `xwininfo -all`), this trick just make it works :(
+      while true;do
+        if echoc -q "toggle-decorations (and move window now if requested)?@Dy";then
+          FUNCmvWnd
+          
+          sleep 0.5
+          SECFUNCexecA -ce toggle-decorations $lnWID
+          
+          FUNCmvWnd
+        else
+          break
+        fi
+      done
+    fi
+    
+    FUNCmvWnd
+		
     if $bAutoStop;then
+      sleep 0.5
       echoc -w -t $nWaitSeconds "waiting specified delay before stopping the app"
       
-      SECFUNCCwindowCmd --minimize --wid "`GAMEFUNCgetFinalWID $nPidNI`"
+      SECFUNCCwindowCmd --minimize --wid "$lnWID"
       kill -SIGSTOP $nPidNI
     fi
-		
+    
 		WINEFUNCcommonOptions hookOnPidStopCont $nPidNI
 	elif [[ "${1-}" == "hookOnPidStopCont" ]];then #help <nPid> hook on pid to monitor it and  stop/continue
 		shift
@@ -1229,6 +1258,9 @@ function GAMEFUNCstopContGame() { #help [lnPid]
       SECFUNCexecA -ce kill -SIGCONT $lnPid
       SECFUNCexecA -ce SECFUNCCwindowCmd --focus --wid $lnWIDok
     fi
+  elif [[ "$lstrPidState" == "Z" ]];then
+    echoc -p --say "pid got zombified (defunct), killing it now..."
+    SECFUNCexecA -ce kill -SIGKILL $lnPid
   else
     local lbStopNow=false
     if ! $lbStopNow && GAMEFUNCautoStop;then lbStopNow=true;fi
