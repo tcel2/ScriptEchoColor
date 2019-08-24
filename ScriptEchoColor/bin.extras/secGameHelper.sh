@@ -675,7 +675,7 @@ function WINEFUNCcommonOptions {
 		#echo "bWindowMinimized='$bWindowMinimized'"
 		#SECFUNCexecA -ce cat "$SECcfgFileName"
 	elif [[ "${1-}" == "fixkeyproblem" ]]; then #help stops X auto repeating keys
-		SECFUNCexecA -ce xset r off
+		SECFUNCexecA -ce xset -r r off # this is important to avoid weird buffered player movements!
 	elif [[ "${1-}" == "restoreKeysAutoRepeat" ]]; then #help restore X auto repeating keys
 		SECFUNCexecA -ce xset -r r on
 	elif [[ "${1-}" == "screenshot" ]];then #help 
@@ -802,29 +802,30 @@ function WINEFUNCcommonOptions {
 		
     local lnWID="$(GAMEFUNCgetFinalWID $nPidNI)"
     
-    function FUNCmvWnd() {
-      if [[ -n "$strMoveWindowXY" ]];then
+    function FUNCmvWnd() { # <strMoveWindowXY>
+      local lstrMoveWindowXY="$1"
+      if [[ -n "$lstrMoveWindowXY" ]];then
         sleep 0.5
-        SECFUNCexecA -ce xdotool windowmove $lnWID "$(echo "$strMoveWindowXY" |cut -d"," -f 1)" "$(echo "$strMoveWindowXY" |cut -d"," -f 2)"
+        SECFUNCexecA -ce xdotool windowmove $lnWID "$(echo "$lstrMoveWindowXY" |cut -d"," -f 1)" "$(echo "$lstrMoveWindowXY" |cut -d"," -f 2)"
       fi
     }
     if $bToggleWindowDecorations;then
       # TODO find a way to detect if it is working (no help with `xwininfo -all`), this trick just make it works :(
       while true;do
         if echoc -q "toggle-decorations (and move window now if requested)?@Dy";then
-          FUNCmvWnd
+          FUNCmvWnd "1,55" # to let toggle work below
           
           sleep 0.5
           SECFUNCexecA -ce toggle-decorations $lnWID
           
-          FUNCmvWnd
+          FUNCmvWnd "$strMoveWindowXY"
         else
           break
         fi
       done
     fi
     
-    FUNCmvWnd
+    FUNCmvWnd "$strMoveWindowXY"
 		
     if $bAutoStop;then
       sleep 0.5

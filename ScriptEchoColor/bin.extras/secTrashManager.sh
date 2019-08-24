@@ -42,6 +42,7 @@ function FUNCmountedFs(){
 
 strExample="DefaultValue"
 CFGstrTest="Test"
+CFGstrIgnoreUnfreeableRegex=""
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 bTest1=false
@@ -243,9 +244,16 @@ function FUNCcheckFS() {
 #				nThisFSAvailGoalMB=$nGoal5Perc
 #			fi
   
+  bIgnoreUnfree=false
+  strIgnUnf=""
+  if [[ -n "$CFGstrIgnoreUnfreeableRegex" ]] && [[ "$strTrashFolder" =~ $CFGstrIgnoreUnfreeableRegex ]];then
+    bIgnoreUnfree=true
+    strIgnUnf=",(IgnoringUnfreable)"
+  fi
+  
   nTrashSizeMB="`du -BM -s ./ |cut -d'M' -f1`"
   nAvailMB="`FUNCavailMB "$strTrashFolder"`"
-  echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'"
+  echoc --info "nAvailMB=${nAvailMB},nThisFSAvailGoalMB='$nThisFSAvailGoalMB',nTrashSizeMB='$nTrashSizeMB',strTrashFolder='$strTrashFolder'${strIgnUnf}"
   if((nTrashSizeMB==0));then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
   
   ############################################## Remove files
@@ -481,16 +489,20 @@ function FUNCcheckFS() {
       echoc --info "trash is empty"
       
       if(( nAvailMB < (nThisFSAvailGoalMB/2) ));then
-        parmSay=""
-        #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
-        if((nAlertSpeechLastTime==0)) || (( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
-          parmSay="--say"
-          nAlertSpeechLastTime=$SECONDS
-          SECFUNCvarWriteDB nAlertSpeechLastTime
+        if $bIgnoreUnfree;then
+          echo "Unfreeable discspace ignored."
+        else
+          parmSay=""
           #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
+          if((nAlertSpeechLastTime==0)) || (( (SECONDS-nAlertSpeechLastTime) > nAlertSpeechCoolDownTimeout ));then
+            parmSay="--say"
+            nAlertSpeechLastTime=$SECONDS
+            SECFUNCvarWriteDB nAlertSpeechLastTime
+            #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
+          fi
+          #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
+          echoc -p $parmSay "unable to free disk space!"&&:
         fi
-        #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
-        echoc -p $parmSay "unable to free disk space!"&&:
       fi
     fi
   fi
