@@ -633,11 +633,14 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 		return 1;
 	fi
 	
-  strMatch="^declare -[aA][^=]*='[(]";
+#  strMatch="^declare -[aA][^=]*='[(]";
+  strMatch="^declare -[aA][^=]*=[(]";
   if [[ "$lstrInfo" =~ $strMatch ]];then
 #  if [[ "$lstrInfo" =~ ^declare\ -[Aa]x\ ${lstrArrayId}=\'(.* ]];then
     if $lbNotEmpty;then
-      if [[ "$lstrInfo" =~ .*"='()'"$ ]];then
+#      if [[ "$lstrInfo" =~ .*"='()'"$ ]];then
+      if [[ "$lstrInfo" =~ .*"=[(][)]"$ ]];then
+        SECFUNCechoWarnA "var assignment is not even an empty array: $lstrInfo"
       #if export |egrep -q "^declare -[Aa]x ${lstrArrayId}='\(\)'";then
         return 1
       fi
@@ -646,6 +649,7 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
     return 0
   fi
   
+  SECFUNCechoWarnA "failed why? lstrArrayId='$lstrArrayId': $lstrInfo"
  	return 1; # anything else will fail
 }
 
@@ -1023,7 +1027,7 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		shift
 	done
-	
+
 	##########################
 	### The number of sed selections must be equal on the optionals and requireds.
 	##########################
@@ -1061,14 +1065,25 @@ function SECFUNCshowHelp() { #help [$FUNCNAME] if function name is supplied, a h
 		fi
 		
     #TODO the varId, if more than one on the line, is matching only the last one!!!
+    #declare -p SECsedTk lstrMatch >&2
 		local lstrVarId="`echo "$lstrLine" |sed -r "s${SECsedTk}.*$lstrMatch.*${SECsedTk}\3${SECsedTk}"`";#declare -p lstrVarId >&2
+    #declare -p lstrLine >&2
+    #declare -p lstrVarId >&2
 		local lbShowValue=true
-		if [[ "$lstrVarId" == "FUNCNAME" ]];then
+    if $lbShowValue && [[ "$lstrVarId" == "$lstrLine" ]];then # matched nothing
+			lbShowValue=false
+      lstrVarId="" # safety cleanup
+    fi
+		if $lbShowValue && [[ "$lstrVarId" == "FUNCNAME" ]];then
 			lbShowValue=false
 		fi
-		if ${!lstrVarId+false};then #if variable, stored into lstrVarId, is NOT set (if it is set the result is empty that evaluates to true)
-			lbShowValue=false
-		fi
+    #set -x
+    if [[ -n "$lstrVarId" ]];then
+      if $lbShowValue && ${!lstrVarId+false};then #if variable, stored into lstrVarId, is NOT set (if it is set the result is empty that evaluates to true)
+        lbShowValue=false
+      fi
+    fi
+    #set +x
 		#if ! ${!lstrVarId+false};then
 		if $lbShowValue;then
 			#echo "$lstrLine" |sed -r "s,$lstrMatch,\1\2='${SECcharEsc}[5m${!lstrVarId}${SECcharEsc}[25m'\3,"
