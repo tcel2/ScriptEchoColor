@@ -262,7 +262,7 @@ fi
 SECFUNCexecA -ce mkdir -vp "$strMountAt"
 #declare -p strLayerBranch |tr ":" "\n"
 #SECFUNCexecA -ce sudo -k mount -t aufs -o sync,br="$strWriteLayer:$strLayerBranch" ${astrOpts[@]-} none "$strMountAt"
-SECFUNCexecA -ce sudo mount -v -t aufs -o "sync,br=$strWriteLayer" ${astrOpts[@]-} none "$strMountAt"
+SECFUNCexecA -m "this first 'none' is just to initialize it, others will be appended" -ce sudo mount -v -t aufs -o "sync,br=$strWriteLayer" ${astrOpts[@]-} none "$strMountAt"
 for strLayer in "${astrLayerListInvert[@]}";do 
 	if [[ -z "$strLayer" ]];then continue;fi #skipper
 	if [[ ! -d "$strLayer" ]];then echoc -p "not a directory?";exit 1;fi 
