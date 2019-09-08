@@ -24,7 +24,7 @@
 
 source <(secinit)
 
-strTrashFolderUser="`realpath -ezs "$HOME/.local/share/Trash/files/"`"
+strTrashFolderUser="`realpath -es "$HOME/.local/share/Trash/files/"`"
 declare -p strTrashFolderUser
 strTrashFolder=""
 nFSSizeAvailGoalMB=1500 #1.5GB 
@@ -162,7 +162,7 @@ function _FUNCrm_deprecated(){
   fi
   
   if [[ ! -L "$lstrFile" ]];then
-    local lstrChkCanonical="`realpath -ezs "$lstrFile"`" # despite not being a symlink, the param must match a canonical file
+    local lstrChkCanonical="`realpath -es "$lstrFile"`" # despite not being a symlink, the param must match a canonical file
     if [[ "$lstrFile" != "$lstrChkCanonical" ]];then
       SECFUNCechoErrA "filename param should be the canonical file '$lstrFile'!='$lstrChkCanonical' ?"
       SECFUNCdbgFuncOutA;return 1; 
@@ -223,7 +223,7 @@ function FUNCcheckFS() {
   fi
 #		ls -ld "$strTrashFolder"&&:
   if [[ ! -d "$strTrashFolder" ]];then SECFUNCdbgFuncOutA;return 0;fi #continue;fi
-  strTrashFolder="`realpath -ezs "$strTrashFolder"`"
+  strTrashFolder="`realpath -es "$strTrashFolder"`"
   declare -p strTrashFolder
 
   SECFUNCexecA -ce cd "$strTrashFolder" ################## AT TRASH FOLDER
@@ -376,7 +376,7 @@ function FUNCcheckFS() {
         bDirectory=false
         
         bRmTrashInfo=true
-        strRmTrashInfoFile="`realpath -ezs "/$strTrashFolder/../info/${strFile}.trashinfo"`"&&:
+        strRmTrashInfoFile="`realpath -es "/$strTrashFolder/../info/${strFile}.trashinfo"`"&&:
         if [[ ! -f "$strRmTrashInfoFile" ]];then bRmTrashInfo=false;fi
         
         bRmFileOrPath=true
@@ -423,7 +423,7 @@ function FUNCcheckFS() {
           
           ################ file/path
           if $bRmFileOrPath;then
-            if ! strWorkFile="`realpath -${strRPExist}zs "$strTrashFolder/$strFile"`";then
+            if ! strWorkFile="`realpath -${strRPExist}s "$strTrashFolder/$strFile"`";then
               SECFUNCechoWarnA "what happened? strTrashFolder='$strTrashFolder' strFile='$strFile' strWorkFile='$strWorkFile'" 
             fi
             strRmOpt="-vf"
@@ -460,11 +460,15 @@ function FUNCcheckFS() {
             ### but the related file(s) will already be lost...
             ### TODO may be, find a way to restore the removed files, using inodes?
             ###########
-            strTrashFolderRP="`realpath -ezs "/$strTrashFolder/"`"
+#            set -x
+            declare -p strTrashFolder >&2
+#            strTrashFolderRP="`realpath -ezs "/$strTrashFolder/"`"
+            strTrashFolderRP="`realpath -es "/$strTrashFolder/"`"
             strTrashFolderRPRegex="`echo "$strTrashFolderRP" |sed -r -e "s@[(]@\\\(@g" -e "s@[)]@\\\)@g"`"
             strCriticalCheckRmLog="[\"']$strTrashFolderRPRegex" #checks if there is a rm message containing 'The trash folder/...' or "The trash folder/..."
             #echo test >>"$strRmLogTmp"
             strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
+#            set +x
             if [[ -n "$strWrong" ]];then
               echoc --say "sec trash cleaner error"
               echoc -p "below should not have happened..."
