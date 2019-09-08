@@ -2340,7 +2340,8 @@ if $bAddYesNoQuestion || $bExtendedQuestionMode; then
 			fi
 			FUNCEQMArrayAdd "$char"
 			if $bClose; then
-				if ((`expr index "$strEQMList" "$char"` == 0)); then
+        #declare -p strEQMList char >&2
+				if ((`expr index "$strEQMList" "$char"&&:` == 0)); then
 					strEQMList="$strEQMList$char"
 				else
 					_hw;echo "this option key was already defined: $char" >&2
