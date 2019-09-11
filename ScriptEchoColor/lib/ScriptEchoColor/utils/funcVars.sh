@@ -774,7 +774,7 @@ function pSECFUNCvarPrepareArraysToExport() { #private:
 	local l_varPlDoUsThVaNaPl #PleaseDontUseThisVarNamePlease
 	#export SECexportedArraysList="" #would break in case of single array var export...
 	for l_varPlDoUsThVaNaPl in $l_list; do
-		if SECFUNCarrayCheck "$l_varPlDoUsThVaNaPl";then
+		if SECFUNCarrayCheck --nowarn "$l_varPlDoUsThVaNaPl";then
 			# just prepare to be shown with `declare` below
 			eval "export $l_varPlDoUsThVaNaPl"
 			# collect exportable array in string mode

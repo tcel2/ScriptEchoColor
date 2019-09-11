@@ -599,6 +599,7 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	# var init here
 	local lastrRemainingParams=()
   local lbNotEmpty=false
+  local lbWarn=true
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		#SECFUNCsingleLetterOptionsA; #this may be encumbersome on some functions?
 		if [[ "$1" == "--help" ]];then #SECFUNCarrayCheck_help show this help
@@ -606,6 +607,8 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 			return 0
 		elif [[ "$1" == "--notempty" || "$1" == "-n" ]];then #SECFUNCarrayCheck_help success only if the array is not empty
 			lbNotEmpty=true
+		elif [[ "$1" == "--nowarn" ]];then #SECFUNCarrayCheck_help 
+			lbWarn=false
 		elif [[ "$1" == "--" ]];then #SECFUNCarrayCheck_help params after this are ignored as being these options, and stored at lastrRemainingParams
 			shift #lastrRemainingParams=("$@")
 			while ! ${1+false};do	# checks if param is set
@@ -629,7 +632,7 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 	# valid env var check
   local lstrInfo
 	if ! lstrInfo="`declare -p "$lstrArrayId" 2>/dev/null`";then
-		SECFUNCechoWarnA "env var lstrArrayId='$lstrArrayId' not declared yet." #TODO? I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
+		if $lbWarn;then SECFUNCechoWarnA "env var lstrArrayId='$lstrArrayId' not declared yet.";fi #TODO? I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
 		return 1;
 	fi
 	
@@ -640,7 +643,7 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
     if $lbNotEmpty;then
 #      if [[ "$lstrInfo" =~ .*"='()'"$ ]];then
       if [[ "$lstrInfo" =~ .*"=[(][)]"$ ]];then
-        SECFUNCechoWarnA "var assignment is not even an empty array: $lstrInfo"
+        if $lbWarn;then SECFUNCechoWarnA "var assignment is not even an empty array: $lstrInfo";fi
       #if export |egrep -q "^declare -[Aa]x ${lstrArrayId}='\(\)'";then
         return 1
       fi
@@ -649,7 +652,7 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
     return 0
   fi
   
-  SECFUNCechoWarnA "failed why? lstrArrayId='$lstrArrayId': $lstrInfo"
+  if $lbWarn;then SECFUNCechoWarnA "failed why? lstrArrayId='$lstrArrayId': $lstrInfo";fi
  	return 1; # anything else will fail
 }
 
