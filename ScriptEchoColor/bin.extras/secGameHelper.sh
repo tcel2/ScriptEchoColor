@@ -714,7 +714,7 @@ function WINEFUNCcommonOptions {
 		strPids=""
 		nInstanceCount=0
 		function FUNClstInsts() {
-      local lanPids=(`pgrep "${CFGstrFileExecutable}"`)
+      local lanPids=(`pgrep "${CFGstrFileExecutable}"&&:`)
       if [[ -z "${lanPids[@]-}" ]];then
         return 0
       fi
