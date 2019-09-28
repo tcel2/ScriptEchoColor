@@ -145,13 +145,15 @@ function FUNCprepareFileAtFastMedia() {
 		if [[ ! -f "$fastMedia/$lfileId" ]];then
 			lbFixMissing=true
 		else
-			local lnSize=`stat -c "%s" "${lfileId}.$cfgExt"`
-			local lnSizeAtFastMedia=`stat -c "%s" "$fastMedia/$lfileId"`
-			if((lnSize!=lnSizeAtFastMedia));then
-				echoc --alert "fixing because size differs $lnSize != $lnSizeAtFastMedia"
-				rm -v "$fastMedia/$lfileId"
-				lbFixMissing=true
-			fi
+      if [[ ! -L "${lfileId}.$cfgExt" ]];then # BUGFIXED: the symlink may be broken so dont mess it up (by deleting the copy at fast and replacing it with a pointless broken symlink)
+        local lnSize=`stat -c "%s" "${lfileId}.$cfgExt"`
+        local lnSizeAtFastMedia=`stat -c "%s" "$fastMedia/$lfileId"`
+        if((lnSize!=lnSizeAtFastMedia));then
+          echoc --alert "fixing because size differs $lnSize != $lnSizeAtFastMedia"
+          SECFUNCtrash "$fastMedia/$lfileId"
+          lbFixMissing=true
+        fi
+      fi
 		fi
 		if $lbFixMissing;then
 			secdelay delayToCopy --init
@@ -224,7 +226,7 @@ function FUNCrestoreFile() {
 	# restore original files
 	if [[ -f "${lfileId}.$cfgExt" ]];then
 		if [[ -L "$lfileId" ]];then
-			rm -v "$lfileId"
+			SECFUNCtrash "$lfileId"
 			if ! mv -v "${lfileId}.$cfgExt" "$lfileId";then
 				echoc --alert "unable to restore file!"
 			fi
