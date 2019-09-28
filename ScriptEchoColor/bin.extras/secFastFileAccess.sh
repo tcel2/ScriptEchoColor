@@ -113,10 +113,14 @@ function FUNCaddFile() {
 }
 
 function FUNCprepareFileAtFastMedia() {
-	echoc --info "$FUNCNAME '$1'"
-	
 	local lfileId="$1"
+	
+  echoc --info "$FUNCNAME '$lfileId'"
+  
 	if [[ -z "$lfileId" ]];then #ignore empty lines
+		return 0
+	fi
+	if [[ "$lfileId" =~  *[#].* ]];then #ignore commented lines
 		return 0
 	fi
 	
@@ -129,12 +133,12 @@ function FUNCprepareFileAtFastMedia() {
 	if [[ ! -f "${lfileId}.$cfgExt" ]];then
 		if [[ -f "$lfileId" ]];then
 			if ! echoc -x "mv -v \"$lfileId\" \"${lfileId}.$cfgExt\"";then
-				echoc -p "renaming failed"
+				echoc --alert "renaming failed"
 				return 1
 			fi
 		else
 			echoc -p "missing real file '$lfileId'"
-			return 1
+			return 0
 		fi
 	fi
 	
@@ -145,10 +149,13 @@ function FUNCprepareFileAtFastMedia() {
 		if [[ ! -f "$fastMedia/$lfileId" ]];then
 			lbFixMissing=true
 		else
-      if [[ ! -L "${lfileId}.$cfgExt" ]];then # BUGFIXED: the symlink may be broken so dont mess it up (by deleting the copy at fast and replacing it with a pointless broken symlink)
-        local lnSize=`stat -c "%s" "${lfileId}.$cfgExt"`
-        local lnSizeAtFastMedia=`stat -c "%s" "$fastMedia/$lfileId"`
-        if((lnSize!=lnSizeAtFastMedia));then
+      local lnSize=`stat -c "%s" "${lfileId}.$cfgExt"`
+      local lnSizeAtFastMedia=`stat -c "%s" "$fastMedia/$lfileId"`
+      if((lnSize!=lnSizeAtFastMedia));then
+        if [[ -L "${lfileId}.$cfgExt" ]];then # BUGFIXED: the symlink may be broken so dont mess it up (by deleting the copy at fast and replacing it with a pointless broken symlink)
+          echoc -p "ignoring (broken?) symlink"
+          return 0
+        else
           echoc --alert "fixing because size differs $lnSize != $lnSizeAtFastMedia"
           SECFUNCtrash "$fastMedia/$lfileId"
           lbFixMissing=true
@@ -188,7 +195,7 @@ function FUNCprepareFileAtFastMedia() {
       
 			#if ! nice -n 19 echoc -x "cp -v \"${lfileId}.$cfgExt\" \"$fastMedia/$lfileId\"";then
       if ! SECFUNCexecA -ce "${astrCpCmd[@]}";then
-				echoc -p "copying failed"
+				echoc --alert "copying failed"
 				return 1
 			fi
 			echo "Delay to copy: `secdelay delayToCopy --getpretty`"
@@ -203,7 +210,7 @@ function FUNCprepareFileAtFastMedia() {
 			if [[ ! -a "$lfileId" ]];then
 				#echoc --alert "fixing missing symlink"
 				if ! echoc -x "ln -sv \"$fastMedia/$lfileId\" \"$lfileId\"";then
-					echoc -p "symlinking failed"
+					echoc --alert "symlinking failed"
 					return 1
 				else
 					# make the symlink have the same timestamp of the real file
@@ -211,11 +218,13 @@ function FUNCprepareFileAtFastMedia() {
 				fi
 			else
 				ls -l "$lfileId"
-				echoc -p "'$lfileId' should not exist"
+				echoc --alert "'$lfileId' should not exist"
 				return 1
 			fi
 		fi
 	fi
+  
+  return 0
 }
 
 function FUNCrestoreFile() {
