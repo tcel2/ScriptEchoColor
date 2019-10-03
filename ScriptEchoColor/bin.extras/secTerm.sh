@@ -128,14 +128,16 @@ if which mrxvt >/dev/null 2>&1;then
   SECastrFullTermCmd+=(mrxvt -hold 0 -sl 1000 -aht +showmenu) #max -sl is 65535
   if [[ -n "$strConcatParms" ]];then
     SECastrFullTermCmd+=(-title "$strTitle" "${astrXTermParms[@]}")
+    declare -p LINENO SECastrFullTermCmd
   fi
   #SECastrFullTermCmd+=(mrxvt -aht +showmenu -title "`SECFUNCfixId --justfix -- "$strConcatParms"`" bash -c "FUNCrun238746478")
 else
   #SECastrFullTermCmd+=(xterm -e bash -c "FUNCrun238746478") # fallback
-  SECastrFullTermCmd+=(xterm "${astrXTermParms[@]}-") # fallback
+  SECastrFullTermCmd+=(xterm "${astrXTermParms[@]-}") # fallback
+  declare -p LINENO SECastrFullTermCmd
 fi
 
-declare -p SECastrFullTermCmd # to be reused must be evaluated outside here or imported as source code
+declare -p LINENO SECastrFullTermCmd # to be reused must be evaluated outside here or imported as source code
 
 if $bJustOutput;then exit 0;fi
 

@@ -156,9 +156,13 @@ function FUNCprepareFileAtFastMedia() {
           echoc -p "ignoring (broken?) symlink"
           return 0
         else
-          echoc --alert "fixing because size differs $lnSize != $lnSizeAtFastMedia"
-          SECFUNCtrash "$fastMedia/$lfileId"
-          lbFixMissing=true
+          echoc --alert "size differs $lnSize != $lnSizeAtFastMedia"
+          ls -l "${lfileId}.$cfgExt" "$fastMedia/$lfileId"
+          echoc --info "the fast media's one got updated???"
+          if echoc -t 30 -q "should it be copied again to fast media?";then
+            SECFUNCtrash "$fastMedia/$lfileId"
+            lbFixMissing=true
+          fi
         fi
       fi
 		fi
