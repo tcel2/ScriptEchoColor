@@ -782,6 +782,9 @@ function FUNCshortDurChk() {
   return 0
 }
 
+strAvConvCmd="avconv"
+if ! which avconv;then strAvConvCmd="ffmpeg";fi
+declare -p strAvConvCmd
 function FUNCavconvRaw() {
   local lstrPartID=""
   if [[ "$1" == "--PartID" ]];then 
@@ -789,7 +792,7 @@ function FUNCavconvRaw() {
     shift; 
   fi
   
-  if $bUseCPUlimit;then SECFUNCCcpulimit -r "avconv.*${lstrPartID}" -l $CFGnCPUPerc;fi #TODO difficult to get the params to avconv to match here...
+  if $bUseCPUlimit;then SECFUNCCcpulimit -r "${strAvConvCmd}.*${lstrPartID}" -l $CFGnCPUPerc;fi #TODO difficult to get the params to avconv to match here...
   
   ( # subshell to let `tail` use the right pid TODO right?
     nBPid=$BASHPID
@@ -797,7 +800,7 @@ function FUNCavconvRaw() {
     echo "DBG: $$ $strFlLog" >&2
     echo -n >>"$strFlLog"
     tail -F --pid=$nBPid "$strFlLog" |egrep "^ *(Input|Output|Duration|Stream|frame=)"& #TODO this was assigning the `tail` PID, how!??! the missing '=' for --pid= ? -> tail -F --pid $BASHPID "$strFlLog"&
-    astrExecCmd=(nice -n 19 avconv "$@")
+    astrExecCmd=(nice -n 19 ${strAvConvCmd} "$@")
     echo "EXEC: `SECFUNCparamsToEval "${astrExecCmd[@]}"`" >&2
     SECFUNCexecA -ce "${astrExecCmd[@]}" >"$strFlLog" 2>&1 ; nRet=$?
     
