@@ -171,7 +171,7 @@ function FUNCprepareFileAtFastMedia() {
       astrCpCmd=()
       
       bExtraCare=false
-      if((CFGnRSyncThrottle>0));then
+      if ! $bQuickMode && ((CFGnRSyncThrottle>0));then
         ###
         # rsync will read, then write, then delay 1s, 
         # and if CPU/IO is encumbered it will not be able to continue reading/writing 
@@ -182,17 +182,22 @@ function FUNCprepareFileAtFastMedia() {
         #TODO try `scp -l $CFGnRSyncThrottle $inFile $outFile` too later
         #TODO ? could also use `dd` sending like 30MB per loop, and checking if CPU is free enough of IO-WAIT using `vmstat 1 2` like at ...
       else
-        if [[ -n "$CFGstrCGroupThrottleIOWrite" ]];then #TODO why cgroup io throttle wont work sometimes?
-          if cgget -g "$CFGstrCGroupThrottleIOWrite" |grep blkio.throttle.write_bps_device;then
-            astrCpCmd+=(cgexec -g "$CFGstrCGroupThrottleIOWrite")
+        if ! $bQuickMode;then
+          if [[ -n "$CFGstrCGroupThrottleIOWrite" ]];then #TODO why cgroup io throttle wont work sometimes?
+            if cgget -g "$CFGstrCGroupThrottleIOWrite" |grep blkio.throttle.write_bps_device;then
+              astrCpCmd+=(cgexec -g "$CFGstrCGroupThrottleIOWrite")
+            fi
+          else
+            astrCpCmd+=(ionice -c 3) #TODO didnt work well either, only worked fine the first 10s ...
+            #TODO later try this too `buffer -u 150 -m 16m -s 100m -p 75 -i foo -o bar`
           fi
-        else
-          astrCpCmd+=(ionice -c 3) #TODO didnt work well either, only worked fine the first 10s ...
-          #TODO later try this too `buffer -u 150 -m 16m -s 100m -p 75 -i foo -o bar`
         fi
         
         astrCpCmd+=(cp -v) # this alone would be extremelly encumbering for large files!
-        bExtraCare=true
+        
+        if ! $bQuickMode;then
+          bExtraCare=true
+        fi
       fi
       
       astrCpCmd+=("${lfileId}.$cfgExt" "$fastMedia/$lfileId")
@@ -295,6 +300,7 @@ export strEnvVarUserCanModify #help this variable will be accepted if modified b
 export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bExample=false
+bQuickMode=false
 CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
@@ -307,6 +313,8 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
+  elif [[ "$1" == "--quick" ]];then #help will make the copies as fast as possible
+    bQuickMode=true
 	elif [[ "$1" == "--daemon" ]];then #help checks if configured files exist in the setup fast media (memory/SSD/etc) and copies them there; otherwise if that midia is not available, removes all symlinks and renames the real files to their original names.
 		bDaemon=true
 	elif [[ "$1" == "--add" ]];then #help adds one or more file to be speed up

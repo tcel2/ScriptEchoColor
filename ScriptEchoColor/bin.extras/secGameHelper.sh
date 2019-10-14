@@ -28,6 +28,7 @@ source <(secinit)
 : ${CFGbIsAFunction:=false};export CFGbIsAFunction
 : ${CFGstrFileExecutable:="${strFileExecutable-}"};export CFGstrFileExecutable
 : ${CFGstrWindowFullName:="Default - Wine desktop"};export CFGstrWindowFullName
+: ${CFGstrLoader:="${strLoader-}"};export CFGstrLoader
 
 if [[ -z "$CFGstrFileExecutable" ]];then
   SECFUNCechoErrA "not set: CFGstrFileExecutable='$CFGstrFileExecutable'"
@@ -687,8 +688,8 @@ function WINEFUNCcommonOptions {
 		
 		#SECFUNCcleanEnvironment to prevent from crashing with this error: "The environment block used to start a process cannot be longer than 65535 bytes.  Your environment block is 152614 bytes long.  Remove some environment variables and try again."
 		if $WINECFGbFixPTrace;then $cmdWine --ptrace;fi #redundant but ok
-	#	$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
-		$cmdWine "${strRelativeExecutablePath}/${strLoader}" "$@" 
+	#	$cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
+		$cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 
 		FUNCwaitGamePid
 	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
 		#~ shift;strNewWinePrefix="$1" #required
@@ -736,8 +737,8 @@ function WINEFUNCcommonOptions {
 		FUNClstInsts
 		nInstCountB4=$nInstanceCount
 		declare -p nInstCountB4&&:
-		#$cmdWine "$strLoader" #
-    astrFullCmd=($cmdWine "${strRelativeExecutablePath}/${strLoader}")
+		#$cmdWine "$CFGstrLoader" #
+    astrFullCmd=($cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}")
     if [[ -n "${astrAppParams[@]-}" ]];then
       astrFullCmd+=( "${astrAppParams[@]}" )
     fi
@@ -1282,7 +1283,8 @@ function GAMEFUNCwaitGamePid() { #help
 	SECONDS=0
 	while ! ps -p $WINEnGamePid >/dev/null 2>&1; do
 		SECFUNCvarReadDB
-		if [[ "$strLoader" == "$CFGstrFileExecutable" ]];then 
+    declare -p CFGstrLoader CFGstrFileExecutable >&2
+		if [[ "$CFGstrLoader" == "$CFGstrFileExecutable" ]];then 
 			# the direct pid wont die 
 			if SECFUNCvarIsSet WINEnDirectGamePid;then
 				if ps -p $WINEnDirectGamePid >&2;then
@@ -1295,25 +1297,27 @@ function GAMEFUNCwaitGamePid() { #help
 		if [[ -z "$WINEnGamePid" ]];then
 			local lanPid=(`pgrep -f "$CFGstrFileExecutable"`)
 			
-			local nPid
-			for nPid in "${lanPid[@]-}";do
-        local strExe="$(basename $(readlink "/proc/$nPid/exe"))"&&:
-				
-				if [[ -n "$strExe" ]] && [[ "${strExe:0:4}" == "wine" ]];then
-					# When it is a loader, the loader will die, and a new pid will have the executable name.
-					# Only the newest/fresh pid with the executable name must be considered, in case of multiple instances,
-					# by ignoring the old instance TODO improve this BAD WILD GUESS WORK.
-					strETime="`ps --no-headers -o etime -p $nPid |awk '{tmp=$1;print tmp}'`";
-					if [[ "$strETime" =~ ^00:..$ ]];then 
-						nETime=${strETime:3:2};
-						if((nETime<=20));then # loaders should die fast
-							declare -p nETime
-							WINEnGamePid=$nPid
-							break
-						fi
-					fi
-				fi
-			done
+      if((`SECFUNCarraySize lanPid`>0));then
+        local nPid
+        for nPid in "${lanPid[@]-}";do
+          local strExe="$(basename $(readlink "/proc/$nPid/exe"))"&&:
+          
+          if [[ -n "$strExe" ]] && [[ "${strExe:0:4}" == "wine" ]];then
+            # When it is a loader, the loader will die, and a new pid will have the executable name.
+            # Only the newest/fresh pid with the executable name must be considered, in case of multiple instances,
+            # by ignoring the old instance TODO improve this BAD WILD GUESS WORK.
+            strETime="`ps --no-headers -o etime -p $nPid |awk '{tmp=$1;print tmp}'`";
+            if [[ "$strETime" =~ ^00:..$ ]];then 
+              nETime=${strETime:3:2};
+              if((nETime<=20));then # loaders should die fast
+                declare -p nETime
+                WINEnGamePid=$nPid
+                break
+              fi
+            fi
+          fi
+        done
+      fi
 		fi
 		
 		if [[ -n "$WINEnGamePid" ]];then break;fi
