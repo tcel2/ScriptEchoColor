@@ -606,7 +606,13 @@ function WINEFUNCcommonOptions {
 		openNewX.sh --script autoStopContOnScreenLock "`pgrep -x $CFGstrFileExecutable`"
 	elif [[ "${1-}" == "cdInst" ]];then #help
 		shift
-		cd "$strPathInstalled"
+    if [[ -d "$strPathInstalled" ]];then
+      cd "$strPathInstalled"
+    else
+      echoc -p "path does not exist: $strPathInstalled"
+      cd "$WINEPREFIX"
+    fi
+    pwd
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or bash interactive wont work..
 		$cmdWine bash
 	elif [[ "${1-}" == "cmd" ]];then #help prompt command line

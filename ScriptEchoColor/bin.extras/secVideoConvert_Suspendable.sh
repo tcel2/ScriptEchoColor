@@ -454,8 +454,17 @@ elif $bCompletedMaintenanceMode;then
       echo -en "."
       strFl="${CFGastrFileList[nIndex]}"
       strFlC="`FUNCflFinal "$strFl"`"
+      declare -p nIndex strFl strFlC
       #echo "(( (`FUNCflSizeBytes "$strFlC"` * 100) / `FUNCflSizeBytes "$strFl"` ))"
       if [[ -f "$strFl" ]] && [[ -f "$strFlC" ]];then
+        nFlSzB="`FUNCflSizeBytes "$strFl"`"
+        nFlCSzB="`FUNCflSizeBytes "$strFlC"`"
+        if((nFlSzB==0)) || ((nFlCSzB==0));then
+          echoc -p "invalid file size"
+          declare -p nFlSzB nFlCSzB
+          continue
+        fi
+        
         if((nSelectedIndex==-1));then nSelectedIndex=$nIndex;fi
         bSel=false;if ! $bSelOk && ((nIndex>=nSelectedIndex));then bSel=true;bSelOk=true;fi
 #        astrMaintListDiag+=("`SECFUNCternary --tf test $nIndex = $nSelectedIndex`" "$nIndex" "`basename "$strFlC"`" "$strFlC");
@@ -465,7 +474,7 @@ elif $bCompletedMaintenanceMode;then
           "$nIndex" 
           "`SECFUNCfileSuffix "$strFl"`"
           "`FUNCflSizeBytes "$strFl"`"
-          "$(( (`FUNCflSizeBytes "$strFlC"` * 100) / `FUNCflSizeBytes "$strFl"` ))"
+          "$(( ($nFlCSzB * 100) / $nFlSzB ))"
           "`basename "$strFlC"`" 
           "`FUNCflBNHash "$strFl"`"
           "$strFlC"
