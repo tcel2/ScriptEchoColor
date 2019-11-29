@@ -635,20 +635,28 @@ function SECFUNCarrayCheck() { #help <lstrArrayId> check if this environment var
 		if $lbWarn;then SECFUNCechoWarnA "env var lstrArrayId='$lstrArrayId' not declared yet.";fi #TODO? I opted to ommit this message, as when a var is just being set like `varset str=abc`, it is not a problem at all..
 		return 1;
 	fi
-	
+	#declare -p lstrInfo >&2
+  
 #  strMatch="^declare -[aA][^=]*='[(]";
   strMatch="^declare -[aA][^=]*=[(]";
   if [[ "$lstrInfo" =~ $strMatch ]];then
 #  if [[ "$lstrInfo" =~ ^declare\ -[Aa]x\ ${lstrArrayId}=\'(.* ]];then
-    if $lbNotEmpty;then
+#    declare -p LINENO >&2
+    if $lbNotEmpty;then # asks for NOT EMPTY (TO HAVE ITEMS)...
 #      if [[ "$lstrInfo" =~ .*"='()'"$ ]];then
-      if [[ "$lstrInfo" =~ .*"=[(][)]"$ ]];then
-        if $lbWarn;then SECFUNCechoWarnA "var assignment is not even an empty array: $lstrInfo";fi
+      #if [[ "$lstrInfo" =~ .*"=[(][)]"$ ]];then
+      local lstrRegexChkIsEmpty=".*[=][(][)]$";
+      if [[ "$lstrInfo" =~ $lstrRegexChkIsEmpty ]];then
+#        echo A1 >&2
+        #if $lbWarn;then SECFUNCechoWarnA "var assignment is not even an empty array: $lstrInfo";fi
       #if export |egrep -q "^declare -[Aa]x ${lstrArrayId}='\(\)'";then
-        return 1
+        return 1 # ... but it IS EMPTY! must fail!
+      else
+        return 0 # ... but it HAS ITEMS therefore it is NOT EMPTY, success!
       fi
     fi
     
+#    echo B1 >&2
     return 0
   fi
   

@@ -99,8 +99,12 @@ function FUNCupdFileList() { # <lstrRefDtTm> find local updated files based on r
     echoc --alert "IGNORING:@-n $CFGstrRegexExcludeFiles @C# ignored files should be a temporary thing."
   fi
 #  IFS=$'\n' read -d '' -r -a astrFileList < <(SECFUNCexecA -ce find "$strWorkPath/" -type f -newer "$lstrRefDtTm" -not -name ${strFlGriveCfg})&&:
-  IFS=$'\n' read -d '' -r -a astrFileList < <(cd "$strWorkPath/";SECFUNCexecA -ce find -type f -newer "$lstrRefDtTm" |egrep -v "$strFlGriveCfg|$CFGstrFlLastUploadBkpBN|$CFGstrRegexExcludeFiles" |sed -r 's"[.]/(.*)"\1"')&&: #sed removes './' from beggining. KEEP the double check for ${strFlGriveCfg} FILE, should not be uploaded!
+  #(cd "$strWorkPath/";pwd >&2;SECFUNCexecA -ce find -type f -newer "$lstrRefDtTm" |egrep -v "$strFlGriveCfg|$CFGstrFlLastUploadBkpBN|$CFGstrRegexExcludeFiles" |sed -r 's"[.]/(.*)"\1"')
+  #declare -p astrFileList&&:
+  IFS=$'\n' read -d '' -r -a astrFileList < <(cd "$strWorkPath/";pwd >&2;SECFUNCexecA -ce find -type f -newer "$lstrRefDtTm" |egrep -v "$strFlGriveCfg|$CFGstrFlLastUploadBkpBN|$CFGstrRegexExcludeFiles" |sed -r 's"[.]/(.*)"\1"')&&: #sed removes './' from beggining. KEEP the double check for ${strFlGriveCfg} FILE, should not be uploaded!
+  declare -p LINENO astrFileList&&:
   if SECFUNCarrayCheck -n astrFileList;then
+    declare -p LINENO
     IFS=$'\n' read -d '' -r -a astrFileList < <(ls -1Sr "${astrFileList[@]}")&&: # will upload smallers firsts
     SECFUNCarrayShow -v astrFileList
     declare -i nTotSize=0
