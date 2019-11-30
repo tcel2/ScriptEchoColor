@@ -85,7 +85,8 @@ function FUNCinternetState() {
 }
 
 function FUNCinternetConnectivity() {
-	ip route ls |grep --color=always "192.168.0."
+	#ip route ls |grep --color=always "192.168.0."
+  ip route ls |grep --color=always "default via 192.168." # or `route -n` then check for a non-zero Gateway entry
 }
 
 function FUNCcheckInternet() {

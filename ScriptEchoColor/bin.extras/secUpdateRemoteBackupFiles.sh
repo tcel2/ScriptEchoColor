@@ -511,8 +511,8 @@ function FUNClsNot() { #synchronize like
 	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" -exec bash -c "FUNCfileDoNotExist \"$relativeToHome\" \"{}\"" \; |sort`
 	#listOfFiles=`find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$relativeToHome" "$lstrFileFound";done |LC_COLLATE=C sort -f`
 #  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$relativeToHome" "$lstrFileFound";done |sort -f)&&:
-  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 -type f -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$lstrFileFound"&&:;done |sort -f)&&:
-	if((${#astrFileList[@]-} > 0));then
+  IFS=$'\n' read -d '' -r -a astrFileList < <(find ./ -maxdepth 1 \( -type f -or \( -type l -and -xtype f \) \) -not -iname "*~" |while read lstrFileFound;do FUNCfileDoNotExist "$lstrFileFound"&&:;done |sort -f)&&:
+	if SECFUNCarrayCheck -n astrFileList;then
 		echoc --info "File list that are not at Remote Backup Folder:"
     SECFUNCexecA -ce ls -ltr "${astrFileList[@]}"
     #for strFile in "${astrFileList[@]}";do echo "$strFile";done
