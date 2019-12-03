@@ -309,6 +309,19 @@ function GAMEFUNCquickSaveAutoBkp() { #help <lstrQuickSaveFullPathNameAndExt>
 	return 0
 }
 
+function GAMEFUNClookForBrokenLinks { #help <lstrGamePath>
+  local lstrGamePath="$1"
+  ( #to avoid changing the path outside here
+    cd "$lstrGamePath"
+    strBrokenLinks="`find . -xtype l 2>/dev/null`"&&:
+    if [[ -n "$strBrokenLinks" ]];then
+      echoc -p "strBrokenLinks found"
+      echo "$strBrokenLinks"
+      exit 1
+    fi
+  )
+}
+
 function GAMEFUNClookForDupFiles(){ #help <lstrGamePath>
 	local lstrGamePath="$1"
 	( #to avoid changing the path outside here
@@ -1301,7 +1314,7 @@ function GAMEFUNCwaitGamePid() { #help
 		
 		# indirect game pid
 		if [[ -z "$WINEnGamePid" ]];then
-			local lanPid=(`pgrep -f "$CFGstrFileExecutable"`)
+			local lanPid=(`pgrep -f "$CFGstrFileExecutable"&&:`)
 			
       if((`SECFUNCarraySize lanPid`>0));then
         local nPid

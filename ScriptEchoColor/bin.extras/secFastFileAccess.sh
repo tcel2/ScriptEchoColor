@@ -66,39 +66,40 @@ function FUNCcheckCfgChanged() {
 	return 1
 }
 
-function FUNCaddFile() {
+function FUNCaddFile() { # <lstrFlToAdd>
+  local lstrFlToAdd="$1";shift
 	# HERE IS $1, to check the real parameter
-	if [[ -L "$1" ]];then
-		if [[ -f "${1}.${cfgExt}" ]];then
-			echoc -x "grep \"`basename "$1"`\" \"$cfgManagedFiles\""
-			echoc -x "ls -l \"${1}.${cfgExt}\""
-			echoc --info "file '$1' seems to be (is at fast media?) already managed..."
+	if [[ -L "$lstrFlToAdd" ]];then
+		if [[ -f "${lstrFlToAdd}.${cfgExt}" ]];then
+			echoc -x "grep \"`basename "$lstrFlToAdd"`\" \"$cfgManagedFiles\""
+			echoc -x "ls -l \"${lstrFlToAdd}.${cfgExt}\""
+			echoc --info "file '$lstrFlToAdd' seems to be (is at fast media?) already managed..."
 			exit
 		else
-			echoc -p "file '$1' is a symlink, must be a real file"
+			echoc -p "file '$lstrFlToAdd' is a symlink, must be a real file"
 			exit 1
 		fi
 	fi
 	
-	fileToAdd=`readlink -f "$1"` # canonical full path and filename
+	lstrFlToAdd=`readlink -f "$lstrFlToAdd"` # canonical full path and filename
 	
-	echoc --info "working with '$fileToAdd'"
+	echoc --info "working with '$lstrFlToAdd'"
 	
-	if [[ ! -f "$fileToAdd" ]];then
-		echoc -p "invalid file '$fileToAdd'"
+	if [[ ! -f "$lstrFlToAdd" ]];then
+		echoc -p "invalid file '$lstrFlToAdd'"
 		exit 1
 	fi
 	
 	# this only happens if the fast media is offline/unmounted and files have been restored
-	if grep -q "^${fileToAdd}$" $cfgManagedFiles;then
-		echoc --info "file '$fileToAdd' already managed."
+	if grep -Hn "^${lstrFlToAdd}$" "$cfgManagedFiles";then
+		echoc --info "file '$lstrFlToAdd' already managed."
 		return 0
 	fi
 	
-	local lnSize=`du -b "$fileToAdd" |grep -o "^[[:digit:]]*"`
+	local lnSize=`du -b "$lstrFlToAdd" |grep -o "^[[:digit:]]*"`
 	if((lnSize<`FUNCcheckFreeSpace`));then
-		echo "$fileToAdd" >>"$cfgManagedFiles"
-		if grep "$fileToAdd" "$cfgManagedFiles";then
+		echo "$lstrFlToAdd" >>"$cfgManagedFiles"
+		if grep "$lstrFlToAdd" "$cfgManagedFiles";then
 			echoc --info "file added"
 		else
 			echoc -p "unable to add file (why?).."
@@ -156,7 +157,7 @@ function FUNCprepareFileAtFastMedia() {
           echoc -p "ignoring (broken?) symlink"
           return 0
         else
-          echoc --alert "size differs $lnSize != $lnSizeAtFastMedia"
+          echoc --alert "size differs@{-n} $lnSize != $lnSizeAtFastMedia"
           ls -l "${lfileId}.$cfgExt" "$fastMedia/$lfileId"
           echoc --info "the fast media's one got updated???"
           if echoc -t 30 -q "should it be copied again to fast media?";then
@@ -309,6 +310,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
 		SECFUNCshowHelp --colorize "Helps on copying big files to a faster media like SSD or even RamDrive (/dev/shm), to significantly improve related applications read/load speed."
+		SECFUNCshowHelp --colorize "To ignore but keep files at config, just comment the line with: #"
 		SECFUNCshowHelp --colorize "\tConfig file: '`SECFUNCcfgFileName --get`'"
 		echo
 		SECFUNCshowHelp
@@ -437,6 +439,10 @@ if $bDaemon;then
 #		done
 		# check all files
 		while read strLine; do
+      if [[ "${strLine:0:1}" == "#" ]];then
+        echo "ignoring: $strLine"
+        continue
+      fi
 			#echoc --info "working with '$strLine'"
 			if ! $bForceDisableFastMedia && $bFastMediaAvailable;then
 				if ! FUNCprepareFileAtFastMedia "$strLine";then
