@@ -223,10 +223,11 @@ function FUNCcreateCache(){ #TODO create the cached files much easier with like:
 	if $SEC_SAYMP3;then
 		local lbConversionWorked=false
 		local lnBitRate=32
-		
+		_SECFUNCcheckCmdDep ffmpeg
+    
 		if ! $lbConversionWorked;then
-			if ! SECFUNCexecA avconv -i "$_SECSAYcacheFolder/${lmd5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${lmd5sumText}.mp3";then
-				SECFUNCechoErrA "avconv failed." #is avconv broken?
+			if ! SECFUNCexecA ffmpeg -i "$_SECSAYcacheFolder/${lmd5sumText}" -b ${lnBitRate}k "$_SECSAYcacheFolder/${lmd5sumText}.mp3";then
+				SECFUNCechoErrA "ffmpeg failed." #is ffmpeg broken?
 				rm "$_SECSAYcacheFolder/${lmd5sumText}.mp3"
 			else
 				lbConversionWorked=true
@@ -325,6 +326,7 @@ function FUNCplay() {
 #	if $bShowPlayOutput;then
 #		lstrPlayOutput=""
 #	fi
+  _SECFUNCcheckCmdDep play
 	local astrCmd=(play -v "$lsayVol" "$fileAudio" $lstrSndEffects)
 	# lstrSndEffects no quotes to become params (work?)
 	if $bShowPlayOutput;then
@@ -581,10 +583,12 @@ while true; do
 #			echo "strSndEffectsGet='$strSndEffectsGet'" >&2
 			
 			#echo "strHead=$strHead" >&2
+      #declare -p strHead >&2
 			bCanPlay=true
 			if [[ -z "$md5sumTextGet" ]];then
 				bCanPlay=false
 			elif ! FUNChasCache "$md5sumTextGet";then
+        _SECFUNCcheckCmdDep festival
 				if ! echo "$strHead"	|SECFUNCexecA festival --pipe;then # this line will CREATE the CACHE!
 					SECFUNCechoErrA "festival failed to speak strHead='$strHead', bug? skipping..."
 					# this error will not exit, it is a error but the daemon can continue running...
