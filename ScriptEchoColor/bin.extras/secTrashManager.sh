@@ -315,7 +315,7 @@ function FUNCcheckFS() {
         break;
       else
         #egrep "%.." ../info/*.trashinfo
-        echoc --alert --say "invalid trash file names"
+        echoc --alert --notify --say "$SECstrScriptSelfName: invalid trash file names"
         #~ while ! echoc -t 600 -q "there are files with non supported names (by this script) on the trash! they have to be cleaned manually for now @s@g:@r(@S, try to remove them all now and retry normal work?";do #TODO inodes?
           #~ echoc --alert --say "invalid trash file names"
         #~ done
@@ -470,7 +470,7 @@ function FUNCcheckFS() {
             strWrong="`egrep -v "$strCriticalCheckRmLog" "$strRmLogTmp"`"&&:
 #            set +x
             if [[ -n "$strWrong" ]];then
-              echoc --say "sec trash cleaner error"
+              echoc --alert --notify --say "$SECstrScriptSelfName: cleaner error"
               echoc -p "below should not have happened..."
               declare -p strWrong
               _SECFUNCcriticalForceExit
@@ -505,7 +505,7 @@ function FUNCcheckFS() {
             #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
           fi
           #echo "DBG$LINENO: $((SECONDS-nAlertSpeechLastTime)) > $nAlertSpeechCoolDownTimeout $nAlertSpeechLastTime" >&2
-          echoc -p $parmSay "unable to free disk space!"&&:
+          echoc --notify -p $parmSay "$SECstrScriptSelfName: unable to free disk space!"&&:
         fi
       fi
     fi

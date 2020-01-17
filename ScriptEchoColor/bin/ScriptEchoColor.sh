@@ -148,65 +148,66 @@ if [[   -f "$strSpeedupFile" ]]; then
 	fi
 fi
 if [[ ! -f "$strSpeedupFile" ]]; then
-		echo "$strCfgHeader" >>"$strSpeedupFile"
-		echo "# DONT change below here, internal config to speed up script execution!" >>"$strSpeedupFile"
+    secPrepareSpeedUp.sh "$strCfgHeader" "$strSpeedupFile"
+		#echo "$strCfgHeader" >>"$strSpeedupFile"
+		#echo "# DONT change below here, internal config to speed up script execution!" >>"$strSpeedupFile"
 		
-		##str=`tput sgr0`;if [[ -z "$str" ]]; then str="\033[0m"; fi
-		echo "cmdOff=\""`      echo -e "\E[0m"`"\"" >>"$strSpeedupFile" #`tput sgr0`
-		echo "cmdBold=\""`     echo -e "\E[1m"`"\"" >>"$strSpeedupFile" #`tput bold`
-		echo "cmdDim=\""`      echo -e "\E[2m"`"\"" >>"$strSpeedupFile"
-		echo "cmdUnderline=\""`echo -e "\E[4m"`"\"" >>"$strSpeedupFile" #`tput smul` tput rmul
-		echo "cmdBlink=\""`    echo -e "\E[5m"`"\"" >>"$strSpeedupFile" #`tput blink`
-		echo "cmdReverse=\""`  echo -e "\E[7m"`"\"" >>"$strSpeedupFile"
-		echo "cmdStrike=\""`   echo -e "\E[9m"`"\"" >>"$strSpeedupFile"
+		###str=`tput sgr0`;if [[ -z "$str" ]]; then str="\033[0m"; fi
+		#echo "cmdOff=\""`      echo -e "\E[0m"`"\"" >>"$strSpeedupFile" #`tput sgr0`
+		#echo "cmdBold=\""`     echo -e "\E[1m"`"\"" >>"$strSpeedupFile" #`tput bold`
+		#echo "cmdDim=\""`      echo -e "\E[2m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdUnderline=\""`echo -e "\E[4m"`"\"" >>"$strSpeedupFile" #`tput smul` tput rmul
+		#echo "cmdBlink=\""`    echo -e "\E[5m"`"\"" >>"$strSpeedupFile" #`tput blink`
+		#echo "cmdReverse=\""`  echo -e "\E[7m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdStrike=\""`   echo -e "\E[9m"`"\"" >>"$strSpeedupFile"
  
-		#cmdFgBlack=`  tput setaf 0`
-		echo "cmdFgBlack=\""`  echo -e "\E[39m"`"\"" >>"$strSpeedupFile" # 30/39 works better. If used with Bold, black gets gray!
-		echo "cmdFgRed=\""`    echo -e "\E[31m"`"\"" >>"$strSpeedupFile" #`tput setaf 1` setaf (ANSI) instead of setf (bg too), works with "linux" terminal also
-		echo "cmdFgGreen=\""`  echo -e "\E[32m"`"\"" >>"$strSpeedupFile" #`tput setaf 2`
-		echo "cmdFgYellow=\""` echo -e "\E[33m"`"\"" >>"$strSpeedupFile" #`tput setaf 3`
-		##str=`tput setaf 4`;if [[ -z "$str" ]]; then str=`echo -e "\033[34m"`; fi
-		echo "cmdFgBlue=\""`   echo -e "\E[34m"`"\"" >>"$strSpeedupFile" #`tput setaf 4`
-		echo "cmdFgMagenta=\""`echo -e "\E[35m"`"\"" >>"$strSpeedupFile" #`tput setaf 5`
-		echo "cmdFgCyan=\""`   echo -e "\E[36m"`"\"" >>"$strSpeedupFile" #`tput setaf 6`
-		echo "cmdFgWhite=\""`  echo -e "\E[37m"`"\"" >>"$strSpeedupFile" #`tput setaf 7`
+		##cmdFgBlack=`  tput setaf 0`
+		#echo "cmdFgBlack=\""`  echo -e "\E[39m"`"\"" >>"$strSpeedupFile" # 30/39 works better. If used with Bold, black gets gray!
+		#echo "cmdFgRed=\""`    echo -e "\E[31m"`"\"" >>"$strSpeedupFile" #`tput setaf 1` setaf (ANSI) instead of setf (bg too), works with "linux" terminal also
+		#echo "cmdFgGreen=\""`  echo -e "\E[32m"`"\"" >>"$strSpeedupFile" #`tput setaf 2`
+		#echo "cmdFgYellow=\""` echo -e "\E[33m"`"\"" >>"$strSpeedupFile" #`tput setaf 3`
+		###str=`tput setaf 4`;if [[ -z "$str" ]]; then str=`echo -e "\033[34m"`; fi
+		#echo "cmdFgBlue=\""`   echo -e "\E[34m"`"\"" >>"$strSpeedupFile" #`tput setaf 4`
+		#echo "cmdFgMagenta=\""`echo -e "\E[35m"`"\"" >>"$strSpeedupFile" #`tput setaf 5`
+		#echo "cmdFgCyan=\""`   echo -e "\E[36m"`"\"" >>"$strSpeedupFile" #`tput setaf 6`
+		#echo "cmdFgWhite=\""`  echo -e "\E[37m"`"\"" >>"$strSpeedupFile" #`tput setaf 7`
 
-		echo "cmdBgBlack=\""`  echo -e "\E[40m"`"\"" >>"$strSpeedupFile" #`tput setab 0`
-		echo "cmdBgRed=\""`    echo -e "\E[41m"`"\"" >>"$strSpeedupFile" #`tput setab 1`
-		echo "cmdBgGreen=\""`  echo -e "\E[42m"`"\"" >>"$strSpeedupFile" #`tput setab 2`
-		echo "cmdBgYellow=\""` echo -e "\E[43m"`"\"" >>"$strSpeedupFile" #`tput setab 3`
-		echo "cmdBgBlue=\""`   echo -e "\E[44m"`"\"" >>"$strSpeedupFile" #`tput setab 4`
-		echo "cmdBgMagenta=\""`echo -e "\E[45m"`"\"" >>"$strSpeedupFile" #`tput setab 5`
-		echo "cmdBgCyan=\""`   echo -e "\E[46m"`"\"" >>"$strSpeedupFile" #`tput setab 6`
-		echo "cmdBgWhite=\""`  echo -e "\E[47m"`"\"" >>"$strSpeedupFile" #`tput setab 7`
+		#echo "cmdBgBlack=\""`  echo -e "\E[40m"`"\"" >>"$strSpeedupFile" #`tput setab 0`
+		#echo "cmdBgRed=\""`    echo -e "\E[41m"`"\"" >>"$strSpeedupFile" #`tput setab 1`
+		#echo "cmdBgGreen=\""`  echo -e "\E[42m"`"\"" >>"$strSpeedupFile" #`tput setab 2`
+		#echo "cmdBgYellow=\""` echo -e "\E[43m"`"\"" >>"$strSpeedupFile" #`tput setab 3`
+		#echo "cmdBgBlue=\""`   echo -e "\E[44m"`"\"" >>"$strSpeedupFile" #`tput setab 4`
+		#echo "cmdBgMagenta=\""`echo -e "\E[45m"`"\"" >>"$strSpeedupFile" #`tput setab 5`
+		#echo "cmdBgCyan=\""`   echo -e "\E[46m"`"\"" >>"$strSpeedupFile" #`tput setab 6`
+		#echo "cmdBgWhite=\""`  echo -e "\E[47m"`"\"" >>"$strSpeedupFile" #`tput setab 7`
  
-		echo "cmdFgLtBlack=\""`  echo -e "\E[90m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtRed=\""`    echo -e "\E[91m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtGreen=\""`  echo -e "\E[92m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtYellow=\""` echo -e "\E[93m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtBlue=\""`   echo -e "\E[94m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtMagenta=\""`echo -e "\E[95m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtCyan=\""`   echo -e "\E[96m"`"\"" >>"$strSpeedupFile"
-		echo "cmdFgLtWhite=\""`  echo -e "\E[97m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtBlack=\""`  echo -e "\E[90m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtRed=\""`    echo -e "\E[91m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtGreen=\""`  echo -e "\E[92m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtYellow=\""` echo -e "\E[93m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtBlue=\""`   echo -e "\E[94m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtMagenta=\""`echo -e "\E[95m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtCyan=\""`   echo -e "\E[96m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdFgLtWhite=\""`  echo -e "\E[97m"`"\"" >>"$strSpeedupFile"
 	
-		echo "cmdBgLtBlack=\""`  echo -e "\E[100m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtRed=\""`    echo -e "\E[101m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtGreen=\""`  echo -e "\E[102m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtYellow=\""` echo -e "\E[103m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtBlue=\""`   echo -e "\E[104m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtMagenta=\""`echo -e "\E[105m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtCyan=\""`   echo -e "\E[106m"`"\"" >>"$strSpeedupFile"
-		echo "cmdBgLtWhite=\""`  echo -e "\E[107m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtBlack=\""`  echo -e "\E[100m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtRed=\""`    echo -e "\E[101m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtGreen=\""`  echo -e "\E[102m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtYellow=\""` echo -e "\E[103m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtBlue=\""`   echo -e "\E[104m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtMagenta=\""`echo -e "\E[105m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtCyan=\""`   echo -e "\E[106m"`"\"" >>"$strSpeedupFile"
+		#echo "cmdBgLtWhite=\""`  echo -e "\E[107m"`"\"" >>"$strSpeedupFile"
 		
-		#GFX tables Hexa/Translation char
-		strTempCharTable=" a  A  b  B  c  C  d  D  e  E  f  F  g  G  h  H  i  I  j  J  k"
-		echo "gfxHexaTable=("`echo "80 81 82 83 8C 8F 90 93 94 97 98 9B 9C A3 A4 AB AC B3 B4 BB BC"`")" >>"$strSpeedupFile"
-		echo "gfxCharTable=("`echo "$strTempCharTable"`")" >>"$strSpeedupFile" #better if unique chars (no repeating)
-		echo "fmtCharTable=("`echo "r g b c m y k w R G B C M Y K W o u d n e l L : a s A S -f -b -l -L -o -u -d -n -e -t -: -a +p"`")" >>"$strSpeedupFile"
-		echo "fmtExtdTable=("`echo "red green blue cyan magenta yellow black white RED GREEN BLUE CYAN MAGENTA YELLOW BLACK WHITE bold underline dim blink strike light LIGHT graphic SaveAll SaveTypeColor RestoreAll RestoreTypeColor -foreground -background -light -LIGHT -bold -underline -dim -blink -strike -types -graphic -ResetAllSettings +RestorePosBkp"`")" >>"$strSpeedupFile"
-		echo "strGfxCharTable=\""`echo "$strTempCharTable" |tr -d " "`"\"" >>"$strSpeedupFile" #to speed up searches
+		##GFX tables Hexa/Translation char
+		#strTempCharTable=" a  A  b  B  c  C  d  D  e  E  f  F  g  G  h  H  i  I  j  J  k"
+		#echo "gfxHexaTable=("`echo "80 81 82 83 8C 8F 90 93 94 97 98 9B 9C A3 A4 AB AC B3 B4 BB BC"`")" >>"$strSpeedupFile"
+		#echo "gfxCharTable=("`echo "$strTempCharTable"`")" >>"$strSpeedupFile" #better if unique chars (no repeating)
+		#echo "fmtCharTable=("`echo "r g b c m y k w R G B C M Y K W o u d n e l L : a s A S -f -b -l -L -o -u -d -n -e -t -: -a +p"`")" >>"$strSpeedupFile"
+		#echo "fmtExtdTable=("`echo "red green blue cyan magenta yellow black white RED GREEN BLUE CYAN MAGENTA YELLOW BLACK WHITE bold underline dim blink strike light LIGHT graphic SaveAll SaveTypeColor RestoreAll RestoreTypeColor -foreground -background -light -LIGHT -bold -underline -dim -blink -strike -types -graphic -ResetAllSettings +RestorePosBkp"`")" >>"$strSpeedupFile"
+		#echo "strGfxCharTable=\""`echo "$strTempCharTable" |tr -d " "`"\"" >>"$strSpeedupFile" #to speed up searches
 		
-		chmod -w "$strSpeedupFile"
+		#chmod -w "$strSpeedupFile"
 fi
 source "$strSpeedupFile"
 
@@ -313,6 +314,7 @@ optHelpListExtdFmt="$optHelp-list-extended-format"
 optIdea="--idea"
 optInfo="--info"
 optInstallPath="--getinstallpath"
+optNotify="--notify"
 #optLogFileName="--logfilename"
 optParentPidList="--parentpidlist"
 optRecreateConfigFile="--recreateconfigfile"
@@ -351,6 +353,9 @@ nOptIdea=0
 
 bOptInfo=false
 bOptInstallPath=false
+
+bOptNotify=false
+
 #bOptLogFileName=false
 bOptParentPidList=false
 bOptRecreateConfigFile=false
@@ -509,6 +514,9 @@ while [[ "${strOpt:0:1}" == "-" ]]; do
 			"${optHelp:2}") 
 					bOptHelp=true 
 					;;
+      "${optNotify:2}")
+          bOptNotify=true
+          ;;
 #      "${optThereCanOnlyBeOne:2}")
 ##          shift; nOptThereCanOnlyBeOnePidSkip=$1
 ##          if ! ps -p "$nOptThereCanOnlyBeOnePidSkip" >/dev/null 2>&1; then
@@ -1448,6 +1456,7 @@ if $bOptHelp; then
 #    echo -e " ${optThereCanOnlyBeOne} <cmdPart>: 'There Can Only Be One' looks for another proccess having cmdPart (ex.: \"\`basename \$0\`\") on its command; skips this caller recursive parents pids; usage: call from a script to prevent it from running if another instance of it is already running."
 		echo -e " ${optSay}\tuse festival to say the text!" |$strExpand
 		echo -e " ${optWaitSay}\tlike ${optSay} but wait until speech ends before exiting." |$strExpand
+		echo -e " ${optNotify}\tuse the notification system." |$strExpand
 		echo -e " ${optExecuteRetry}\tin conjunction with -x or -X, will ask if you want to retry the failed command." |$strExpand
 		echo 
 		echo "String format summary (@/@{}):"
@@ -2848,6 +2857,20 @@ FUNCdoTheEcho(){
 		#eval "disown '$sayCmd'"
 		#("$SECinstallPath/bin/secSayStack.sh" --sayvol $SEC_SAYVOL "$strUnformatted"&)
 	fi
+  
+  if $bOptNotify;then
+    local lastrCmdNotif=(notify-send)
+    if $bOptAlert;then
+      lastrCmdNotif+=(-u critical)
+      lastrCmdNotif+=(-t 10)
+      local lstrPicAlert="`secGetInstallPath.sh`/share/pixmaps/ScriptEchoColor/Alert.png"
+      if [[ -f "$lstrPicAlert" ]];then
+        lastrCmdNotif+=(-i "$lstrPicAlert")
+      fi
+    fi
+    lastrCmdNotif+=("$strUnformatted")
+    "${lastrCmdNotif[@]}"
+  fi
 }
 
 FUNCstrNL(){
