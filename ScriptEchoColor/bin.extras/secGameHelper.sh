@@ -342,6 +342,42 @@ function FUNClookForDupFiles(){ #help <lstrGamePath>
 	GAMEFUNClookForDupFiles "$1"
 };export -f FUNClookForDupFiles
 
+function GAMEFUNClimitSavegamesSimple() { #help <lnQuotaMB>
+  local lnQuotaMB="$1";shift
+  
+  if [[ ! -d "$CFGstrSavegamesPath" ]];then
+    declare -p CFGstrSavegamesPath >&2
+    echoc -p -t 60 "Savegames path missing"
+    return 0
+  fi
+  
+  cd "$CFGstrSavegamesPath";pwd
+  
+  local lnQuotaKB=$((lnQuotaMB*1024))
+  local lstrKeepRegex="(parei|p4re1|k33p|l4st|st0pp3d)"
+  echoc --info "ignoring (case also) filenames containing '$lstrKeepRegex'"
+  while true;do
+    SECFUNCdrawLine
+    
+    local lnUsedKB="$(du -s . |awk '{print $1}')"
+    #ls -t1 |egrep -vi "$lstrKeepRegex"
+    local lstrOldestFile="$(ls -t1 |egrep -vi "$lstrKeepRegex" |tail -n 1)"
+    
+    declare -p lnUsedKB lstrOldestFile lnQuotaKB lstrKeepRegex
+    
+    if((lnUsedKB>lnQuotaKB));then
+      ls -l "$lstrOldestFile"
+      SECFUNCtrash "$lstrOldestFile"
+      echo
+      #echoc -w -t 10 "debug wait"
+    else
+      echoc -w -t 60 "check again for used vs quota"
+    fi
+    
+    FUNCexitIfGameExits
+  done
+}
+
 function FUNCwait() {
 	# all loops that happen the whole game must use this wait mode that is faster than echoc
 	#echoc -t $1 --info "$2" #uses much cpu
@@ -614,10 +650,12 @@ function WINEFUNCcommonOptions {
   declare -p SECstrRunLogFile
 	
 	if [[ "${1-}" == "autoStopContOnScreenLock" ]]; then #help
+    function FUNCautoStopContOnScreenLock(){ :;};
 		FUNCcheckIfThisScriptCmdIsRunning "$@"
 		FUNCwaitGameStartRunning
 		openNewX.sh --script autoStopContOnScreenLock "`pgrep -x $CFGstrFileExecutable`"
 	elif [[ "${1-}" == "cdInst" ]];then #help
+    function FUNCcdInst(){ :;};
 		shift
     if [[ -d "$strPathInstalled" ]];then
       cd "$strPathInstalled"
@@ -629,14 +667,17 @@ function WINEFUNCcommonOptions {
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or bash interactive wont work..
 		$cmdWine bash
 	elif [[ "${1-}" == "cmd" ]];then #help prompt command line
+    function FUNCcmd(){ :;};
 		cd "$strPathInstalled"
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or cmd interactive wont work..
 		$cmdWine cmd
 	elif [[ "${1-}" == "dropcaches" ]]; then #help try to dethermine what happens when game freezes
+    function FUNCdropcaches(){ :;};
 				# clears the RAM cache to prevent crashes!
 				echoc -x "sync" #echoc -x "sudo sync"
 				echoc -x "echo 3 |sudo -k tee /proc/sys/vm/drop_caches"
 	elif [[ "${1-}" == "instGecko" ]];then #help instal mono (like dotnet)
+    function FUNCinstGecko(){ :;};
 		shift
 		strFileWMVers="/tmp/wineGeckoVersions.tmp.html"
 		SECFUNCexecA -ce wget -O "$strFileWMVers" http://dl.winehq.org/wine/wine-gecko/&&:
@@ -649,6 +690,7 @@ function WINEFUNCcommonOptions {
 		strFileInst="`echoc -S "install which?"`"
 		WINEFUNCcommonOptions msiInstall "$strFileInst"
 	elif [[ "${1-}" == "instMono" ]];then #help instal mono (like dotnet)
+    function FUNCinstMono(){ :;};
 		shift
 		strFileWMVers="/tmp/wineMonoVersions.tmp.html"
 		SECFUNCexecA -ce wget -O "$strFileWMVers" http://dl.winehq.org/wine/wine-mono/&&:
@@ -661,6 +703,7 @@ function WINEFUNCcommonOptions {
 		strFileInst="`echoc -S "install which?"`"
 		WINEFUNCcommonOptions msiInstall "$strFileInst"
 	elif [[ "${1-}" == "kill" ]];then #help
+    function FUNCkill(){ :;};
 		kill -SIGKILL `pgrep $CFGstrFileExecutable`&&:
 		$cmdWine wineserver -k&&: #this does not work (bug?)
 		if pgrep wineserver;then
@@ -668,10 +711,12 @@ function WINEFUNCcommonOptions {
 			for str in "${astr[@]}";do SECFUNCexec --echo -c pkill -x "$str";done	
 		fi
 	elif [[ "${1-}" == "msiInstall" ]];then #help to install a .msi file
+    function FUNCmsiInstall(){ :;};
 		shift
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or cmd interactive wont work..
 		$cmdWine msiexec /i "$@"
 	elif [[ "${1-}" == "minimize" ]];then #help 
+    function FUNCminimize(){ :;};
 		SECFUNCcfgReadDB
 		#echo "bWindowMinimized='$bWindowMinimized'"
 		#echo "SECcfgFileName='$SECcfgFileName'"
@@ -695,22 +740,36 @@ function WINEFUNCcommonOptions {
 		#echo "bWindowMinimized='$bWindowMinimized'"
 		#SECFUNCexecA -ce cat "$SECcfgFileName"
 	elif [[ "${1-}" == "fixkeyproblem" ]]; then #help stops X auto repeating keys
+    function FUNCfixkeyproblem(){ :;};
 		SECFUNCexecA -ce xset -r r off # this is important to avoid weird buffered player movements!
 	elif [[ "${1-}" == "restoreKeysAutoRepeat" ]]; then #help restore X auto repeating keys
+    function FUNCrestoreKeysAutoRepeat(){ :;};
 		SECFUNCexecA -ce xset -r r on
 	elif [[ "${1-}" == "screenshot" ]];then #help 
+    function FUNCscreenshot(){ :;};
 		secScreenShotOnMouseStop.sh -t 0 -k -h
 	elif [[ "${1-}" == "runAtom" ]]; then #help [gameRunParams]... run just the target executable alone
+    function FUNCrunAtom(){ :;};
 		shift
 		
 		cd "$strPathInstalled"
+    
+    : ${bCdToRelatExec:=false} #help
+    if $bCdToRelatExec;then
+      cd "$strRelativeExecutablePath"
+    fi
 		
 		#SECFUNCcleanEnvironment to prevent from crashing with this error: "The environment block used to start a process cannot be longer than 65535 bytes.  Your environment block is 152614 bytes long.  Remove some environment variables and try again."
 		if $WINECFGbFixPTrace;then $cmdWine --ptrace;fi #redundant but ok
 	#	$cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
-		$cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 
+    if $bCdToRelatExec;then
+      $cmdWine "./${CFGstrLoader}" "$@" 
+    else
+      $cmdWine "./${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 
+    fi
 		FUNCwaitGamePid
 	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
+    function FUNCrunNewSimultInstance(){ :;};
 		#~ shift;strNewWinePrefix="$1" #required
 		#~ shift&&:;strLogFileHint="${1-}"
 		#~ shift&&:;nMaxMemKB="${1-}";if [[ -z "$nMaxMemKB" ]];then nMaxMemKB=0;fi #will wait til this amount in KB is reached b4 continuing
@@ -857,6 +916,7 @@ function WINEFUNCcommonOptions {
     
 		WINEFUNCcommonOptions hookOnPidStopCont $nPidNI
 	elif [[ "${1-}" == "hookOnPidStopCont" ]];then #help <nPid> hook on pid to monitor it and  stop/continue
+    function FUNChookOnPidStopCont(){ :;};
 		shift
 		nPid=$1;shift #TODO	WINEnGamePid is saved to a file, better not mess with it?
 		
@@ -865,6 +925,7 @@ function WINEFUNCcommonOptions {
 			GAMEFUNCstopContGame $nPid
 		done
 	elif [[ "${1-}" == "delOldSaves" ]];then #help <strSavesPath> <iKeepCount> <astrFilesExtensionsAndMask[]> #astrFilesExtensionsAndMask ex.: "*.sav" "*.bla", every entry means a iKeepCount multiplier (as they must be related to the same savegame), so in this ex. it would be 2
+    function FUNCdelOldSaves(){ :;};
 		shift
 		strSavesPath="$1";shift
 		iKeepCount="$1";shift
@@ -881,6 +942,7 @@ function WINEFUNCcommonOptions {
 		echoc --info "kept"
 		ls ${astrFilesExtensionsAndMask[@]} -lt
 	elif $CFGbIsAFunction || [[ "${1-}" == "custom" ]];then #help [cmd and params...] runs a custom command with the WINEPREFIX etc all setup
+    function FUNCcustom(){ :;};
 		if [[ "${1-}" == "custom" ]];then
 			shift
 		fi
@@ -895,6 +957,7 @@ function WINEFUNCcommonOptions {
 			FUNCwaitGamePid
 		fi
 	elif [[ "${1-}" == "winetricks" ]];then #help [params...]
+    function FUNCwinetricks(){ :;};
 		shift
 		$cmdWine winetricks "$@"
 		# sound can be fixed with: winetricks sound=alsa #but may cause weird problems like missing sound effects; only pulseaudio works 100%
@@ -1135,34 +1198,6 @@ function GAMEFUNCgetFinalWID() { #help [lnPid]
 function GAMEFUNCgetExecPID() { #help
   echo "$FUNCNAME CFGstrFileExecutable='$CFGstrFileExecutable'" >&2
   GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable";return $?
-  
-	#~ local lnPid=${1-}
-  #~ echo "$FUNCNAME lnPid=$lnPid (param)" >&2
-  
-  #~ if [[ -n "$lnPid" ]];then
-    #~ if ! SECFUNCisNumber -dn "$lnPid";then
-      #~ SECFUNCechoErrA "lnPid='$lnPid' CFGstrFileExecutable='$CFGstrFileExecutable' WINEnGamePid='${WINEnGamePid-}'"
-      #~ exit 1
-    #~ fi
-  #~ fi
-  
-  #~ if [[ -z "$lnPid" ]];then
-    #~ lnPid=${WINEnGamePid-};
-    #~ echo "$FUNCNAME WINEnGamePid=$WINEnGamePid" >&2
-  #~ fi
-  
-  #~ if [[ -z "$lnPid" ]];then
-    #~ lnPid=`GAMEFUNCgetWPRegexPID "$CFGstrFileExecutable"`
-    #~ echo "$FUNCNAME lnPid=$lnPid (from GAMEFUNCgetWPRegexPID)" >&2
-  #~ fi
-    
-  #~ if [[ -z "$lnPid" ]];then
-    #~ lnPid="`pgrep -fn "$CFGstrFileExecutable"`"
-    #~ echo "$FUNCNAME lnPid=$lnPid (newest)" >&2
-  #~ fi
-  
-  #~ echo $lnPid
-  #~ return 0
 };export -f GAMEFUNCgetExecPID
 
 #function GAMEFUNCgetExecWID() { #help [lnPid]
