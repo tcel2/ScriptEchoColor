@@ -142,7 +142,7 @@ if [[ -n "$strTitleForce" ]];then
 	varset strTitle="`SECFUNCfixId -- "$strTitleForce"`"&&: #if user puts a title with invalid characters it will be said by not using --justfix option
 else # strTitle is set to the command that is the first parameter
 	# $1 must NOT be consumed (shift) here!!! $@ will consume all executable parameters later!!!
-	varset strTitle="`SECFUNCfixId --justfix -- "$1"`"
+	varset strTitle="`SECFUNCfixId --justfix -- "$*"`"
 	#shift # !!!ALERT!!! do NOT use shift here!!!
 fi
 
@@ -197,7 +197,7 @@ fi
 #fi
 
 # trick to avoid error message where function id may conflict (may already exist) #TODO unnecessary?
-export strPseudoFunctionId="${strTitle}_pid$$_Title"
+export strPseudoFunctionId="pid$$_${strTitle}_Title"
 while [[ -n "`type -t "$strPseudoFunctionId"`" ]];do
 	# the identifier must not be being used already by file, function, alias etc...
 	strPseudoFunctionId="${strPseudoFunctionId}_"
