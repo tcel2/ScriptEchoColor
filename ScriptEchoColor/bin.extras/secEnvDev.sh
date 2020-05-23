@@ -37,14 +37,17 @@ strCfg="$HOME/.$strBN.cfg"
 
 #~ : ${SECbDevelopmentMode:=false};export SECbDevelopmentMode
 while true;do
-  strSECDEVPath="`cat "$strCfg"`"
+  if [[ -z "$strSECDEVPath" ]];then
+	strSECDEVPath="`cat "$strCfg"`"
+  fi
   strSECDEVPath="`realpath -e "$strSECDEVPath"`"
-  declare -p strSECDEVPath >&2
-  if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strSECDEVPath/bin/secinit" ]];then
+  strExeChk="$strSECDEVPath/bin/secinit"
+  declare -p strSECDEVPath strExeChk >&2
+  if [[ -z "$strSECDEVPath" ]] || [[ ! -f "$strExeChk" ]];then
     echo "dev path not set at '$strCfg'" >&2
     nTmOut=10
-    strMsg="($@) dev path not set at '$strCfg', (waiting ${nTmOut}s) Paste it: "
-    if SECFUNCisShellInteractive;then
+    strMsg="($@) dev path not set (or invalid) at '$strCfg', (retrying in ${nTmOut}s) Paste it: "
+    if test -t 0;then #check if shell is interactive
       echoc -p "$strMsg" >&2
       read -t $nTmOut -p "$strMsg" strSECDEVPath
     else

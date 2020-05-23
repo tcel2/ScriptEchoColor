@@ -24,6 +24,8 @@
 
 source <(secinit)
 
+#yad --text "$0" #@@@R
+
 bCreateThumbnailersFile=false
 strSetupFolder="/usr/share/thumbnailers/"
 strSetupFileName="secwebp.thumbnailer"
@@ -78,17 +80,26 @@ if $bCreateThumbnailersFile;then
 	exit 0
 fi
 
-strInFile="$1"
-nMaxDimension="$2"
-strOutFile="$3"
+if [[ -z "${1-}" ]];then exit 0;fi # dummy call is ok, just do nothing
+
+strInFile="${1-}"
+if [[ ! -f "$strInFile" ]];then echo "invalid params L$LINENO: $@" >&2;exit 1;fi
+
+nMaxDimension="${2-}"
+if ! SECFUNCisNumber -dn "$nMaxDimension";then echo "invalid params L$LINENO: $@" >&2;exit 1;fi
+
+strOutFile="${3-}"
+if [[ -z "$strOutFile" ]];then echo "invalid params L$LINENO: $@" >&2;exit 1;fi
 
 
 # this is a trick to prevent vwebp from actually showing the image and still give the required information
-strInfo="`DISPLAY=NONE SECFUNCexecA -c --echo vwebp -info "$strInFile"`"&&:
+if ! strInfo="`DISPLAY=NONE SECFUNCexecA -ce vwebp -info "$strInFile"`";then echo "vwebp failed." >&2;return 1;fi
 strSize="`echo "$strInfo" |grep Canvas |sed -r 's"Canvas: (.*) x (.*)"\1\t\2"'`"
 
 nWidth="`echo "$strSize" |cut -f1`"
 nHeight="`echo "$strSize" |cut -f2`"
+
+declare -p strInfo strSize nWidth nHeight
 
 if((nWidth>nHeight));then
 	nNewWidth=$nMaxDimension
@@ -98,5 +109,9 @@ else
 	nNewWidth=` bc <<< "scale=10;f=$nWidth *($nNewHeight/$nHeight);scale=0;f/1"` #proportionality
 fi
 
+if ! SECFUNCisNumber -dn "$nNewHeight";then echo "invalid nNewHeight='$nNewHeight'" >&2;exit 1;fi
+if ! SECFUNCisNumber -dn "$nNewWidth";then echo "invalid nNewWidth='$nNewWidth'" >&2;exit 1;fi
+
 SECFUNCexecA -c --echo /usr/bin/dwebp "$strInFile" -scale $nNewWidth $nNewHeight -o "$strOutFile"
 
+exit 0

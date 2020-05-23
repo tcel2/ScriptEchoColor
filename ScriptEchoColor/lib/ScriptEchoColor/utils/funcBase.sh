@@ -193,7 +193,7 @@ function SECFUNCarraysExport() { #help export all arrays marked to be exported '
 	SECFUNCdbgFuncOutA;
 }
 
-function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch; otherwise current (now) is used
+function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. Can also be in a recognized date (command) string format; otherwise current (now) is used
 	#SECFUNCdtFmt_help If no format option is selected, the default simplest format seconds.nano (%s.%N), will be used, mainly to be reused at param lfTime with --delay.
 
 	#local lastrParams=("$@") #backup before consuming with shift
@@ -255,15 +255,20 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch; 
 			SECFUNCechoWarnA "lbDelayMode='$lbDelayMode' requires 'lfTime' to be set, disabling option.."
 			lbDelayMode=false
 		fi
-	else
-		if [[ ! "$lfTime" =~ "." ]];then #dot not found
-			lfTime+=".0" #fix to be float
-		fi
 	fi
 	
 	if ! SECFUNCisNumber -n "$lfTime";then
-		SECFUNCechoErrA "invalid lfTime='$lfTime'"
-		return 1
+		local lfTmp
+		if lfTmp="$(date --date="$lfTime" +%s.%N)";then
+			lfTime="$lfTmp"
+		else
+			SECFUNCechoErrA "invalid lfTime='$lfTime'"
+			return 1
+		fi
+	fi
+
+	if [[ ! "$lfTime" =~ "." ]];then #dot not found
+		lfTime+=".0" #fix to be float
 	fi
 	
 	local lnDays=0
@@ -1614,6 +1619,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	local lbGetPrettyFull=false
 	local lbShowId=false
 	local lnCheckDelayAt=0
+	local lstrSet=""
 	#TODO create an automatic init option that works with ex --getpretty, so a function can be called by a loop and still retain control over its initialization inside of it.
 	while ! ${1+false} && [[ "${1:0:2}" == "--" ]]; do
 		if [[ "$1" == "--help" ]];then #SECFUNCdelay_help --help show this help
@@ -1627,12 +1633,14 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 			
 			lbCheckOrInit=true
 		elif [[ "$1" == "--checkorinit1" ]];then #SECFUNCdelay_help <lnCheckDelayAt> like --1stistrue  --checkorinit 
-			shift
-			lnCheckDelayAt=${1-}
+			shift;lnCheckDelayAt=${1-}
 			
 			lbCheckOrInit=true
 			l_b1stIsTrueOnCheckOrInit=true
-		elif [[ "$1" == "--init" ]];then #SECFUNCdelay_help set temp date storage to now
+		elif [[ "$1" == "--init" ]];then #SECFUNCdelay_help set start datetime storage to now
+			lbInit=true
+		elif [[ "$1" == "--initset" ]];then #SECFUNCdelay_help <lstrSet> set start datetime
+			shift;lstrSet="${1-}"
 			lbInit=true
 		elif [[ "$1" == "--get" ]];then #SECFUNCdelay_help get delay from init (is the default if no option parameters are set)
 			if ! SECFUNCdelay_ValidateIndexIdForOption "$1";then return 1;fi
@@ -1676,8 +1684,13 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		fi
 	fi
 	
-	function SECFUNCdelay_init(){
-		_dtSECFUNCdelayArray[$indexId]="`SECFUNCdtFmt`"
+	function SECFUNCdelay_init(){ # [lstrSetDT]
+		local lstrSetDT="${1-}"
+		local lf="`SECFUNCdtFmt`"
+		if [[ -n "$lstrSetDT" ]];then
+			lf="`SECFUNCdtFmt "$lstrSetDT"`"
+		fi
+		_dtSECFUNCdelayArray[$indexId]="$lf"
 	}
 	
 	function SECFUNCdelay_get(){
@@ -1706,7 +1719,7 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 	}
 	
 	if $lbInit;then
-		SECFUNCdelay_init
+		SECFUNCdelay_init "$lstrSet"
 	elif $lbGet;then
 		SECFUNCdelay_get
 #	elif $lbNow;then
