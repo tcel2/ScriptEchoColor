@@ -561,19 +561,19 @@ if $bDaemon;then
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
     #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $CFGbZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
-      "toggle _auto play mode to conserve CPU"
+      "toggle _auto play mode to conserve CPU (`SECFUNCternary --onoff $bPlay`)"
       "_change image now"
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
       "_disable current"
       "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
       "fi_lter(@s@y$CFGstrFilter@S)"
-      "toggle ra_ndom coloring"
+      "toggle ra_ndom coloring (`SECFUNCternary --onoff $bRandomColoring`)"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
       "_reset timeout counter ($nSumSleep/$nChangeInterval)"
-      "_set image index"
+      "_set image index (`SECFUNCternary test $nSetIndex = -1 ? echo "disabled" : echo "nSetIndex=$nSetIndex"`)"
       "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)"
-      "fi_x wallpaper pic URI (lets you set outside here while not)"
+      "fi_x wallpaper pic URI" # lets you set wallpaper outside here while not fixed
       "toggle _zoom if possible (is `SECFUNCternary --onoff $CFGbZoom`)" #"$strOptZoom"
     )
     #~ strOpts="`for strOpt in "${astrOpt[@]}";do echo -n "${strOpt}\n";done`"
