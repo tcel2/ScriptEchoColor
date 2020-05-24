@@ -28,55 +28,102 @@ echo "WARN: This is still a scratch code..." >&2
 
 egrep "[#]help" $0
 
-strDT="${1-}" #help []
+strParamDT="${1-}" #help []
+nDT=-1;
 
-bSetNow=$(SECFUNCternary --tf test -n "$strDT")
+bSetNow=$(SECFUNCternary --tf test -n "$strParamDT")
 
+SECFUNCcfgFileName --show
+
+strPrettyDT=""
 function FUNCupdDT() {
-	strDT="`SECFUNCdtFmt --pretty --nonano --nodate "${1-}"`"
+	echo "$FUNCNAME $@" >&2
+	local lstrTmp="${1-}"
+	strPrettyDT="`SECFUNCdtFmt --pretty --nonano --nodate "${lstrTmp}"`"
+	if [[ -z "$lstrTmp" ]];then lstrTmp="$strPrettyDT";fi
+	nDT="$(date --date "${lstrTmp}" +%s)"
 }
 
+nNotifID=""
+function FUNCnotifyCmd() {
+	local lstrTitle="$1"
+	local lstrContent="${2-}"
+	local lstrMyAppName="$lstrTitle"
+	gdbus call \
+		--session \
+		--dest org.freedesktop.Notifications \
+		--object-path /org/freedesktop/Notifications \
+		--method org.freedesktop.Notifications.Notify \
+		"$lstrMyAppName" 0 dummy "$lstrTitle" "$lstrContent" "[]" "{}" 0
+	return 0
+}
+function FUNCnotify() {
+	declare -g nNotifID="$(FUNCnotifyCmd "$@" |awk '{print $2}' |tr -d ",)" )";
+	#declare -p nNotifID;echoc -w;
+	return 0
+}
+function FUNCnotifyDelLast() {
+	if [[ -n "$nNotifID" ]];then
+		gdbus call \
+			--session \
+			--dest org.freedesktop.Notifications \
+			--object-path /org/freedesktop/Notifications \
+			--method org.freedesktop.Notifications.CloseNotification \
+			$nNotifID	
+		nNotifID=""
+	fi
+	return 0
+}
+
+CFGnLastAteAt=0
 SECFUNCcfgReadDB
 
-if [[ -z "$strDT" ]] && [[ -n "$CFGnLastAteAt" ]];then 
-	FUNCupdDT "${CFGnLastAteAt}";
+if [[ -n "$strParamDT" ]];then 
+	FUNCupdDT "$strParamDT";
+elif((CFGnLastAteAt>0));then 
+	FUNCupdDT "@${CFGnLastAteAt}";
 fi
 
-FUNCupdDT "$strDT"
-SECFUNCdelay --initset "$strDT"
-#if [[ -n "$strDT" ]];then
-	#_dtSECFUNCdelayArray[SECFUNCdelay]="`date --date="$strDT" +%s`" #TODO SECFUNCdelay --initset "$strDT"
-##	SECFUNCdelay --getpretty;
-#fi
+if((nDT>-1));then
+	SECFUNCdelay --initset "@${nDT}"
+fi
 
 declare -p CFGnLastAteAt strDT bSetNow&&:
 
 while true;do 
-	if [[ -z "$strDT" ]];then
+	if [[ -z "$strParamDT" ]];then
 		bSetNow=$(SECFUNCternary --tf echoc -t $((60*10)) -q "ate now?")
+#		bSetNow=$(SECFUNCternary --tf echoc -t 5 -q "ate now?")
 		if $bSetNow;then
 			FUNCupdDT
 			SECFUNCdelay --init;
 		fi
 	fi
 	
-	if [[ -n "$strDT" ]];then
-		echoc --info "ate at: @s@{LYb} $strDT @S"
+	if [[ -n "$strPrettyDT" ]];then
+		echoc --info "ate at: @s@{LYb} $strPrettyDT @S"
 		if $bSetNow;then
 #			SECFUNCcfgWriteVar CFGnLastAteAt="`date +%s`"
-			SECFUNCcfgWriteVar CFGnLastAteAt="$strDT"
+			SECFUNCcfgWriteVar CFGnLastAteAt="$nDT"
+		fi
+	
+		nDelay="`SECFUNCdelay --getsec`"
+		declare -p nDelay
+		#strNotify="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
+		#strNotify+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${nDelay}"`"
+		strNotify="Ate `SECFUNCdtFmt --delay --alt --nonano --nodate "${nDelay}"` ago."
+		if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+			bUsePythonNotif=false #TODO delete a notification using python
+			if $bUsePythonNotif;then
+				secNotifyOnLockToo.py "$strNotify"
+			else
+				FUNCnotifyDelLast
+				FUNCnotify "$strNotify"
+			fi
+		else
+			echo "$strNotify"
 		fi
 	fi
 	
-	strDelay="`SECFUNCdelay --getsec`"
-	declare -p strDelay
-	strNotify="Ate at `SECFUNCdtFmt --alt --nonano --nodate "${strDT}"`,"
-	strNotify+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${strDelay}"`"
-	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
-		secNotifyOnLockToo.py "$strNotify"
-	else
-		echo "$strNotify"
-	fi
-	
-	strDT="";
+	strParamDT="";
 done

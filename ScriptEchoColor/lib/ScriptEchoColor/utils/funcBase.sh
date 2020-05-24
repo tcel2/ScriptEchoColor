@@ -1701,6 +1701,11 @@ function SECFUNCdelay() { #help The first parameter can optionally be a string i
 		if $lbShowId;then
 			lstrShowId="$indexId, "
 		fi
+		
+		if [[ "${lfDelayToOutput:0:1}" == "-" ]];then
+			SECFUNCechoErrA "negative delay ${lfNow} - ${_dtSECFUNCdelayArray[$indexId]}"
+		fi
+		
 		if $lbGetSec;then
 			echo "$lfDelayToOutput" |sed -r 's"^([[:digit:]]*)[.][[:digit:]]*$"\1"' #seconds only
 		elif $lbGetPretty;then
