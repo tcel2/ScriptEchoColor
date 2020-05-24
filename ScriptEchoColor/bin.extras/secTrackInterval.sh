@@ -70,6 +70,25 @@ function FUNCnotifyDelLast() {
 	return 0
 }
 
+function FUNCreportDelay(){ #<lnDelay>
+	local lnDelay="$1"
+	#declare -p lnDelay
+	#strNotify="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
+	#strNotify+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"`"
+	strNotify="Ate `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"` ago."
+	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+		bUsePythonNotif=false #TODO delete a notification using python
+		if $bUsePythonNotif;then
+			secNotifyOnLockToo.py "$strNotify"
+		else
+			FUNCnotifyDelLast
+			FUNCnotify "$strNotify"
+		fi
+	else
+		echo "$strNotify"
+	fi
+}		
+
 strExample="DefaultValue"
 bExample=false
 CFGstrTest="Test"
@@ -140,7 +159,7 @@ strParamDT="${1-}" #help []
 nDT=-1;
 bSetNow=$(SECFUNCternary --tf test -n "$strParamDT")
 
-SECFUNCcfgFileName --show
+#SECFUNCcfgFileName --show
 
 if [[ -n "$strParamDT" ]];then 
 	FUNCupdDT "$strParamDT";
@@ -155,9 +174,10 @@ fi
 declare -p CFGnLastAteAt strDT bSetNow&&:
 
 while true;do 
+	#echoc -Q "question@O_one/_two/answer__t_hree@Dt"&&:; nRet=$?; case "`secascii $nRet`" in o)echo 1;; t)echo 2;; h)echo 3;; *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;; esac
+
 	if [[ -z "$strParamDT" ]];then
 		bSetNow=$(SECFUNCternary --tf echoc -t $((60*10)) -q "ate now?")
-#		bSetNow=$(SECFUNCternary --tf echoc -t 5 -q "ate now?")
 		if $bSetNow;then
 			FUNCupdDT
 			SECFUNCdelay --init;
@@ -167,26 +187,11 @@ while true;do
 	if [[ -n "$strPrettyDT" ]];then
 		echoc --info "ate at: @s@{LYb} $strPrettyDT @S"
 		if $bSetNow;then
-#			SECFUNCcfgWriteVar CFGnLastAteAt="`date +%s`"
 			SECFUNCcfgWriteVar CFGnLastAteAt="$nDT"
 		fi
 	
 		nDelay="`SECFUNCdelay --getsec`"
-		declare -p nDelay
-		#strNotify="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
-		#strNotify+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${nDelay}"`"
-		strNotify="Ate `SECFUNCdtFmt --delay --alt --nonano --nodate "${nDelay}"` ago."
-		if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
-			bUsePythonNotif=false #TODO delete a notification using python
-			if $bUsePythonNotif;then
-				secNotifyOnLockToo.py "$strNotify"
-			else
-				FUNCnotifyDelLast
-				FUNCnotify "$strNotify"
-			fi
-		else
-			echo "$strNotify"
-		fi
+		FUNCreportDelay "$nDelay"
 	fi
 	
 	strParamDT="";
