@@ -105,7 +105,9 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 
 strExample="DefaultValue"
 bExample=false
+bExitAfterConfig=false
 CFGstrTest="Test"
+CFGstrSomeCfgValue=""
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 
@@ -124,6 +126,9 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
+	elif [[ "$1" == "-c" || "$1" == "--configoption" ]];then #help <CFGstrSomeCfgValue> MISSING DESCRIPTION
+		shift;CFGstrSomeCfgValue="${1-}"
+		bExitAfterConfig=true
 	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
 		shift;strExample="${1-}"
 	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
@@ -149,6 +154,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 done
 # IMPORTANT validate CFG vars here before writing them all...
 if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
+if $bExitAfterConfig;then exit 0;fi
 
 ### collect required named params
 # strParam1="$1";shift
