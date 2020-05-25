@@ -24,10 +24,6 @@
 
 source <(secinit)
 
-#echo "WARN: This is still a scratch code..." >&2
-
-#egrep "[#]help" $0
-
 SECFUNCcfgFileName --show
 
 strPrettyDT=""
@@ -39,10 +35,12 @@ function FUNCupdDT() {
 	nDT="$(date --date "${lstrTmp}" +%s)"
 }
 
-nNotifID=""
+declare -A anNotifIdList=()
 function FUNCnotifyCmd() {
-	local lstrTitle="$1"
-	local lstrContent="${2-}"
+	local lstrKey="$1";shift
+	local lstrTitle="$1";shift
+	local lstrContent="${1-}";shift
+	
 	local lstrMyAppName="$lstrTitle"
 	gdbus call \
 		--session \
@@ -52,40 +50,45 @@ function FUNCnotifyCmd() {
 		"$lstrMyAppName" 0 dummy "$lstrTitle" "$lstrContent" "[]" "{}" 0
 	return 0
 }
-function FUNCnotify() {
-	declare -g nNotifID="$(FUNCnotifyCmd "$@" |awk '{print $2}' |tr -d ",)" )";
-	#declare -p nNotifID;echoc -w;
+function FUNCnotify() { # <lstrKey>
+	local lstrKey="$1";shift
+	local lstrTitle="$1";shift
+	local lstrContent="${1-}";shift&&:
+	
+	anNotifIdList[$lstrKey]="$(FUNCnotifyCmd "$lstrKey" "$lstrTitle" "$lstrContent" |awk '{print $2}' |tr -d ",)" )";
+	
 	return 0
 }
-function FUNCnotifyDelLast() {
-	if [[ -n "$nNotifID" ]];then
+function FUNCnotifyDelLast() { #<lnNotifID>
+	local lnNotifID="$1"
+	if [[ -n "$lnNotifID" ]];then
 		gdbus call \
 			--session \
 			--dest org.freedesktop.Notifications \
 			--object-path /org/freedesktop/Notifications \
 			--method org.freedesktop.Notifications.CloseNotification \
-			$nNotifID	
-		nNotifID=""
+			$lnNotifID	
 	fi
 	return 0
 }
 
-function FUNCreportDelay(){ #<lnDelay>
-	local lnDelay="$1"
-	#declare -p lnDelay
-	#strNotify="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
-	#strNotify+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"`"
-	strNotify="Ate `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"` ago."
+function FUNCreportDelay(){ #<lstrKey> <lnDelay>
+	local lstrKey="$1";shift
+	local lnDelay="$1";shift
+	
+	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
+	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"`"
+	local lstrInfo="`echo "$lstrKey" |tr -d "_"` `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"` ago."
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
 		bUsePythonNotif=false #TODO delete a notification using python
 		if $bUsePythonNotif;then
-			secNotifyOnLockToo.py "$strNotify"
+			secNotifyOnLockToo.py "$lstrInfo"
 		else
-			FUNCnotifyDelLast
-			FUNCnotify "$strNotify"
+			FUNCnotifyDelLast "${anNotifIdList[$lstrKey]-}"
+			FUNCnotify "$lstrKey" "$lstrInfo"
 		fi
 	else
-		echo "$strNotify"
+		echo "$lstrInfo"
 	fi
 }		
 
@@ -96,9 +99,6 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
-#CFGastrKeyValue[Tst1]=10;
-#CFGastrKeyValue[Tst2]=20;
-#SECFUNCcfgWriteVar CFGastrKeyValue
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above, and BEFORE the skippable ones!!!
 
@@ -155,44 +155,28 @@ done
 if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 if $bExitAfterConfig;then exit 0;fi
 
-strParamDT="${1-}" #help []
-nDT=-1;
-bSetNow=$(SECFUNCternary --tf test -n "$strParamDT")
-
-#SECFUNCcfgFileName --show
-
-if [[ -n "$strParamDT" ]];then 
-	FUNCupdDT "$strParamDT";
-elif((CFGnLastAteAt>0));then 
-	FUNCupdDT "@${CFGnLastAteAt}";
-fi
-
-if((nDT>-1));then
-	SECFUNCdelay --initset "@${nDT}"
-fi
-
-declare -p CFGnLastAteAt strDT bSetNow&&:
-
-while true;do 
-	#echoc -Q "question@O_one/_two/answer__t_hree@Dt"&&:; nRet=$?; case "`secascii $nRet`" in o)echo 1;; t)echo 2;; h)echo 3;; *)if((nRet==1));then SECFUNCechoErrA "err=$nRet";exit 1;fi;; esac
-
-	if [[ -z "$strParamDT" ]];then
-		bSetNow=$(SECFUNCternary --tf echoc -t $((60*10)) -q "ate now?")
-		if $bSetNow;then
-			FUNCupdDT
-			SECFUNCdelay --init;
-		fi
+for strKey in "${!CFGastrKeyValue[@]}";do
+	nValue="${CFGastrKeyValue[$strKey]}"
+	if((nValue>-1));then
+		SECFUNCdelay "$strKey" --initset "${CFGastrKeyValue[$strKey]}"
+		echo "init strKey='$strKey' nValue='$nValue'"
 	fi
-	
-	if [[ -n "$strPrettyDT" ]];then
-		echoc --info "ate at: @s@{LYb} $strPrettyDT @S"
-		if $bSetNow;then
-			SECFUNCcfgWriteVar CFGnLastAteAt="$nDT"
-		fi
-	
-		nDelay="`SECFUNCdelay --getsec`"
-		FUNCreportDelay "$nDelay"
+done
+strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
+while true;do
+	echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}"&&:; nRet=$?; strRetChar="`secascii $nRet`"; declare -p strRetChar
+	if [[ -n "$strRetChar" ]];then
+		strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
+		CFGastrKeyValue[$strKey]="`date +%s`"
+		SECFUNCcfgWriteVar CFGastrKeyValue
+		SECFUNCdelay "$strKey" --init;
+	else
+		for strKey in "${!CFGastrKeyValue[@]}";do
+			nValue="${CFGastrKeyValue[$strKey]}"
+			if((nValue>-1));then
+				nDelay="`SECFUNCdelay "$strKey" --getsec`"
+				FUNCreportDelay "$strKey" "$nDelay"
+			fi
+		done
 	fi
-	
-	strParamDT="";
 done
