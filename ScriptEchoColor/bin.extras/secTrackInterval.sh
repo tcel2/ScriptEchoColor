@@ -72,23 +72,24 @@ function FUNCnotifyDelLast() { #<lnNotifID>
 	return 0
 }
 
-function FUNCreportDelay(){ #<lstrKey> <lnDelay>
+function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lstrKey="$1";shift
 	local lnDelay="$1";shift
+	local lstrExtraComment="$1";shift
 	
 	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"`"
 	local lstrInfo="`echo "$lstrKey" |tr -d "_"` `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"` ago."
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
-		bUsePythonNotif=false #TODO delete a notification using python
+		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
-			secNotifyOnLockToo.py "$lstrInfo"
+			secNotifyOnLockToo.py "${lstrInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
 		else
 			FUNCnotifyDelLast "${anNotifIdList[$lstrKey]-}"
-			FUNCnotify "$lstrKey" "$lstrInfo"
+			FUNCnotify "$lstrKey" "$lstrInfo" "$lstrExtraComment"
 		fi
 	else
-		echo "$lstrInfo"
+		echo "${lstrInfo} ${lstrExtraComment}"
 	fi
 }		
 
@@ -164,7 +165,8 @@ for strKey in "${!CFGastrKeyValue[@]}";do
 done
 strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
-	echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}"&&:; nRet=$?; strRetChar="`secascii $nRet`"; declare -p strRetChar
+	echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}"&&:;nRet=$?; 
+	strRetChar="`secascii $nRet`"; #declare -p strRetChar
 	if [[ -n "$strRetChar" ]];then
 		strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
 		CFGastrKeyValue[$strKey]="`date +%s`"
@@ -175,7 +177,7 @@ while true;do
 			nValue="${CFGastrKeyValue[$strKey]}"
 			if((nValue>-1));then
 				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay"
+				FUNCreportDelay "$strKey" "$nDelay" "Was at `SECFUNCdtFmt --pretty --nonano "@$nValue"`."
 			fi
 		done
 	fi
