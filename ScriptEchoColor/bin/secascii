@@ -64,6 +64,17 @@ str="$str2"
 
 eval 'strArray=('$str')'
 strFmt=""
+
+strArray2=()
+for strValidate in "${strArray[@]}";do 
+#  echo "$strValidate" >&2 #DEBUG
+  strChk="`echo "$strValidate" |tr -d "0"`"
+  # ignores null bytes: 0 value
+  if [[ -z "$strChk" || "$strChk" == "x" ]];then continue;fi # x here means hexa number
+  strArray2+=("$strValidate")
+done
+strArray=("${strArray2[@]}")
+
 for((n=0;n<${#strArray[*]};n++));do
   strFmt="$strFmt""\\\0%o"
 done

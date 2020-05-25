@@ -3089,7 +3089,7 @@ elif $bAddYesNoQuestion || $bExtendedQuestionMode; then #QUESTION MODE
 				strResp=`echo    "${strResp-}"    |tr "[:upper:]" "[:lower:]"`
 				strEQMList=`echo "$strEQMList" |tr "[:upper:]" "[:lower:]"`
 			fi
-			if ((`expr index "$strEQMList" "${strResp-}"` != 0)); then
+			if ((`expr index "$strEQMList" "${strResp-}"&&:` != 0)); then
 				strResp="'${strResp-}'"
 				nRet=`printf "%d" "${strResp-}"`
 ##        exit `printf "%d" "${strResp-}"`
