@@ -207,19 +207,20 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 	local lbShowZeros=true;
 	local lbAlternative=false;
 	local lbShowNano=true
+	local lbShowSeconds=true
 	local lbShowFormat=false
 #	local lbGetSimple=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCdtFmt_help show this help
 			SECFUNCshowHelp --nosort ${FUNCNAME}
 			return
-		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help to show as user message
+		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help ~format to show as user message
 			lbPretty=true
-		elif [[ "$1" == "--alt" ]];then #SECFUNCdtFmt_help alternative mode
+		elif [[ "$1" == "--alt" ]];then #SECFUNCdtFmt_help ~format alternative mode
 			lbAlternative=true
-		elif [[ "$1" == "--filename" ]];then #SECFUNCdtFmt_help to be used on filename
+		elif [[ "$1" == "--filename" ]];then #SECFUNCdtFmt_help ~format to be used on filename
 			lbFilename=true
-		elif [[ "$1" == "--logmessages" ]];then #SECFUNCdtFmt_help compact for log messages
+		elif [[ "$1" == "--logmessages" ]];then #SECFUNCdtFmt_help ~format compact for log messages
 			lbLogMessages=true
 		elif [[ "$1" == "--nodate" ]];then #SECFUNCdtFmt_help show only time, not the date
 			lbShowDate=false
@@ -229,6 +230,9 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 			lbShowZeros=false
 		elif [[ "$1" == "--nonano" ]];then #SECFUNCdtFmt_help do not show nano for seconds
 			lbShowNano=false
+		elif [[ "$1" == "--nosec" ]];then #SECFUNCdtFmt_help do not show seconds (implies --nonano)
+			lbShowNano=false
+			lbShowSeconds=false
 #		elif [[ "$1" == "--get" ]];then #SECFUNCdtFmt_help the simplest format seconds.nano (%s.%N), mainly to be reused at param lfTime with --delay 
 #			lbGetSimple=true
 		elif [[ "$1" == "--fmt" ]];then #SECFUNCdtFmt_help <format> specify a custom format
@@ -318,16 +322,20 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 			if $lbShowZeros || ((lnDays>0)) || (( lnTimeSeconds>=(60+$SECnFixDate) ));then
 				lstrFormat+="%M"
 				if $lbAlternative;then lstrFormat+="m";fi
-				lstrFormat+="${lstrTimeSeparator}"
-			fi
-			
-			lstrFormat+="%S" #always show seconds
-			if $lbShowNano;then
-				if $lbShowZeros || ((10#$lnTimeNano>0));then
-					lstrFormat+="${lstrNanoSeparator}%N"
+				if $lbShowSeconds;then
+					lstrFormat+="${lstrTimeSeparator}"
 				fi
 			fi
-			if $lbAlternative;then lstrFormat+="s";fi
+			
+			if $lbShowSeconds;then
+				lstrFormat+="%S" #always show seconds
+				if $lbShowNano;then
+					if $lbShowZeros || ((10#$lnTimeNano>0));then
+						lstrFormat+="${lstrNanoSeparator}%N"
+					fi
+				fi
+			fi
+			if $lbShowSeconds && $lbAlternative;then lstrFormat+="s";fi
 		}
 		if $lbPretty;then
 			SECFUNCdtFmt_set_lstrFormat "${lnDays} days, " "%d/%m/%Y " ":" "."

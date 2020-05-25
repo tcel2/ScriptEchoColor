@@ -30,7 +30,7 @@ strPrettyDT=""
 function FUNCupdDT() {
 	echo "$FUNCNAME $@" >&2
 	local lstrTmp="${1-}"
-	strPrettyDT="`SECFUNCdtFmt --pretty --nonano --nodate "${lstrTmp}"`"
+	strPrettyDT="`SECFUNCdtFmt --pretty --nonano --nodate --nosec "${lstrTmp}"`"
 	if [[ -z "$lstrTmp" ]];then lstrTmp="$strPrettyDT";fi
 	nDT="$(date --date "${lstrTmp}" +%s)"
 }
@@ -77,9 +77,9 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lnDelay="$1";shift
 	local lstrExtraComment="$1";shift
 	
-	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate "@${nDT}"`,"
-	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"`"
-	local lstrInfo="`echo "$lstrKey" |tr -d "_"` `SECFUNCdtFmt --delay --alt --nonano --nodate "${lnDelay}"` ago."
+	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate  --nosec "@${nDT}"`,"
+	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
+	local lstrInfo="`echo "$lstrKey" |tr -d "_"` `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"` ago."
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
 		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
@@ -177,7 +177,7 @@ while true;do
 			nValue="${CFGastrKeyValue[$strKey]}"
 			if((nValue>-1));then
 				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay" "Was at `SECFUNCdtFmt --pretty --nonano "@$nValue"`."
+				FUNCreportDelay "$strKey" "$nDelay" "Was at `SECFUNCdtFmt --pretty --nonano  --nosec "@$nValue"`."
 			fi
 		done
 	fi
