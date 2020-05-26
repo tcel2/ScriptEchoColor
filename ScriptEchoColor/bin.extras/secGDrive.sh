@@ -85,8 +85,7 @@ SECFUNCuniqueLock --waitbecomedaemon # if a daemon or to prevent simultaneously 
 
 #echoc --alert "TODO!@-n store link target as seccfg"
 
-strWorkPath="$HOME/GoogleDrive/" #symlink
-strWorkPath="$HOME/Google Drive/"
+: ${strWorkPath:="$HOME/Google Drive/"} #help
 SECFUNCexecA -ce cd "$strWorkPath";SECFUNCexecA -ce pwd
 
 #nMax=$((`find "$strWorkPath/" |wc -l`+1000)) #TODO find a way to know how many files are there properly

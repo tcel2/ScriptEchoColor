@@ -79,7 +79,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	
 	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate  --nosec "@${nDT}"`,"
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
-	local lstrInfo="`echo "$lstrKey" |tr -d "_"` `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"` ago."
+	local lstrInfo="`echo "$lstrKey" |tr -d "_"`, `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"` ago."
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
 		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
@@ -156,6 +156,24 @@ done
 if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 if $bExitAfterConfig;then exit 0;fi
 
+function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
+	local lstrRetChar="$1";shift
+	local lstrNewDT="$1";shift
+	declare -p lstrRetChar lstrNewDT
+	
+	if [[ "${lstrNewDT:0:1}" == "@" ]];then
+		lstrNewDT="${lstrNewDT:1}"
+	else
+		lstrNewDT="`date --date="$lstrNewDT" +%s`"
+	fi
+	
+	strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${lstrRetChar}")"; declare -p strKey
+	CFGastrKeyValue[$strKey]="$lstrNewDT"
+	SECFUNCcfgWriteVar CFGastrKeyValue
+	SECFUNCdelay "$strKey" --initset "$lstrNewDT"
+	declare -p FUNCNAME strKey lstrNewDT
+}	
+
 for strKey in "${!CFGastrKeyValue[@]}";do
 	nValue="${CFGastrKeyValue[$strKey]}"
 	if((nValue>-1));then
@@ -165,13 +183,26 @@ for strKey in "${!CFGastrKeyValue[@]}";do
 done
 strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
-	echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}"&&:;nRet=$?; 
-	strRetChar="`secascii $nRet`"; #declare -p strRetChar
+	bFixMode=false
+	while true;do
+		echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}/_fixTime"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+		if [[ "$strRetChar" == "f" ]];then
+			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+			if [[ -n "$strRetChar" ]];then
+				strNewDT="`echoc -S "Type the time"`"
+				FUNCupdateArrayDT "$strRetChar" "$strNewDT"
+			fi
+			continue
+		fi
+		break;
+	done
+	
 	if [[ -n "$strRetChar" ]];then
-		strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
-		CFGastrKeyValue[$strKey]="`date +%s`"
-		SECFUNCcfgWriteVar CFGastrKeyValue
-		SECFUNCdelay "$strKey" --init;
+		FUNCupdateArrayDT "$strRetChar" "@`date +%s`"
+		#strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
+		#CFGastrKeyValue[$strKey]="`date +%s`"
+		#SECFUNCcfgWriteVar CFGastrKeyValue
+		#SECFUNCdelay "$strKey" --init;
 	else
 		for strKey in "${!CFGastrKeyValue[@]}";do
 			nValue="${CFGastrKeyValue[$strKey]}"
