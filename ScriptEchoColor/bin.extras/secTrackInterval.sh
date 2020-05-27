@@ -180,8 +180,9 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	SECFUNCcfgWriteVar CFGastrKeyValue
 	
 	declare -p CFGastrKeyHist
+	local lnLnCount=0
 	if $lbFix;then
-		local lnLnCount="`echo -e "${CFGastrKeyHist[$lstrKey]}" |wc -l`"
+		lnLnCount="`echo -e "${CFGastrKeyHist[$lstrKey]-}" |wc -l`"
 		if((lnLnCount>0));then
 			if((lnLnCount==1));then
 				CFGastrKeyHist[$lstrKey]="";
