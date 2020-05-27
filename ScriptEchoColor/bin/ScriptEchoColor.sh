@@ -2820,11 +2820,17 @@ FUNCdoTheEcho(){
 	fi
 	
 	#local strFmted=`FUNCtranslateFormatColor "$str"`
-	eval   echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strFUNCformatColor}${strResetAtEnd}\"" $output
+	if $bUnformatted;then
+		eval echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strUnformatted}\"" $output
+	else
+		eval echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strFUNCformatColor}${strResetAtEnd}\"" $output
+	fi
+	
 	if $bOptEscapedChars; then
 		echo
 		echo "echo -e \"${strFUNCformatColor}${strResetAtEnd}\"" |sed 's"\d27"\\E"g'
 	fi
+	
 	if ! $SEC_LOG_AVOID && [[ -n "$strUnformattedFileNameLog" ]]; then
 		eval echo $strEchoNormalOption $strNL "\"${strGoToBeginOfLine}${strHeaderExec}${strUnformatted}\"" >>"$strUnformattedFileNameLog"
 	fi
