@@ -163,6 +163,7 @@ if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all co
 if $bExitAfterConfig;then exit 0;fi
 
 function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
+	local lbFix=false;if [[ "$1" == "--fix" ]];then lbFix=true;shift;fi
 	local lstrRetChar="$1";shift
 	local lstrNewDT="$1";shift
 	declare -p lstrRetChar lstrNewDT
@@ -178,9 +179,21 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	CFGastrKeyValue[$lstrKey]="$lstrNewDT"
 	SECFUNCcfgWriteVar CFGastrKeyValue
 	
+	declare -p CFGastrKeyHist
+	if $lbFix;then
+		local lnLnCount="`echo -e "${CFGastrKeyHist[$lstrKey]}" |wc -l`"
+		if((lnLnCount>0));then
+			if((lnLnCount==1));then
+				CFGastrKeyHist[$lstrKey]="";
+			else
+				CFGastrKeyHist[$lstrKey]="`echo "${CFGastrKeyHist[$lstrKey]}" |head -n $((lnLnCount-1))`"
+			fi
+		fi
+	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
 	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --pretty --nonano --nosec $lstrNewDT`"
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n 6`" # limit
+	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
 	
 	SECFUNCdelay "$lstrKey" --initset "$lstrNewDT"
@@ -199,12 +212,12 @@ strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
 	bFixMode=false
 	while true;do
-		echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}/_fixTime"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+		echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}/<_fixTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then
 				strNewDT="`echoc -S "Type the time"`"
-				FUNCupdateArrayDT "$strRetChar" "$strNewDT"
+				FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT"
 			fi
 			continue
 		fi
