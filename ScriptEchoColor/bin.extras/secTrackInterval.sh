@@ -89,6 +89,11 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 			FUNCnotify "$lstrKey" "$lstrInfo" "$lstrExtraComment"
 		fi
 	else
+		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
+		if [[ -n "$lstrReport" ]];then
+			echo "((( $lstrKey )))"
+			echo -e "$lstrReport"
+		fi
 		echo "${lstrInfo} ${lstrExtraComment}"
 	fi
 }		
@@ -100,6 +105,7 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
+declare -A CFGastrKeyHist=()
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above, and BEFORE the skippable ones!!!
 
@@ -167,11 +173,19 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 		lstrNewDT="`date --date="$lstrNewDT" +%s`"
 	fi
 	
-	strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${lstrRetChar}")"; declare -p strKey
-	CFGastrKeyValue[$strKey]="$lstrNewDT"
+	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${lstrRetChar}")"; declare -p strKey
+	
+	CFGastrKeyValue[$lstrKey]="$lstrNewDT"
 	SECFUNCcfgWriteVar CFGastrKeyValue
-	SECFUNCdelay "$strKey" --initset "$lstrNewDT"
-	declare -p FUNCNAME strKey lstrNewDT
+	
+	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
+	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --pretty --nonano --nosec $lstrNewDT`"
+	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n 6`" # limit
+	SECFUNCcfgWriteVar CFGastrKeyHist
+	
+	SECFUNCdelay "$lstrKey" --initset "$lstrNewDT"
+	
+	declare -p FUNCNAME lstrKey lstrNewDT
 }	
 
 for strKey in "${!CFGastrKeyValue[@]}";do
