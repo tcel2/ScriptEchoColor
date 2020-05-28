@@ -199,6 +199,7 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 	#local lastrParams=("$@") #backup before consuming with shift
 	local lfTime=""
 	local lbPretty=false
+	local lbUniversal=false
 	local lbFilename=false
 	local lbLogMessages=false
 	local lbShowDate=true
@@ -216,6 +217,8 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 			return
 		elif [[ "$1" == "--pretty" ]];then #SECFUNCdtFmt_help ~format to show as user message
 			lbPretty=true
+		elif [[ "$1" == "--universal" ]];then #SECFUNCdtFmt_help ~format pretty universal to show as user message
+			lbUniversal=true
 		elif [[ "$1" == "--alt" ]];then #SECFUNCdtFmt_help ~format alternative mode
 			lbAlternative=true
 		elif [[ "$1" == "--filename" ]];then #SECFUNCdtFmt_help ~format to be used on filename
@@ -339,6 +342,8 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 		}
 		if $lbPretty;then
 			SECFUNCdtFmt_set_lstrFormat "${lnDays} days, " "%d/%m/%Y " ":" "."
+		elif $lbUniversal;then
+			SECFUNCdtFmt_set_lstrFormat "${lnDays} days, " "%Y/%m/%d " ":" "."
 		elif $lbFilename;then
 			SECFUNCdtFmt_set_lstrFormat "${lnDays}-" "%Y_%m_%d-" "_" "_"
 		elif $lbLogMessages;then

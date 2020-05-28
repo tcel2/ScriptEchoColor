@@ -30,7 +30,7 @@ strPrettyDT=""
 function FUNCupdDT() {
 	echo "$FUNCNAME $@" >&2
 	local lstrTmp="${1-}"
-	strPrettyDT="`SECFUNCdtFmt --pretty --nonano --nodate --nosec "${lstrTmp}"`"
+	strPrettyDT="`SECFUNCdtFmt --universal --nonano --nodate --nosec "${lstrTmp}"`"
 	if [[ -z "$lstrTmp" ]];then lstrTmp="$strPrettyDT";fi
 	nDT="$(date --date "${lstrTmp}" +%s)"
 }
@@ -194,8 +194,13 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 			fi
 		fi
 	fi
+	local lstrLastHist="`echo "${CFGastrKeyHist[$lstrKey]}" |tail -n 1`"
+	local lnLastHTimeS="`date --date="$lstrLastHist" +%s&&:`"&&:
+	#if [[ -n "$lnLastHTimeS" ]];then
+		#lnLastDelay="$(())"
+	#fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
-	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --pretty --nonano --nosec $lstrNewDT`"
+	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`"
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n 6`" # limit
 	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
@@ -239,7 +244,7 @@ while true;do
 			nValue="${CFGastrKeyValue[$strKey]}"
 			if((nValue>-1));then
 				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --pretty --nonano  --nosec "@$nValue"`"
+				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@$nValue"`"
 			fi
 		done
 	fi
