@@ -79,7 +79,9 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	
 	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate  --nosec "@${nDT}"`,"
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
-	local lstrInfoFmt="@{lyK} `echo "$lstrKey" |tr -d "_"`@w, @{lg}`SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"` @{w}ago."
+	local lstrDelay="`SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
+	local lstrPKey="`echo "$lstrKey" |tr -d "_"`"
+	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}"
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
 		bUsePythonNotif=false 
@@ -95,7 +97,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 			echo "((( $lstrKey )))"
 			echo -e "$lstrReport" |head -n -1
 		fi
-		echoc "${lstrInfoFmt} @{b}${lstrExtraComment}"
+		echoc "@{lb}${lstrExtraComment}@w, ${lstrInfoFmt}"
 	fi
 }		
 
@@ -237,7 +239,7 @@ while true;do
 			nValue="${CFGastrKeyValue[$strKey]}"
 			if((nValue>-1));then
 				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay" "Was at `SECFUNCdtFmt --pretty --nonano  --nosec "@$nValue"`."
+				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --pretty --nonano  --nosec "@$nValue"`"
 			fi
 		done
 	fi
