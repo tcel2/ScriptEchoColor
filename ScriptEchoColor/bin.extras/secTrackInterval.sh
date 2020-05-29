@@ -79,7 +79,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	
 	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate  --nosec "@${nDT}"`,"
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
-	local lstrDelay="`SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
+	local lstrDelay="`SECFUNCdtFmt --delay --alt --nonano --nodate --nosec "${lnDelay}"`"
 	local lstrPKey="`echo "$lstrKey" |tr -d "_"`"
 	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}"
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
@@ -194,13 +194,17 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 			fi
 		fi
 	fi
-	local lstrLastHist="`echo "${CFGastrKeyHist[$lstrKey]}" |tail -n 1`"
-	local lnLastHTimeS="`date --date="$lstrLastHist" +%s&&:`"&&:
-	#if [[ -n "$lnLastHTimeS" ]];then
-		#lnLastDelay="$(())"
-	#fi
+	local lstrLastHist="`echo "${CFGastrKeyHist[$lstrKey]}" |tail -n 1 |cut -d "," -f1`";declare -p lstrLastHist
+	local lnLastHTimeS="`date --date="$lstrLastHist" +%s&&:`"&&:;declare -p lnLastHTimeS
+	local lstrLastAgo=""
+	if [[ -n "$lnLastHTimeS" ]];then
+		lnLastDelay="$((`date --date="@${lstrNewDT}" +%s`-$lnLastHTimeS))"&&:;declare -p lnLastDelay
+		if [[ -n "$lnLastDelay" ]];then
+			lstrLastAgo=", `SECFUNCdtFmt --delay --alt --nonano --nodate --nosec $lnLastDelay`"&&:;declare -p lstrLastAgo
+		fi
+	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
-	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`"
+	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`${lstrLastAgo}"
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n 6`" # limit
 	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
@@ -244,7 +248,7 @@ while true;do
 			nValue="${CFGastrKeyValue[$strKey]}"
 			if((nValue>-1));then
 				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@$nValue"`"
+				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
 			fi
 		done
 	fi
