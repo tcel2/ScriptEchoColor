@@ -210,6 +210,8 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 	local lbShowNano=true
 	local lbShowSeconds=true
 	local lbShowFormat=false
+	local lnRoundMin=0
+	local lnTruncMin=0
 #	local lbGetSimple=false
 	while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do
 		if [[ "$1" == "--help" ]];then #SECFUNCdtFmt_help show this help
@@ -239,8 +241,11 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 #		elif [[ "$1" == "--get" ]];then #SECFUNCdtFmt_help the simplest format seconds.nano (%s.%N), mainly to be reused at param lfTime with --delay 
 #			lbGetSimple=true
 		elif [[ "$1" == "--fmt" ]];then #SECFUNCdtFmt_help <format> specify a custom format
-			shift
-			lstrFmtCustom="${1-}"
+			shift;lstrFmtCustom="${1-}"
+		elif [[ "$1" == "--trunc" ]];then #SECFUNCdtFmt_help <lnTruncMin> in minutes
+			shift;lnTruncMin="${1-}"
+		elif [[ "$1" == "--round" ]];then #SECFUNCdtFmt_help <lnRoundMin> in minutes
+			shift;lnRoundMin="${1-}"
 		elif [[ "$1" == "--showfmt" ]];then #SECFUNCdtFmt_help show the resulting format used with `date`
 			lbShowFormat=true
 		else
@@ -266,7 +271,7 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 	
 	if ! SECFUNCisNumber -n "$lfTime";then
 		local lfTmp
-		if lfTmp="$(date --date="$lfTime" +%s.%N)";then
+		if lfTmp="$(date --date="$lfTime" +%s.%N)";then # let `date` translate it
 			lfTime="$lfTmp"
 		else
 			SECFUNCechoErrA "invalid lfTime='$lfTime'"
@@ -276,6 +281,23 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 
 	if [[ ! "$lfTime" =~ "." ]];then #dot not found
 		lfTime+=".0" #fix to be float
+	fi
+	
+	if((lnRoundMin>0 || lnTruncMin>0));then
+		local lnDT="`echo "$lfTime"|cut -d. -f1`"
+		local lnMin=$lnTruncMin;
+		if((lnRoundMin>0));then lnMin=$lnRoundMin;fi
+		local lnRoundLim=$((lnMin*60));
+		local lnRoundLDiv2=$((lnRoundLim/2));
+		local lnRemainder=$((lnDT%lnRoundLim));
+		local lnDTTrunc=$((lnDT-(lnDT%lnRoundLim)));
+		if((lnRoundMin>0));then
+			lnDT=$((lnDT%lnRoundLim > lnRoundLDiv2 ? (lnDTTrunc+lnRoundLim) : lnDTTrunc));
+		else
+			lnDT=$lnDTTrunc;
+		fi
+		#declare -p nMin nDT nRemainder nRoundLDiv2 nRoundLim nDTTrunc;date --date="@${nDT}"
+		lfTime="${lnDT}.0"
 	fi
 	
 	local lnDays=0
