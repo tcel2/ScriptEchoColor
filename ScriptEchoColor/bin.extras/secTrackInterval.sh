@@ -95,7 +95,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
 		if [[ -n "$lstrReport" ]];then
 			echo "((( $lstrKey )))"
-			echo -e "$lstrReport" |head -n -1
+			echo -e "$lstrReport" #|head -n -1
 		fi
 		echoc "@{lb}${lstrExtraComment}@w, ${lstrInfoFmt}"
 	fi

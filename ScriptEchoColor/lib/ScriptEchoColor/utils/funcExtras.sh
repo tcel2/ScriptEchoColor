@@ -38,6 +38,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 	local lnDelay=3
 	local lstrStopMatchRegex=""
 	local lbMaximize=false
+	local lbUnMaximize=false
 	local lbOnTop=false
 	local lnPosX=-1
 	local lnPosY=-1
@@ -72,6 +73,8 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 			lbFocus=true
 		elif [[ "$1" == "--maximize" || "$1" == "-x" ]];then #SECFUNCCwindowCmd_help maximize window
 			lbMaximize=true
+		elif [[ "$1" == "--unmaximize" || "$1" == "-X" ]];then #SECFUNCCwindowCmd_help unmaximize window
+			lbUnMaximize=true
 		elif [[ "$1" == "--minimize" || "$1" == "-i" ]];then #SECFUNCCwindowCmd_help minimize window
 			lbMinimize=true
 		elif [[ "$1" == "--delay" || "$1" == "-d" ]];then #SECFUNCCwindowCmd_help <lnDelay> between checks
@@ -225,7 +228,7 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 #child process
 		local lbStop=false
 		trap 'lbStop=true;' USR1
-		declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom >&2
+		declare -p lbOnTop lbFocus lbMaximize lbUnMaximize lbMinimize lbMoveGeom >&2
 		while true;do
 			if $lbStop;then
 				break
@@ -253,8 +256,13 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				if $lbFocus && SECFUNCexecA -ce xdotool windowactivate $lnWindowId && SECFUNCexecA -ce xdotool windowfocus $lnWindowId && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b remove,below;then # if minimized, must be activated before focus!
 					lbFocus=false
 				fi
-				if $lbMaximize && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b add,maximized_vert,maximized_horz;then
-					lbMaximize=false;
+				if $lbMaximize || $lbUnMaximize;then
+					local lstrMaxMode="add"
+					if $lbUnMaximize;then lstrMaxMode="remove";fi
+					if SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b ${lstrMaxMode},maximized_vert,maximized_horz;then
+						lbMaximize=false;
+						lbUnMaximize=false;
+					fi
 				fi
 #				if $lbMinimize && wmctrl -i -r $lnWindowId -b add,hidden;then
 				if $lbMinimize && SECFUNCexecA -ce xdotool windowminimize $lnWindowId && SECFUNCexecA -ce wmctrl -i -r $lnWindowId -b add,below;then # "below" is a trick in case "window" cant be minimized properly
@@ -269,10 +277,11 @@ function SECFUNCCwindowCmd() { #help [options] <lstrMatchRegex> this will run a 
 				# ATTENTION  <-----<< !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				# only end when all is done
 				#############
-				declare -p lbOnTop lbFocus lbMaximize lbMinimize lbMoveGeom >&2
+				declare -p lbOnTop lbFocus lbMaximize lbUnMaximize lbMinimize lbMoveGeom >&2
 				if	! $lbOnTop && 
 						! $lbFocus && 
 						! $lbMaximize && 
+						! $lbUnMaximize &&
 						! $lbMinimize &&
 						! $lbMoveGeom && 
             true;
