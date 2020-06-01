@@ -225,7 +225,7 @@ strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
 	bFixMode=false
 	while true;do
-		echoc -t $((60*10)) -Q "Now, did you?@O${strOptions}/<_fixTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+		echoc -t $((60*10)) -Q "Now `SECFUNCdtFmt --pretty --nosec --nonano --nodate`, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then

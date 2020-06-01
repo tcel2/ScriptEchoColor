@@ -44,7 +44,7 @@ nTotMemMB="`free --mega |grep Mem |awk '{print $2}'`"
 anPidAlreadyStopped=()
 function FUNCsig() { # <SIGNAL>
   local lstrSig="$1"
-  if [[ -n "$CFGstrPgrepSigStop" ]];then
+  if [[ -n "${CFGstrPgrepSigStop-}" ]];then
     if pgrep -fa "$CFGstrPgrepSigStop";then
       if [[ "${lstrSig}" == "STOP" ]];then
         declare -ag anPidAlreadyStopped
@@ -93,7 +93,7 @@ while true;do
       #fi
     #fi
     
-    SECFUNCexecA -ce stress-ng --vm-bytes ${nUseMB}M --timeout 15 --vm-keep --vm 1 --verbose;
+    SECFUNCexecA -ce stress-ng --vm-bytes ${nUseMB}M --timeout 15 --vm-keep --vm 4 --verbose; # --vm 4 prevents "no available memory" error
     SEC_SAYVOL=25 echoc --say "swapping done"
     
     FUNCsig CONT

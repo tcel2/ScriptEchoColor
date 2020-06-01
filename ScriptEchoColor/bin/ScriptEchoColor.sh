@@ -2848,7 +2848,13 @@ FUNCdoTheEcho(){
 			strOptWaitSay="--waitsay"
 		fi
 #		nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} --sayvol $SEC_SAYVOL "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
-		nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
+		(
+			source <(secinit) #TODO secSayStack.sh should output nothing other than CRITICAL errors! may be add --verboseless or --critmsgonly option? this way would not be necessary to redirect stderr!
+			_SECFUNCcheckCmdDep ffmpeg
+			_SECFUNCcheckCmdDep play
+			_SECFUNCcheckCmdDep festival
+			nohup "$SECinstallPath/bin/secSayStack.sh" ${strOptWaitSay} "$strUnformatted" 2>/dev/null 1>/dev/null& #>/dev/null is required to prevent nohup creating nohup.out file...
+		)
 		if $bWaitSay; then
 			wait $!
 		fi
