@@ -205,7 +205,8 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
 	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`${lstrLastAgo}"
-	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n 6`" # limit
+	: ${nLimitHist:=12} #help
+	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n $nLimitHist`" # limit
 	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
 	
@@ -225,7 +226,7 @@ strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
 	bFixMode=false
 	while true;do
-		echoc -t $((60*10)) -Q "Now `SECFUNCdtFmt --pretty --nosec --nonano --nodate`, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+		echoc -t $((60*10)) -Q "Now @s@y`SECFUNCdtFmt --pretty --nosec --nonano --nodate`@S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then
