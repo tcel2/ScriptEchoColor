@@ -89,7 +89,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 			secNotifyOnLockToo.py "${lstrInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
 		else
 			FUNCnotifyDelLast "${anNotifIdList[$lstrKey]-}"
-			FUNCnotify "$lstrKey" "$lstrInfo" "$lstrExtraComment"
+			FUNCnotify "$lstrKey" "${lstrInfo} `date +%H:%M`" "$lstrExtraComment"
 		fi
 	else
 		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
@@ -226,7 +226,8 @@ strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
 	bFixMode=false
 	while true;do
-		echoc -t $((60*10)) -Q "Now @s@y`SECFUNCdtFmt --pretty --nosec --nonano --nodate`@S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+		: ${nDelayMins:=20} #help
+		echoc -t $((60*nDelayMins)) -Q "Now @s@y`SECFUNCdtFmt --pretty --nosec --nonano --nodate`@S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then
