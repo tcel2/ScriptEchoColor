@@ -213,6 +213,7 @@ if $bDaemon;then
   bDisableCurrent=false
   bWasHidden=false;
   bResetCounters=false;
+  bXBRZ=true;
   : ${CFGstrCurrentFile:=""}
   
   FUNChiddenToggle() {
@@ -337,7 +338,7 @@ if $bDaemon;then
       ##########
       if $SECbExecVerboseEchoAllowed;then declare -p LINENO nOrigW nOrigH nResW nResH;fi
 #      if((nOrigW<nResW || nOrigH<nResH)) && which xbrzscale >/dev/null;then
-      if((nOrigW<nResW5p6 || nOrigH<nResH5p6)) && which xbrzscale >/dev/null;then
+      if $bXBRZ && ((nOrigW<nResW5p6 || nOrigH<nResH5p6)) && which xbrzscale >/dev/null;then
         nXBRZ=2 # more than 2 is not good for most pics
   #      if [[ -f "$HOME/.cache/${SECstrScriptSelfName}/${CFGstrCurrentFile}.resizeTo${nResW}x${nResH}" ]];then
         strXBRZcache="$HOME/.cache/${SECstrScriptSelfName}/`basename "${CFGstrCurrentFile}"`-${nXBRZ}xBRZ.webp"
@@ -562,6 +563,7 @@ if $bDaemon;then
     #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $CFGbZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
       "toggle _auto play mode to conserve CPU (`SECFUNCternary --onoff $bPlay`)"
+      "toggle x_BRZ oil paint zoom (`SECFUNCternary --onoff $bXBRZ`)"
       "_change image now"
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
       "_disable current"
@@ -580,6 +582,9 @@ if $bDaemon;then
     echoc -t $nSleep -Q "@O\n\t`SECFUNCarrayJoin "\n\t" "${astrOpt[@]}"`\n"&&:; nRet=$?; case "`secascii $nRet`" in 
       a)
         SECFUNCtoggleBoolean bPlay
+        ;;
+      b)
+        SECFUNCtoggleBoolean bXBRZ
         ;;
       c)
         bChangeImage=true
