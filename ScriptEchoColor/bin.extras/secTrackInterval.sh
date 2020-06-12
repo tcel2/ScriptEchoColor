@@ -231,7 +231,11 @@ while true;do
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then
-				strNewDT="`echoc -S "Type the time"`"
+				strNewDT="`echoc -S "Type the time HH:MM, but if negative (-MM) will be 'now - minutes'"`"
+				if [[ "${strNewDT:0:1}" == "-" ]];then
+					nLessMin="$strNewDT"
+					strNewDT="@$(( $(date +%s)+(nLessMin*60) ))"
+				fi
 				FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT"
 			fi
 			continue
