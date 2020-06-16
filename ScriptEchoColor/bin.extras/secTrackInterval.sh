@@ -95,7 +95,12 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
 		if [[ -n "$lstrReport" ]];then
 			echo "((( $lstrKey )))"
-			echo -e "$lstrReport" #|head -n -1
+			local lnAvailLines=$(tput lines)
+			(( lnAvailLines -= 1 ))&&: # the question line
+			(( lnAvailLines -= (${#CFGastrKeyHist[*]} * 2) ))&&: # each type has a title and a current entry info line, so: * 2
+			lnAvailLines=$((lnAvailLines/${#CFGastrKeyHist[*]})) # how much for each type will be left
+			echo -n "types=${#CFGastrKeyHist[*]},lines=`tput lines`,`declare -p lnAvailLines`" #@@@R
+			echo -e "$lstrReport" |tail -n -${lnAvailLines}
 		fi
 		echoc "@{lb}${lstrExtraComment}@w, ${lstrInfoFmt}"
 	fi
@@ -206,7 +211,7 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
 	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`${lstrLastAgo}" # add updated current entry
-	: ${nLimitHist:=12} #help
+	: ${nLimitHist:=100} #help
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n $nLimitHist`" # limit
 	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
@@ -226,6 +231,7 @@ done
 strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
 while true;do
 	bFixMode=false
+	#SECFUNCexecA -ce tput lines
 	while true;do
 		: ${nDelayMins:=20} #help
 		echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
