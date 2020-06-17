@@ -107,8 +107,13 @@ function GAMEFUNCwaitAndExitWhenGameExits() { #help <lstrFileExecutable>
 	done
 }
 
-function GAMEFUNCuniquelyRunThisSubScript() {
-	GAMEFUNCcheckIfThisScriptCmdIsRunning --nodeprecationwarn "$@"
+function GAMEFUNCuniquelyRunThisSubScript() { #help <"$@">
+  if $CFGbFakeRun;then
+    GAMEFUNCcheckIfThisScriptCmdIsRunning --nowait --nodeprecationwarn "$@"
+  else
+    GAMEFUNCcheckIfThisScriptCmdIsRunning --nodeprecationwarn "$@"
+  fi
+  return 0;
 }
 function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that were passed to the script) (useful to help on avoiding dup instances)
 	local lbWait=true
@@ -147,9 +152,10 @@ function GAMEFUNCcheckIfThisScriptCmdIsRunning() { #help <"$@"> (all params that
 		SECFUNCuniqueLock --id "$lstrDaemonId" --waitbecomedaemon
 	else
 		if SECFUNCuniqueLock --id "$lstrDaemonId" --isdaemonrunning;then
+      echo "subscript already running: $@"
 			return 0
 		else
-			return 1
+			SECFUNCuniqueLock --id "$lstrDaemonId" --waitbecomedaemon
 		fi
 	fi
 	
