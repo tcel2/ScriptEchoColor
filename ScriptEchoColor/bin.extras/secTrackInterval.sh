@@ -79,7 +79,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	
 	#strInfo="Ate at `SECFUNCdtFmt --alt --nonano --nodate  --nosec "@${nDT}"`,"
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
-	local lstrDelay="`SECFUNCdtFmt --delay --alt --nonano --nodate --nosec "${lnDelay}"`"
+	local lstrDelay="`SECFUNCdtFmt --delay --nozero --alt --nonano --nosec "${lnDelay}"`"
 	local lstrPKey="`echo "$lstrKey" |tr -d "_"`"
 	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}"
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
@@ -99,7 +99,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 			(( lnAvailLines -= 1 ))&&: # the question line
 			(( lnAvailLines -= (${#CFGastrKeyHist[*]} * 2) ))&&: # each type has a title and a current entry info line, so: * 2
 			lnAvailLines=$((lnAvailLines/${#CFGastrKeyHist[*]})) # how much for each type will be left
-			echo -n "types=${#CFGastrKeyHist[*]},lines=`tput lines`,`declare -p lnAvailLines`" #@@@R
+			#echo -n "types=${#CFGastrKeyHist[*]},lines=`tput lines`,`declare -p lnAvailLines`" #@@@R
 			echo -e "$lstrReport" |tail -n -${lnAvailLines}
 		fi
 		echoc "@{lb}${lstrExtraComment}@w, ${lstrInfoFmt}"
@@ -206,7 +206,7 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	if [[ -n "$lnLastHTimeS" ]];then
 		lnLastDelay="$((`date --date="@${lstrNewDT}" +%s`-$lnLastHTimeS))"&&:;declare -p lnLastDelay
 		if [[ -n "$lnLastDelay" ]];then
-			lstrLastAgo=", -`SECFUNCdtFmt --delay --alt --nonano --nodate --nosec $lnLastDelay`^"&&:;declare -p lstrLastAgo
+			lstrLastAgo=", -`SECFUNCdtFmt --delay --nozero --alt --nonano --nosec $lnLastDelay`^"&&:;declare -p lstrLastAgo
 		fi
 	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
@@ -238,7 +238,7 @@ while true;do
 		if [[ "$strRetChar" == "f" ]];then
 			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
 			if [[ -n "$strRetChar" ]];then
-				strNewDT="`echoc -S "Type the time HH:MM, but if negative (-MM) will be 'now - minutes'"`"
+				strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
 				if [[ "${strNewDT:0:1}" == "-" ]];then
 					nLessMin="$strNewDT"
 					strNewDT="@$(( $(date +%s)+(nLessMin*60) ))"
