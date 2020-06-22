@@ -1382,7 +1382,7 @@ function SECFUNCisNumber(){ #help "is float" check by default
 		if [[ "$1" == "--help" ]];then #SECFUNCisNumber_help show this help
 			SECFUNCshowHelp ${FUNCNAME}
 			return
-		elif [[ "$1" == "--decimal" || "$1" == "-d" ]];then #SECFUNCisNumber_help decimal check
+		elif [[ "$1" == "--decimal" || "$1" == "-d" ]];then #SECFUNCisNumber_help decimal check (false if float)
 			bDecimalCheck=true
 		elif [[ "$1" == "--notnegative" || "$1" == "-n" ]];then #SECFUNCisNumber_help if negative, return false (1)
 			bNotNegativeCheck=true

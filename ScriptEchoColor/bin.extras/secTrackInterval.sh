@@ -241,10 +241,11 @@ while true;do
 			if [[ -n "$strRetChar" ]];then
 				strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
 				if [[ "${strNewDT:0:1}" == "-" ]];then
-					if ! declare -i iLessMin="$strNewDT";then
+					if ! SECFUNCisNumber -d "$strNewDT";then
 						echoc -p "invalid input value"
 						continue;
 					fi
+					declare -i iLessMin="$strNewDT"
 					strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
 				fi
 				if ! FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT";then continue;fi
