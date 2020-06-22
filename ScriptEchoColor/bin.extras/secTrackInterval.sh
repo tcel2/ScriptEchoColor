@@ -26,14 +26,14 @@ source <(secinit)
 
 SECFUNCcfgFileName --show
 
-strPrettyDT=""
-function FUNCupdDT() {
-	echo "$FUNCNAME $@" >&2
-	local lstrTmp="${1-}"
-	strPrettyDT="`SECFUNCdtFmt --universal --nonano --nodate --nosec "${lstrTmp}"`"
-	if [[ -z "$lstrTmp" ]];then lstrTmp="$strPrettyDT";fi
-	nDT="$(date --date "${lstrTmp}" +%s)"
-}
+#strPrettyDT=""
+#function FUNCupdDT() {
+	#echo "$FUNCNAME $@" >&2
+	#local lstrTmp="${1-}"
+	#strPrettyDT="`SECFUNCdtFmt --universal --nonano --nodate --nosec "${lstrTmp}"`"
+	#if [[ -z "$lstrTmp" ]];then lstrTmp="$strPrettyDT";fi
+	#nDT="$(date --date "${lstrTmp}" +%s)"
+#}
 
 declare -A anNotifIdList=()
 function FUNCnotifyCmd() {
@@ -176,10 +176,9 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	local lstrNewDT="$1";shift
 	declare -p lstrRetChar lstrNewDT
 	
-	if [[ "${lstrNewDT:0:1}" == "@" ]];then
-		lstrNewDT="${lstrNewDT:1}"
-	else
-		lstrNewDT="`date --date="$lstrNewDT" +%s`"
+	if ! lstrNewDT="`date --date="$lstrNewDT" +%s`";then
+		echoc -p "invalid date input"
+		return 1
 	fi
 	
 	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${lstrRetChar}")"; declare -p strKey
@@ -219,6 +218,8 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	SECFUNCdelay "$lstrKey" --initset "$lstrNewDT"
 	
 	declare -p FUNCNAME lstrKey lstrNewDT
+	
+	return 0
 }	
 
 for strKey in "${!CFGastrKeyValue[@]}";do
@@ -240,10 +241,13 @@ while true;do
 			if [[ -n "$strRetChar" ]];then
 				strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
 				if [[ "${strNewDT:0:1}" == "-" ]];then
-					nLessMin="$strNewDT"
-					strNewDT="@$(( $(date +%s)+(nLessMin*60) ))"
+					if ! declare -i iLessMin="$strNewDT";then
+						echoc -p "invalid input value"
+						continue;
+					fi
+					strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
 				fi
-				FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT"
+				if ! FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT";then continue;fi
 			fi
 			continue
 		fi
