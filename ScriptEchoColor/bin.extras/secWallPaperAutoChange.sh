@@ -127,8 +127,18 @@ cd $strWallPPath;
 fResRatio="`FUNCratio $strScreenSize`"
 eval `echo "$strScreenSize" |sed -r 's@([0-9]*)x([0-9]*)@nResW=\1;nResH=\2;@'`
 declare -p strScreenSize fResRatio
-nResW5p6=$((nResW-`SECFUNCbcPrettyCalcA --scale 0 "${nResW}/12"`)) # /12 is for 16:9 monitor #TODO other monitor's ratios
-nResH5p6=$((nResH-`SECFUNCbcPrettyCalcA --scale 0 "${nResH}/6"`)) # good top/bottom blurred margin is 1/12 each (sum = 1/6) of the total requested height
+
+: ${nPercTo2xBRZScale:=60} #help below this perc relatively to screen size, xBRZ will be used
+bOldMode=false
+if $bOldMode;then
+  #TODO explain this better... and what 5p6 meant again? :P
+  nResW5p6=$((nResW-`SECFUNCbcPrettyCalcA --scale 0 "${nResW}/12"`)) # /12 is for 16:9 monitor #TODO other monitor's ratios
+  nResH5p6=$((nResH-`SECFUNCbcPrettyCalcA --scale 0 "${nResH}/6"`)) # good top/bottom blurred margin is 1/12 each (sum = 1/6) of the total requested height
+else
+  nResW5p6=$((nResW*nPercTo2xBRZScale/100))
+  nResH5p6=$((nResH*nPercTo2xBRZScale/100))
+fi
+declare -p nResW5p6 nResH5p6
 
 function FUNCconvert() {
   #~ (
@@ -560,6 +570,7 @@ if $bDaemon;then
 		#~ SECFUNCexecA -ce gsettings set org.gnome.desktop.background picture-uri "file://$CFGstrCurrentFile";
     nWeek=$((3600*24*7))
     if ! $bPlay;then nSleep=$nWeek;fi #a week trick
+    echoc --info "CFGstrCurrentFile='$CFGstrCurrentFile'"
     #strOptZoom="";if $bAllowZoom;then strOptZoom="toggle _zoom if possible (is `SECFUNCternary $CFGbZoom ? echo ON : echo OFF`)\n";fi
     astrOpt=(
       "toggle _auto play mode to conserve CPU (`SECFUNCternary --onoff $bPlay`)"
