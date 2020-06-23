@@ -860,7 +860,9 @@ function WINEFUNCcommonOptions {
 			SECFUNCdelay waitInit --init
 			while ! grep "$strLogFileHint" "$SECstrRunLogFile";do
 				"${astrCmdPs[@]}" >&2
-				echoc -w -t 3 "waiting initialization for `SECFUNCdelay waitInit --getsec`s ..."
+				if echoc -t 3 -q "waiting initialization for `SECFUNCdelay waitInit --getsec`s, ignore and continue now?";then 
+          break;
+        fi
 			done
 		fi
 		
