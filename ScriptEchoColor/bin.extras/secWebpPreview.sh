@@ -93,13 +93,17 @@ if [[ -z "$strOutFile" ]];then echo "invalid params L$LINENO: $@" >&2;exit 1;fi
 
 
 # this is a trick to prevent vwebp from actually showing the image and still give the required information
-if ! strInfo="`DISPLAY=NONE SECFUNCexecA -ce vwebp -info "$strInFile"`";then echo "vwebp failed." >&2;exit 1;fi
+strInfo="`DISPLAY=NONE SECFUNCexecA -ce vwebp -info "$strInFile"`"&&:
+declare -p strInfo >&2
 strSize="`echo "$strInfo" |grep Canvas |sed -r 's"Canvas: (.*) x (.*)"\1\t\2"'`"
 
 nWidth="`echo "$strSize" |cut -f1`"
 nHeight="`echo "$strSize" |cut -f2`"
 
 declare -p strInfo strSize nWidth nHeight
+
+if ! SECFUNCisNumber -dn "$nHeight";then echo "invalid nHeight='$nHeight'" >&2;exit 1;fi
+if ! SECFUNCisNumber -dn "$nWidth";then echo "invalid nWidth='$nWidth'" >&2;exit 1;fi
 
 if((nWidth>nHeight));then
 	nNewWidth=$nMaxDimension
