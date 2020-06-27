@@ -220,7 +220,8 @@ if $bDaemon;then
   nChosen=0
   bPlay=true
   bRandomColoring=true
-  bDisableCurrent=false
+  bOptDisableCurrent=false
+  bOptAllowCurrentOnLockScreen=false
   bWasHidden=false;
   bResetCounters=false;
   bXBRZ=true;
@@ -249,19 +250,26 @@ if $bDaemon;then
 	while true;do 
 		if ! FUNCchkUpdateFileList;then continue;fi
 		
-    if $bDisableCurrent;then
-      if [[ -f "$CFGstrCurrentFile" ]];then
-        #SECFUNCexecA -ce mkdir -vp "$strWallPPath/.disabled/"
-        #SECFUNCexecA -ce mv -vf "$CFGstrCurrentFile" "$strWallPPath/.disabled/"
-        # to just hide is better, keeping at folders organized by user
-        SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "`dirname "$CFGstrCurrentFile"`/.DISABLED.`basename "$CFGstrCurrentFile"`" &&:
-      fi
-      bDisableCurrent=false
-      continue
-    fi
-    
     if [[ ! -f "$CFGstrCurrentFile" ]];then
       bChangeImage=true;
+      
+      # cleanups options that wont work
+      bOptDisableCurrent=false;
+      bOptAllowCurrentOnLockScreen=false;
+    else
+      if $bOptDisableCurrent;then
+        SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "`dirname "$CFGstrCurrentFile"`/.DISABLED.`basename "$CFGstrCurrentFile"`" &&:
+        bOptDisableCurrent=false
+        continue
+      elif $bOptAllowCurrentOnLockScreen;then
+        if ! [[ "$CFGstrCurrentFile" =~ .*LOCKSCREEN[.].* ]];then
+          strNewName="`dirname "$CFGstrCurrentFile"`/LOCKSCREEN.`basename "$CFGstrCurrentFile"`"
+          SECFUNCexecA -ce mv -v "$CFGstrCurrentFile" "$strNewName" &&:
+          CFGstrCurrentFile="$strNewName"
+        fi
+        bOptAllowCurrentOnLockScreen=false
+        continue
+      fi
     fi
     
     if $bChangeImage;then
@@ -538,6 +546,12 @@ if $bDaemon;then
     # final step
     SECFUNCexecA -cE mv -f "${strTmpFilePreparing}" "$strTmpFile"
     
+    if [[ "$CFGstrCurrentFile" =~ .*LOCKSCREEN[.].* ]];then
+      strLockS="$strWallPPath/LOCKSCREEN.IMAGE"
+      SECFUNCexecA -cE cp -vf "$strTmpFile" "$strLockS"
+      SECFUNCexecA -ce gsettings set org.gnome.desktop.screensaver picture-uri "file://$strLockS";
+    fi
+    
     if $bFastMode;then
       if((nChHueFastModeCount<nChHueFastModeTimes));then
         ((nChHueFastModeCount++))&&:;
@@ -580,6 +594,7 @@ if $bDaemon;then
       "_disable current"
       "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
+      "allow current on loc_k screen"
       "fi_lter(@s@y$CFGstrFilter@S)"
       "toggle ra_ndom coloring (`SECFUNCternary --onoff $bRandomColoring`)"
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
@@ -602,7 +617,7 @@ if $bDaemon;then
         bResetCounters=true
         ;;
       d)
-        bDisableCurrent=true;
+        bOptDisableCurrent=true;
         bChangeImage=true
         bResetCounters=true
         ;;
@@ -622,6 +637,9 @@ if $bDaemon;then
         SECFUNCtoggleBoolean bFlipKeep
         bResetCounters=true
         ;; 
+      k)
+        bOptAllowCurrentOnLockScreen=true
+        ;;
       l)
         FUNCchkUpdateFileList --refill
         SECFUNCarrayShow CFGastrFileList
