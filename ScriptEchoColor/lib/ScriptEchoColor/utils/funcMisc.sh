@@ -1259,7 +1259,10 @@ function SECFUNCCcpulimit() { #help [lstrMatchRegex] run cpulimit as a child pro
 	done
 
   if((lnPercRelat>0));then
-    local lnCPUs="`lscpu |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`"
+		local lnCPUs
+    if ! lnCPUs="`lscpu 2>/dev/null |egrep "^CPU\(s\)" |egrep -o "[[:digit:]]*"`";then
+			lnCPUs="$(ls -1d /sys/devices/system/cpu/cpu? |wc -l)"
+    fi
     lastrRemainingParams+=(-l $((lnPercRelat*lnCPUs)))
   fi
 	
