@@ -225,6 +225,7 @@ if $bDaemon;then
   bWasHidden=false;
   bResetCounters=false;
   bXBRZ=true;
+  bTargetZoomAtMouse=false
   : ${CFGstrCurrentFile:=""}
   
   FUNChiddenToggle() {
@@ -412,16 +413,40 @@ if $bDaemon;then
       fi
       
       if $bAllowZoom;then
-        if((RANDOM%4>0));then # 25% chance of not zooming once
-          if $CFGbZoom;then
+        bDoZoomNow=false
+        if $CFGbZoom && ((RANDOM%4>0));then # 25% chance of not zooming once
+          bDoZoomNow=true
+        fi
+        if $bTargetZoomAtMouse;then
+          bDoZoomNow=true
+        fi
+        if $bDoZoomNow;then
+          if $bTargetZoomAtMouse;then
+            nLeftMargin=0;
+            if((nOrigW>nResW));then 
+              eval "$(xdotool getmouselocation --shell|egrep "^(X|Y)"|sed -r -e "s'X'nMouseX'" -e "s'Y'nMouseY'")"
+              
+              nPercX=$((nMouseX*100/nResW))
+              if $bFlopKeep;then nPercX=$((100-nPercX));fi
+              
+              nPercY=$((nMouseY*100/nResH))
+              if $bFlipKeep;then nPercY=$((100-nPercY));fi
+              
+              declare -p nMouseX nMouseY nPercX nPercY >&2
+              
+              nLeftMargin=$(( (nOrigW-nResW)*nPercX/100 ));
+              nTopMargin=$((  (nOrigH-nResH)*nPercY/100 ));
+            fi
+          else
             nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( RANDOM%(nOrigW-nResW) ));fi
             nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  RANDOM%(nOrigH-nResH) ));fi
-            #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
-            #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
-            FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
-            SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
-            strTxtZoom=",ZOOM"
           fi
+          declare -p nLeftMargin nTopMargin nOrigW nOrigH nResW nResH >&2
+          #~ nLeftMargin=0;if((nOrigW>nResW));then nLeftMargin=$(( (nOrigW-nResW)/2 ));fi
+          #~ nTopMargin=0 ;if((nOrigH>nResH));then nTopMargin=$((  (nOrigH-nResH)/2 ));fi
+          FUNCconvert -extent "${strScreenSize}+${nLeftMargin}+${nTopMargin}" "${strTmpFilePreparing}" "jpeg:${strTmpFilePreparing}2"
+          SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
+          strTxtZoom=",ZOOM"
         fi
       fi
       
@@ -600,6 +625,7 @@ if $bDaemon;then
       "toggle fl_op (`SECFUNCternary --onoff $bFlopKeep`)"
       "_reset timeout counter ($nSumSleep/$nChangeInterval)"
       "_set image index (`SECFUNCternary test $nSetIndex = -1 ? echo "disabled" : echo "nSetIndex=$nSetIndex"`)"
+      "_target zoom at cursor (`SECFUNCternary --onoff $bTargetZoomAtMouse`)"
       "_verbose commands (to debug: `SECFUNCternary --onoff $SECbExecVerboseEchoAllowed`)"
       "fi_x wallpaper pic URI" # lets you set wallpaper outside here while not fixed
       "toggle _zoom if possible (is `SECFUNCternary --onoff $CFGbZoom`)" #"$strOptZoom"
@@ -680,7 +706,10 @@ if $bDaemon;then
           echoc -p "invalid nSetIndex='$nSetIndex'"
           nSetIndex=-1
         fi
-        ;; 
+        ;;
+      t)
+        SECFUNCtoggleBoolean --show bTargetZoomAtMouse
+        ;;
       v)
         SECFUNCtoggleBoolean SECbExecVerboseEchoAllowed
         ;;
