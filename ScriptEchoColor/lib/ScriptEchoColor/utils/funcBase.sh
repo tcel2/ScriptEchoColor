@@ -384,8 +384,8 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 	if $lbShowFormat;then
 		echo "$FUNCNAME:lstrFormat='$lstrFormat'" #user can easily capture this
 	fi
-	if [[ -z "$lstrFormat" ]] || ! date -d "@$lfTime" "+${lstrFormat-}";then
-		SECFUNCechoErrA "invalid lstrFormat='$lstrFormat'" #lfTime already checked
+	if [[ -z "${lstrFormat-}" ]] || ! date -d "@$lfTime" "+${lstrFormat-}";then
+		SECFUNCechoErrA "invalid lstrFormat='${lstrFormat-}'" #lfTime already checked
 		return 1
 	fi
 }
