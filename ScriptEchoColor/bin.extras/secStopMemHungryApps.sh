@@ -36,9 +36,9 @@ function FUNCCHILDaddIgnorePid() { #<lnPid>
   )&
 }
 
-: ${strEnvVarUserCanModify:="test"}
-export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
-export strEnvVarUserCanModify2 #help test
+#: ${strEnvVarUserCanModify:="test"}
+#export strEnvVarUserCanModify #help this variable will be accepted if modified by user before calling this script
+#export strEnvVarUserCanModify2 #help test
 strExample="DefaultValue"
 bExample=false
 CFGstrTest="Test"
@@ -65,11 +65,11 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
-		shift
-		strExample="${1-}"
-	elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
-		bExample=true
+	#elif [[ "$1" == "-e" || "$1" == "--exampleoption" ]];then #help <strExample> MISSING DESCRIPTION
+		#shift
+		#strExample="${1-}"
+	#elif [[ "$1" == "-s" || "$1" == "--simpleoption" ]];then #help MISSING DESCRIPTION
+		#bExample=true
 	elif [[ "$1" == "-v" || "$1" == "--verbose" ]];then #help shows more useful messages
 		SECbExecVerboseEchoAllowed=true #this is specific for SECFUNCexec, and may be reused too.
 	elif [[ "$1" == "--cfg" ]];then #help <strCfgVarVal>... Configure and store a variable at the configuration file with SECFUNCcfgWriteVar, and exit. Use "help" as param to show all vars related info. Usage ex.: CFGstrTest="a b c" CFGnTst=123 help
@@ -182,8 +182,10 @@ while true;do
         if SECFUNCexecA -ce kill -SIGSTOP $nPid;then
           (
             astrText=(
-              "BaseCmd: $strComm"
-              '!!! ?CONTINUE?RUNNING? THIS PID ? and ignore memory hungryness... !!!\n'
+              "CONTINUE RUNNING this PID?\n"
+              "and ignore it's memory hungryness...\n"
+              "\n"
+              "BaseCmd: $strComm\n"
               "\n"
               "This memory hungry app was stopped:\n"
               "Pid=$nPid\n"
@@ -192,10 +194,11 @@ while true;do
             )
             strText="${astrText[*]}"
             SECFUNCexecA -ce SECFUNCCwindowCmd --ontop "${strComm}.*$SECstrScriptSelfName"
-            if yad --title="($strComm)$SECstrScriptSelfName" --info \
+            if yad --title="($strComm/ContinueRunning?)$SECstrScriptSelfName" --info \
               --button="gtk-ok:0" --button="gtk-close:1" \
+              --width=500 --height=300 --center \
               --form \
-              --field "INFO($strComm):TXT" \
+              --field "INFO($strComm/ContinueRunning?):TXT" \
               "$strText" # fills the TXT field
               #--text="${strText:0:1000}";
             then
@@ -233,13 +236,25 @@ while true;do
       #~ --column="" --column="PID" --column="ResKB" --column="CMD" \
       #~ 0 123 321 asdf 1 124 322 asdfg
   #~ fi
-  ScriptEchoColor -t 10 -Q "question@O_add/_remove one PID or show ignore _list"&&:; nRet=$?; case "`secascii $nRet`" in 
+  ScriptEchoColor -t 10 -Q "above pids with more than nMemLimKB='$nMemLimKB'@OPIDs: _add/_remove/_kill/show ignore _list"&&:; nRet=$?; case "`secascii $nRet`" in 
     a)
       nPidIgnore=`echoc -S "what PID"`;
       if [[ -n "$nPidIgnore" ]];then
         FUNCCHILDaddIgnorePid $nPidIgnore
       fi
       ;; 
+    k)
+      nPidKill=`echoc -S "what PID"`;
+      ps -o ppid,pid,cmd -p $nPidKill&&:
+      SECFUNCexecA -ce kill -SIGCONT $nPidKill
+      SECFUNCexecA -ce kill -SIGTERM $nPidKill&&:;sleep 1
+      if ps -p $nPidKill;then SECFUNCexecA -ce kill -SIGKILL $nPidKill&&:; sleep 1;fi
+      if ps -p $nPidKill;then SECFUNCexecA -ce kill -SIGABRT $nPidKill&&:; sleep 1;fi
+      if ps -p $nPidKill;then 
+        ps -o ppid,pid,cmd -p $nPidKill&&:
+        echoc -p "unable to kill pid $nPidKill"
+      fi
+      ;;
     l)
       echoc --info "Ignored PIDs"
       SECFUNCexecA -ce ps -o rss,pid,state,cmd --sort -rss -p "${anPidIgnore[@]}" |sed -r "s@(.{$nMaxCols}).*@\1@" &&:
