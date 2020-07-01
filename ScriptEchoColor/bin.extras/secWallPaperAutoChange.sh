@@ -621,6 +621,7 @@ if $bDaemon;then
       "_change image now"
       "toggle _fast mode (`SECFUNCternary --onoff $bFastMode`)"
       "_disable current"
+      "_edit current image"
       "show _hidden toggle (`SECFUNCternary --onoff $CFGbShowHidden`)"
       "toggle fl_ip (`SECFUNCternary --onoff $bFlipKeep`)"
       "allow current on loc_k screen"
@@ -650,6 +651,10 @@ if $bDaemon;then
         bOptDisableCurrent=true;
         bChangeImage=true
         bResetCounters=true
+        ;;
+      e)
+        : ${astrEditor[0]:=gimp} #help
+        SECFUNCexecA -ce "${astrEditor[@]}" "$CFGstrCurrentFile"
         ;;
       f)
         SECFUNCtoggleBoolean bFastMode
