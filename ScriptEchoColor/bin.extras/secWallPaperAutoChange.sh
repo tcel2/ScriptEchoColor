@@ -45,9 +45,9 @@ export CFGstrFilter #help
 
 strExample="DefaultValue"
 CFGstrTest="Test"
-strBaseTmpFileName="_WallPaperChanger-TMP.jpg"
+strBaseTmpFileName=".KEEP_ORIGINAL.secWallPaperChanger-TMP.jpg"
 strWallPPath="$HOME/Pictures/Wallpapers/"
-: ${strTmpPath:="/dev/shm"}
+: ${strTmpPath:="/dev/shm"} #help
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 export CFGastrFileList=()
@@ -484,7 +484,11 @@ if $bDaemon;then
       astrCmd+=( \( -clone 0 -resize $strResizeFinal \) )
       #astrCmd+=( -crop  ${strScreenSize}+10+10 )
       astrCmd+=( -delete 0 -gravity center -composite "jpeg:${strTmpFilePreparing}2" )
-      "${astrCmd[@]}"
+      if ! "${astrCmd[@]}";then
+        echoc -p "Failed to process CFGstrCurrentFile='$CFGstrCurrentFile'"
+        bChangeImage=true;
+        continue;
+      fi
       if $SECbExecVerboseEchoAllowed;then declare -p LINENO strOrigSize strScreenSize strResizeFinal;fi
       SECFUNCexecA -cE mv -f "${strTmpFilePreparing}2" "${strTmpFilePreparing}"
     fi

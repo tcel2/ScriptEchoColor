@@ -46,6 +46,7 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 
 astrRegexIgnorePgrepBase=(Xorg compiz metacity xfwm4 kwin mutter dbus ibus) # all window managers at least and a few other important things
+declare -p astrRegexIgnorePgrepBase
 CFGastrRegexIgnorePgrep=()
 strFifoFl="`SECFUNCcreateFIFO`"
 : ${nMemLimKB:=500000} #help
@@ -57,6 +58,7 @@ bReadFIFO=false
 trap 'bReadFIFO=true' SIGUSR1
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above
+declare -p CFGastrRegexIgnorePgrep
 while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 	SECFUNCsingleLetterOptionsA;
 	if [[ "$1" == "--help" ]];then #help show this help
