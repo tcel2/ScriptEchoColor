@@ -361,6 +361,13 @@ function SECFUNCdtFmt() { #help [lfTime] in seconds (or with nano) since epoch. 
 				fi
 			fi
 			if $lbShowSeconds && $lbAlternative;then lstrFormat+="s";fi
+			
+			# special problematic condition
+			#declare -p lbDelayMode lnTimeSeconds lbShowSeconds lstrFormat&&: >&2
+			if $lbDelayMode && (( lnTimeSeconds<=(59+$SECnFixDate) )) && ! $lbShowSeconds && [[ -z "${lstrFormat-}" ]];then
+				lstrFormat="%M" # it will just end up outputting 00 minutes tho.
+				if $lbAlternative;then lstrFormat+="m";fi
+			fi
 		}
 		if $lbPretty;then
 			SECFUNCdtFmt_set_lstrFormat "${lnDays} days, " "%d/%m/%Y " ":" "."
