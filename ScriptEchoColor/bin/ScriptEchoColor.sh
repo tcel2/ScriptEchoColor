@@ -1963,7 +1963,7 @@ elif $bProblem ||
 		bWARNBEEP=true
 	elif $bAddYesNoQuestion || $bExtendedQuestionMode || $bStringQuestion; then
 		if $bStringQuestion && ((fWaitTime > 0)); then
-			strString="$strString" # color format will be of option -q
+			strString="$strString" # color format will be of option -q #TODO why this useless line?
 		else
 			strString="$strColorAddYesNoQuestion$strString"
 		fi
@@ -2988,15 +2988,20 @@ elif $bStringQuestion; then
 	fi
 	
 	strResp=""
+	astrReadParams=()
+	if [[ -n "$strStringAnswerDefault" ]];then
+		astrReadParams+=(-e -i "$strStringAnswerDefault")
+	fi
+	astrReadParams+=(strResp)
 	if $bCollectAnswerTimedMode; then
 		strLogOption=""
 		if ! $SEC_LOG_AVOID && [[ -n "$strUnformattedFileNameLog" ]]; then
 			strLogOption=" -l \"$strUnformattedFileNameLog\" "
 		fi
 		eval $strSelfName -n $strLogOption "\"${strColorAddYesNoQuestion}Type your answer: \"" $stderr
-		FUNCread strResp&&:
+		FUNCread "${astrReadParams[@]}"&&:
 	elif ! $bHideStringQuestion; then
-		FUNCread strResp&&:
+		FUNCread "${astrReadParams[@]}"&&:
 	fi
 	
 	if ! $bKeepPosition; then
