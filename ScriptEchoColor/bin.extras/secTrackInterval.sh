@@ -176,6 +176,8 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	local lstrNewDT="$1";shift
 	declare -p lstrRetChar lstrNewDT
 	
+	if [[ -z "$lstrNewDT" ]];then return 1;fi # just ignore
+	
 	if ! lstrNewDT="`date --date="$lstrNewDT" +%s`";then
 		echoc -p "invalid date input"
 		return 1
