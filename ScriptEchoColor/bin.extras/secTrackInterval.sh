@@ -183,7 +183,10 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 		return 1
 	fi
 	
-	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${lstrRetChar}")"; declare -p strKey
+	echo "keys: ${!CFGastrKeyValue[@]}" >&2
+	local lstrMatchKey="_($lstrRetChar|$(echo "$lstrRetChar" |tr "[:lower:]" "[:upper:]"))"
+	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"
+	declare -p lstrRetChar CFGastrKeyValue lstrNewDT strKey lstrMatchKey lstrKey >&2
 	
 	CFGastrKeyValue[$lstrKey]="$lstrNewDT"
 	SECFUNCcfgWriteVar CFGastrKeyValue
