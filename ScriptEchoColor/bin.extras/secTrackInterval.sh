@@ -94,15 +94,16 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	else
 		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
 		if [[ -n "$lstrReport" ]];then
-			echo "((( $lstrKey )))"
+			#echo "((( $lstrKey )))"
 			local lnAvailLines=$(tput lines)
 			(( lnAvailLines -= 1 ))&&: # the question line
-			(( lnAvailLines -= (${#CFGastrKeyHist[*]} * 2) ))&&: # each type has a title and a current entry info line, so: * 2
+			#(( lnAvailLines -= (${#CFGastrKeyHist[*]} * 2) ))&&: # each type has a title and a current entry info line, so: * 2
+			(( lnAvailLines -= ${#CFGastrKeyHist[*]} ))&&: # each type has a current entry info line
 			lnAvailLines=$((lnAvailLines/${#CFGastrKeyHist[*]})) # how much for each type will be left
 			#echo -n "types=${#CFGastrKeyHist[*]},lines=`tput lines`,`declare -p lnAvailLines`" #@@@R
 			echo -e "$lstrReport" |tail -n -${lnAvailLines}
 		fi
-		echoc "@{lb}${lstrExtraComment}@w, ${lstrInfoFmt}"
+		echoc "@s@{Blc} ${lstrExtraComment} @S@w, ${lstrInfoFmt}"
 	fi
 }		
 
@@ -235,44 +236,55 @@ for strKey in "${!CFGastrKeyValue[@]}";do
 	fi
 done
 strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
+bReportOnce=true
 while true;do
 	bFixMode=false
 	#SECFUNCexecA -ce tput lines
-	while true;do
-		: ${nDelayMins:=20} #help
-		echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-		if [[ "$strRetChar" == "f" ]];then
-			echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-			if [[ -n "$strRetChar" ]];then
-				strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
-				if [[ "${strNewDT:0:1}" == "-" ]];then
-					if ! SECFUNCisNumber -d "$strNewDT";then
-						echoc -p "invalid input value"
+	if ! $bReportOnce;then
+		while true;do
+			: ${nDelayMins:=20} #help
+			echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+			if [[ "$strRetChar" == "f" ]];then
+				echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+				if [[ -n "$strRetChar" ]];then
+					strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
+					if [[ "${strNewDT:0:1}" == "-" ]];then
+						if ! SECFUNCisNumber -d "$strNewDT";then
+							echoc -p "invalid input value"
+							continue;
+						fi
+						declare -i iLessMin="$strNewDT"
+						strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
+					fi
+					if FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT";then
+						bReportOnce=true
+						strRetChar=""
+						break
+					else
 						continue;
 					fi
-					declare -i iLessMin="$strNewDT"
-					strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
 				fi
-				if ! FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT";then continue;fi
+				continue
 			fi
-			continue
-		fi
-		break;
-	done
+			break;
+		done
+	fi
 	
-	if [[ -n "$strRetChar" ]];then
+	if [[ -n "${strRetChar-}" ]];then
 		FUNCupdateArrayDT "$strRetChar" "@`date +%s`"
 		#strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
 		#CFGastrKeyValue[$strKey]="`date +%s`"
 		#SECFUNCcfgWriteVar CFGastrKeyValue
 		#SECFUNCdelay "$strKey" --init;
-	else
-		for strKey in "${!CFGastrKeyValue[@]}";do
-			nValue="${CFGastrKeyValue[$strKey]}"
-			if((nValue>-1));then
-				nDelay="`SECFUNCdelay "$strKey" --getsec`"
-				FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
-			fi
-		done
 	fi
+	
+	for strKey in "${!CFGastrKeyValue[@]}";do
+		nValue="${CFGastrKeyValue[$strKey]}"
+		if((nValue>-1));then
+			nDelay="`SECFUNCdelay "$strKey" --getsec`"
+			FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
+		fi
+	done
+	
+	bReportOnce=false
 done
