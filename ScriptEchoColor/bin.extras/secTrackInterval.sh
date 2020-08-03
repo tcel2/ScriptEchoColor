@@ -24,7 +24,7 @@
 
 source <(secinit)
 
-SECFUNCcfgFileName --show
+strCfgFile="`SECFUNCcfgFileName --get`"
 
 #strPrettyDT=""
 #function FUNCupdDT() {
@@ -81,7 +81,8 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	#strInfo+="interval of `SECFUNCdtFmt --delay --alt --nonano --nodate  --nosec "${lnDelay}"`"
 	local lstrDelay="`SECFUNCdtFmt --delay --nozero --alt --nonano --nosec "${lnDelay}"`"
 	local lstrPKey="`echo "$lstrKey" |tr -d "_"`"
-	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}"
+	local lstrComment="${CFGastrKeyComment[$lstrKey]-}"
+	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}, \"$lstrComment\""
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
 	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
 		bUsePythonNotif=false 
@@ -114,9 +115,13 @@ astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
 CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
+declare -A CFGastrKeyComment=()
 declare -A CFGastrKeyHist=()
+astrOptMaint=(_fixLastTime _commentOnLast);declare -p astrOptMaint
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above, and BEFORE the skippable ones!!!
+
+declare -p CFGastrKeyValue
 
 : ${bWriteCfgVars:=true} #help false to speedup if writing them is unnecessary
 : ${strEnvVarUserCanModify:="test"}
@@ -132,7 +137,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		echo
 		SECFUNCshowHelp
 		exit 0
-	elif [[ "$1" == "-a" || "$1" == "--addkey" ]];then #help <strKey> add a new key
+	elif [[ "$1" == "-a" || "$1" == "--addkey" ]];then #help <strKey> add a new key (must not conflict with astrOptMaint array's keys)
 		shift;strKey="${1}"
 		#strKey="$(echo "$strKey" |tr -d "_")"
 		if [[ -z "${CFGastrKeyValue[$strKey]-}" ]];then
@@ -171,6 +176,26 @@ done
 if $bWriteCfgVars;then SECFUNCcfgAutoWriteAllVars;fi #this will also show all config vars
 if $bExitAfterConfig;then exit 0;fi
 
+function FUNCreportHist() { 
+	echo
+	SECFUNCdrawLine "HIST-BEGIN"
+	for strKey in "${!CFGastrKeyHist[@]}";do 
+		SECFUNCdrawLine --left " $strKey ";
+		echo "${CFGastrKeyHist[$strKey]}" |sed "s'[\]n'\n'g" |tr "['" "\n\n" |egrep "^" -n;
+	done
+	SECFUNCdrawLine "HIST-END"
+	echo
+}
+
+function FUNCfindKey() { #<lstrRetChar>
+	local lstrRetChar="$1";shift
+	
+	local lstrMatchKey="_($lstrRetChar|$(echo "$lstrRetChar" |tr "[:lower:]" "[:upper:]"))"
+	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"
+	
+	echo "$lstrKey"
+}
+
 function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	local lbFix=false;if [[ "$1" == "--fix" ]];then lbFix=true;shift;fi
 	local lstrRetChar="$1";shift
@@ -185,14 +210,15 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	fi
 	
 	echo "keys: ${!CFGastrKeyValue[@]}" >&2
-	local lstrMatchKey="_($lstrRetChar|$(echo "$lstrRetChar" |tr "[:lower:]" "[:upper:]"))"
-	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"
-	declare -p lstrRetChar CFGastrKeyValue lstrNewDT strKey lstrMatchKey lstrKey >&2
+	#local lstrMatchKey="_($lstrRetChar|$(echo "$lstrRetChar" |tr "[:lower:]" "[:upper:]"))"
+	#local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"
+	local lstrKey="`FUNCfindKey "${lstrRetChar}"`"
+	declare -p lstrRetChar CFGastrKeyValue lstrNewDT strKey lstrKey >&2
 	
 	CFGastrKeyValue[$lstrKey]="$lstrNewDT"
 	SECFUNCcfgWriteVar CFGastrKeyValue
 	
-	declare -p CFGastrKeyHist
+	FUNCreportHist
 	local lnLnCount=0
 	if $lbFix;then
 		lnLnCount="`echo -e "${CFGastrKeyHist[$lstrKey]-}" |wc -l`"
@@ -214,11 +240,17 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 			lstrLastAgo=", -`SECFUNCdtFmt --delay --nozero --alt --nonano --nosec $lnLastDelay`^"&&:;declare -p lstrLastAgo
 		fi
 	fi
+	local lstrComment="${CFGastrKeyComment[$lstrKey]-}"
+	if [[ -n "$lstrComment" ]];then
+		lstrComment=", \"$lstrComment\""
+	fi
 	if [[ -n "${CFGastrKeyHist[$lstrKey]-}" ]];then CFGastrKeyHist[$lstrKey]+="\n";fi
-	CFGastrKeyHist[$lstrKey]+="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`${lstrLastAgo}" # add updated current entry
+	local lstrCurrent="`SECFUNCdtFmt --universal --nonano --nosec $lstrNewDT`"
+	CFGastrKeyHist[$lstrKey]+="${lstrCurrent}${lstrLastAgo}${lstrComment}" # add updated current entry
 	: ${nLimitHist:=100} #help
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n $nLimitHist`" # limit
-	declare -p CFGastrKeyHist lnLnCount lbFix lstrKey lstrNewDT
+	FUNCreportHist
+	declare -p lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
 	
 	SECFUNCdelay "$lstrKey" --initset "$lstrNewDT"
@@ -228,6 +260,8 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	return 0
 }	
 
+SECFUNCexecA -ce cp -vf "$strCfgFile" "${strCfgFile}-`SECFUNCdtFmt --filename`.bkp"
+
 for strKey in "${!CFGastrKeyValue[@]}";do
 	nValue="${CFGastrKeyValue[$strKey]}"
 	if((nValue>-1));then
@@ -235,7 +269,9 @@ for strKey in "${!CFGastrKeyValue[@]}";do
 		echo "init strKey='$strKey' nValue='$nValue'"
 	fi
 done
-strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")"
+declare -p CFGastrKeyValue
+strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")";declare -p strOptions
+strOptionsXtra="${strOptions}/[$(echo "${astrOptMaint[@]}" |tr " " "|")]" # these end up being reserved keys 'f' and 'c' ...
 bReportOnce=true
 while true;do
 	bFixMode=false
@@ -243,10 +279,10 @@ while true;do
 	if ! $bReportOnce;then
 		while true;do
 			: ${nDelayMins:=20} #help
-			echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptions}/<_fixLastTime>"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-			if [[ "$strRetChar" == "f" ]];then
-				echoc -Q "Fix what time?@O${strOptions}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-				if [[ -n "$strRetChar" ]];then
+			echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptionsXtra}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
+			if [[ "$strRetChar" == "f" || "$strRetChar" == "c" ]];then
+				echoc -Q "What key?@O${strOptions}"&&:;nRet=$?;strRetCharWork="`secascii $nRet`"; #declare -p strRetChar
+				if [[ "$strRetChar" == "f" ]];then # fixing time work
 					strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
 					if [[ "${strNewDT:0:1}" == "-" ]];then
 						if ! SECFUNCisNumber -d "$strNewDT";then
@@ -256,13 +292,25 @@ while true;do
 						declare -i iLessMin="$strNewDT"
 						strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
 					fi
-					if FUNCupdateArrayDT --fix "$strRetChar" "$strNewDT";then
+					if FUNCupdateArrayDT --fix "$strRetCharWork" "$strNewDT";then
 						bReportOnce=true
 						strRetChar=""
 						break
 					else
 						continue;
 					fi
+				fi
+				if [[ "$strRetChar" == "c" ]];then # commenting work
+					declare -p CFGastrKeyComment
+					if strKey="`FUNCfindKey "${strRetCharWork}"`";then
+						if [[ -n "$strKey" ]];then
+							if strNewComment="`echoc -S "@D${CFGastrKeyComment[$strKey]-}"`";then
+								CFGastrKeyComment[$strKey]="$strNewComment"
+								SECFUNCcfgWriteVar CFGastrKeyComment
+							fi
+						fi
+					fi
+					declare -p CFGastrKeyComment
 				fi
 				continue
 			fi
