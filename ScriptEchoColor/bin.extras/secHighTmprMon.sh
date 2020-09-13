@@ -528,6 +528,8 @@ function FUNCcheckIfDaemonRunningOrExit() {
 	fi
 }
 
+_SECFUNCcheckCmdDep cpufreq-info
+_SECFUNCcheckCmdDep gawk
 strCPUFreqGovernorCurrent=""
 astrCpuFreqSteps=(`cpufreq-info |grep "available frequency steps:" |head -n 1 |tr -d ' ' |tr ':,' '\n\n' |tail -n +2`)
 nCpuFreqStepsTotal=${#astrCpuFreqSteps[@]}

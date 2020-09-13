@@ -79,6 +79,7 @@ SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 SECFUNCuniqueLock --waitbecomedaemon
 
 # Main code
+_SECFUNCcheckCmdDep 7z
 while true;do
   if $bDaemon;then SECFUNCcfgReadDB;fi #to know about additions
   

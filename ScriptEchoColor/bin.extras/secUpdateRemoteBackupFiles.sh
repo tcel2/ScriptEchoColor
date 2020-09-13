@@ -533,6 +533,7 @@ function FUNClsNot() { #synchronize like
 	fi
 };export -f FUNClsNot
 
+_SECFUNCcheckCmdDep 7z
 strSufixCompressedFile="$SECstrScriptSelfName.7z"
 function FUNCcompressFile() {
 	local lstrFileCompressed="${1}.$strSufixCompressedFile"
