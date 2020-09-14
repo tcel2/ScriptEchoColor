@@ -282,19 +282,12 @@ while true;do
 		c)
 			echoc --alert "SOURCEFORGE PassWord @{-n} may be asked...";
 			strTitleRegex="^Git Gui [(]`basename "$strDevPath"`[)] ${strDevPath}$"
-			SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
+			#SECFUNCCwindowCmd --timeout 1200 --focus "$strTitleRegex"
 			(sleep 3;FUNCCHILDgenerateChangesLogFileGitGuiLoop)&nChildPidGenCLFGGL=$!
 			echoc --alert "REFRESH @{-n} as the change log will be updated after normal commit!"
-#			SECFUNCexecA -ce  git gui&&: & wait&&:
-      #xterm -e "nohup git gui&disown;sleep 1"
       xterm -e "(nohup git gui&disown)&disown;sleep 3"
-      #(git gui&disown)&disown;sleep 1
-			#SECFUNCexecA -ce  git gui&disown;nGitGuiPid=$!
-      #while [[ -d /proc/$nGitGuiPid ]];do echoc -w -t 3;done
-			#SECFUNCCwindowCmd --stop "$strTitleRegex"
-      #while SECFUNCCwindowCmd --wait "$strTitleRegex";do sleep 1;done
-      SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
-      SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 3600 --waitexit "$strTitleRegex" 
+      #SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 60 --wait "$strTitleRegex" # til it kicks in
+      #SECFUNCexecA -ce SECFUNCCwindowCmd --timeout 3600 --waitexit "$strTitleRegex" 
       SECFUNCexecA -ce kill -SIGUSR1 $nChildPidGenCLFGGL&&:
 			;; 
 		d)
