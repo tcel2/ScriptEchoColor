@@ -103,6 +103,7 @@ function FUNCexample() { #help function help text is here! MISSING DESCRIPTION
 	SECFUNCdbgFuncOutA;return 0 # important to have this default return value in case some non problematic command fails before returning
 }
 
+declare -p SECstrUserScriptCfgPath
 strExample="DefaultValue"
 bExample=false
 bExitAfterConfig=false
