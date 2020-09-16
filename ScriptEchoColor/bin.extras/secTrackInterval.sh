@@ -72,6 +72,7 @@ function FUNCnotifyDelLast() { #<lnNotifID>
 	return 0
 }
 
+bIsScreenLocked=false
 function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lstrKey="$1";shift
 	local lnDelay="$1";shift
@@ -84,7 +85,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lstrComment="${CFGastrKeyComment[$lstrKey]-}"
 	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}, \"$lstrComment\""
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
-	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+        if $bIsScreenLocked;then
 		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
 			secNotifyOnLockToo.py "${lstrInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
@@ -326,6 +327,10 @@ while true;do
 		#SECFUNCdelay "$strKey" --init;
 	fi
 	
+        bIsScreenLocked=false
+	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+                bIsScreenLocked=true
+        fi
 	for strKey in "${!CFGastrKeyValue[@]}";do
 		nValue="${CFGastrKeyValue[$strKey]}"
 		if((nValue>-1));then
