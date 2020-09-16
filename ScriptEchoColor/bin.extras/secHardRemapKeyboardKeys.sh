@@ -64,7 +64,7 @@ while ! ${1+false} && [[ "${1:0:1}" == "-" ]];do # checks if param is set
 		bIgnoreNumlock=true
 	elif [[ "$1" == "-a" || "$1" == "--alllooksgood" ]];then #help ~single accept changes without review
 		bAcceptWithoutReview=true
-	elif [[ "$1" == "-n" || "$1" == "--newconfig" ]];then #help ~single create and apply a new config, subsequent params will be stored on the new config file ex.: <KEYBOARD_KEY_700f1=kp0> [[KEYBOARD_KEY_7005c=1] ...]
+	elif [[ "$1" == "-n" || "$1" == "--newconfig" ]];then #help ~single create and apply a new config, subsequent params will be stored on the new config file. A=B means A will generate B code. A==B means they swap, so: A gen B code and B gen A code. ex.: --newconfig -- KEYBOARD_KEY_70062=leftalt kp0=leftalt kp0==leftalt
 		bApplyNewConfig=true
 	elif [[ "$1" == "-r" || "$1" == "--restoredefaults" ]];then #help ~single restore default keyboard config based on the backup cfg file
 		bRestoreDefaultCfg=true
@@ -117,17 +117,19 @@ if $bRecreateKbdCfg || [[ ! -f "${strFlKbdDefCfg-}" ]];then
   echoc --info "creating a required backup of the current (default) keyboard keys configuration"
   
   #### input-kbd
+  _SECFUNCcheckCmdDep input-kbd
   strInputKbdData="`SECFUNCexecA -ce sudo input-kbd $CFGnDevEvtNum`";declare -p strInputKbdData
   strHexaVendor="` echo "$strInputKbdData" |grep vendor  |grep "0x.*" -o |tr "[:lower:]" "[:upper:]"`";strHexaVendor="`printf "%04X" $strHexaVendor`";declare -p strHexaVendor
   strHexaProduct="`echo "$strInputKbdData" |grep product |grep "0x.*" -o |tr "[:lower:]" "[:upper:]"`";strHexaProduct="`printf "%04X" $strHexaProduct`";declare -p strHexaProduct
 
   #### evtest
+  _SECFUNCcheckCmdDep evtest
   (sleep 1;sudo pkill -fe -SIGINT "^evtest /dev/input/event${CFGnDevEvtNum}")& strEvtestData="`SECFUNCexecA -ce sudo evtest /dev/input/event${CFGnDevEvtNum}`";declare -p strEvtestData
-  if ! echo "$strEvtestData" |egrep "Input device name:.*Keyboard";then
+  if ! echo "$strEvtestData" |egrep "Input device name:.*(Keyboard|KB)" -i;then
     echoc -p "Not a keyboard?"
     exit 1
   fi
-  if echo "$strEvtestData" |egrep "Input device name:.*MOUSE";then
+  if echo "$strEvtestData" |egrep "Input device name:.*MOUSE" -i;then
     echoc -p "invalid device, MOUSE may contain the Keyboard word in it's name"
     exit 1
   fi
@@ -164,14 +166,56 @@ strSystemCfgFile="/etc/udev/hwdb.d/98-${SECstrScriptSelfName}.hwdb";declare -p s
 if $bApplyNewConfig;then
   echoc --info "Preparing to apply a new keyboard keys configuration"
   
-  if [[ -z "${1-}" ]];then
-    echoc -p "at least one key cfg is required"
+  #if [[ -z "${1-}" ]];then
+    #echoc -p "at least one key cfg is required"
+    #exit 1
+  #fi
+  
+  if [[ -z "${astrRemainingParams[@]-}" ]];then
+    echoc -p "at least one key cfg is required, remember to use -- before them"
     exit 1
   fi
   
-  head -n 1 "$strFlKbdDefCfg" |SECFUNCexecA -ce sudo tee "$strSystemCfgFile"
-  for strKeyCfg in "$@";do
-    echo " $strKeyCfg" |sudo tee -a "$strSystemCfgFile"
+  head -n 1 "$strFlKbdDefCfg" |SECFUNCexecA -ce sudo tee "$strSystemCfgFile" # will trunc cleaning existing file
+  for strKeyCfg in "${astrRemainingParams[@]}";do
+    strKeyA="`echo "$strKeyCfg" |cut -d= -f1`"
+    if [[ "$strKeyA" =~ KEYBOARD_KEY_.* ]];then
+      if ! grep "${strKeyA}=" "$strFlKbdDefCfg";then
+        echoc -p "invalid strKeyA='$strKeyA'"
+        exit 1
+      fi
+      strKeyACode="$strKeyA"
+      strKeyA=""
+    else
+      strKeyACode="`egrep "=${strKeyA}$" "$strFlKbdDefCfg" |cut -d= -f1 |tr -d ' '`"
+      if [[ -z "$strKeyACode" ]];then
+        echoc -p "invalid strKeyA='$strKeyA'"
+        exit 1
+      fi
+    fi
+    
+    strKeyB="`echo "$strKeyCfg" |cut -d= -f2`" # a=b
+    bSwap=false
+    if [[ -z "$strKeyB" ]];then
+      strKeyB="`echo "$strKeyCfg" |cut -d= -f3`" # a==b
+      bSwap=true
+    fi
+    
+    if ! egrep "=${strKeyB}$" "$strFlKbdDefCfg";then
+      echoc -p "invalid strKeyB='$strKeyB'"
+      exit 1
+    fi
+    
+    echo " ${strKeyACode}=${strKeyB}" |sudo tee -a "$strSystemCfgFile"
+    
+    if $bSwap;then
+      strKeyBCode="`egrep "=${strKeyB}$" "$strFlKbdDefCfg" |cut -d= -f1 |tr -d ' '`"
+      if [[ -z "$strKeyBCode" ]];then
+        echoc -p "invalid strKeyB='$strKeyB'"
+        exit 1
+      fi
+      echo " ${strKeyBCode}=${strKeyA}" |sudo tee -a "$strSystemCfgFile"
+    fi
   done
   SECFUNCexecA -ce cat "$strSystemCfgFile"
   
@@ -182,6 +226,7 @@ if $bApplyNewConfig;then
     :
   else
     if ! echoc -q "all looks good?";then
+      sudo trash -v "$strSystemCfgFile"
       exit 0
     fi
   fi
