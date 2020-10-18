@@ -118,7 +118,7 @@ CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
 declare -A CFGastrKeyComment=()
 declare -A CFGastrKeyHist=()
-astrOptMaint=(_fixLastTime _commentOnLast);declare -p astrOptMaint
+astrOptMaint=(_fixLastTime _commentOnLast _history);declare -p astrOptMaint
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above, and BEFORE the skippable ones!!!
 
@@ -219,7 +219,7 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	CFGastrKeyValue[$lstrKey]="$lstrNewDT"
 	SECFUNCcfgWriteVar CFGastrKeyValue
 	
-	FUNCreportHist
+	#FUNCreportHist
 	local lnLnCount=0
 	if $lbFix;then
 		lnLnCount="`echo -e "${CFGastrKeyHist[$lstrKey]-}" |wc -l`"
@@ -250,7 +250,7 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	CFGastrKeyHist[$lstrKey]+="${lstrCurrent}${lstrLastAgo}${lstrComment}" # add updated current entry
 	: ${nLimitHist:=100} #help
 	CFGastrKeyHist[$lstrKey]="`echo -e "${CFGastrKeyHist[$lstrKey]}" |tail -n $nLimitHist`" # limit
-	FUNCreportHist
+	#FUNCreportHist
 	declare -p lnLnCount lbFix lstrKey lstrNewDT
 	SECFUNCcfgWriteVar CFGastrKeyHist
 	
@@ -281,38 +281,47 @@ while true;do
 		while true;do
 			: ${nDelayMins:=20} #help
 			echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptionsXtra}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-			if [[ "$strRetChar" == "f" || "$strRetChar" == "c" ]];then
-				echoc -Q "What key?@O${strOptions}"&&:;nRet=$?;strRetCharWork="`secascii $nRet`"; #declare -p strRetChar
-				if [[ "$strRetChar" == "f" ]];then # fixing time work
-					strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
-					if [[ "${strNewDT:0:1}" == "-" ]];then
-						if ! SECFUNCisNumber -d "$strNewDT";then
-							echoc -p "invalid input value"
-							continue;
-						fi
-						declare -i iLessMin="$strNewDT"
-						strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
-					fi
-					if FUNCupdateArrayDT --fix "$strRetCharWork" "$strNewDT";then
-						bReportOnce=true
-						strRetChar=""
-						break
-					else
-						continue;
-					fi
-				fi
-				if [[ "$strRetChar" == "c" ]];then # commenting work
-					declare -p CFGastrKeyComment
-					if strKey="`FUNCfindKey "${strRetCharWork}"`";then
-						if [[ -n "$strKey" ]];then
-							if strNewComment="`echoc -S "@D${CFGastrKeyComment[$strKey]-}"`";then
-								CFGastrKeyComment[$strKey]="$strNewComment"
-								SECFUNCcfgWriteVar CFGastrKeyComment
-							fi
-						fi
-					fi
-					declare -p CFGastrKeyComment
-				fi
+			if [[ "$strRetChar" == "c" || "$strRetChar" == "f" || "$strRetChar" == "h" ]];then #TODO !!!!!!!!! IMPORTANT UPDATE THIS WITH astrOptMaint KEYS !!!!!!!!!!
+        if [[ "$strRetChar" == "c" || "$strRetChar" == "f" ]];then
+          echoc -Q "What key?@O${strOptions}"&&:;nRet=$?;strRetCharWork="`secascii $nRet`"; #declare -p strRetChar
+        fi
+        case "$strRetChar" in
+          c) # commenting work
+            declare -p CFGastrKeyComment
+            if strKey="`FUNCfindKey "${strRetCharWork}"`";then
+              if [[ -n "$strKey" ]];then
+                if strNewComment="`echoc -S "@D${CFGastrKeyComment[$strKey]-}"`";then
+                  CFGastrKeyComment[$strKey]="$strNewComment"
+                  SECFUNCcfgWriteVar CFGastrKeyComment
+                fi
+              fi
+            fi
+            declare -p CFGastrKeyComment
+            ;;
+          f) # fixing time work
+            strNewDT="`echoc -S "Type the time [%Y/%m/%d] <%H:%M>, but if it is just a negative number will be 'now - minutes'"`"
+            if [[ "${strNewDT:0:1}" == "-" ]];then
+              if ! SECFUNCisNumber -d "$strNewDT";then
+                echoc -p "invalid input value"
+                continue;
+              fi
+              declare -i iLessMin="$strNewDT"
+              strNewDT="@$(( $(date +%s)+(iLessMin*60) ))"
+            fi
+            if FUNCupdateArrayDT --fix "$strRetCharWork" "$strNewDT";then
+              bReportOnce=true
+              strRetChar=""
+              break
+            else
+              continue;
+            fi
+            ;;
+          h)
+            FUNCreportHist
+            ;;
+          *) : ;;
+        esac
+        
 				continue
 			fi
 			break;
