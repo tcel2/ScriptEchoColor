@@ -85,7 +85,8 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lstrComment="${CFGastrKeyComment[$lstrKey]-}"
 	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}, \"$lstrComment\""
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
-        if $bIsScreenLocked;then
+  #declare -p bForceNotificationUpdate bIsScreenLocked&&:
+  if $bIsScreenLocked || $bForceNotificationUpdate;then
 		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
 			secNotifyOnLockToo.py "${lstrInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
@@ -118,7 +119,8 @@ CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
 declare -A CFGastrKeyComment=()
 declare -A CFGastrKeyHist=()
-astrOptMaint=(_fixLastTime _commentOnLast _history);declare -p astrOptMaint
+astrOptMaint=(_fixLastTime _commentOnLast _history _notifUpd);declare -p astrOptMaint
+astrOptMaintChars=(`echo "${astrOptMaint[@]}" |egrep "_." -o |tr -d "_"`);declare -p astrOptMaintChars
 
 SECFUNCcfgReadDB ########### AFTER!!! default variables value setup above, and BEFORE the skippable ones!!!
 
@@ -190,11 +192,18 @@ function FUNCreportHist() {
 
 function FUNCfindKey() { #<lstrRetChar>
 	local lstrRetChar="$1";shift
+	if [[ -z "$lstrRetChar" ]];then
+    return 1
+  fi
 	
 	local lstrMatchKey="_($lstrRetChar|$(echo "$lstrRetChar" |tr "[:lower:]" "[:upper:]"))"
-	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"
-	
+	local lstrKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |egrep "${lstrMatchKey}")"&&:
+	if [[ -z "$lstrKey" ]];then
+    return 1
+  fi
+  
 	echo "$lstrKey"
+  return 0
 }
 
 function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
@@ -261,6 +270,20 @@ function FUNCupdateArrayDT(){ #<lstrRetChar> <lstrNewDT>
 	return 0
 }	
 
+function FUNCshowReport() {
+  bIsScreenLocked=false
+	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+    bIsScreenLocked=true
+  fi
+	for strKey in "${!CFGastrKeyValue[@]}";do
+		nValue="${CFGastrKeyValue[$strKey]}"
+		if((nValue>-1));then
+			nDelay="`SECFUNCdelay "$strKey" --getsec`"
+			FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
+		fi
+	done
+}
+
 SECFUNCexecA -ce cp -vf "$strCfgFile" "${strCfgFile}-`SECFUNCdtFmt --filename`.bkp"
 
 for strKey in "${!CFGastrKeyValue[@]}";do
@@ -274,6 +297,7 @@ declare -p CFGastrKeyValue
 strOptions="$(echo "${!CFGastrKeyValue[@]}" |tr " " "/")";declare -p strOptions
 strOptionsXtra="${strOptions}/[$(echo "${astrOptMaint[@]}" |tr " " "|")]" # these end up being reserved keys 'f' and 'c' ...
 bReportOnce=true
+bForceNotificationUpdate=false
 while true;do
 	bFixMode=false
 	#SECFUNCexecA -ce tput lines
@@ -281,7 +305,8 @@ while true;do
 		while true;do
 			: ${nDelayMins:=20} #help
 			echoc -t $((60*nDelayMins)) -Q "Now @s@{-Ly} `SECFUNCdtFmt --pretty --nosec --nonano --nodate` @S, did you?@O${strOptionsXtra}"&&:;nRet=$?;strRetChar="`secascii $nRet`"; #declare -p strRetChar
-			if [[ "$strRetChar" == "c" || "$strRetChar" == "f" || "$strRetChar" == "h" ]];then #TODO !!!!!!!!! IMPORTANT UPDATE THIS WITH astrOptMaint KEYS !!!!!!!!!!
+			#if [[ "$strRetChar" == "c" || "$strRetChar" == "f" || "$strRetChar" == "h" ]];then #TODO !!!!!!!!! IMPORTANT UPDATE THIS WITH astrOptMaint KEYS !!!!!!!!!!
+      if SECFUNCarrayContains astrOptMaintChars "$strRetChar";then
         if [[ "$strRetChar" == "c" || "$strRetChar" == "f" ]];then
           echoc -Q "What key?@O${strOptions}"&&:;nRet=$?;strRetCharWork="`secascii $nRet`"; #declare -p strRetChar
         fi
@@ -319,6 +344,12 @@ while true;do
           h)
             FUNCreportHist
             ;;
+          n)
+            bReportOnce=true
+            bForceNotificationUpdate=true
+            #strRetChar=""
+            break
+            ;;
           *) : ;;
         esac
         
@@ -328,7 +359,11 @@ while true;do
 		done
 	fi
 	
-	if [[ -n "${strRetChar-}" ]];then
+	#if [[ -n "${strRetChar-}" ]] || [[ -n "${CFGastrKeyValue[$strRetChar]-}" ]];then
+  #declare -p CFGastrKeyValue strRetChar&&:
+	#if [[ -n "${CFGastrKeyValue[${strRetChar-}]-}" ]];then
+  if FUNCfindKey "${strRetChar-}";then
+	#if [[ -n "${strRetChar-}" ]];then
 		FUNCupdateArrayDT "$strRetChar" "@`date +%s`"
 		#strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
 		#CFGastrKeyValue[$strKey]="`date +%s`"
@@ -336,17 +371,19 @@ while true;do
 		#SECFUNCdelay "$strKey" --init;
 	fi
 	
-        bIsScreenLocked=false
-	if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
-                bIsScreenLocked=true
-        fi
-	for strKey in "${!CFGastrKeyValue[@]}";do
-		nValue="${CFGastrKeyValue[$strKey]}"
-		if((nValue>-1));then
-			nDelay="`SECFUNCdelay "$strKey" --getsec`"
-			FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
-		fi
-	done
+  FUNCshowReport
+  #bIsScreenLocked=false
+	#if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
+    #bIsScreenLocked=true
+  #fi
+	#for strKey in "${!CFGastrKeyValue[@]}";do
+		#nValue="${CFGastrKeyValue[$strKey]}"
+		#if((nValue>-1));then
+			#nDelay="`SECFUNCdelay "$strKey" --getsec`"
+			#FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
+		#fi
+	#done
 	
 	bReportOnce=false
+  bForceNotificationUpdate=false
 done
