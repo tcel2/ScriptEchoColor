@@ -671,12 +671,12 @@ function WINEFUNCcommonOptions {
     fi
     pwd
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or bash interactive wont work..
-		$cmdWine bash
+		"${acmdWine[@]}" bash
 	elif [[ "${1-}" == "cmd" ]];then #help prompt command line
     function FUNCcmd(){ :;};
 		cd "$strPathInstalled"
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or cmd interactive wont work..
-		$cmdWine cmd
+		"${acmdWine[@]}" cmd
 	elif [[ "${1-}" == "dropcaches" ]]; then #help try to dethermine what happens when game freezes
     function FUNCdropcaches(){ :;};
 				# clears the RAM cache to prevent crashes!
@@ -711,7 +711,7 @@ function WINEFUNCcommonOptions {
 	elif [[ "${1-}" == "kill" ]];then #help
     function FUNCkill(){ :;};
 		kill -SIGKILL `pgrep $CFGstrFileExecutable`&&:
-		$cmdWine wineserver -k&&: #this does not work (bug?)
+		"${acmdWine[@]}" wineserver -k&&: #this does not work (bug?)
 		if pgrep wineserver;then
 			astr=(wineserver services.exe winedevice.exe plugplay.exe explorer.exe);
 			for str in "${astr[@]}";do SECFUNCexec --echo -c pkill -x "$str";done	
@@ -720,7 +720,7 @@ function WINEFUNCcommonOptions {
     function FUNCmsiInstall(){ :;};
 		shift
 		SECFUNCcheckActivateRunLog --restoredefaultoutputs #or cmd interactive wont work..
-		$cmdWine msiexec /i "$@"
+		"${acmdWine[@]}" msiexec /i "$@"
 	elif [[ "${1-}" == "minimize" ]];then #help 
     function FUNCminimize(){ :;};
 		SECFUNCcfgReadDB
@@ -766,12 +766,12 @@ function WINEFUNCcommonOptions {
     fi
 		
 		#SECFUNCcleanEnvironment to prevent from crashing with this error: "The environment block used to start a process cannot be longer than 65535 bytes.  Your environment block is 152614 bytes long.  Remove some environment variables and try again."
-		if $WINECFGbFixPTrace;then $cmdWine --ptrace;fi #redundant but ok
-	#	$cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
+		if $WINECFGbFixPTrace;then "${acmdWine[@]}" --ptrace;fi #redundant but ok
+	#	"${acmdWine[@]}" "${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 2>&1 |tee -a "$SECstrRunLogFile"& #env vars cleaning migrated to wine caller script
     if $bCdToRelatExec;then
-      $cmdWine "./${CFGstrLoader}" "$@" 
+      "${acmdWine[@]}" "./${CFGstrLoader}" "$@" 
     else
-      $cmdWine "./${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 
+      "${acmdWine[@]}" "./${strRelativeExecutablePath}/${CFGstrLoader}" "$@" 
     fi
 		FUNCwaitGamePid
 	elif [[ "${1-}" == "runNewSimultInstance" ]];then #help <strNewWinePrefix> [strLogFileHint|""] [nMaxMemKB|0] [nWaitSeconds|0]... run a simultaneous (initially stopped) new instance for quick restart after crashes/exit, strLogFileHint is when initialization have completted based on log file contents, nMaxMemKB is a guess based on memory being filled up
@@ -821,8 +821,8 @@ function WINEFUNCcommonOptions {
 		FUNClstInsts
 		nInstCountB4=$nInstanceCount
 		declare -p nInstCountB4&&:
-		#$cmdWine "$CFGstrLoader" #
-    astrFullCmd=($cmdWine "${strRelativeExecutablePath}/${CFGstrLoader}")
+		#"${acmdWine[@]}" "$CFGstrLoader" #
+    astrFullCmd=("${acmdWine[@]}" "${strRelativeExecutablePath}/${CFGstrLoader}")
     if [[ -n "${astrAppParams[@]-}" ]];then
       astrFullCmd+=( "${astrAppParams[@]}" )
     fi
@@ -961,13 +961,13 @@ function WINEFUNCcommonOptions {
 		if $CFGbIsAFunction;then
 			"$@"
 		else
-			$cmdWine "$@"
+			"${acmdWine[@]}" "$@"
 			FUNCwaitGamePid
 		fi
 	elif [[ "${1-}" == "winetricks" ]];then #help [params...]
     function FUNCwinetricks(){ :;};
 		shift
-		$cmdWine winetricks "$@"
+		"${acmdWine[@]}" winetricks "$@"
 		# sound can be fixed with: winetricks sound=alsa #but may cause weird problems like missing sound effects; only pulseaudio works 100%
 	else
 		echoc -p "invalid option '${1-}'"
@@ -1400,8 +1400,8 @@ function FUNCtrashSymlinksToRoot() {
 }
 
 function FUNCchkInitPrefix() {
-  #if [[ ! -d "$WINEPREFIX/" ]];then SECFUNCexecA -ce "$cmdWine" wineboot;fi #mkdir -v "$WINEPREFIX/";fi
-	if [[ ! -f "$WINEPREFIX/system.reg" ]];then SECFUNCexecA -ce $cmdWine wineboot;fi #mkdir -v "$WINEPREFIX/";fi
+  #if [[ ! -d "$WINEPREFIX/" ]];then SECFUNCexecA -ce ""${acmdWine[@]}"" wineboot;fi #mkdir -v "$WINEPREFIX/";fi
+	if [[ ! -f "$WINEPREFIX/system.reg" ]];then SECFUNCexecA -ce "${acmdWine[@]}" wineboot;fi #mkdir -v "$WINEPREFIX/";fi
 	FUNCtrashSymlinksToRoot
 }
 

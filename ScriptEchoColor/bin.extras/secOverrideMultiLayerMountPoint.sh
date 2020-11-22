@@ -96,11 +96,14 @@ done
 SECFUNCcfgAutoWriteAllVars #this will also show all config vars
 
 strMountAt="${1-}"
+declare -p strMountAt
 
 if [[ -z "$strMountAt" ]];then
 	echoc -p "invalid strMountAt='$strMountAt'"
 	exit 1
 fi
+#strMountAt="`realpath -e Root "$strMountAt"`"
+#declare -p strMountAt
 
 SECFUNCuniqueLock --waitbecomedaemon
 
@@ -275,8 +278,9 @@ for strLayer in "${astrLayerListInvert[@]}";do
 done
 SECFUNCexecA -ce sudo -k
 
-strSI="`mount |grep "$strMountAt type aufs" |egrep -o "si=[^)]*" |tr "=" "_"`"
-SECFUNCexecA -ce ls -l /sys/fs/aufs/$strSI/brid*
+strSI="`mount |grep "on $strMountedChk type aufs" |egrep -o "si=[^)]*" |tr "=" "_"`"
+declare -p strSI
+SECFUNCexecA -ce ls -l "/sys/fs/aufs/${strSI}/brid"*
 
 #SECFUNCexecA -ce ls -d "${strMountAt}"*
 SECFUNCexecA -ce ls -d1 "${astrLayerList[@]}"
