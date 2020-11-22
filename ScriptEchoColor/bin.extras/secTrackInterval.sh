@@ -56,6 +56,7 @@ function FUNCnotify() { # <lstrKey>
 	local lstrContent="${1-}";shift&&:
 	
 	anNotifIdList[$lstrKey]="$(FUNCnotifyCmd "$lstrKey" "$lstrTitle" "$lstrContent" |awk '{print $2}' |tr -d ",)" )";
+  #echo "DEBUG: '${anNotifIdList[$lstrKey]}'"
 	
 	return 0
 }
@@ -67,7 +68,7 @@ function FUNCnotifyDelLast() { #<lnNotifID>
 			--dest org.freedesktop.Notifications \
 			--object-path /org/freedesktop/Notifications \
 			--method org.freedesktop.Notifications.CloseNotification \
-			$lnNotifID	
+			$lnNotifID	>/dev/null
 	fi
 	return 0
 }
@@ -85,16 +86,23 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 	local lstrComment="${CFGastrKeyComment[$lstrKey]-}"
 	local lstrInfoFmt="@{lg}${lstrDelay} @{w}ago, @{lyK}${lstrPKey}, \"$lstrComment\""
 	local lstrInfo="`echoc -u "$lstrInfoFmt"`"
+  local lstrNotifTime="@`SECFUNCdtFmt --universal --nodate --nonano --nosec "@${CFGastrKeyValue[$lstrKey]}"`"
+  local lstrNotifInfo="${lstrNotifTime},${lstrPKey},-${lstrDelay}+`date +%H:%M`"
   #declare -p bForceNotificationUpdate bIsScreenLocked&&:
-  if $bIsScreenLocked || $bForceNotificationUpdate;then
+  
+  #if $bIsScreenLocked || $bForceNotificationUpdate;then
+    # NOTIFICATION
 		bUsePythonNotif=false 
 		if $bUsePythonNotif;then
-			secNotifyOnLockToo.py "${lstrInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
+			secNotifyOnLockToo.py "${lstrNotifInfo}" "$lstrExtraComment" #TODO delete a notification using python, how?
 		else
 			FUNCnotifyDelLast "${anNotifIdList[$lstrKey]-}"
-			FUNCnotify "$lstrKey" "${lstrInfo} `date +%H:%M`" "$lstrExtraComment"
+#			FUNCnotify "$lstrKey" "$lstrNotifTime, ${lstrInfo} `date +%H:%M`" "$lstrExtraComment"
+			FUNCnotify "$lstrKey" "${lstrNotifInfo}" "$lstrExtraComment"
 		fi
-	else
+	#else
+    
+    # TEXT REPORT
 		local lstrReport="${CFGastrKeyHist[$lstrKey]-}"
 		if [[ -n "$lstrReport" ]];then
 			#echo "((( $lstrKey )))"
@@ -107,7 +115,7 @@ function FUNCreportDelay(){ #<lstrKey> <lnDelay> <lstrExtraComment>
 			echo -e "$lstrReport" |tail -n -${lnAvailLines}
 		fi
 		echoc "@s@{Blc} ${lstrExtraComment} @S@w, ${lstrInfoFmt}"
-	fi
+	#fi
 }		
 
 strExample="DefaultValue"
@@ -115,7 +123,6 @@ bExample=false
 CFGstrTest="Test"
 astrRemainingParams=()
 astrAllParams=("${@-}") # this may be useful
-CFGnLastAteAt=0
 declare -A CFGastrKeyValue=()
 declare -A CFGastrKeyComment=()
 declare -A CFGastrKeyHist=()
@@ -335,6 +342,7 @@ while true;do
             fi
             if FUNCupdateArrayDT --fix "$strRetCharWork" "$strNewDT";then
               bReportOnce=true
+              bForceNotificationUpdate=true
               strRetChar=""
               break
             else
@@ -359,30 +367,11 @@ while true;do
 		done
 	fi
 	
-	#if [[ -n "${strRetChar-}" ]] || [[ -n "${CFGastrKeyValue[$strRetChar]-}" ]];then
-  #declare -p CFGastrKeyValue strRetChar&&:
-	#if [[ -n "${CFGastrKeyValue[${strRetChar-}]-}" ]];then
   if FUNCfindKey "${strRetChar-}";then
-	#if [[ -n "${strRetChar-}" ]];then
 		FUNCupdateArrayDT "$strRetChar" "@`date +%s`"
-		#strKey="$(echo "${!CFGastrKeyValue[@]}" |tr " " "\n" |grep "_${strRetChar}")"; declare -p strKey
-		#CFGastrKeyValue[$strKey]="`date +%s`"
-		#SECFUNCcfgWriteVar CFGastrKeyValue
-		#SECFUNCdelay "$strKey" --init;
 	fi
 	
   FUNCshowReport
-  #bIsScreenLocked=false
-	#if secAutoScreenLock.sh --gnome --islocked;then #TODO implement --autodetect instead of --gnome
-    #bIsScreenLocked=true
-  #fi
-	#for strKey in "${!CFGastrKeyValue[@]}";do
-		#nValue="${CFGastrKeyValue[$strKey]}"
-		#if((nValue>-1));then
-			#nDelay="`SECFUNCdelay "$strKey" --getsec`"
-			#FUNCreportDelay "$strKey" "$nDelay" "`SECFUNCdtFmt --universal --nonano  --nosec "@${nValue}"`"
-		#fi
-	#done
 	
 	bReportOnce=false
   bForceNotificationUpdate=false
